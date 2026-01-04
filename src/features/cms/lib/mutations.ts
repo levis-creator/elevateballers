@@ -1,4 +1,5 @@
 import { prisma } from '../../../lib/prisma';
+import { generateSlug } from './utils';
 import type {
   CreateNewsArticleInput,
   UpdateNewsArticleInput,
@@ -256,6 +257,7 @@ export async function createTeam(data: CreateTeamInput): Promise<Team> {
     data: {
       ...data,
       slug,
+      approved: data.approved ?? true, // Default to true for admin-created teams
     },
   });
 }
@@ -449,7 +451,10 @@ export async function deleteMatch(id: string): Promise<boolean> {
  */
 export async function createPlayer(data: CreatePlayerInput): Promise<Player> {
   return await prisma.player.create({
-    data,
+    data: {
+      ...data,
+      approved: data.approved ?? true, // Default to true for admin-created players
+    },
   });
 }
 

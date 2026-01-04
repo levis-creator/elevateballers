@@ -82,6 +82,7 @@ export const POST: APIRoute = async ({ request }) => {
     const team = await createTeam({
       name: data.name,
       description: description || undefined,
+      approved: false, // Public registrations are unapproved by default
     });
 
     // Parse coach name and create staff member
@@ -121,11 +122,92 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
+    // Auto-link players who registered with this team name
+    let linkedPlayersCount = 0;
+    try {
+      // Find players who registered with this team name but aren't linked yet
+      const playersToLink = await prisma.player.findMany({
+        where: {
+          teamId: null,
+          OR: [
+            {
+              bio: {
+                contains: `Team: ${team.name}`,
+              },
+            },
+            {
+              bio: {
+                contains: team.name,
+              },
+            },
+          ],
+        },
+      });
+
+      if (playersToLink.length > 0) {
+        await prisma.player.updateMany({
+          where: {
+            id: {
+              in: playersToLink.map(p => p.id),
+            },
+          },
+          data: {
+            teamId: team.id,
+          },
+        });
+
+        linkedPlayersCount = playersToLink.length;
+
+        // Create notifications for auto-linked players
+        for (const player of playersToLink) {
+          await prisma.registrationNotification.create({
+            data: {
+              type: 'PLAYER_AUTO_LINKED',
+              playerId: player.id,
+              teamId: team.id,
+              message: `Player ${player.firstName} ${player.lastName} was automatically linked to team ${team.name}`,
+              metadata: {
+                playerName: `${player.firstName} ${player.lastName}`,
+                teamName: team.name,
+              },
+            },
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('Error auto-linking players:', error);
+      // Don't fail the registration if auto-linking fails
+    }
+
+    // Create notification for team registration
+    try {
+      await prisma.registrationNotification.create({
+        data: {
+          type: 'TEAM_REGISTERED',
+          teamId: team.id,
+          staffId: coachStaff.id,
+          message: `New team registration: ${team.name} (Coach: ${data.coachName})`,
+          metadata: {
+            teamName: team.name,
+            coachName: data.coachName,
+            contactEmail: data.contactEmail,
+            contactPhone: data.contactPhone,
+            leagueName: leagueName,
+            linkedPlayersCount: linkedPlayersCount,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('Error creating team registration notification:', error);
+      // Don't fail the registration if notification creation fails
+    }
+
     return new Response(JSON.stringify({ 
       success: true, 
       message: 'Team registration submitted successfully',
       team,
       coach: coachStaff,
+      linkedPlayers: linkedPlayersCount,
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },

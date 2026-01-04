@@ -6,9 +6,19 @@ import { requireAdmin } from '../../../features/cms/lib/auth';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
-    const team = await getTeamById(params.id!);
+    // Try to get admin user, but don't fail if not authenticated
+    let includeUnapproved = false;
+    try {
+      await requireAdmin(request);
+      includeUnapproved = true; // Admins can see unapproved teams
+    } catch {
+      // Not an admin, only show approved teams
+      includeUnapproved = false;
+    }
+
+    const team = await getTeamById(params.id!, includeUnapproved);
 
     if (!team) {
       return new Response(JSON.stringify({ error: 'Team not found' }), {

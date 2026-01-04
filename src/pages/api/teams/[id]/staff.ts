@@ -34,8 +34,8 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Check if team exists
-    const team = await getTeamById(params.id!);
+    // Check if team exists (admins can see unapproved teams)
+    const team = await getTeamById(params.id!, true);
     if (!team) {
       return new Response(JSON.stringify({ error: 'Team not found' }), {
         status: 404,

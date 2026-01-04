@@ -1,7 +1,7 @@
 import { useState, useEffect, type ComponentType } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Bell, Users, UserPlus, Link as LinkIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DashboardStats {
@@ -10,6 +10,31 @@ interface DashboardStats {
   playersCount: number;
   mediaCount: number;
   pagesCount: number;
+}
+
+interface RegistrationNotification {
+  id: string;
+  type: 'TEAM_REGISTERED' | 'PLAYER_REGISTERED' | 'PLAYER_AUTO_LINKED';
+  message: string;
+  read: boolean;
+  createdAt: string;
+  team?: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+  player?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  staff?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  } | null;
+  metadata?: any;
 }
 
 export default function Dashboard() {
@@ -22,6 +47,8 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notifications, setNotifications] = useState<RegistrationNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [icons, setIcons] = useState<{
     Newspaper?: ComponentType<any>;
     Calendar?: ComponentType<any>;
@@ -49,13 +76,132 @@ export default function Dashboard() {
         Bolt: mod.Bolt,
         ChevronRight: mod.ChevronRight,
         AlertCircle: mod.AlertCircle,
+        Bell: mod.Bell,
+        Users: mod.Users,
+        UserPlus: mod.UserPlus,
+        Link: mod.Link,
       });
     });
   }, []);
 
   useEffect(() => {
     fetchStats();
+    fetchNotifications();
   }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setNotificationsLoading(true);
+      const response = await fetch('/api/notifications?unread=true&limit=10');
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data);
+      }
+    } catch (err: any) {
+      console.error('Error fetching notifications:', err);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: notificationId, read: true }),
+      });
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+        );
+      }
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const approveTeam = async (teamId: string, notificationId: string) => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: true }),
+      });
+      if (response.ok) {
+        // Mark notification as read and refresh
+        await markAsRead(notificationId);
+        fetchNotifications();
+      } else {
+        const error = await response.json();
+        alert('Error approving team: ' + (error.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      console.error('Error approving team:', err);
+      alert('Error approving team: ' + err.message);
+    }
+  };
+
+  const rejectTeam = async (teamId: string, notificationId: string) => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: false }),
+      });
+      if (response.ok) {
+        // Just mark as read (team stays unapproved)
+        await markAsRead(notificationId);
+        fetchNotifications();
+      } else {
+        const error = await response.json();
+        alert('Error rejecting team: ' + (error.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      console.error('Error rejecting team:', err);
+      alert('Error rejecting team: ' + err.message);
+    }
+  };
+
+  const approvePlayer = async (playerId: string, notificationId: string) => {
+    try {
+      const response = await fetch(`/api/players/${playerId}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: true }),
+      });
+      if (response.ok) {
+        await markAsRead(notificationId);
+        fetchNotifications();
+      } else {
+        const error = await response.json();
+        alert('Error approving player: ' + (error.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      console.error('Error approving player:', err);
+      alert('Error approving player: ' + err.message);
+    }
+  };
+
+  const rejectPlayer = async (playerId: string, notificationId: string) => {
+    try {
+      const response = await fetch(`/api/players/${playerId}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: false }),
+      });
+      if (response.ok) {
+        await markAsRead(notificationId);
+        fetchNotifications();
+      } else {
+        const error = await response.json();
+        alert('Error rejecting player: ' + (error.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      console.error('Error rejecting player:', err);
+      alert('Error rejecting player: ' + err.message);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -364,6 +510,179 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Registration Notifications */}
+      <Card>
+        <CardHeader className="pb-4 border-b">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            {icons.Bell ? <icons.Bell size={20} /> : null}
+            Recent Registrations
+          </CardTitle>
+          <CardDescription>New team and player registrations</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {notificationsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-lg border border-border">
+                  <Skeleton className="w-10 h-10 rounded-lg" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No new registrations</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((notification) => {
+                const getIcon = () => {
+                  if (notification.type === 'TEAM_REGISTERED') {
+                    return icons.Users || null;
+                  } else if (notification.type === 'PLAYER_REGISTERED') {
+                    return icons.UserPlus || null;
+                  } else {
+                    return icons.Link || null;
+                  }
+                };
+
+                const getColor = () => {
+                  if (notification.type === 'TEAM_REGISTERED') {
+                    return '#667eea';
+                  } else if (notification.type === 'PLAYER_REGISTERED') {
+                    return '#4facfe';
+                  } else {
+                    return '#10b981';
+                  }
+                };
+
+                const NotificationIcon = getIcon();
+                const color = getColor();
+                const date = new Date(notification.createdAt);
+                const timeAgo = formatTimeAgo(date);
+
+                return (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      "flex items-start gap-4 p-4 rounded-lg border transition-all",
+                      notification.read
+                        ? "border-border bg-background opacity-60"
+                        : "border-primary/20 bg-primary/5"
+                    )}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white"
+                      style={{ backgroundColor: color }}
+                    >
+                      {NotificationIcon ? <NotificationIcon size={20} /> : null}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground mb-1">{notification.message}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <span>{timeAgo}</span>
+                        {notification.team && (
+                          <>
+                            <span>•</span>
+                            <a
+                              href={`/admin/teams/view/${notification.team.id}`}
+                              className="text-primary hover:underline"
+                              onClick={() => markAsRead(notification.id)}
+                            >
+                              View Team
+                            </a>
+                          </>
+                        )}
+                        {notification.player && (
+                          <>
+                            <span>•</span>
+                            <a
+                              href={`/admin/players/edit/${notification.player.id}`}
+                              className="text-primary hover:underline"
+                              onClick={() => markAsRead(notification.id)}
+                            >
+                              View Player
+                            </a>
+                          </>
+                        )}
+                      </div>
+                      {!notification.read && (
+                        <div className="flex items-center gap-2 mt-2">
+                          {notification.type === 'TEAM_REGISTERED' && notification.team && (
+                            <>
+                              <button
+                                onClick={() => approveTeam(notification.team!.id, notification.id)}
+                                className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                                title="Approve team registration"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => rejectTeam(notification.team!.id, notification.id)}
+                                className="px-3 py-1 text-xs font-medium bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                                title="Reject team registration"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {notification.type === 'PLAYER_REGISTERED' && notification.player && (
+                            <>
+                              <button
+                                onClick={() => approvePlayer(notification.player!.id, notification.id)}
+                                className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                                title="Approve player registration"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => rejectPlayer(notification.player!.id, notification.id)}
+                                className="px-3 py-1 text-xs font-medium bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                                title="Reject player registration"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => markAsRead(notification.id)}
+                            className="px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            title="Dismiss notification"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
+}
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  } else {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
+  }
 }

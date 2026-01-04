@@ -48,7 +48,30 @@ export const POST: APIRoute = async ({ request }) => {
       jerseyNumber: data.jerseyNumber,
       teamId: teamId,
       bio: bioParts || undefined,
+      approved: false, // Public registrations are unapproved by default
     });
+
+    // Create notification for player registration
+    try {
+      await prisma.registrationNotification.create({
+        data: {
+          type: 'PLAYER_REGISTERED',
+          playerId: player.id,
+          teamId: teamId || undefined,
+          message: `New player registration: ${data.firstName} ${data.lastName}${teamId ? ` (Team: ${data.teamName})` : data.teamName ? ` (Pending team: ${data.teamName})` : ''}`,
+          metadata: {
+            playerName: `${data.firstName} ${data.lastName}`,
+            email: data.email,
+            phone: data.phone,
+            teamName: data.teamName || null,
+            teamLinked: !!teamId,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('Error creating player registration notification:', error);
+      // Don't fail the registration if notification creation fails
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 

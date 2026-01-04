@@ -10,7 +10,17 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const teamId = url.searchParams.get('teamId') || undefined;
 
-    const players = await getPlayers(teamId);
+    // Try to get admin user, but don't fail if not authenticated
+    let includeUnapproved = false;
+    try {
+      await requireAdmin(request);
+      includeUnapproved = true; // Admins can see unapproved players
+    } catch {
+      // Not an admin, only show approved players
+      includeUnapproved = false;
+    }
+
+    const players = await getPlayers(teamId, includeUnapproved);
 
     return new Response(JSON.stringify(players), {
       headers: { 'Content-Type': 'application/json' },

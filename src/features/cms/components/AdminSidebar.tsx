@@ -91,9 +91,9 @@ export default function AdminSidebar() {
     { href: '/admin/teams', icon: icons.Shield, label: 'Teams' },
     { href: '/admin/players', icon: icons.Users, label: 'Players' },
     { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff' },
-    { href: '/admin/media', icon: icons.Images, label: 'Media' },
-    { href: '/admin/pages', icon: icons.FileText, label: 'Pages' },
-    { href: '/admin/settings', icon: icons.Settings, label: 'Settings' },
+    // { href: '/admin/media', icon: icons.Images, label: 'Media' },
+    // { href: '/admin/pages', icon: icons.FileText, label: 'Pages' },
+    // { href: '/admin/settings', icon: icons.Settings, label: 'Settings' },
   ];
 
   const BasketballIcon = icons.Basketball;

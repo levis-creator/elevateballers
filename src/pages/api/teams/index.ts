@@ -12,8 +12,18 @@ export const GET: APIRoute = async ({ request }) => {
     console.log('[API /teams] GET request received at', new Date().toISOString());
     console.log('[API /teams] Fetching teams from database...');
     
+    // Try to get admin user, but don't fail if not authenticated
+    let includeUnapproved = false;
+    try {
+      await requireAdmin(request);
+      includeUnapproved = true; // Admins can see unapproved teams
+    } catch {
+      // Not an admin, only show approved teams
+      includeUnapproved = false;
+    }
+    
     // Add a timeout wrapper for the database query
-    const queryPromise = getTeams();
+    const queryPromise = getTeams(includeUnapproved);
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Database query timeout after 5 seconds')), 5000)
     );

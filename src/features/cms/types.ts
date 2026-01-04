@@ -220,6 +220,7 @@ export type CreatePlayerInput = {
   position?: string;
   jerseyNumber?: number;
   stats?: Record<string, any>;
+  approved?: boolean;
 };
 
 export type UpdatePlayerInput = Partial<CreatePlayerInput>;
@@ -229,6 +230,7 @@ export type CreateTeamInput = {
   slug?: string; // Optional - will be auto-generated from name if not provided
   logo?: string;
   description?: string;
+  approved?: boolean;
 };
 
 export type UpdateTeamInput = Partial<CreateTeamInput>;

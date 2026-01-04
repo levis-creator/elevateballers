@@ -123,45 +123,51 @@ model Match {
 }
 
 model Team {
-  id           String        @id @default(cuid())
-  name         String        @unique
+  id           String                   @id @default(cuid())
+  name         String                   @unique
   logo         String?
   description  String?
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  slug         String        @unique
+  approved     Boolean                  @default(false)
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  slug         String                   @unique
   matchEvents  MatchEvent[]
   matchPlayers MatchPlayer[]
-  team1Matches Match[]       @relation("Team1Matches")
-  team2Matches Match[]       @relation("Team2Matches")
+  team1Matches Match[]                  @relation("Team1Matches")
+  team2Matches Match[]                  @relation("Team2Matches")
   players      Player[]
   staff        TeamStaff[]
+  notifications RegistrationNotification[]
 
   @@index([name])
   @@index([slug])
+  @@index([approved])
   @@map("teams")
 }
 
 model Player {
-  id           String        @id @default(cuid())
+  id           String                   @id @default(cuid())
   image        String?
   bio          String?
   position     String?
-  jerseyNumber Int?          @map("jersey_number")
+  jerseyNumber Int?                      @map("jersey_number")
   stats        Json?
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  teamId       String?       @map("team_id")
-  firstName    String?       @map("first_name")
+  approved     Boolean                  @default(false)
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+  teamId       String?                   @map("team_id")
+  firstName    String?                   @map("first_name")
   height       String?
-  lastName     String?       @map("last_name")
+  lastName     String?                   @map("last_name")
   weight       String?
-  assistEvents MatchEvent[]  @relation("AssistEvents")
+  assistEvents MatchEvent[]              @relation("AssistEvents")
   matchEvents  MatchEvent[]
   matchPlayers MatchPlayer[]
-  team         Team?         @relation(fields: [teamId], references: [id])
+  team         Team?                     @relation(fields: [teamId], references: [id])
+  notifications RegistrationNotification[]
 
   @@index([teamId])
+  @@index([approved])
   @@map("players")
 }
 
@@ -212,7 +218,7 @@ model SiteSetting {
 }
 
 model Staff {
-  id        String      @id @default(cuid())
+  id        String                   @id @default(cuid())
   firstName String
   lastName  String
   email     String?
@@ -220,9 +226,10 @@ model Staff {
   role      StaffRole
   bio       String?
   image     String?
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+  createdAt DateTime                 @default(now()) @map("created_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
   teams     TeamStaff[]
+  notifications RegistrationNotification[]
 
   @@index([role])
   @@map("staff")
@@ -384,4 +391,33 @@ enum MatchEventType {
   TIMEOUT
   INJURY
   OTHER
+}
+
+model RegistrationNotification {
+  id          String                      @id @default(cuid())
+  type        RegistrationNotificationType
+  teamId      String?                     @map("team_id")
+  playerId    String?                     @map("player_id")
+  staffId     String?                     @map("staff_id")
+  message     String
+  read        Boolean                     @default(false)
+  metadata    Json?
+  createdAt   DateTime                    @default(now()) @map("created_at")
+  updatedAt   DateTime                    @updatedAt @map("updated_at")
+  team        Team?                       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player      Player?                     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  staff       Staff?                      @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([read])
+  @@index([createdAt])
+  @@index([teamId])
+  @@index([playerId])
+  @@map("registration_notifications")
+}
+
+enum RegistrationNotificationType {
+  TEAM_REGISTERED
+  PLAYER_REGISTERED
+  PLAYER_AUTO_LINKED
 }

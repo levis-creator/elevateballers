@@ -182,14 +182,16 @@ export async function getMatchById(id: string): Promise<MatchWithTeamsAndLeagueA
 /**
  * Get all teams with player counts
  */
-export async function getTeams(): Promise<TeamWithPlayerCount[]> {
+export async function getTeams(includeUnapproved: boolean = false): Promise<TeamWithPlayerCount[]> {
   return await prisma.team.findMany({
+    where: includeUnapproved ? {} : { approved: true },
     select: {
       id: true,
       name: true,
       slug: true,
       logo: true,
       description: true,
+      approved: true,
       createdAt: true,
       updatedAt: true,
       _count: {
@@ -207,7 +209,7 @@ export async function getTeams(): Promise<TeamWithPlayerCount[]> {
 /**
  * Get a single team by ID
  */
-export async function getTeamById(id: string): Promise<TeamWithPlayers | null> {
+export async function getTeamById(id: string, includeUnapproved: boolean = false): Promise<TeamWithPlayers | null> {
   return await prisma.team.findUnique({
     where: { id },
     select: {
@@ -216,9 +218,11 @@ export async function getTeamById(id: string): Promise<TeamWithPlayers | null> {
       slug: true,
       logo: true,
       description: true,
+      approved: true,
       createdAt: true,
       updatedAt: true,
       players: {
+        where: includeUnapproved ? {} : { approved: true },
         orderBy: [
           {
             firstName: 'asc',
@@ -237,16 +241,21 @@ export async function getTeamById(id: string): Promise<TeamWithPlayers | null> {
  */
 export async function getTeamBySlug(slug: string): Promise<TeamWithPlayers | null> {
   return await prisma.team.findUnique({
-    where: { slug },
+    where: { 
+      slug,
+      approved: true, // Only return approved teams for public access
+    },
     select: {
       id: true,
       name: true,
       slug: true,
       logo: true,
       description: true,
+      approved: true,
       createdAt: true,
       updatedAt: true,
       players: {
+        where: { approved: true }, // Only return approved players
         orderBy: [
           {
             firstName: 'asc',
@@ -263,8 +272,10 @@ export async function getTeamBySlug(slug: string): Promise<TeamWithPlayers | nul
 /**
  * Get players with optional team filter
  */
-export async function getPlayers(teamId?: string): Promise<Player[]> {
-  const where: any = {};
+export async function getPlayers(teamId?: string, includeUnapproved: boolean = false): Promise<Player[]> {
+  const where: any = {
+    ...(includeUnapproved ? {} : { approved: true }),
+  };
 
   if (teamId) {
     where.teamId = teamId;
@@ -273,7 +284,14 @@ export async function getPlayers(teamId?: string): Promise<Player[]> {
   return await prisma.player.findMany({
     where,
     include: {
-      team: true,
+      team: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          approved: true,
+        },
+      },
     },
     orderBy: [
       {
