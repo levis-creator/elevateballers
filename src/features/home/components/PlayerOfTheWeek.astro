@@ -1,0 +1,35 @@
+---
+import type { PlayerOfTheWeek } from '../types';
+import { playerOfTheWeek } from '../data/homeData';
+
+const player: PlayerOfTheWeek = playerOfTheWeek;
+
+const descriptionHtml = player.description
+  .split('\n\n')
+  .map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
+  .join('');
+---
+
+<div class="stm-coach-excerption-wrapp">
+  <div class="stm-title-wrapp">
+    <h3>PLAYER OF THE WEEK</h3>
+  </div>
+  <div class="clearfix"></div>
+  <div class="stm-data-wrapp">
+    <div class="stm-photo-wrapp">
+      <img decoding="async" src={player.image} alt={player.imageAlt || player.name} />
+    </div>
+    <div class="stm-excerption-wrapp">
+      <span class="stm-excerption" set:html={descriptionHtml}>
+        <div class="stm-name-sign-wrapp">
+          <span class="stm-coach-name heading-font">{player.name}</span>
+          {player.signature && (
+            <div class="stm-img-wrapp">
+              <img decoding="async" src={player.signature} alt={`${player.name} signature`} />
+            </div>
+          )}
+        </div>
+      </span>
+    </div>
+  </div>
+</div>

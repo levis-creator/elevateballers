@@ -1,0 +1,65 @@
+---
+import type { Stat } from '../types';
+import { stats } from '../data/homeData';
+import Spacing from '../../../shared/components/ui/Spacing.astro';
+---
+
+<div class="stm-statistics-wrapper">
+  <div class="vc_row wpb_row vc_inner vc_row-fluid">
+    <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3">
+      <div class="vc_column-inner">
+        <div class="wpb_wrapper">
+          <div class="stm-stats-wrapp default">
+            <img decoding="async" src={stats[0].icon} alt={stats[0].iconAlt || stats[0].label} />
+            <div class="stm-stat-info-wrapp">
+              <span class="stm-stat-points heading-font">{stats[0].value}</span>
+              <span class="stm-stat-title normal_font">{stats[0].label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <Spacing id="stm-spacing-stat-1" lg="0" md="0" sm="0" xs="30" />
+    <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3">
+      <div class="vc_column-inner">
+        <div class="wpb_wrapper">
+          <div class="stm-stats-wrapp default">
+            <img decoding="async" src={stats[1].icon} alt={stats[1].iconAlt || stats[1].label} />
+            <div class="stm-stat-info-wrapp">
+              <span class="stm-stat-points heading-font">{stats[1].value}</span>
+              <span class="stm-stat-title normal_font">{stats[1].label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <Spacing id="stm-spacing-stat-2" lg="0" md="0" sm="30" xs="30" />
+    <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3">
+      <div class="vc_column-inner">
+        <div class="wpb_wrapper">
+          <div class="stm-stats-wrapp default">
+            <img decoding="async" src={stats[2].icon} alt={stats[2].iconAlt || stats[2].label} />
+            <div class="stm-stat-info-wrapp">
+              <span class="stm-stat-points heading-font">{stats[2].value}</span>
+              <span class="stm-stat-title normal_font">{stats[2].label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <Spacing id="stm-spacing-stat-3" lg="0" md="0" sm="30" xs="30" />
+    <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3">
+      <div class="vc_column-inner">
+        <div class="wpb_wrapper">
+          <div class="stm-stats-wrapp default">
+            <img decoding="async" src={stats[3].icon} alt={stats[3].iconAlt || stats[3].label} />
+            <div class="stm-stat-info-wrapp">
+              <span class="stm-stat-points heading-font">{stats[3].value}</span>
+              <span class="stm-stat-title normal_font">{stats[3].label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,79 @@
+---
+// Spacing utility component
+// Replaces inline jQuery scripts for responsive spacing
+interface Props {
+  id: string;
+  lg?: string;
+  md?: string;
+  sm?: string;
+  xs?: string;
+}
+
+const { id, lg = '0', md = '0', sm = '0', xs = '0' } = Astro.props;
+---
+
+<div class="stm-spacing" id={id}></div>
+
+<script is:inline define:vars={{ spacingID: id, lgSpacing: lg, mdSpacing: md, smSpacing: sm, xsSpacing: xs }}>
+  (function(){
+    "use strict";
+    var spacingID = spacingID,
+        lgSpacing = lgSpacing,
+        mdSpacing = mdSpacing,
+        smSpacing = smSpacing,
+        xsSpacing = xsSpacing;
+
+    function stmSpacing($) {
+      if (!$ || !$.fn) return;
+      var element = $('#' + spacingID);
+      if (!element.length) return;
+
+      if (window.matchMedia("(min-width: 1200px)").matches && lgSpacing) {
+        element.css("height", lgSpacing + 'px');
+      } else if (window.matchMedia("(max-width: 1199px) and (min-width: 992px)").matches && mdSpacing) {
+        element.css("height", mdSpacing + 'px');
+      } else if (window.matchMedia("(max-width: 991px) and (min-width: 768px)").matches && smSpacing) {
+        element.css("height", smSpacing + 'px');
+      } else if (window.matchMedia("(max-width: 767px)").matches && xsSpacing) {
+        element.css("height", xsSpacing + 'px');
+      } else {
+        element.css("height", "");
+      }
+    }
+
+    function initSpacing() {
+      var $ = typeof window !== 'undefined' ? (window.jQuery || window.$) : null;
+      if ($ && $.fn) {
+        $(document).ready(function() {
+          stmSpacing($);
+        });
+
+        $(window).resize(function() {
+          stmSpacing($);
+        });
+      } else {
+        // Wait for jQuery to load
+        var checkJQuery = setInterval(function() {
+          if (typeof window !== 'undefined' && typeof window.jQuery !== 'undefined') {
+            clearInterval(checkJQuery);
+            var $ = window.jQuery;
+            $(document).ready(function() {
+              stmSpacing($);
+            });
+            $(window).resize(function() {
+              stmSpacing($);
+            });
+          }
+        }, 50);
+        
+        // Clear interval after 10 seconds to prevent infinite checking
+        setTimeout(function() {
+          clearInterval(checkJQuery);
+        }, 10000);
+      }
+    }
+
+    initSpacing();
+  })();
+</script>
+

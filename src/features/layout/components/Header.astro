@@ -1,0 +1,211 @@
+---
+// Header component - Main header with logo, navigation menu, and search
+interface Props {
+  backgroundImage?: string;
+  showBackground?: boolean;
+}
+
+const { 
+  backgroundImage = "/images/Elevate_Patreon_Banner.png",
+  showBackground = true 
+} = Astro.props;
+
+// Menu items configuration
+interface MenuItem {
+  id: string;
+  href: string;
+  label: string;
+  isHome?: boolean;
+  title?: string;
+}
+
+const menuItems: MenuItem[] = [
+  { id: "menu-item-4039", href: "/", label: "Home", isHome: true },
+  { id: "menu-item-4032", href: "/teams/", label: "Teams" },
+  { id: "menu-item-4034", href: "/standings/", label: "Standings" },
+  { id: "menu-item-4656", href: "/upcoming-fixtures/", label: "Fixtures" },
+  { id: "menu-item-2242", href: "/about-club/", label: "About", title: "" },
+  { id: "menu-item-4037", href: "/contacts/", label: "Contacts" },
+  { id: "menu-item-4747", href: "/league-registration/", label: "2026 LEAGUE REGISTRATION" },
+];
+
+// Get current pathname
+const currentPath = Astro.url.pathname;
+
+// Check if we're on the homepage
+const isHomepage = currentPath === "/" || currentPath === "";
+
+// Helper function to check if a menu item is active
+function isActive(href: string, isHome: boolean = false): boolean {
+  if (isHome) {
+    return isHomepage;
+  }
+  // Check if current path starts with the href (for nested routes)
+  return currentPath === href || currentPath.startsWith(href);
+}
+
+// Helper function to get menu item classes
+function getMenuItemClasses(item: MenuItem, isActive: boolean): string {
+  const baseClasses = "menu-item menu-item-type-post_type menu-item-object-page";
+  const homeClass = item.isHome ? "menu-item-home" : "";
+  const activeClass = isActive ? "current-menu-item page_item current_page_item" : "";
+  return `${baseClasses} ${homeClass} ${item.id} ${activeClass}`.trim();
+}
+---
+
+<div class={`stm-header ${isHomepage ? 'stm-transparent-header' : 'stm-non-transparent-header'} stm-header-static stm-header-first`}>
+  <div class="stm-header-inner">
+    {showBackground && (
+      <div 
+        class="stm-header-background"
+        style={`background-image: url('${backgroundImage}')`}
+      ></div>
+    )}
+    <div class="container stm-header-container">
+      <!--Logo -->
+      <div class="logo-main" style="margin-top: 22px;">
+        <a class="blogname" href="/" title="Home">
+          <h1>Elevate</h1>
+        </a>
+      </div>
+      <div class="stm-main-menu">
+        <div class="stm-main-menu-unit stm-search-enabled" style="margin-top: 0px;">
+          <ul class="header-menu stm-list-duty heading-font clearfix">
+            {menuItems.map((item) => {
+              const active = isActive(item.href, item.isHome);
+              return (
+                <li id={item.id} class={getMenuItemClasses(item, active)}>
+                  <a href={item.href} title={item.title || item.label} aria-current={active ? "page" : undefined}>
+                    <span>{item.label}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          <div class="stm-header-search heading-font">
+            <form method="get" action="/">
+              <div class="search-wrapper">
+                <input placeholder="Search" type="text" class="search-input" value="" name="s">
+              </div>
+              <button type="submit" class="search-submit">
+                <i class="fa fa-search"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!--MOBILE HEADER-->
+  <div class="stm-header-mobile clearfix">
+    <div class="logo-main" style="margin-top: 22px;">
+      <a class="blogname" href="/" title="Home">
+        <h1>Elevate</h1>
+      </a>
+    </div>
+    <div class="stm-mobile-right">
+      <div class="clearfix">
+        <div class="stm-menu-toggle">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stm-mobile-menu-unit">
+      <div class="inner">
+        <div class="stm-top clearfix">
+          <div class="stm-switcher pull-left"></div>
+          <div class="stm-top-right">
+            <div class="clearfix">
+              <div class="stm-top-search"></div>
+              <div class="stm-top-socials">
+                <ul class="top-bar-socials stm-list-duty">
+                  <li>
+                    <a href="https://www.facebook.com/Elevateballers" target="_blank">
+                      <i class="fa fa-facebook"></i>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.instagram.com/elevateballers/" target="_blank">
+                      <i class="fa fa-instagram"></i>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.youtube.com/@elevateballers9389/featured" target="_blank">
+                      <i class="fa fa-youtube-play"></i>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <ul class="stm-mobile-menu-list heading-font">
+          {menuItems.map((item) => {
+            const active = isActive(item.href, item.isHome);
+            return (
+              <li class={getMenuItemClasses(item, active)}>
+                <a href={item.href} title={item.title || item.label} aria-current={active ? "page" : undefined}>
+                  <span>{item.label}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // Mobile menu toggle functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const menuToggle = document.querySelector('.stm-header-mobile .stm-menu-toggle');
+      const mobileMenuUnit = document.querySelector('.stm-header-mobile .stm-mobile-menu-unit');
+      
+      if (menuToggle && mobileMenuUnit) {
+        menuToggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Toggle active class on menu toggle
+          menuToggle.classList.toggle('active');
+          
+          // Toggle active class on mobile menu unit
+          mobileMenuUnit.classList.toggle('active');
+          
+          // Prevent body scroll when menu is open
+          if (mobileMenuUnit.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+          } else {
+            document.body.style.overflow = '';
+          }
+        });
+        
+        // Close menu when clicking on menu links
+        const menuLinks = mobileMenuUnit.querySelectorAll('.stm-mobile-menu-list a');
+        menuLinks.forEach(function(link) {
+          link.addEventListener('click', function() {
+            menuToggle.classList.remove('active');
+            mobileMenuUnit.classList.remove('active');
+            document.body.style.overflow = '';
+          });
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+          const target = e.target;
+          if (target && target instanceof HTMLElement && !target.closest('.stm-header-mobile') && mobileMenuUnit.classList.contains('active')) {
+            menuToggle.classList.remove('active');
+            mobileMenuUnit.classList.remove('active');
+            document.body.style.overflow = '';
+          }
+        });
+      }
+    });
+  })();
+</script>
+

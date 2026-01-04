@@ -1,0 +1,285 @@
+/**
+ * Landing Page UI/UX Enhancements
+ * Smooth transitions, micro-interactions, and modern button styles
+ */
+
+/* Smooth Section Transitions */
+section {
+  opacity: 1;
+  transition: opacity var(--transition-base, 250ms);
+}
+
+/* Fade-in Animation for Sections */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Enhanced Button Styles */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transform: translateY(0);
+  transition: all var(--transition-base, 250ms);
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Card Hover Effects */
+.card {
+  transition: transform var(--transition-base, 250ms), 
+              box-shadow var(--transition-base, 250ms);
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+}
+
+/* Image Hover Effects */
+.stm-media-preview img {
+  transition: transform var(--transition-slow, 350ms);
+}
+
+.stm-media-preview:hover img {
+  transform: scale(1.05);
+}
+
+/* Link Hover Effects */
+a {
+  position: relative;
+  transition: color var(--transition-base, 250ms);
+}
+
+a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-primary, #dd3333);
+  transition: width var(--transition-base, 250ms);
+}
+
+a:hover::after,
+a:focus::after {
+  width: 100%;
+}
+
+/* Navigation Link Special Handling */
+.header-menu a::after,
+.stm-slide__link::after,
+.btn::after {
+  display: none;
+}
+
+/* Stats Section Animation */
+.stm-stat-points {
+  transition: transform var(--transition-base, 250ms);
+}
+
+.stm-stats-wrapp:hover .stm-stat-points {
+  transform: scale(1.1);
+}
+
+/* Carousel Controls Enhancement */
+.stm-carousel-control-prev,
+.stm-carousel-control-next {
+  transition: all var(--transition-base, 250ms);
+  cursor: pointer;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--spacing-2, 0.5rem);
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+.stm-carousel-control-prev:hover,
+.stm-carousel-control-next:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.stm-carousel-control-prev:active,
+.stm-carousel-control-next:active {
+  transform: scale(0.95);
+}
+
+/* News Ticker Smooth Scroll */
+.stmTickerPostsWrapper {
+  scroll-behavior: smooth;
+}
+
+/* Registration CTA Pulse Effect */
+.registration-cta-section .btn {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 186, 0, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 186, 0, 0);
+  }
+}
+
+/* Loading States */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Focus Visible Improvements */
+*:focus-visible {
+  outline: 2px solid var(--color-primary, #dd3333);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+/* Skip Link Animation */
+.skip-link {
+  transition: top var(--transition-fast, 150ms);
+}
+
+/* Smooth Scroll for Anchor Links */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Tab Navigation Enhancement */
+.stm-media-tabs-nav a {
+  position: relative;
+  overflow: hidden;
+}
+
+.stm-media-tabs-nav a::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: var(--color-primary, #dd3333);
+  transform: scaleX(0);
+  transition: transform var(--transition-base, 250ms);
+}
+
+.stm-media-tabs-nav li.active a::before {
+  transform: scaleX(1);
+}
+
+/* Stats Section Number Counter Animation */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stm-stat-points {
+  animation: countUp 0.8s ease-out;
+}
+
+/* Image Lazy Loading Enhancement */
+img[loading="lazy"] {
+  opacity: 0;
+  transition: opacity var(--transition-base, 250ms);
+}
+
+img[loading="lazy"].loaded {
+  opacity: 1;
+}
+
+/* Section Divider */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-gray-300, #d1d5db),
+    transparent
+  );
+  margin: var(--spacing-12, 3rem) 0;
+}
+
+/* Responsive Image Improvements */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Accessibility: High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .btn {
+    border-width: 3px;
+  }
+  
+  a {
+    text-decoration: underline;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .btn,
+  .stm-carousel-control-prev,
+  .stm-carousel-control-next,
+  .skip-link {
+    display: none;
+  }
+  
+  section {
+    page-break-inside: avoid;
+  }
+}
+

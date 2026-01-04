@@ -1,0 +1,333 @@
+---
+import { formatMatchDate } from '../../matches/lib/utils';
+import { getLeagueName } from '../../matches/lib/league-helpers';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../../matches/lib/team-helpers';
+import { getStageDisplayName } from '../../matches/lib/stage-helpers';
+import type { MatchDTO } from '../../matches/types';
+
+// Fetch the most upcoming match from API endpoint
+// Prioritize championships, then other stages, then any upcoming match
+let match: MatchDTO | null = null;
+
+try {
+  // First try to get championships
+  const championshipUrl = new URL('/api/matches', Astro.url.origin);
+  championshipUrl.searchParams.set('status', 'UPCOMING');
+  championshipUrl.searchParams.set('stage', 'CHAMPIONSHIP');
+  championshipUrl.searchParams.set('sort', 'date-asc');
+  championshipUrl.searchParams.set('limit', '1');
+  
+  let response = await fetch(championshipUrl.toString());
+  
+  if (response.ok) {
+    const matches = await response.json();
+    if (matches && matches.length > 0) {
+      match = matches[0];
+    }
+  }
+  
+  // If no championship, get any upcoming match
+  if (!match) {
+    const apiUrl = new URL('/api/matches', Astro.url.origin);
+    apiUrl.searchParams.set('status', 'UPCOMING');
+    apiUrl.searchParams.set('sort', 'date-asc');
+    apiUrl.searchParams.set('limit', '1');
+    
+    response = await fetch(apiUrl.toString());
+    
+    if (response.ok) {
+      const matches = await response.json();
+      match = matches && matches.length > 0 ? matches[0] : null;
+    }
+  }
+} catch (error) {
+  console.error('Error fetching next match from API:', error);
+}
+
+// Return nothing if no match found
+if (!match) {
+  return null;
+}
+
+const matchDate = formatMatchDate(match.date);
+const matchUrl = `/matches/${match.id}`;
+const leagueName = getLeagueName(match) || '';
+const team1Name = getTeam1Name(match);
+const team1Logo = getTeam1Logo(match);
+const team2Name = getTeam2Name(match);
+const team2Logo = getTeam2Logo(match);
+const stageDisplay = match.stage 
+  ? getStageDisplayName(match.stage).toUpperCase()
+  : 'UPCOMING MATCH';
+---
+
+<section class="marquee-matchup-section section" aria-label="Featured match">
+  <div class="container">
+    <div class="marquee-matchup-hero">
+      <div class="marquee-matchup-content">
+    <h1 class="marquee-matchup-title">MARQUEE MATCHUP</h1>
+    <p class="marquee-matchup-league">{leagueName}</p>
+
+    <div class="marquee-matchup-teams">
+      <div class="marquee-matchup-team">
+        <a href={matchUrl}>
+          {team1Logo && <img src={team1Logo} alt={team1Name} class="marquee-matchup-logo" />}
+          {!team1Logo && (
+            <div class="marquee-matchup-logo marquee-matchup-logo-placeholder">
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+          )}
+        </a>
+        <div class="marquee-matchup-team-name marquee-matchup-team-1">
+          <a href={matchUrl}>{team1Name}</a>
+        </div>
+      </div>
+
+      <div class="marquee-matchup-vs">VS</div>
+
+      <div class="marquee-matchup-team">
+        <a href={matchUrl}>
+          {team2Logo && <img src={team2Logo} alt={team2Name} class="marquee-matchup-logo" />}
+          {!team2Logo && (
+            <div class="marquee-matchup-logo marquee-matchup-logo-placeholder">
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+          )}
+        </a>
+        <div class="marquee-matchup-team-name marquee-matchup-team-2">
+          <a href={matchUrl}>{team2Name}</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="marquee-matchup-date">{matchDate}</div>
+  </div>
+
+      <div class="marquee-matchup-overlay">{stageDisplay}</div>
+    </div>
+  </div>
+</section>
+
+<style>
+  :root {
+    --marquee-primary-red: #e63946;
+    --marquee-accent-gold: #f1c40f;
+    --marquee-team-purple: #6f42c1;
+    --marquee-bg-dark: #121212;
+    --marquee-text-light: #f8f9fa;
+    --marquee-card-bg: rgba(255, 255, 255, 0.08);
+  }
+
+  .marquee-matchup-section {
+    background-color: var(--color-gray-100, #f0f0f0);
+    padding: 0 !important;
+  }
+
+  .marquee-matchup-section .container {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .basketball_two .container {
+    max-width: 1170px;
+    padding: 0;
+  }
+
+  .marquee-matchup-hero {
+    position: relative;
+    min-height: 100vh;
+    background: url('https://thumbs.dreamstime.com/b/basketball-court-hoop-under-spotlight-image-depicts-indoor-single-illuminated-features-polished-wooden-floor-427006957.jpg') no-repeat center center/cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+
+  .marquee-matchup-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.8));
+    z-index: 1;
+  }
+
+  .marquee-matchup-content {
+    position: relative;
+    z-index: 2;
+    padding: 60px 20px 40px;
+    text-align: center;
+  }
+
+  .marquee-matchup-title {
+    font-family: 'Teko', sans-serif;
+    font-size: clamp(3rem, 8vw, 7rem);
+    color: var(--marquee-primary-red);
+    margin: 0;
+    text-shadow: 0 0 20px rgba(230, 57, 70, 0.6);
+    letter-spacing: 8px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .marquee-matchup-league {
+    font-family: 'Rubik', sans-serif;
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    color: var(--marquee-accent-gold);
+    margin: 10px 0 60px;
+    font-weight: 600;
+    letter-spacing: 4px;
+  }
+
+  .marquee-matchup-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin: 40px 0;
+  }
+
+  .marquee-matchup-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 250px;
+  }
+
+  .marquee-matchup-logo {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    border-radius: 50%;
+    border: 6px solid var(--marquee-accent-gold);
+    box-shadow: 0 0 30px rgba(241, 196, 15, 0.5);
+    transition: transform 0.4s ease;
+    background: var(--marquee-card-bg);
+    padding: 20px;
+    display: block;
+  }
+
+  .marquee-matchup-logo:hover {
+    transform: scale(1.1);
+  }
+
+  .marquee-matchup-logo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--marquee-accent-gold);
+  }
+
+  .marquee-matchup-logo-placeholder svg {
+    width: 80px;
+    height: 80px;
+    color: var(--marquee-accent-gold);
+  }
+
+  .marquee-matchup-team-name {
+    font-family: 'Teko', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    margin-top: 20px;
+    font-weight: bold;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    line-height: 1.2;
+  }
+
+  .marquee-matchup-team-name a {
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 0.3s ease;
+  }
+
+  .marquee-matchup-team-name a:hover {
+    opacity: 0.8;
+  }
+
+  .marquee-matchup-team-1 {
+    color: var(--marquee-primary-red);
+  }
+
+  .marquee-matchup-team-2 {
+    color: var(--marquee-team-purple);
+  }
+
+  .marquee-matchup-vs {
+    font-family: 'Teko', sans-serif;
+    font-size: clamp(4rem, 10vw, 8rem);
+    background: linear-gradient(45deg, var(--marquee-accent-gold), #ffd60a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 20px rgba(241, 196, 15, 0.8);
+    animation: marquee-pulse 2s infinite;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  @keyframes marquee-pulse {
+    0%, 100% { 
+      opacity: 1; 
+    }
+    50% { 
+      opacity: 0.8; 
+    }
+  }
+
+  .marquee-matchup-date {
+    font-family: 'Rubik', sans-serif;
+    font-size: 1.5rem;
+    color: var(--marquee-accent-gold);
+    margin: 40px 0;
+    letter-spacing: 3px;
+    font-weight: 600;
+  }
+
+  .marquee-matchup-overlay {
+    position: relative;
+    z-index: 2;
+    padding: 40px;
+    font-family: 'Teko', sans-serif;
+    font-size: clamp(4rem, 12vw, 10rem);
+    color: var(--marquee-accent-gold);
+    text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 60px var(--marquee-primary-red);
+    letter-spacing: 10px;
+    animation: marquee-glow 3s ease-in-out infinite alternate;
+    text-align: center;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  @keyframes marquee-glow {
+    from { 
+      text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 60px var(--marquee-primary-red); 
+    }
+    to { 
+      text-shadow: 0 0 60px rgba(0,0,0,0.9), 0 0 100px var(--marquee-primary-red); 
+    }
+  }
+
+  @media (max-width: 768px) {
+    .marquee-matchup-teams {
+      flex-direction: column;
+    }
+    .marquee-matchup-vs {
+      order: -1;
+      margin-bottom: 20px;
+    }
+    .marquee-matchup-logo {
+      width: 150px;
+      height: 150px;
+    }
+    .marquee-matchup-logo-placeholder svg {
+      width: 60px;
+      height: 60px;
+    }
+  }
+</style>

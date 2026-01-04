@@ -1,0 +1,387 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  name         String
+  role         UserRole      @default(EDITOR)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  comments     Comment[]
+  newsArticles NewsArticle[]
+
+  @@map("users")
+}
+
+model NewsArticle {
+  id          String       @id @default(cuid())
+  title       String
+  slug        String       @unique
+  content     String
+  excerpt     String?
+  category    NewsCategory
+  image       String?
+  published   Boolean      @default(false)
+  publishedAt DateTime?    @map("published_at")
+  authorId    String       @map("author_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  feature     Boolean      @default(false)
+  comments    Comment[]
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([publishedAt])
+  @@index([published])
+  @@index([feature])
+  @@index([authorId])
+  @@map("news_articles")
+}
+
+model League {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  logo        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  matches     Match[]
+  seasons     Season[]
+
+  @@index([name])
+  @@index([slug])
+  @@index([active])
+  @@map("leagues")
+}
+
+model Season {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String
+  description String?
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  leagueId    String   @map("league_id")
+  matches     Match[]
+  league      League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, slug])
+  @@index([name])
+  @@index([slug])
+  @@index([active])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([leagueId])
+  @@map("seasons")
+}
+
+model Match {
+  id           String        @id @default(cuid())
+  team1Name    String?       @map("team1_name")
+  team1Logo    String?       @map("team1_logo")
+  team2Name    String?       @map("team2_name")
+  team2Logo    String?       @map("team2_logo")
+  date         DateTime
+  team1Score   Int?          @map("team1_score")
+  team2Score   Int?          @map("team2_score")
+  status       MatchStatus   @default(UPCOMING)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  leagueId     String?       @map("league_id")
+  leagueName   String?       @map("league_name")
+  seasonId     String?       @map("season_id")
+  team1Id      String?       @map("team1_id")
+  team2Id      String?       @map("team2_id")
+  stage        MatchStage?
+  events       MatchEvent[]
+  matchPlayers MatchPlayer[]
+  league       League?       @relation(fields: [leagueId], references: [id])
+  season       Season?       @relation(fields: [seasonId], references: [id])
+  team1        Team?         @relation("Team1Matches", fields: [team1Id], references: [id])
+  team2        Team?         @relation("Team2Matches", fields: [team2Id], references: [id])
+
+  @@index([date])
+  @@index([status])
+  @@index([stage])
+  @@index([team1Id])
+  @@index([team2Id])
+  @@index([leagueId])
+  @@index([seasonId])
+  @@map("matches")
+}
+
+model Team {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  logo         String?
+  description  String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  slug         String        @unique
+  matchEvents  MatchEvent[]
+  matchPlayers MatchPlayer[]
+  team1Matches Match[]       @relation("Team1Matches")
+  team2Matches Match[]       @relation("Team2Matches")
+  players      Player[]
+  staff        TeamStaff[]
+
+  @@index([name])
+  @@index([slug])
+  @@map("teams")
+}
+
+model Player {
+  id           String        @id @default(cuid())
+  image        String?
+  bio          String?
+  position     String?
+  jerseyNumber Int?          @map("jersey_number")
+  stats        Json?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  teamId       String?       @map("team_id")
+  firstName    String?       @map("first_name")
+  height       String?
+  lastName     String?       @map("last_name")
+  weight       String?
+  assistEvents MatchEvent[]  @relation("AssistEvents")
+  matchEvents  MatchEvent[]
+  matchPlayers MatchPlayer[]
+  team         Team?         @relation(fields: [teamId], references: [id])
+
+  @@index([teamId])
+  @@map("players")
+}
+
+model Media {
+  id        String    @id @default(cuid())
+  title     String
+  url       String
+  type      MediaType
+  thumbnail String?
+  tags      String[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("media")
+}
+
+model PageContent {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  content         String
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description")
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([published])
+  @@map("page_contents")
+}
+
+model SiteSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String   @default("text")
+  label       String
+  description String?
+  category    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([key])
+  @@index([category])
+  @@map("site_settings")
+}
+
+model Staff {
+  id        String      @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  role      StaffRole
+  bio       String?
+  image     String?
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+  teams     TeamStaff[]
+
+  @@index([role])
+  @@map("staff")
+}
+
+model TeamStaff {
+  id        String    @id @default(cuid())
+  teamId    String    @map("team_id")
+  staffId   String    @map("staff_id")
+  role      StaffRole
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, staffId])
+  @@index([teamId])
+  @@index([staffId])
+  @@map("team_staff")
+}
+
+model Comment {
+  id          String      @id @default(cuid())
+  content     String
+  authorName  String?     @map("author_name")
+  authorEmail String?     @map("author_email")
+  authorUrl   String?     @map("author_url")
+  approved    Boolean     @default(false)
+  articleId   String      @map("article_id")
+  userId      String?     @map("user_id")
+  parentId    String?     @map("parent_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  article     NewsArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  parent      Comment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[]   @relation("CommentReplies")
+  user        User?       @relation(fields: [userId], references: [id])
+
+  @@index([articleId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([approved])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model MatchPlayer {
+  id            String   @id @default(cuid())
+  matchId       String   @map("match_id")
+  playerId      String   @map("player_id")
+  teamId        String   @map("team_id")
+  started       Boolean  @default(false)
+  position      String?
+  jerseyNumber  Int?     @map("jersey_number")
+  minutesPlayed Int?     @map("minutes_played")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player        Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId, teamId])
+  @@index([matchId])
+  @@index([playerId])
+  @@index([teamId])
+  @@map("match_players")
+}
+
+model MatchEvent {
+  id             String         @id @default(cuid())
+  matchId        String         @map("match_id")
+  eventType      MatchEventType @map("event_type")
+  minute         Int
+  playerId       String?        @map("player_id")
+  teamId         String         @map("team_id")
+  assistPlayerId String?        @map("assist_player_id")
+  description    String?
+  metadata       Json?
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  assistPlayer   Player?        @relation("AssistEvents", fields: [assistPlayerId], references: [id])
+  match          Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player         Player?        @relation(fields: [playerId], references: [id])
+  team           Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([playerId])
+  @@index([teamId])
+  @@index([eventType])
+  @@index([minute])
+  @@map("match_events")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+}
+
+enum NewsCategory {
+  INTERVIEWS
+  CHAMPIONSHIPS
+  MATCH_REPORT
+  ANALYSIS
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+}
+
+enum MatchStage {
+  REGULAR_SEASON
+  PRESEASON
+  EXHIBITION
+  PLAYOFF
+  QUARTER_FINALS
+  SEMI_FINALS
+  CHAMPIONSHIP
+  QUALIFIER
+  OTHER
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum StaffRole {
+  COACH
+  ASSISTANT_COACH
+  MANAGER
+  ASSISTANT_MANAGER
+  PHYSIOTHERAPIST
+  TRAINER
+  ANALYST
+  OTHER
+}
+
+enum MatchEventType {
+  TWO_POINT_MADE
+  TWO_POINT_MISSED
+  THREE_POINT_MADE
+  THREE_POINT_MISSED
+  FREE_THROW_MADE
+  FREE_THROW_MISSED
+  ASSIST
+  REBOUND_OFFENSIVE
+  REBOUND_DEFENSIVE
+  STEAL
+  BLOCK
+  TURNOVER
+  FOUL_PERSONAL
+  FOUL_TECHNICAL
+  FOUL_FLAGRANT
+  SUBSTITUTION_IN
+  SUBSTITUTION_OUT
+  TIMEOUT
+  INJURY
+  OTHER
+}

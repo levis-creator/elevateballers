@@ -1,0 +1,345 @@
+---
+import { getNewsArticles } from '../../cms/lib/queries';
+import { reverseCategoryMap } from '../../cms/types';
+
+interface Props {
+  searchQuery?: string;
+  showTags?: boolean;
+  showInstagram?: boolean;
+}
+
+const { searchQuery = '', showTags = false, showInstagram = false } = Astro.props;
+
+// Get sidebar data
+const allArticles = await getNewsArticles();
+
+// Get categories with counts
+const categoryCounts = allArticles.reduce((acc, art) => {
+  const cat = reverseCategoryMap[art.category] || art.category;
+  acc[cat] = (acc[cat] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>);
+
+// Get archives (group by year/month)
+const archives = allArticles.reduce((acc, art) => {
+  if (!art.publishedAt) return acc;
+  const date = new Date(art.publishedAt);
+  const key = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+  const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  if (!acc[key]) {
+    acc[key] = { label, count: 0, url: `/news?archive=${key}` };
+  }
+  acc[key].count++;
+  return acc;
+}, {} as Record<string, { label: string; count: number; url: string }>);
+
+const archivesList = Object.entries(archives)
+  .sort((a, b) => b[0].localeCompare(a[0]))
+  .slice(0, 5);
+
+// Get latest news for sidebar
+const latestNews = allArticles.slice(0, 3);
+
+// Get tags (extract from article content or use categories as tags)
+const tags = Array.from(new Set(
+  allArticles.flatMap(art => {
+    const cat = reverseCategoryMap[art.category] || art.category;
+    return [cat.toLowerCase()];
+  })
+));
+---
+
+<!-- Search Widget -->
+<aside id="search-5" class="widget widget-default widget_search">
+  <div class="widget-title">
+    <h4>search</h4>
+  </div>
+  <form method="get" action="/news/">
+    <div class="search-wrapper">
+      <input placeholder="Search" type="text" class="search-input" value={searchQuery} name="s" />
+    </div>
+    <button type="submit" class="search-submit">
+      <i class="fa fa-search"></i>
+    </button>
+  </form>
+</aside>
+
+<!-- Categories Widget -->
+<aside id="categories-2" class="widget widget-default widget_categories">
+  <div class="widget-title">
+    <h4>Categories</h4>
+  </div>
+  <ul>
+    {Object.entries(categoryCounts).map(([cat, count]) => (
+      <li class="cat-item">
+        <a href={`/news?category=${cat}`}>
+          <span>{cat}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</aside>
+
+<!-- Archives Widget -->
+<aside id="archives-2" class="widget widget-default widget_archive">
+  <div class="widget-title">
+    <h4>Archives</h4>
+  </div>
+  <ul>
+    {archivesList.map(([key, archive]) => (
+      <li>
+        <a href={archive.url}>{archive.label}</a>
+      </li>
+    ))}
+  </ul>
+</aside>
+
+{showTags && (
+  <!-- Tags Widget -->
+  <aside id="tag_cloud-2" class="widget widget-default widget_tag_cloud">
+    <div class="widget-title">
+      <h4>Tags</h4>
+    </div>
+    <div class="tagcloud">
+      {tags.map((tag, index) => (
+        <a href={`/news?category=${tag}`} class={`tag-cloud-link tag-link-${index + 1} tag-link-position-${index + 1}`} style="font-size: 8pt;">
+          {tag}
+        </a>
+      ))}
+    </div>
+  </aside>
+)}
+
+<!-- Latest News Widget -->
+<aside id="stm_recent_posts-2" class="widget widget-default widget_stm_recent_posts">
+  <div class="widget-title">
+    <h4>Latest news</h4>
+  </div>
+  {latestNews.map((news) => {
+    const newsDate = news.publishedAt
+      ? new Date(news.publishedAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : null;
+    return (
+      <div class="widget_media clearfix">
+        <a href={`/news/${news.slug}`}>
+          {news.image && (
+            <div class="image">
+              <img 
+                width="150" 
+                height="150" 
+                src={news.image} 
+                class="img-responsive wp-post-image" 
+                alt={news.title} 
+                decoding="async"
+              />
+            </div>
+          )}
+          <div class="stm-post-content">
+            {newsDate && (
+              <div class="date normal_font">{newsDate}</div>
+            )}
+            <span class="h5">{news.title}</span>
+          </div>
+        </a>
+      </div>
+    );
+  })}
+</aside>
+
+{showInstagram && (
+  <!-- Instagram Widget -->
+  <aside id="text-3" class="widget widget-default widget_text">
+    <div class="widget-title">
+      <h4>Instagram</h4>
+    </div>
+    <div class="textwidget">
+      <!-- Instagram feed can be added here -->
+    </div>
+  </aside>
+)}
+
+<style>
+  /* Sidebar Styles */
+  .widget {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .widget:last-child {
+    border-bottom: none;
+  }
+
+  .widget-title h4 {
+    font-family: 'Teko', sans-serif;
+    font-size: 20px;
+    line-height: 24px;
+    color: #dd3333;
+    margin: 0 0 1rem 0;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .widget_search form {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .search-wrapper {
+    flex: 1;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: 'Rubik', sans-serif;
+  }
+
+  .search-submit {
+    padding: 0.5rem 1rem;
+    background: #dd3333;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .search-submit:hover {
+    background: #b82828;
+  }
+
+  .widget_categories ul,
+  .widget_archive ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .widget_categories li,
+  .widget_archive li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .widget_categories li:last-child,
+  .widget_archive li:last-child {
+    border-bottom: none;
+  }
+
+  .widget_categories a,
+  .widget_archive a {
+    color: #666;
+    text-decoration: none;
+    font-size: 14px;
+    font-family: 'Rubik', sans-serif;
+  }
+
+  .widget_categories a:hover,
+  .widget_archive a:hover {
+    color: #dd3333;
+  }
+
+  .tagcloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .tag-cloud-link {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #f0f0f0;
+    color: #666;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Rubik', sans-serif;
+    transition: all 0.2s ease;
+  }
+
+  .tag-cloud-link:hover {
+    background: #dd3333;
+    color: #fff;
+  }
+
+  .widget_stm_recent_posts .widget_media {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .widget_stm_recent_posts .widget_media:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .widget_stm_recent_posts .widget_media a {
+    display: flex;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .widget_stm_recent_posts .image {
+    flex-shrink: 0;
+    width: 150px;
+    height: 150px;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+
+  .widget_stm_recent_posts .image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .widget_stm_recent_posts .stm-post-content {
+    flex: 1;
+  }
+
+  .widget_stm_recent_posts .date {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 0.5rem;
+    font-family: 'Rubik', sans-serif;
+  }
+
+  .widget_stm_recent_posts .h5 {
+    font-family: 'Teko', sans-serif;
+    font-size: 18px;
+    line-height: 22px;
+    color: #333;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .widget_stm_recent_posts .h5:hover {
+    color: #dd3333;
+  }
+
+  @media (max-width: 768px) {
+    .widget_stm_recent_posts .widget_media {
+      flex-direction: column;
+    }
+
+    .widget_stm_recent_posts .image {
+      width: 100%;
+      height: auto;
+    }
+  }
+</style>
+

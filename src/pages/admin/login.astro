@@ -1,0 +1,84 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import LoginForm from '../../features/cms/components/LoginForm';
+import { checkAuth } from '../../features/cms/lib/auth-astro';
+
+// If already logged in, redirect to dashboard
+try {
+  const user = await checkAuth(Astro.request);
+  if (user) {
+    return Astro.redirect('/admin', 302);
+  }
+} catch (error) {
+  // Continue to login page if auth check fails
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Elevate Ballers CMS</title>
+  
+  <!-- Website Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600">
+  <link rel="stylesheet" href="/css/fontawesome.min.css">
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/images/Elevate_Icon-32x32.png" sizes="32x32">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      background-color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: #363f48;
+    }
+    
+    h1, h2, h3, h4, h5, h6, .heading-font {
+      font-family: 'Teko', sans-serif;
+      color: #dd3333 !important;
+    }
+    
+    .login-wrapper {
+      width: 100%;
+      max-width: 450px;
+    }
+    
+    .login-card {
+      background: #ffffff;
+      border-radius: 3px;
+      padding: 3rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+    
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 2rem 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <LoginForm client:load />
+  </div>
+</body>
+</html>

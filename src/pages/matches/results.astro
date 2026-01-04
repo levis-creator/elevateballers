@@ -1,0 +1,81 @@
+---
+import Layout from "../layouts/Layout.astro";
+import TopBar from "../features/layout/components/TopBar.astro";
+import Header from "../features/layout/components/Header.astro";
+import MobileMenu from "../features/layout/components/MobileMenu";
+import Footer from "../features/layout/components/Footer.astro";
+import Spacing from "../shared/components/ui/Spacing.astro";
+import { getCompletedMatches } from "../features/matches/lib/queries";
+import MatchList from "../features/matches/components/MatchList";
+
+export const prerender = false;
+
+// Fetch completed matches from database
+const matches = await getCompletedMatches();
+---
+
+<Layout>
+  <div id="wrapper">
+    <TopBar />
+    <Header />
+    <MobileMenu client:load />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      ></div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-results-header"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+
+                  <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">
+                    MATCH RESULTS
+                  </h2>
+
+                  <MatchList 
+                    client:load 
+                    matches={matches}
+                    showFilters={true}
+                    showLeague={true}
+                    onMatchClick={(match) => {
+                      window.location.href = `/matches/${match.id}`;
+                    }}
+                  />
+
+                  <Spacing
+                    id="stm-spacing-results-footer"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+  </div>
+</Layout>
+
+<style>
+  .heading-font {
+    font-size: 40px;
+    line-height: 44px;
+    margin-bottom: 50px;
+    color: #dd3333 !important;
+  }
+</style>
+

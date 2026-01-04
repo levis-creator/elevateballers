@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../features/cms/components/AdminLayout.astro';
+import Dashboard from '../../features/cms/components/Dashboard';
+import { checkAuth } from '../../features/cms/lib/auth-astro';
+
+// Check authentication
+const user = await checkAuth(Astro.request);
+if (!user) {
+  return Astro.redirect('/admin/login', 302);
+}
+---
+
+<AdminLayout title="CMS Dashboard">
+  <Dashboard client:load />
+</AdminLayout>
+

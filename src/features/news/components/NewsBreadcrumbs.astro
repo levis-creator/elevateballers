@@ -1,0 +1,55 @@
+---
+interface Props {
+  items: Array<{ label: string; url?: string }>;
+}
+
+const { items } = Astro.props;
+---
+
+<div class="stm-breadcrumbs-unit normal_font">
+  <div class="container">
+    <div class="navxtBreads">
+      {items.map((item, index) => (
+        <>
+          {index > 0 && <span> &gt; </span>}
+          {item.url ? (
+            <span>
+              <a href={item.url} class={index === items.length - 1 ? 'current-item' : ''}>
+                <span>{item.label}</span>
+              </a>
+            </span>
+          ) : (
+            <span class="post post-post current-item">{item.label}</span>
+          )}
+        </>
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .stm-breadcrumbs-unit {
+    margin-bottom: 1rem;
+    padding-top: 1rem;
+  }
+
+  .navxtBreads {
+    font-size: 14px;
+    color: #666;
+    font-family: 'Rubik', sans-serif;
+  }
+
+  .navxtBreads a {
+    color: #666;
+    text-decoration: none;
+  }
+
+  .navxtBreads a:hover {
+    color: #dd3333;
+  }
+
+  .navxtBreads .current-item {
+    color: #333;
+  }
+</style>
+

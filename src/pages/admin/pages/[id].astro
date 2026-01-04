@@ -1,0 +1,18 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+export async function getStaticPaths() {
+  return [];
+}
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import PageContentEditor from '../../../features/cms/components/PageContentEditor';
+
+const { id } = Astro.params;
+---
+
+<AdminLayout title="Edit Page - Admin">
+  <PageContentEditor pageId={id} client:load />
+</AdminLayout>
+

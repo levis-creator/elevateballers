@@ -1,0 +1,115 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TopBar from "../../features/layout/components/TopBar.astro";
+import Header from "../../features/layout/components/Header.astro";
+import MobileMenu from "../../features/layout/components/MobileMenu";
+import Footer from "../../features/layout/components/Footer.astro";
+import Spacing from "../../shared/components/ui/Spacing.astro";
+import { getMatchById } from "../../features/cms/lib/queries";
+import MatchDetail from "../../features/matches/components/MatchDetail";
+import type { Match } from "@prisma/client";
+
+export const prerender = false;
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect("/matches");
+}
+
+// Fetch match from database
+const match: Match | null = await getMatchById(id);
+
+if (!match) {
+  return Astro.redirect("/matches");
+}
+---
+
+<Layout>
+  <div id="wrapper">
+    <TopBar />
+    <Header />
+    <MobileMenu client:load />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      ></div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-match-header"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+
+                  <div style="max-width: 800px; margin: 0 auto;">
+                    <MatchDetail client:load match={match} />
+                  </div>
+
+                  <div style="text-align: center; margin-top: 2rem;">
+                    <a href="/upcoming-fixtures" class="btn btn-primary" data-astro-prefetch>
+                      View All Fixtures
+                    </a>
+                    <a href="/matches/results" class="btn btn-secondary" data-astro-prefetch style="margin-left: 1rem;">
+                      View Results
+                    </a>
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-match-footer"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+  </div>
+</Layout>
+
+<style>
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background-color: #dd3333;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #c02929;
+  }
+
+  .btn-secondary {
+    background-color: #64748b;
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background-color: #475569;
+  }
+</style>
+

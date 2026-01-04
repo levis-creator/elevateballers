@@ -1,0 +1,87 @@
+---
+import type { TeamPlayer } from "../data/teamData";
+
+/**
+ * TeamPlayerTable component
+ * Displays team players in a statistics table format matching the players page design
+ */
+interface Props {
+  players: TeamPlayer[];
+}
+
+const { players } = Astro.props;
+
+/**
+ * Format a number to one decimal place, or "-" if zero
+ */
+function formatStat(value: number): string {
+  return value === 0 ? "-" : value.toFixed(1);
+}
+
+/**
+ * Format a percentage to one decimal place, or "-" if zero
+ */
+function formatPercent(value: number): string {
+  return value === 0 ? "-" : value.toFixed(1);
+}
+---
+
+<div class="sp-template sp-template-player-list">
+  <div class="sp-table-wrapper">
+    <table class="sp-player-list sp-data-table">
+      <thead>
+        <tr>
+          <th class="data-name">Player</th>
+          <th class="data-position">Position</th>
+          <th class="data-height">Height</th>
+          <th class="data-weight">Weight</th>
+          <th class="data-fg">FG%</th>
+          <th class="data-ft">FT%</th>
+          <th class="data-3p">3P%</th>
+          <th class="data-rpg">RPG</th>
+          <th class="data-apg">APG</th>
+          <th class="data-spg">SPG</th>
+          <th class="data-bpg">BPG</th>
+          <th class="data-ppg">PPG</th>
+          <th class="data-eff">EFF</th>
+        </tr>
+      </thead>
+      <tbody>
+        {players.length > 0 ? (
+          players.map((player) => (
+            <tr>
+              <td class="data-name">
+                {player.url ? (
+                  <a href={player.url} class="sp-player-name">
+                    {player.name}
+                  </a>
+                ) : (
+                  <span class="sp-player-name">{player.name}</span>
+                )}
+              </td>
+              <td class="data-position">{player.position}</td>
+              <td class="data-height">{player.height}</td>
+              <td class="data-weight">{player.weight}</td>
+              <td class="data-fg">{formatPercent(player.fgPercent)}</td>
+              <td class="data-ft">{formatPercent(player.ftPercent)}</td>
+              <td class="data-3p">{formatPercent(player.threePointPercent)}</td>
+              <td class="data-rpg">{formatStat(player.rpg)}</td>
+              <td class="data-apg">{formatStat(player.apg)}</td>
+              <td class="data-spg">{formatStat(player.spg)}</td>
+              <td class="data-bpg">{formatStat(player.bpg)}</td>
+              <td class="data-ppg">{formatStat(player.ppg)}</td>
+              <td class="data-eff">{formatStat(player.eff)}</td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colspan="13" class="data-name" style="text-align: center; padding: 20px;">
+              No players data available. Please add player data to <code>src/features/team/data/teamData.ts</code>
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+

@@ -1,0 +1,118 @@
+/* stm-post-meta-bottom styles */
+.stm-post-meta-bottom {
+  box-sizing: border-box;
+  margin-bottom: 38px;
+  text-transform: uppercase;
+  color: #a4a4a4 !important;
+  font-weight: 700;
+  font-family: Rubik;
+  font-size: 14px;
+  line-height: 20px;
+  border-bottom: none;
+}
+
+.stm_post_tags {
+  /* Empty tags container */
+}
+
+.stm-share-this-wrapp {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stm-share-this-wrapp > span:first-child {
+  text-transform: lowercase;
+  color: #a4a4a4;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.stm-share-btn-wrapp {
+  display: inline-block;
+}
+
+/* AddToAny styles */
+.addtoany_share_save_container {
+  display: inline-block;
+}
+
+.a2a_kit {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.a2a_button_facebook,
+.a2a_button_mastodon,
+.a2a_button_email,
+.a2a_dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #fff;
+  font-size: 14px;
+  transition: opacity 0.2s;
+  line-height: 32px;
+}
+
+.a2a_button_facebook:hover,
+.a2a_button_mastodon:hover,
+.a2a_button_email:hover,
+.a2a_dd:hover {
+  opacity: 0.9;
+}
+
+.a2a_svg {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.a2a_svg svg {
+  width: 20px;
+  height: 20px;
+  stroke: #fff;
+  fill: none;
+}
+
+.a2a_label {
+  font-size: 14px;
+  color: #fff;
+}
+
+.a2a_s_facebook {
+  background-color: rgb(8, 102, 255) !important;
+}
+
+.a2a_s_mastodon {
+  background-color: rgb(99, 100, 255) !important;
+}
+
+.a2a_s_email {
+  background-color: rgb(136, 137, 144) !important;
+}
+
+.a2a_s_a2a {
+  background-color: rgb(1, 102, 255) !important;
+}
+
+@media (max-width: 768px) {
+  .stm-share-this-wrapp {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .a2a_kit {
+    flex-wrap: wrap;
+  }
+}
+
