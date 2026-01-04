@@ -5,6 +5,7 @@ import Header from "../features/layout/components/Header.astro";
 import MobileMenu from "../features/layout/components/MobileMenu";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
+import LeagueRegistrationForm from "../features/registration/components/LeagueRegistrationForm";
 ---
 
 <Layout>
@@ -38,107 +39,12 @@ import Spacing from "../shared/components/ui/Spacing.astro";
                   <div class="registration-content" style="max-width: 800px; margin: 0 auto;">
                     <div class="normal_font" style="line-height: 1.8; color: #363f48; margin-bottom: 40px; text-align: center;">
                       <p style="margin-bottom: 20px; font-size: 16px;">
-                        Register your team for the 2026 Elevate Ballers League season.
+                        Register your team or yourself as a player for the 2026 Elevate Ballers League season.
                       </p>
                     </div>
 
                     <div class="registration-form-wrapper">
-                      <form class="registration-form" method="post" action="#">
-                        <h3 class="heading-font" style="color: #dd3333; margin-bottom: 20px; font-size: 24px; text-align: center;">
-                          Team Registration Form
-                        </h3>
-                        
-                        <div style="margin-bottom: 20px;">
-                          <label style="display: block; margin-bottom: 8px; color: #363f48; font-weight: 600;">
-                            Team Name <span style="color: #dd3333;">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="team_name"
-                            placeholder="Enter team name"
-                            required
-                            style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                          />
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                          <label style="display: block; margin-bottom: 8px; color: #363f48; font-weight: 600;">
-                            Coach Name <span style="color: #dd3333;">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="coach_name"
-                            placeholder="Enter coach name"
-                            required
-                            style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                          />
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                          <label style="display: block; margin-bottom: 8px; color: #363f48; font-weight: 600;">
-                            Contact Email <span style="color: #dd3333;">*</span>
-                          </label>
-                          <input
-                            type="email"
-                            name="contact_email"
-                            placeholder="Enter contact email"
-                            required
-                            style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                          />
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                          <label style="display: block; margin-bottom: 8px; color: #363f48; font-weight: 600;">
-                            Contact Phone <span style="color: #dd3333;">*</span>
-                          </label>
-                          <input
-                            type="tel"
-                            name="contact_phone"
-                            placeholder="Enter contact phone"
-                            required
-                            style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                          />
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                          <label style="display: block; margin-bottom: 8px; color: #363f48; font-weight: 600;">
-                            League Category
-                          </label>
-                          <select
-                            name="league_category"
-                            style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                          >
-                            <option value="">Select League Category</option>
-                            <option value="ballers-league">Ballers League</option>
-                            <option value="junior-ballers">Junior Ballers</option>
-                            <option value="senior-ballers">Senior Ballers</option>
-                            <option value="womens-league">Women's League</option>
-                            <option value="veterans">Veterans</option>
-                          </select>
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                          <label style="display: block; margin-bottom: 8px; color: #363f48; font-weight: 600;">
-                            Additional Information
-                          </label>
-                          <textarea
-                            name="additional_info"
-                            placeholder="Any additional information about your team"
-                            rows="5"
-                            style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px; resize: vertical;"
-                          ></textarea>
-                        </div>
-
-                        <div style="text-align: center; margin-top: 30px;">
-                          <button
-                            type="submit"
-                            class="button btn-primary btn-lg btn-style-2"
-                            style="background-color: #dd3333; color: #fff; border: none; padding: 15px 40px; font-family: Teko; font-size: 18px; text-transform: uppercase; cursor: pointer; border-radius: 3px;"
-                          >
-                            Submit Registration
-                          </button>
-                        </div>
-                      </form>
+                      <LeagueRegistrationForm client:load />
                     </div>
                   </div>
 
@@ -223,6 +129,16 @@ import Spacing from "../shared/components/ui/Spacing.astro";
       scroll-behavior: smooth;
     }
 
+    /* Make footer static so it scrolls with the page */
+    .stm-footer {
+      position: static !important;
+    }
+
+    /* Remove extra padding since footer is no longer fixed */
+    #main {
+      padding-bottom: 0;
+    }
+
     /* Registration page specific styles */
     .wpb_wrapper h2.heading-font {
       font-size: 40px;
@@ -245,6 +161,17 @@ import Spacing from "../shared/components/ui/Spacing.astro";
 
     .registration-form label {
       font-family: Rubik;
+    }
+
+    /* Responsive styles for form grid layouts */
+    @media (max-width: 767px) {
+      .registration-form [style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+      
+      #main {
+        padding-bottom: 0;
+      }
     }
   </style>
 
