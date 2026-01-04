@@ -1,0 +1,23 @@
+---
+/**
+ * FeatureGate Astro Component
+ * 
+ * Server-side component that conditionally renders children based on feature flag status.
+ * This is more efficient for server-rendered content as it doesn't require client-side JavaScript.
+ */
+
+import { isFeatureEnabled } from '../lib/feature-flags';
+import type { FeatureFlag } from '../lib/feature-flags';
+
+interface Props {
+  feature: FeatureFlag;
+  fallback?: any;
+}
+
+const { feature, fallback = null } = Astro.props;
+const isEnabled = isFeatureEnabled(feature);
+---
+
+{isEnabled && <slot />}
+{!isEnabled && fallback}
+

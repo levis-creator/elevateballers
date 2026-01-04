@@ -147,6 +147,49 @@ The site will be available at `http://localhost:4321`
 | `npm run preview` | Preview production build locally |
 | `npm run astro` | Run Astro CLI commands |
 
+## 🎛️ Feature Flags
+
+The application includes a comprehensive feature flags system that allows you to enable or disable modules and features without modifying code.
+
+### Quick Start
+
+Control features via environment variables in `.env`:
+
+```bash
+# Disable specific features
+FEATURE_FLAG_HOME_POST_SLIDER=false
+FEATURE_FLAG_HOME_NEWS_TICKER=false
+
+# Disable entire modules
+FEATURE_FLAG_MODULE_MEDIA=false
+FEATURE_FLAG_MODULE_REGISTRATION=false
+```
+
+### Usage
+
+**Server-Side (Astro):**
+```astro
+---
+import FeatureGate from "../components/FeatureGate.astro";
+---
+
+<FeatureGate feature="home.postSlider">
+  <PostSlider client:load />
+</FeatureGate>
+```
+
+**Client-Side (React):**
+```tsx
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
+
+function MyComponent() {
+  const isEnabled = useFeatureFlag('home.postSlider');
+  return isEnabled ? <PostSlider /> : null;
+}
+```
+
+For complete documentation, see [Feature Flags Documentation](./src/lib/FEATURE_FLAGS.md).
+
 ## 💻 Development Guidelines
 
 ### Code Organization Principles

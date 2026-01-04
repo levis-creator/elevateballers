@@ -13,59 +13,74 @@ import NextMatchCarousel from "../features/home/components/NextMatchCarousel";
 import LatestNews from "../features/home/components/LatestNews";
 import Sponsors from "../features/home/components/Sponsors";
 import MediaGallery from "../features/media/components/MediaGallery";
+import FeatureGate from "../components/FeatureGate.astro";
+import { isFeatureEnabled } from "../lib/feature-flags";
 ---
 
 <Layout>
   <a href="#main-content" class="skip-link">Skip to main content</a>
   
   <div id="wrapper">
-    <TopBar />
-    <Header />
-    <MobileMenu client:load />
+    {isFeatureEnabled('layout.topbar') && <TopBar />}
+    {isFeatureEnabled('layout.header') && <Header />}
+    {isFeatureEnabled('layout.mobileMenu') && <MobileMenu client:load />}
     
     <main id="main" role="main">
       <!-- Hero Section: Post Slider -->
-      <section class="hero-section" aria-label="Featured content">
-        <div class="container">
-          <PostSlider client:load />
-        </div>
-      </section>
+      <FeatureGate feature="home.postSlider">
+        <section class="hero-section" aria-label="Featured content">
+          <div class="container">
+            <PostSlider client:load />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- News Ticker Section -->
-      <section class="news-ticker-section" aria-label="Latest news ticker">
-        <NewsTicker client:load />
-      </section>
+      <FeatureGate feature="home.newsTicker">
+        <section class="news-ticker-section" aria-label="Latest news ticker">
+          <NewsTicker client:load />
+        </section>
+      </FeatureGate>
 
       <!-- Marquee Matchup Section -->
-      <section class="marquee-matchup-section section" aria-label="Featured match">
-        <div class="container">
-          <MarqueeMatchup />
-        </div>
-      </section>
+      <FeatureGate feature="home.marqueeMatchup">
+        <section class="marquee-matchup-section section" aria-label="Featured match">
+          <div class="container">
+            <MarqueeMatchup />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- Next Match Carousel Section -->
-      <section class="next-match-section section" aria-label="Upcoming matches">
-        <div class="container">
-          <NextMatchCarousel client:load />
-        </div>
-      </section>
+      <FeatureGate feature="home.nextMatchCarousel">
+        <section class="next-match-section section" aria-label="Upcoming matches">
+          <div class="container">
+            <NextMatchCarousel client:load />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- Latest News Section -->
-      <section class="latest-news-section section" id="main-content" aria-label="Latest news">
-        <div class="container">
-          <LatestNews client:load />
-        </div>
-      </section>
+      <FeatureGate feature="home.latestNews">
+        <section class="latest-news-section section" id="main-content" aria-label="Latest news">
+          <div class="container">
+            <LatestNews client:load />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- Player of the Week Section -->
-      <section class="player-week-section section" aria-label="Player of the week">
-        <div class="container">
-          <PlayerOfTheWeek />
-        </div>
-      </section>
+      <FeatureGate feature="home.playerOfTheWeek">
+        <section class="player-week-section section" aria-label="Player of the week">
+          <div class="container">
+            <PlayerOfTheWeek />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- Stats Leaders Section -->
-      <section class="stats-leaders-section section" aria-label="Statistics and leaders">
+      <FeatureGate feature="home.statsLeaders">
+        <section class="stats-leaders-section section" aria-label="Statistics and leaders">
         <div class="container">
           <div class="stats-leaders-header">
             <h2 class="section-title">Stats Leaders</h2>
@@ -178,30 +193,38 @@ import MediaGallery from "../features/media/components/MediaGallery";
           </script>
         </div>
       </section>
+      </FeatureGate>
 
       <!-- Statistics Section -->
-      <section class="statistics-section section" aria-label="League statistics">
-        <div class="container">
-          <StatsSection />
-        </div>
-      </section>
+      <FeatureGate feature="home.statsSection">
+        <section class="statistics-section section" aria-label="League statistics">
+          <div class="container">
+            <StatsSection />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- Media Gallery Section -->
-      <section class="media-gallery-section section" aria-label="Media gallery">
-        <div class="container">
-          <MediaGallery client:load />
-        </div>
-      </section>
+      <FeatureGate feature="home.mediaGallery">
+        <section class="media-gallery-section section" aria-label="Media gallery">
+          <div class="container">
+            <MediaGallery client:load />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- Sponsors Section -->
-      <section class="sponsors-section section" aria-label="Our sponsors">
-        <div class="container">
-          <Sponsors client:load />
-        </div>
-      </section>
+      <FeatureGate feature="home.sponsors">
+        <section class="sponsors-section section" aria-label="Our sponsors">
+          <div class="container">
+            <Sponsors client:load />
+          </div>
+        </section>
+      </FeatureGate>
 
       <!-- Registration CTA Section -->
-      <section class="registration-cta-section section" aria-label="Join the league">
+      <FeatureGate feature="home.registrationCta">
+        <section class="registration-cta-section section" aria-label="Join the league">
         <div class="container">
           <div class="registration-cta-content">
             <h2 class="registration-title">
@@ -225,6 +248,7 @@ import MediaGallery from "../features/media/components/MediaGallery";
           </div>
         </div>
       </section>
+      </FeatureGate>
     </main>
 
     <!-- Footer Sponsors -->
@@ -235,7 +259,7 @@ import MediaGallery from "../features/media/components/MediaGallery";
     </div>
   </div>
 
-  <Footer />
+  {isFeatureEnabled('layout.footer') && <Footer />}
 
   <!-- Additional Scripts and Styles -->
   <div class="rev-close-btn" aria-hidden="true">
