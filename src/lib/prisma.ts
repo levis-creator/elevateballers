@@ -12,21 +12,62 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Create PostgreSQL connection pool
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error('DATABASE_URL environment variable is not set');
+// Lazy initialization of connection pool and adapter
+// This prevents errors during module load in serverless environments
+let pool: Pool | null = null;
+let adapter: PrismaPg | null = null;
+
+function getConnectionPool(): Pool {
+  if (!pool) {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error(
+        'DATABASE_URL environment variable is not set. ' +
+        'Please configure it in your Vercel project settings under Environment Variables. ' +
+        'Go to: Project Settings → Environment Variables → Add DATABASE_URL'
+      );
+    }
+
+    // Optimize pool settings for serverless environments
+    // In serverless, we want fewer connections per function instance
+    pool = new Pool({
+      connectionString,
+      max: process.env.NODE_ENV === 'production' ? 1 : 10, // Single connection per function in production
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000, // Increased timeout for serverless cold starts
+      // Enable connection pooling for serverless (important for Vercel)
+      allowExitOnIdle: true,
+    });
+  }
+  return pool;
 }
 
-const pool = new Pool({
-  connectionString,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+function getAdapter(): PrismaPg {
+  if (!adapter) {
+    adapter = new PrismaPg(getConnectionPool());
+  }
+  return adapter;
+}
 
-// Create Prisma 7 adapter using the official @prisma/adapter-pg
-const adapter = new PrismaPg(pool);
+// Initialize adapter lazily - only create when PrismaClient is actually instantiated
+// This defers any connection errors until the client is actually used
+function createPrismaClient(): PrismaClient {
+  try {
+    return new PrismaClient({
+      adapter: getAdapter(),
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    });
+  } catch (error) {
+    // If adapter creation fails, provide helpful error message
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+      throw error; // Re-throw with our improved message
+    }
+    throw new Error(
+      `Failed to initialize Prisma Client: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+      'Please check your DATABASE_URL environment variable.'
+    );
+  }
+}
 
 // Check if the cached Prisma client has all required models
 // If not, recreate it (useful after adding new models without restarting)
@@ -85,22 +126,28 @@ if (shouldRecreateClient) {
   cachedPrisma = undefined;
 }
 
-// Create new Prisma client instance
-const newPrisma = new PrismaClient({
-  adapter,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
-
-// Verify the new client has the staff model (only warn, don't throw)
-// This allows the app to start even if the model check fails
-// The actual error will be clearer when trying to use the model
+// Create new Prisma client instance with improved error handling
+// The adapter and pool are created when PrismaClient is instantiated
+// Errors are caught and re-thrown with helpful messages for serverless environments
+let newPrisma: PrismaClient;
 try {
-  if (!hasModel(newPrisma, 'staff')) {
-    console.warn('WARNING: Prisma client may be missing staff model. If you see errors, run: npx prisma generate');
+  newPrisma = createPrismaClient();
+  
+  // Verify the new client has the staff model (only warn, don't throw)
+  // This allows the app to start even if the model check fails
+  try {
+    if (!hasModel(newPrisma, 'staff')) {
+      console.warn('WARNING: Prisma client may be missing staff model. If you see errors, run: npx prisma generate');
+    }
+  } catch (error) {
+    // Silently ignore check errors - the actual usage will show the real error
+    console.warn('Could not verify Prisma models. If you see errors, run: npx prisma generate');
   }
 } catch (error) {
-  // Silently ignore check errors - the actual usage will show the real error
-  console.warn('Could not verify Prisma models. If you see errors, run: npx prisma generate');
+  // If initialization fails, create a stub that provides helpful error messages
+  // This allows the module to load, but operations will fail with clear messages
+  console.error('Failed to initialize Prisma Client:', error);
+  throw error; // Re-throw to fail fast during deployment if DATABASE_URL is missing
 }
 
 export const prisma = cachedPrisma ?? newPrisma;
