@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
-import { getMatchEventById } from '../../../../../../features/cms/lib/queries';
-import { updateMatchEvent, deleteMatchEvent } from '../../../../../../features/cms/lib/mutations';
-import { requireAuth } from '../../../../../../features/cms/lib/auth';
+import { getMatchEventById } from '@/features/cms/lib/queries';
+import { updateMatchEvent, deleteMatchEvent } from '@/features/cms/lib/mutations';
+import { requireAuth } from '@/features/cms/lib/auth';
 
 export const GET: APIRoute = async ({ params }) => {
   const id = params.id;
