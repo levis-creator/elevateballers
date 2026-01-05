@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, X, Activity, Target, Square as CardIcon, Users, Clock, AlertCircle, Basketball, Shield } from 'lucide-react';
+import { Plus, X, Activity, Target, Square as CardIcon, Users, Clock, AlertCircle, Circle, Shield } from 'lucide-react';
 
 interface MatchEventsManagerProps {
   matchId: string;
@@ -40,8 +40,8 @@ const EVENT_TYPES: { value: MatchEventType; label: string; icon: any }[] = [
   { value: 'FREE_THROW_MADE', label: 'Free Throw Made', icon: Target },
   { value: 'FREE_THROW_MISSED', label: 'Free Throw Missed', icon: Target },
   { value: 'ASSIST', label: 'Assist', icon: Activity },
-  { value: 'REBOUND_OFFENSIVE', label: 'Offensive Rebound', icon: Basketball },
-  { value: 'REBOUND_DEFENSIVE', label: 'Defensive Rebound', icon: Basketball },
+  { value: 'REBOUND_OFFENSIVE', label: 'Offensive Rebound', icon: Circle },
+  { value: 'REBOUND_DEFENSIVE', label: 'Defensive Rebound', icon: Circle },
   { value: 'STEAL', label: 'Steal', icon: Shield },
   { value: 'BLOCK', label: 'Block', icon: Shield },
   { value: 'TURNOVER', label: 'Turnover', icon: Activity },

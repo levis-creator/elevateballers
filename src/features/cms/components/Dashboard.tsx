@@ -60,6 +60,9 @@ export default function Dashboard() {
     Bolt?: ComponentType<any>;
     ChevronRight?: ComponentType<any>;
     AlertCircle?: ComponentType<any>;
+    Bell?: ComponentType<any>;
+    UserPlus?: ComponentType<any>;
+    Link?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -77,7 +80,6 @@ export default function Dashboard() {
         ChevronRight: mod.ChevronRight,
         AlertCircle: mod.AlertCircle,
         Bell: mod.Bell,
-        Users: mod.Users,
         UserPlus: mod.UserPlus,
         Link: mod.Link,
       });
