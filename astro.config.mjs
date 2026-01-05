@@ -1,7 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import vercel from '@astrojs/vercel';
+import netlify from '@astrojs/netlify';
 import { fileURLToPath } from 'url';
 import { resolve } from 'path';
 
@@ -9,11 +9,7 @@ import { resolve } from 'path';
 export default defineConfig({
   integrations: [react()],
   output: 'server',
-  adapter: vercel({
-    webAnalytics: {
-      enabled: true,
-    },
-  }),
+  adapter: netlify(),
   vite: {
     resolve: {
       alias: {

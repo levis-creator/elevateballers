@@ -52,7 +52,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@astrojs/vercel": "^9.0.2",
+    "@astrojs/netlify": "^5.2.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.16.0",
