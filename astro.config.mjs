@@ -13,7 +13,9 @@ export default defineConfig({
     webAnalytics: {
       enabled: true,
     },
+    functionPerRoute: false,
   }),
+  trailingSlash: 'ignore',
   vite: {
     resolve: {
       alias: {
