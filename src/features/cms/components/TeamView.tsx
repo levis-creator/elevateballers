@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Edit, Users, Shield, User, FileText, Plus, Briefcase, Mail, Phone, X, Info, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Users, Shield, User, FileText, Plus, Briefcase, Mail, Phone, X, Info, AlertCircle, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 interface TeamViewProps {
   teamId: string;
@@ -51,6 +51,7 @@ export default function TeamView({ teamId }: TeamViewProps) {
   const [addStaffError, setAddStaffError] = useState('');
   const [addingStaff, setAddingStaff] = useState(false);
   const [removeStaffId, setRemoveStaffId] = useState<string | null>(null);
+  const [approving, setApproving] = useState(false);
 
   useEffect(() => {
     fetchTeam();
@@ -178,6 +179,30 @@ export default function TeamView({ teamId }: TeamViewProps) {
     }
   };
 
+  const handleApproveTeam = async (approved: boolean) => {
+    if (!team) return;
+    setApproving(true);
+    try {
+      const response = await fetch(`/api/teams/${team.id}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update approval status' }));
+        throw new Error(errorData.error || 'Failed to update approval status');
+      }
+
+      const updatedTeam = await response.json();
+      setTeam({ ...team, approved: updatedTeam.approved });
+    } catch (err: any) {
+      alert('Error updating approval status: ' + err.message);
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const getRoleLabel = (role: StaffRole | string): string => {
     const labels: Record<string, string> = {
       'COACH': 'Coach',
@@ -270,13 +295,71 @@ export default function TeamView({ teamId }: TeamViewProps) {
               )}
             </div>
             <div className="flex-1">
-              <h2 className="text-4xl font-heading font-bold mb-4 text-foreground">{team.name}</h2>
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <h2 className="text-4xl font-heading font-bold text-foreground">{team.name}</h2>
+                <div className="flex items-center gap-2">
+                  {team.approved ? (
+                    <Badge className="bg-green-500 text-white">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Approved
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Pending Approval
+                    </Badge>
+                  )}
+                </div>
+              </div>
               {team.description && (
                 <div className="flex gap-3 mt-4">
                   <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
                   <p className="text-muted-foreground leading-relaxed">{team.description}</p>
                 </div>
               )}
+              {/* Approval Actions */}
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                {team.approved ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApproveTeam(false)}
+                    disabled={approving}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    {approving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Reject Team
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => handleApproveTeam(true)}
+                    disabled={approving}
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    {approving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Approve Team
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

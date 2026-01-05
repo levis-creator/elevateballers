@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Save, X, AlertCircle, CheckCircle, Info, Loader2, User } from 'lucide-react';
+import { ArrowLeft, Save, X, AlertCircle, CheckCircle, Info, Loader2, User, XCircle } from 'lucide-react';
 
 interface PlayerEditorProps {
   playerId?: string;
@@ -26,6 +26,8 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [playerApproved, setPlayerApproved] = useState<boolean | null>(null);
+  const [approving, setApproving] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -83,6 +85,7 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
         jerseyNumber: player.jerseyNumber?.toString() || '',
         stats: player.stats ? JSON.stringify(player.stats, null, 2) : '',
       });
+      setPlayerApproved((player as any).approved ?? false);
     } catch (err: any) {
       setError(err.message || 'Failed to load player');
     } finally {
@@ -146,6 +149,30 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
     }
   };
 
+  const handleApprovePlayer = async (approved: boolean) => {
+    if (!playerId) return;
+    setApproving(true);
+    try {
+      const response = await fetch(`/api/players/${playerId}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update approval status' }));
+        throw new Error(errorData.error || 'Failed to update approval status');
+      }
+
+      const updatedPlayer = await response.json();
+      setPlayerApproved(updatedPlayer.approved);
+    } catch (err: any) {
+      alert('Error updating approval status: ' + err.message);
+    } finally {
+      setApproving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -160,14 +187,76 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-6 border-b">
-        <div>
-          <h1 className="text-3xl font-heading font-semibold mb-2 text-foreground flex items-center gap-2">
-            <User className="h-8 w-8" />
-            {playerId ? 'Edit Player' : 'Create New Player'}
-          </h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-heading font-semibold text-foreground flex items-center gap-2">
+              <User className="h-8 w-8" />
+              {playerId ? 'Edit Player' : 'Create New Player'}
+            </h1>
+            {playerId && playerApproved !== null && (
+              <div className="flex items-center gap-2">
+                {playerApproved ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 text-green-800 text-sm font-medium">
+                    <CheckCircle className="h-3 w-3" />
+                    Approved
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-800 text-sm font-medium">
+                    <XCircle className="h-3 w-3" />
+                    Pending Approval
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
           <p className="text-muted-foreground">
             {playerId ? 'Update player details and information' : 'Add a new player to your organization'}
           </p>
+          {/* Approval Actions */}
+          {playerId && playerApproved !== null && (
+            <div className="flex items-center gap-2 mt-3">
+              {playerApproved ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleApprovePlayer(false)}
+                  disabled={approving}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  {approving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Reject Player
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => handleApprovePlayer(true)}
+                  disabled={approving}
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                  {approving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Approve Player
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
         <Button variant="outline" asChild>
           <a href="/admin/players" data-astro-prefetch>
