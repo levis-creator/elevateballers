@@ -1,6 +1,6 @@
-import { k as getMatchPlayerById } from '../../../../../chunks/queries_vvMOn9ut.mjs';
-import { j as updateMatchPlayer, k as deleteMatchPlayer } from '../../../../../chunks/mutations_CnOGsUyk.mjs';
-import { a as requireAuth } from '../../../../../chunks/auth_DQR-8pbN.mjs';
+import { k as getMatchPlayerById } from '../../../../../chunks/queries_E6Jl_Myi.mjs';
+import { j as updateMatchPlayer, k as deleteMatchPlayer } from '../../../../../chunks/mutations_BV82jF-A.mjs';
+import { a as requireAuth } from '../../../../../chunks/auth_CrN9ezVw.mjs';
 export { renderers } from '../../../../../renderers.mjs';
 
 const GET = async ({ params }) => {

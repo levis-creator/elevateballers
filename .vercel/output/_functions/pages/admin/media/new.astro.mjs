@@ -1,7 +1,7 @@
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../../chunks/astro/server_c8H0H61q.mjs';
 import 'piccolore';
-import { $ as $$AdminLayout } from '../../../chunks/AdminLayout_CR5Hf1uL.mjs';
-import { M as MediaEditor } from '../../../chunks/MediaEditor_Dng1hm0x.mjs';
+import { $ as $$AdminLayout } from '../../../chunks/AdminLayout_C6oIy3vZ.mjs';
+import { M as MediaEditor } from '../../../chunks/MediaEditor_CrISbhjm.mjs';
 export { renderers } from '../../../renderers.mjs';
 
 const prerender = false;

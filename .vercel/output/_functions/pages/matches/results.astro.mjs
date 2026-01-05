@@ -3,7 +3,7 @@ import 'piccolore';
 import { $ as $$Layout } from '../../chunks/Layout_0fak_qL3.mjs';
 import { P as PageLoader, b as $$TopBar, a as $$Header, M as MobileMenu, $ as $$Footer } from '../../chunks/PageLoader_D_5s45Mo.mjs';
 import { $ as $$Spacing } from '../../chunks/Spacing_BPc02AQQ.mjs';
-import { a as getCompletedMatches } from '../../chunks/queries_WVd1Mo-o.mjs';
+import { a as getCompletedMatches } from '../../chunks/queries_DUy-FH4c.mjs';
 import { jsxs, jsx } from 'react/jsx-runtime';
 import { useState, useEffect } from 'react';
 import { g as getMatchStatusColor, a as getMatchStatusLabel, f as formatMatchDate, b as formatMatchTime } from '../../chunks/utils_D-DJdZHD.mjs';

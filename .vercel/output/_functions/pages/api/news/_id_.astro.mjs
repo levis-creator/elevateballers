@@ -1,8 +1,8 @@
-import { g as getNewsArticleById } from '../../../chunks/queries_vvMOn9ut.mjs';
-import { t as updateNewsArticle, v as deleteNewsArticle } from '../../../chunks/mutations_CnOGsUyk.mjs';
-import { r as requireAdmin } from '../../../chunks/auth_DQR-8pbN.mjs';
+import { g as getNewsArticleById } from '../../../chunks/queries_E6Jl_Myi.mjs';
+import { t as updateNewsArticle, v as deleteNewsArticle } from '../../../chunks/mutations_BV82jF-A.mjs';
+import { r as requireAdmin } from '../../../chunks/auth_CrN9ezVw.mjs';
 import { c as categoryMap } from '../../../chunks/types_DXfYTmyI.mjs';
-import { p as prisma } from '../../../chunks/prisma_sB1uhqJV.mjs';
+import { p as prisma } from '../../../chunks/prisma_Cvn-nyRW.mjs';
 import { g as generateSlug } from '../../../chunks/utils_AjT2vheH.mjs';
 export { renderers } from '../../../renderers.mjs';
 
