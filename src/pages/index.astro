@@ -15,9 +15,11 @@ import Sponsors from "../features/home/components/Sponsors";
 import MediaGallery from "../features/media/components/MediaGallery";
 import FeatureGate from "../components/FeatureGate.astro";
 import { isFeatureEnabled } from "../lib/feature-flags";
+import PageLoader from "../components/PageLoader";
 ---
 
 <Layout>
+  <PageLoader client:load />
   <a href="#main-content" class="skip-link">Skip to main content</a>
   
   <div id="wrapper">
@@ -251,15 +253,12 @@ import { isFeatureEnabled } from "../lib/feature-flags";
       </FeatureGate>
     </main>
 
-    <!-- Footer Sponsors -->
-    <div class="footer-sponsors" role="complementary" aria-label="Footer sponsors">
-      <div class="sportspress">
-        <div class="sp-sponsors"></div>
-      </div>
+    {isFeatureEnabled('layout.footer') && <Footer />}
+
+    <div class="sp-footer-sponsors">
+      <div class="sportspress"><div class="sp-sponsors"></div></div>
     </div>
   </div>
-
-  {isFeatureEnabled('layout.footer') && <Footer />}
 
   <!-- Additional Scripts and Styles -->
   <div class="rev-close-btn" aria-hidden="true">
@@ -452,14 +451,12 @@ import { isFeatureEnabled } from "../lib/feature-flags";
       color: rgba(255, 255, 255, 0.9);
     }
 
-    .footer-sponsors {
-      background: var(--color-gray-100, #f4f4f4);
-      color: var(--color-gray-800, #363f48);
-      padding: var(--spacing-6, 1.5rem) 0;
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
     }
-
-    .footer-sponsors .sp-sponsors .sp-sponsors-title {
-      color: var(--color-gray-800, #363f48);
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
     }
 
     /* Responsive Adjustments */

@@ -8,6 +8,7 @@ import MobileMenu from '../../features/layout/components/MobileMenu';
 import Footer from '../../features/layout/components/Footer.astro';
 import { getTeamBySlug, getStaffByTeam } from '../../features/cms/lib/queries';
 import Spacing from '../../shared/components/ui/Spacing.astro';
+import PageLoader from '../../components/PageLoader';
 
 const { slug } = Astro.params;
 if (!slug) {
@@ -133,6 +134,7 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
     ]
   })} />
   
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
@@ -340,16 +342,13 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
         </section>
       </div>
     </div>
-
-    <!-- Footer Sponsors -->
-    <div class="footer-sponsors" role="complementary" aria-label="Footer sponsors">
-      <div class="sportspress">
-        <div class="sp-sponsors"></div>
-      </div>
-    </div>
   </div>
 
   <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
 
   <!-- Additional Scripts and Styles -->
   <div class="rev-close-btn" aria-hidden="true">
@@ -744,14 +743,12 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
       color: #dd3333;
     }
 
-    .footer-sponsors {
-      background: var(--color-gray-100, #f4f4f4);
-      color: var(--color-gray-800, #363f48);
-      padding: var(--spacing-6, 1.5rem) 0;
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
     }
-
-    .footer-sponsors .sp-sponsors .sp-sponsors-title {
-      color: var(--color-gray-800, #363f48);
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
     }
 
     /* Responsive Styles */

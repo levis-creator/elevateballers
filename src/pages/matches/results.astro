@@ -7,14 +7,25 @@ import Footer from "../../features/layout/components/Footer.astro";
 import Spacing from "../../shared/components/ui/Spacing.astro";
 import { getCompletedMatches } from "../../features/matches/lib/queries";
 import MatchList from "../../features/matches/components/MatchList";
+import PageLoader from "../../components/PageLoader";
+import ContentLoader from "../../components/ContentLoader";
+import type { MatchWithTeamsAndLeagueAndSeason } from "../../features/cms/types";
 
 export const prerender = false;
 
 // Fetch completed matches from database
-const matches = await getCompletedMatches();
+let matches: MatchWithTeamsAndLeagueAndSeason[] = [];
+let hasError = false;
+try {
+  matches = await getCompletedMatches();
+} catch (error) {
+  console.error('Error fetching match results:', error);
+  hasError = true;
+}
 ---
 
 <Layout>
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
@@ -42,7 +53,10 @@ const matches = await getCompletedMatches();
                     MATCH RESULTS
                   </h2>
 
-                  <MatchList 
+                  {hasError ? (
+                    <ContentLoader client:load message="Failed to load match results. Please try again later." />
+                  ) : (
+                    <MatchList 
                     client:load 
                     matches={matches}
                     showFilters={true}
@@ -51,6 +65,7 @@ const matches = await getCompletedMatches();
                       window.location.href = `/matches/${match.id}`;
                     }}
                   />
+                  )}
 
                   <Spacing
                     id="stm-spacing-results-footer"
@@ -66,11 +81,24 @@ const matches = await getCompletedMatches();
         </section>
       </div>
     </div>
-    <Footer />
+  </div>
+
+  <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
   </div>
 </Layout>
 
-<style>
+<style is:inline type="text/css">
+  .sp-footer-sponsors {
+    background: #f4f4f4;
+    color: #363f48;
+  }
+  .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+    color: #363f48;
+  }
+
   .heading-font {
     font-size: 40px;
     line-height: 44px;

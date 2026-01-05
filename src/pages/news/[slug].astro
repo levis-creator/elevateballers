@@ -12,6 +12,7 @@ import CommentsList from '../../features/comments/components/CommentsList';
 import { prisma } from '../../lib/prisma';
 import NewsSidebar from '../../features/news/components/NewsSidebar.astro';
 import NewsBreadcrumbs from '../../features/news/components/NewsBreadcrumbs.astro';
+import PageLoader from '../../components/PageLoader';
 
 const { slug } = Astro.params;
 if (!slug) {
@@ -167,6 +168,7 @@ const modifiedTime = modifiedDate;
         }
       ]
     })} />
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
@@ -267,38 +269,23 @@ const modifiedTime = modifiedDate;
         </div>
       </div>
     </main>
-
-    <!-- Footer Sponsors -->
-    <div class="footer-sponsors" role="complementary" aria-label="Footer sponsors">
-      <div class="sportspress">
-        <div class="sp-sponsors"></div>
-      </div>
-    </div>
   </div>
 
   <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
 
   <style>
     /* WordPress-style single post layout */
     #main {
       padding-top: 2rem !important;
-      padding-bottom: 200px; /* Space for fixed footer */
     }
 
     .stm-single-post {
       padding: 2rem 0;
       background: #ffffff;
-    }
-
-    /* Ensure footer is visible */
-    .stm-footer {
-      position: fixed !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      z-index: 100 !important;
-      display: block !important;
-      visibility: visible !important;
     }
 
 
@@ -431,14 +418,12 @@ const modifiedTime = modifiedDate;
       border-top: 2px solid #e2e8f0;
     }
 
-    .footer-sponsors {
-      background: var(--color-gray-100, #f4f4f4);
-      color: var(--color-gray-800, #363f48);
-      padding: var(--spacing-6, 1.5rem) 0;
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
     }
-
-    .footer-sponsors .sp-sponsors .sp-sponsors-title {
-      color: var(--color-gray-800, #363f48);
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
     }
 
     /* Remove yellow background from reply buttons */

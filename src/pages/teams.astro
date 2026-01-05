@@ -8,9 +8,18 @@ import MobileMenu from '../features/layout/components/MobileMenu';
 import Footer from '../features/layout/components/Footer.astro';
 import { getTeams } from '../features/cms/lib/queries';
 import Spacing from '../shared/components/ui/Spacing.astro';
+import PageLoader from '../components/PageLoader';
+import ContentLoader from '../components/ContentLoader';
 
 // Fetch all teams from database
-let teams = await getTeams();
+let teams = [];
+let hasError = false;
+try {
+  teams = await getTeams();
+} catch (error) {
+  console.error('Error fetching teams:', error);
+  hasError = true;
+}
 
 // SEO Meta Tags
 const pageTitle = 'Teams - Elevate Ballers';
@@ -79,6 +88,7 @@ const pageUrl = `${Astro.url.origin}/teams/`;
     ]
   })} />
   
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
@@ -106,7 +116,9 @@ const pageUrl = `${Astro.url.origin}/teams/`;
                     TEAMS
                   </h2>
 
-                  {teams.length === 0 ? (
+                  {hasError ? (
+                    <ContentLoader client:load message="Failed to load teams. Please try again later." />
+                  ) : teams.length === 0 ? (
                     <div class="no-teams-message">
                       <p>No teams available at this time.</p>
                     </div>
@@ -160,16 +172,13 @@ const pageUrl = `${Astro.url.origin}/teams/`;
         </section>
       </div>
     </div>
-
-    <!-- Footer Sponsors -->
-    <div class="footer-sponsors" role="complementary" aria-label="Footer sponsors">
-      <div class="sportspress">
-        <div class="sp-sponsors"></div>
-      </div>
-    </div>
   </div>
 
   <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
 
   <!-- Additional Scripts and Styles -->
   <div class="rev-close-btn" aria-hidden="true">
@@ -406,14 +415,12 @@ const pageUrl = `${Astro.url.origin}/teams/`;
       color: #dd3333 !important;
     }
 
-    .footer-sponsors {
-      background: var(--color-gray-100, #f4f4f4);
-      color: var(--color-gray-800, #363f48);
-      padding: var(--spacing-6, 1.5rem) 0;
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
     }
-
-    .footer-sponsors .sp-sponsors .sp-sponsors-title {
-      color: var(--color-gray-800, #363f48);
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
     }
   </style>
 </Layout>

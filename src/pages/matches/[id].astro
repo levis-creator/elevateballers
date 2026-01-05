@@ -8,6 +8,8 @@ import Spacing from "../../shared/components/ui/Spacing.astro";
 import { getMatchById } from "../../features/cms/lib/queries";
 import MatchDetail from "../../features/matches/components/MatchDetail";
 import type { Match } from "@prisma/client";
+import PageLoader from "../../components/PageLoader";
+import ContentLoader from "../../components/ContentLoader";
 
 export const prerender = false;
 
@@ -22,14 +24,21 @@ if (!id) {
 }
 
 // Fetch match from database
-const match: Match | null = await getMatchById(id);
-
-if (!match) {
-  return Astro.redirect("/matches");
+let match: Match | null = null;
+let hasError = false;
+try {
+  match = await getMatchById(id);
+  if (!match) {
+    return Astro.redirect("/matches");
+  }
+} catch (error) {
+  console.error('Error fetching match:', error);
+  hasError = true;
 }
 ---
 
 <Layout>
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
@@ -53,9 +62,13 @@ if (!match) {
                     xs="40"
                   />
 
-                  <div style="max-width: 800px; margin: 0 auto;">
-                    <MatchDetail client:load match={match} />
-                  </div>
+                  {hasError ? (
+                    <ContentLoader client:load message="Failed to load match details. Please try again later." />
+                  ) : match ? (
+                    <div style="max-width: 800px; margin: 0 auto;">
+                      <MatchDetail client:load match={match} />
+                    </div>
+                  ) : null}
 
                   <div style="text-align: center; margin-top: 2rem;">
                     <a href="/upcoming-fixtures" class="btn btn-primary" data-astro-prefetch>
@@ -80,11 +93,24 @@ if (!match) {
         </section>
       </div>
     </div>
-    <Footer />
+  </div>
+
+  <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
   </div>
 </Layout>
 
-<style>
+<style is:inline type="text/css">
+  .sp-footer-sponsors {
+    background: #f4f4f4;
+    color: #363f48;
+  }
+  .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+    color: #363f48;
+  }
+
   .btn {
     display: inline-block;
     padding: 0.75rem 1.5rem;

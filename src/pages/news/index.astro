@@ -10,12 +10,17 @@ import { getNewsArticles } from '../../features/cms/lib/queries';
 import { reverseCategoryMap } from '../../features/cms/types';
 import NewsSidebar from '../../features/news/components/NewsSidebar.astro';
 import NewsBreadcrumbs from '../../features/news/components/NewsBreadcrumbs.astro';
+import PageLoader from '../../components/PageLoader';
+import ContentLoader from '../../components/ContentLoader';
 
 // Get query parameters
 const { category, archive, s: searchQuery } = Astro.url.searchParams;
 
 // Fetch all articles
-let articles = await getNewsArticles();
+let articles = [];
+let hasError = false;
+try {
+  articles = await getNewsArticles();
 
 // Filter by category if provided
 if (category) {
@@ -44,6 +49,10 @@ if (searchQuery) {
     article.excerpt?.toLowerCase().includes(query) ||
     article.content.toLowerCase().includes(query)
   );
+}
+} catch (error) {
+  console.error('Error fetching news articles:', error);
+  hasError = true;
 }
 
 
@@ -130,6 +139,7 @@ const pageUrl = `${Astro.url.origin}/news/`;
     ]
   })} />
   
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
@@ -162,8 +172,11 @@ const pageUrl = `${Astro.url.origin}/news/`;
               </div>
               
               <!-- News Articles List -->
-              <div class="row row-3 row-sm-2">
-                {articles.map((article) => {
+              {hasError ? (
+                <ContentLoader client:load message="Failed to load news articles. Please try again later." />
+              ) : (
+                <div class="row row-3 row-sm-2">
+                  {articles.map((article) => {
                   const articleCategory = reverseCategoryMap[article.category] || article.category;
                   
                   return (
@@ -211,6 +224,7 @@ const pageUrl = `${Astro.url.origin}/news/`;
                   </div>
                 )}
               </div>
+              )}
             </div>
             
             <!-- Sidebar -->
@@ -221,38 +235,23 @@ const pageUrl = `${Astro.url.origin}/news/`;
         </div>
       </div>
     </div>
-
-    <!-- Footer Sponsors -->
-    <div class="footer-sponsors" role="complementary" aria-label="Footer sponsors">
-      <div class="sportspress">
-        <div class="sp-sponsors"></div>
-      </div>
-    </div>
   </div>
   
   <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
   
   <style>
     /* News Listing Page Styles */
     #main {
       padding-top: 2rem !important;
-      padding-bottom: 200px; /* Space for fixed footer */
     }
     
     .stm-default-page {
       padding: 2rem 0;
       background: #ffffff;
-    }
-
-    /* Ensure footer is visible */
-    .stm-footer {
-      position: fixed !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      z-index: 100 !important;
-      display: block !important;
-      visibility: visible !important;
     }
     
     
@@ -384,14 +383,12 @@ const pageUrl = `${Astro.url.origin}/news/`;
       font-family: 'Rubik', sans-serif;
     }
 
-    .footer-sponsors {
-      background: var(--color-gray-100, #f4f4f4);
-      color: var(--color-gray-800, #363f48);
-      padding: var(--spacing-6, 1.5rem) 0;
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
     }
-
-    .footer-sponsors .sp-sponsors .sp-sponsors-title {
-      color: var(--color-gray-800, #363f48);
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
     }
     
     @media (max-width: 768px) {

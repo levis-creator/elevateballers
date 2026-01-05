@@ -5,9 +5,11 @@ import Header from "../features/layout/components/Header.astro";
 import MobileMenu from "../features/layout/components/MobileMenu";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
+import PageLoader from "../components/PageLoader";
 ---
 
 <Layout>
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />

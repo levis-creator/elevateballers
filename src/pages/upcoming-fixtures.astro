@@ -9,9 +9,18 @@ import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import { getUpcomingMatches } from "../features/matches/lib/queries";
 import { formatMatchDate, formatMatchTime } from "../features/matches/lib/utils";
+import PageLoader from "../components/PageLoader";
+import ContentLoader from "../components/ContentLoader";
 
 // Fetch upcoming matches from database
-const matches = await getUpcomingMatches();
+let matches = [];
+let hasError = false;
+try {
+  matches = await getUpcomingMatches();
+} catch (error) {
+  console.error('Error fetching matches:', error);
+  hasError = true;
+}
 
 /**
  * Format date for display
@@ -29,6 +38,7 @@ function formatTime(date: Date | string): string {
 ---
 
 <Layout>
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
@@ -56,7 +66,10 @@ function formatTime(date: Date | string): string {
                     UPCOMING FIXTURES
                   </h2>
 
-                  <div class="sp-template sp-template-event-list">
+                  {hasError ? (
+                    <ContentLoader client:load message="Failed to load fixtures. Please try again later." />
+                  ) : (
+                    <div class="sp-template sp-template-event-list">
                     <div class="sp-table-wrapper">
                       <table class="sp-event-list sp-data-table">
                         <thead>
@@ -96,6 +109,7 @@ function formatTime(date: Date | string): string {
                       </table>
                     </div>
                   </div>
+                  )}
 
                   <Spacing
                     id="stm-spacing-fixtures-footer"

@@ -7,9 +7,11 @@ import Footer from "../features/layout/components/Footer.astro";
 import TeamPlayerTable from "../features/team/components/TeamPlayerTable.astro";
 import { playerCategories } from "../features/team/data/teamData";
 import Spacing from "../shared/components/ui/Spacing.astro";
+import PageLoader from "../components/PageLoader";
 ---
 
 <Layout>
+  <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
     <Header />
