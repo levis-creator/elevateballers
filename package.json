@@ -49,10 +49,10 @@
     "react-hook-form": "^7.69.0",
     "tailwind-merge": "^3.4.0",
     "zod": "^3.25.76",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.9",
+    "@astrojs/netlify": "^6.6.3"
   },
   "devDependencies": {
-    "@astrojs/netlify": "^6.6.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.16.0",
