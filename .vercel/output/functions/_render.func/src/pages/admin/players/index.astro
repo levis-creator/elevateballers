@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import PlayerList from '../../../features/cms/components/PlayerList';
+---
+
+<AdminLayout title="Players Management - Admin">
+  <PlayerList client:load />
+</AdminLayout>
+

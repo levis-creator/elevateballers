@@ -1,0 +1,407 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import TopBar from '../../features/layout/components/TopBar.astro';
+import Header from '../../features/layout/components/Header.astro';
+import MobileMenu from '../../features/layout/components/MobileMenu';
+import Footer from '../../features/layout/components/Footer.astro';
+import { getNewsArticles } from '../../features/cms/lib/queries';
+import { reverseCategoryMap } from '../../features/cms/types';
+import NewsSidebar from '../../features/news/components/NewsSidebar.astro';
+import NewsBreadcrumbs from '../../features/news/components/NewsBreadcrumbs.astro';
+import PageLoader from '../../components/PageLoader';
+import ContentLoader from '../../components/ContentLoader';
+
+// Get query parameters
+const { category, archive, s: searchQuery } = Astro.url.searchParams;
+
+// Fetch all articles
+let articles = [];
+let hasError = false;
+try {
+  articles = await getNewsArticles();
+
+// Filter by category if provided
+if (category) {
+  articles = articles.filter(article => {
+    const articleCategory = reverseCategoryMap[article.category] || article.category;
+    return articleCategory.toLowerCase() === category.toLowerCase();
+  });
+}
+
+// Filter by archive if provided
+if (archive) {
+  const [year, month] = archive.split('/');
+  articles = articles.filter(article => {
+    if (!article.publishedAt) return false;
+    const date = new Date(article.publishedAt);
+    return date.getFullYear().toString() === year && 
+           String(date.getMonth() + 1).padStart(2, '0') === month;
+  });
+}
+
+// Filter by search query if provided
+if (searchQuery) {
+  const query = searchQuery.toLowerCase();
+  articles = articles.filter(article => 
+    article.title.toLowerCase().includes(query) ||
+    article.excerpt?.toLowerCase().includes(query) ||
+    article.content.toLowerCase().includes(query)
+  );
+}
+} catch (error) {
+  console.error('Error fetching news articles:', error);
+  hasError = true;
+}
+
+
+// SEO Meta Tags
+const pageTitle = 'News - Elevate';
+const pageDescription = 'Latest news and updates from Elevate Ballers';
+const pageUrl = `${Astro.url.origin}/news/`;
+---
+
+<Layout>
+  <script is:inline define:vars={{ pageTitle, pageDescription, pageUrl }}>
+    // Update page title
+    document.title = pageTitle;
+    
+    // Update or create meta tags
+    const updateMeta = (name, content, property = false) => {
+      const attr = property ? 'property' : 'name';
+      let meta = document.querySelector(`meta[${attr}="${name}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute(attr, name);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+    
+    // Update canonical link
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', pageUrl);
+    
+    // Set meta tags
+    updateMeta('og:locale', 'en_US', true);
+    updateMeta('og:type', 'article', true);
+    updateMeta('og:title', pageTitle, true);
+    updateMeta('og:description', pageDescription, true);
+    updateMeta('og:url', pageUrl, true);
+    updateMeta('og:site_name', 'Elevate', true);
+    updateMeta('twitter:card', 'summary_large_image');
+  </script>
+  
+  <script type="application/ld+json" is:inline set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["WebPage", "CollectionPage"],
+        "@id": pageUrl,
+        "url": pageUrl,
+        "name": pageTitle,
+        "isPartOf": { "@id": `${Astro.url.origin}/#website` },
+        "datePublished": "2016-05-03T05:04:41+00:00",
+        "dateModified": "2016-05-03T05:04:41+00:00",
+        "breadcrumb": { "@id": `${pageUrl}#breadcrumb` },
+        "inLanguage": "en-US"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${pageUrl}#breadcrumb`,
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": `${Astro.url.origin}/` },
+          { "@type": "ListItem", "position": 2, "name": "News" }
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${Astro.url.origin}/#website`,
+        "url": `${Astro.url.origin}/`,
+        "name": "Elevate",
+        "description": "",
+        "potentialAction": [{
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": `${Astro.url.origin}/?s={search_term_string}`
+          },
+          "query-input": "required name=search_term_string"
+        }],
+        "inLanguage": "en-US"
+      }
+    ]
+  })} />
+  
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header />
+    <MobileMenu client:load />
+    
+    <div id="main">
+      <div class="stm-default-page stm-default-page-list stm-default-page-right">
+        <div class="container">
+          <div class="row sidebar-wrapper">
+            <!-- Main Content -->
+            <div class="col-md-9 col-sm-12 col-xs-12">
+              <div class="sidebar-margin-top clearfix"></div>
+              
+              <!-- Breadcrumbs and Title -->
+              <div class="stm-small-title-box">
+                <div class="stm-title-box-unit title_box-96">
+                  <NewsBreadcrumbs items={[
+                    { label: 'Elevate', url: '/' },
+                    { label: 'News' }
+                  ]} />
+                  
+                  <div class="stm-page-title">
+                    <div class="container">
+                      <div class="clearfix stm-title-box-title-wrapper">
+                        <h1 class="stm-main-title-unit">News</h1>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- News Articles List -->
+              {hasError ? (
+                <ContentLoader client:load message="Failed to load news articles. Please try again later." />
+              ) : (
+                <div class="row row-3 row-sm-2">
+                  {articles.map((article) => {
+                  const articleCategory = reverseCategoryMap[article.category] || article.category;
+                  
+                  return (
+                    <div class="col-md-12">
+                      <div class={`stm-single-post-loop stm-single-post-loop-list post-${article.id} post type-post status-publish format-standard has-post-thumbnail hentry category-${articleCategory.toLowerCase()}`}>
+                        {article.image && (
+                          <a href={`/news/${article.slug}`} title={article.title} class="stm-image-link">
+                            <div class="image">
+                              <div class="stm-plus"></div>
+                              <img 
+                                width="1170" 
+                                height="650" 
+                                src={article.image} 
+                                class="img-responsive wp-post-image" 
+                                alt={article.title} 
+                                decoding="async"
+                              />
+                            </div>
+                          </a>
+                        )}
+                        
+                        <div class="stm-post-content-inner">
+                          <a href={`/news/${article.slug}`}>
+                            <div class="title heading-font">
+                              {article.title}
+                            </div>
+                          </a>
+                          
+                          <div class="clearfix"></div>
+                          
+                          <div class="content">
+                            <p>{article.excerpt || article.content.substring(0, 200) + '...'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {articles.length === 0 && (
+                  <div class="col-md-12">
+                    <div class="no-articles">
+                      <p>No news articles found.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              )}
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-md-3 hidden-sm hidden-xs af-margin-88">
+              <NewsSidebar searchQuery={searchQuery || ''} showTags={true} showInstagram={true} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
+  
+  <style>
+    /* News Listing Page Styles */
+    #main {
+      padding-top: 2rem !important;
+    }
+    
+    .stm-default-page {
+      padding: 2rem 0;
+      background: #ffffff;
+    }
+    
+    
+    .stm-page-title {
+      margin-bottom: 2rem;
+    }
+    
+    .stm-main-title-unit {
+      font-family: 'Teko', sans-serif;
+      font-size: 50px;
+      line-height: 54px;
+      color: #dd3333;
+      margin: 0;
+      font-weight: 700;
+    }
+    
+    /* News Article List Item */
+    .stm-single-post-loop {
+      margin-bottom: 3rem;
+      padding-bottom: 3rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .stm-single-post-loop:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .stm-image-link {
+      display: block;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    
+    .stm-image-link .image {
+      position: relative;
+      width: 100%;
+      height: auto;
+      overflow: hidden;
+    }
+    
+    .stm-image-link .image img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    
+    .stm-image-link:hover .image img {
+      transform: scale(1.05);
+    }
+    
+    .stm-plus {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: rgba(221, 51, 51, 0.8);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 1;
+    }
+    
+    .stm-plus::before,
+    .stm-plus::after {
+      content: '';
+      position: absolute;
+      background: #fff;
+      width: 2px;
+      height: 20px;
+    }
+    
+    .stm-plus::before {
+      transform: rotate(90deg);
+    }
+    
+    .stm-image-link:hover .stm-plus {
+      opacity: 1;
+    }
+    
+    .stm-post-content-inner {
+      padding: 0;
+    }
+    
+    .stm-post-content-inner .title {
+      font-family: 'Teko', sans-serif;
+      font-size: 25px;
+      line-height: 29px;
+      color: #dd3333;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    
+    .stm-post-content-inner .title a {
+      color: #dd3333;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    
+    .stm-post-content-inner .title a:hover {
+      color: #b82828;
+    }
+    
+    .stm-post-content-inner .content {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    
+    .stm-post-content-inner .content p {
+      margin: 0 0 1rem 0;
+    }
+    
+    
+    .no-articles {
+      padding: 3rem;
+      text-align: center;
+      color: #666;
+      font-family: 'Rubik', sans-serif;
+    }
+
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
+    }
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
+    }
+    
+    @media (max-width: 768px) {
+      .stm-main-title-unit {
+        font-size: 32px;
+        line-height: 36px;
+      }
+      
+      .stm-single-post-loop {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+      }
+    }
+  </style>
+</Layout>
+

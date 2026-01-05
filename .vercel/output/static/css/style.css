@@ -1,0 +1,406 @@
+/*
+    Theme Name: Splash
+    Theme URI: http://splash.stylemixthemes.com/
+    Author: StylemixThemes
+    Author URI: https://stylemixthemes.com/
+    Description: Splash has been designed for pro, amateur and community football, soccer, basketball and baseball leagues and clubs. This robust, powerful and flexible sports theme comes with all the bells and whistles you need to present your league, club and player achievements and news in style.
+    Version: 4.3.9
+    License: GNU General Public License v2 or later
+    License URI: http://www.gnu.org/licenses/gpl-2.0.html
+    Tags: one-column, two-columns, three-columns, four-columns, left-sidebar, right-sidebar, flexible-header, custom-background, custom-colors, custom-header, custom-menu, editor-style, sticky-post, theme-options
+    Text Domain: splash
+*/
+
+/*Slider UPD*/
+body .slider-date,
+body .slider-description {
+    color: #fff !important;
+}
+
+/* .ares .tp-bullet {
+    background: rgba(229, 229, 229, 0.5) !important;
+}
+
+.ares .tp-bullet.selected {
+    background: #e21e22 !important;
+} */
+
+.tp-caption .button.btn-md:hover {
+    color: #e21e22 !important;
+}
+
+body.skin-blue .ares .tp-bullet.selected {
+    color: #5268d8 !important;
+}
+
+body.skin-blue .tp-caption .button.btn-md:hover {
+    color: #5268d8 !important;
+}
+
+body.skin-blue-violet .ares .tp-bullet.selected {
+    color: #8a2be2 !important;
+}
+
+body.skin-blue-violet .tp-caption .button.btn-md:hover {
+    color: #8a2be2 !important;
+}
+
+body.skin-choco .ares .tp-bullet.selected {
+    color: #8f5902 !important;
+}
+
+body.skin-choco .tp-caption .button.btn-md:hover {
+    color: #8f5902 !important;
+}
+
+body.skin-gold .ares .tp-bullet.selected {
+    color: #c9ae14 !important;
+}
+
+body.skin-gold .tp-caption .button.btn-md:hover {
+    color: #c9ae14 !important;
+}
+
+body.skin-green .ares .tp-bullet.selected {
+    color: #41c648 !important;
+}
+
+body.skin-green .tp-caption .button.btn-md:hover {
+    color: #41c648 !important;
+}
+
+body.skin-orange .ares .tp-bullet.selected {
+    color: #ea7f04 !important;
+}
+
+body.skin-orange .tp-caption .button.btn-md:hover {
+    color: #ea7f04 !important;
+}
+
+body.skin-sky-blue .ares .tp-bullet.selected {
+    color: #729fcf !important;
+}
+
+body.skin-sky-blue .tp-caption .button.btn-md:hover {
+    color: #729fcf !important;
+}
+
+body.skin-turquose .ares .tp-bullet.selected {
+    color: #00c9c2 !important;
+}
+
+body.skin-turquose .tp-caption .button.btn-md:hover {
+    color: #00c9c2 !important;
+}
+
+body.skin-violet-red .ares .tp-bullet.selected {
+    color: #d02090 !important;
+}
+
+body.skin-violet-red .tp-caption .button.btn-md:hover {
+    color: #d02090 !important;
+}
+
+/*1.1 UPD*/
+.stm-next-match-units {
+    overflow: hidden;
+}
+
+/*NEW SPORTSPRESS FIXES*/
+.stm-single-sp_player .sp-template-photo {
+    float: none;
+    max-width: 100%;
+}
+
+.stm-single-sp_player .sp-section-content-photo {
+    float: left;
+    width: 25%;
+}
+
+.stm-single-sp_player .sp-section-content-details {
+    float: left;
+    width: 75%;
+}
+
+.stm-single-sp_player .sp-template.sp-template-player-details.sp-template-details {
+    float: left;
+    width: 49%;
+}
+
+.stm-single-sp_player .sp-section-content-excerpt:after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
+.stm-single-sp_player .stm_player_right_details {
+    float: right;
+    width: 49%;
+}
+
+body.single-sp_player .sp-post-content {
+    margin-top: 40px;
+}
+
+/*29 sept 2016*/
+.stm-latest-results-units .stm-latest-results-info .stm-latest-result .stm-latest-result-team span {
+    color: #151515;
+    text-decoration: none !important;
+}
+
+.stm-no-decoration {
+    text-decoration: none !important;
+}
+
+/*13 OCT 2016*/
+/*Player resp putting back*/
+@media (max-width: 1024px) {
+    .stm-single-sp_player .stm_player_right_details {
+        width: 100%;
+    }
+
+    .stm-single-sp_player .sp-template.sp-template-player-details.sp-template-details {
+        width: 100%;
+    }
+
+    .stm-single-sp_player .sp-section-content-photo,
+    .stm-single-sp_player .sp-section-content-details {
+        width: 100%;
+        text-align: center;
+    }
+
+    .sp-player-details {
+        max-width: 300px;
+        width: auto;
+        margin: 0 auto;
+    }
+
+    .stm-single-sp_player .sp-section-content-details .single-info {
+        text-align: left;
+    }
+
+    .stm-player-details-right .stm-player-team-logo img {
+        width: 150px !important;
+        height: auto !important;
+    }
+}
+
+.stm-single-product-images {
+    min-height: 450px;
+}
+
+/*Fixing VC problems with Owl Carousel*/
+.stm-player-statistic-unit .owl-nav {
+    margin-top: 0 !important;
+}
+
+.stm-player-statistic-unit .owl-next, .stm-player-statistic-unit .owl-prev {
+    padding: 0 !important;
+    background: transparent !important;
+    margin-top: 0 !important;
+}
+
+/*Coaches basketball fix*/
+.sp-section-content.sp-section-content-staff:before {
+    content: '';
+    display: block;
+    clear: both;
+}
+
+/*new WooCommerce style*/
+.woocommerce-product-gallery {
+    position: relative;
+    margin-bottom: 3em
+}
+
+.woocommerce-product-gallery figure {
+    margin: 0
+}
+
+.woocommerce-product-gallery .woocommerce-product-gallery__image:nth-child(n+2) {
+    width: 25%;
+    display: inline-block
+}
+
+.woocommerce-product-gallery .flex-control-thumbs li {
+    list-style: none;
+    float: left;
+    cursor: pointer
+}
+
+.woocommerce-product-gallery .flex-control-thumbs img {
+    opacity: .5
+}
+
+.woocommerce-product-gallery .flex-control-thumbs img.flex-active, .woocommerce-product-gallery .flex-control-thumbs img:hover {
+    opacity: 1
+}
+
+.woocommerce-product-gallery img {
+    display: block
+}
+
+.woocommerce-product-gallery--columns-3 .flex-control-thumbs li {
+    width: 33.3333%
+}
+
+.woocommerce-product-gallery--columns-4 .flex-control-thumbs li {
+    width: 25%
+}
+
+.woocommerce-product-gallery--columns-5 .flex-control-thumbs li {
+    width: 20%
+}
+
+.woocommerce-product-gallery__trigger {
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    z-index: 99
+}
+
+.splashSoccer .widget_search {
+    line-height: 48px;
+}
+
+body.splashMagazineTwo .mc4wp-form input[type="email"] {
+    color: #151515 !important;
+}
+
+.splashSoccerTwo .vc_next_match.single-view .button i {
+    margin-left: 5px;
+}
+
+body.splashAmericanFootball table thead tr th:nth-child(1), body.splashAmericanFootball table.sp-data-table td:first-child {
+    text-align: left;
+    padding-left: 15px;
+}
+
+body.splashAmericanFootball table thead tr th:last-child {
+    padding-right: 15px;
+}
+
+.splashSoccer .stm-products-carousel-init .product .product_info a,
+.splashSoccer .stm-products-carousel-init .stm-single-product-carousel .product_info a {
+    margin: 0 5px 3px 0;
+}
+
+.splashSoccer .sp-template-player-list {
+    overflow-x: auto;
+}
+
+body.splashBaseball .stm-single-sp_calendar .sp-stm-template-event-blocks .stm-single-block-event-list .stm-single-block-unit .stm-teams-info .stm-team-results-outer .stm-latest-result_result .stm-win,
+body.splashBaseball .stm-single-sp_calendar .sp-stm-template-event-blocks .stm-single-block-event-list .stm-single-block-unit .stm-teams-info .stm-team-results-outer .stm-latest-result_result .stm-lose {
+    background: transparent;
+}
+
+body.splashBaseball .vc_tta-container .vc_tta.vc_general .vc_tta-panel-title a:before {
+    font: normal normal normal 14px/1 FontAwesome;
+    line-height: 26px;
+    content: "\f105";
+    left: 0;
+    top: 1px;
+    font-size: 18px;
+}
+body.splashBaseball #wrapper #main .vc_tta-accordion .vc_tta-panels-container .vc_tta-panels .vc_tta-panel .vc_tta-panel-heading h4 a:before{
+     top: 2px;
+ }
+body.splashBaseball #wrapper #main .vc_tta-accordion .vc_tta-panels-container .vc_tta-panels .vc_tta-panel.vc_active .vc_tta-panel-title a:before{
+    top: 3.5px;
+}
+.splashBaseball .stm-woocommerce-single-product{
+    margin-top: 80px;
+}
+.splashMagazineOne #wrapper #main .stm-players .stm-list-single-player a{
+    display: inline;
+}
+.shop_table_responsive.cart .cart_item td.product-name .variation {
+    display: block;
+    overflow: hidden;
+}
+.shop_table_responsive.cart .cart_item td.product-name .variation dt,
+.shop_table_responsive.cart .cart_item td.product-name .variation dd {
+    display: inline;
+    float: left;
+    margin-right: 10px;
+}
+.shop_table_responsive.cart .cart_item td.product-name .variation dd {
+    margin-right: 20px;
+}
+
+@media (max-width: 1024px) {
+    body.splashBaseball .stm-products-carousel-unit-wrapper .stm-products-carousel-unit .stm-products-carousel-init .stm-single-product-carousel a .stm-product-meta {
+        overflow: visible;
+    }
+}
+
+@media (max-width: 768px) {
+    .splashSoccerTwo .stm-trophy-carousel .stm-trophy-carousel-init-unit .owl-carousel .stm-single-trophy .stm-title {
+        height: auto;
+    }
+
+    body.splashAmericanFootball .sp-section-content .sp-template-player-list {
+        overflow-x: auto;
+        margin: auto -15px !important;
+    }
+}
+
+@media (max-width: 520px) {
+    .splashBaseball .stm-woocommerce-single-product{
+        margin-top: auto;
+    }
+    body.splashSoccer .rev_slider .rev_post_title span, body.splashSoccer .rev_slider .rev_post_title {
+        font-size: 20px !important;
+        line-height: 20px !important;
+    }
+
+    .splashSoccer .stmTickerWrapper .container .stmTickerContent .stmTickerTitle,
+    .splashSoccer .stmTickerWrapper .container .stmTickerContent {
+        display: none;
+    }
+}
+
+@media (max-width: 425px) {
+    .splashSoccer #stm-footer-bottom .footer-bottom-right {
+        display: none;
+    }
+
+    .stm-sportspress-sidebar-left .col-md-9 .sp-template-league-table,
+    .stm-sportspress-sidebar-right .col-md-9 .sp-template-league-table {
+        overflow-x: scroll;
+        margin: auto -15px !important;
+    }
+
+    .stm-info-table-wrapp .stm-info-table tr td {
+        vertical-align: top;
+    }
+
+    .splashAmericanFootball .stm-single-league .stm-single-league-title_box h3 {
+        font-size: 28px !important;
+    }
+}
+
+@media (max-width: 375px) {
+    .splashAmericanFootball .stm-single-league .stm-single-league-title_box h3 {
+        font-size: 30px !important;
+    }
+
+    .sp-league-table tbody tr td.has-logo .team-logo .stm-league-table-team-logo {
+        display: none;
+    }
+}
+
+@media (max-width: 320px) {
+    .splashMagazineOne #wrapper #main .wpb_revslider_element .rev_slider_wrapper p{
+        display: none;
+    }
+    body.splashMagazineTwo #wrapper #main .stm-next-match-units .stm-next-match-unit .stm-next-match-opponents .stm-command h4 {
+        font-size: 20px !important;
+    }
+    body.splashMagazineTwo #wrapper #main .stm-next-match-units .stm-next-match-unit .stm-next-match-opponents .stm-command-vs span {
+        height: 70px;
+        width: 50px;
+        line-height: 70px;
+        font-size: 26px;
+    }
+}

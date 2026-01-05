@@ -1,0 +1,809 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import TopBar from '../../features/layout/components/TopBar.astro';
+import Header from '../../features/layout/components/Header.astro';
+import MobileMenu from '../../features/layout/components/MobileMenu';
+import Footer from '../../features/layout/components/Footer.astro';
+import { getTeamBySlug, getStaffByTeam } from '../../features/cms/lib/queries';
+import Spacing from '../../shared/components/ui/Spacing.astro';
+import PageLoader from '../../components/PageLoader';
+
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect('/404', 302);
+}
+
+let team;
+try {
+  team = await getTeamBySlug(slug);
+  if (!team) {
+    return Astro.redirect('/404', 302);
+  }
+} catch (error) {
+  console.error('Error fetching team:', error);
+  return Astro.redirect('/404', 302);
+}
+
+// Get staff for this team
+let teamStaff = [];
+try {
+  teamStaff = await getStaffByTeam(team.id);
+} catch (error) {
+  console.error('Error fetching team staff:', error);
+}
+
+// Format player name
+const getPlayerName = (player: any): string => {
+  if (player.firstName && player.lastName) {
+    return `${player.firstName} ${player.lastName}`;
+  }
+  return player.firstName || player.lastName || 'Unknown Player';
+};
+
+// Format stats from JSON
+const getStat = (stats: any, key: string): number => {
+  if (!stats || typeof stats !== 'object') return 0;
+  return stats[key] || 0;
+};
+
+// Format stat value
+const formatStat = (value: number): string => {
+  return value === 0 ? "-" : value.toFixed(1);
+};
+
+// Format percentage
+const formatPercent = (value: number): string => {
+  return value === 0 ? "-" : value.toFixed(1);
+};
+
+// Format staff role
+const formatStaffRole = (role: string): string => {
+  return role
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// SEO Meta Tags
+const pageTitle = `${team.name} - Teams - Elevate Ballers`;
+const pageDescription = team.description || `View ${team.name} team information, players, and staff`;
+const pageUrl = `${Astro.url.origin}/teams/${slug}`;
+---
+
+<Layout>
+  <script is:inline define:vars={{ pageTitle, pageDescription, pageUrl }}>
+    // Update page title
+    document.title = pageTitle;
+    
+    // Update or create meta tags
+    const updateMeta = (name, content, property = false) => {
+      const attr = property ? 'property' : 'name';
+      let meta = document.querySelector(`meta[${attr}="${name}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute(attr, name);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+    
+    // Update canonical link
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', pageUrl);
+    
+    // Set meta tags
+    updateMeta('og:locale', 'en_US', true);
+    updateMeta('og:type', 'website', true);
+    updateMeta('og:title', pageTitle, true);
+    updateMeta('og:description', pageDescription, true);
+    updateMeta('og:url', pageUrl, true);
+    updateMeta('og:site_name', 'Elevate Ballers', true);
+    updateMeta('twitter:card', 'summary_large_image');
+  </script>
+  
+  <script type="application/ld+json" is:inline set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": pageUrl,
+        "url": pageUrl,
+        "name": pageTitle,
+        "isPartOf": { "@id": `${Astro.url.origin}/#website` },
+        "datePublished": "2016-04-19T05:29:11+00:00",
+        "dateModified": new Date().toISOString(),
+        "breadcrumb": { "@id": `${pageUrl}#breadcrumb` },
+        "inLanguage": "en-US"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${pageUrl}#breadcrumb`,
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": `${Astro.url.origin}/` },
+          { "@type": "ListItem", "position": 2, "name": "Teams", "item": `${Astro.url.origin}/teams` },
+          { "@type": "ListItem", "position": 3, "name": team.name }
+        ]
+      }
+    ]
+  })} />
+  
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header />
+    <MobileMenu client:load />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      ></div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-team-header"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+
+                  <!-- Team Header -->
+                  <div class="team-header">
+                    <div class="team-header-content">
+                      {team.logo ? (
+                        <div class="team-logo-large">
+                          <img 
+                            src={team.logo} 
+                            alt={`${team.name} logo`}
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div class="team-logo-large-placeholder">
+                          <span class="team-logo-text-large">{team.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                      )}
+                      <div class="team-header-info">
+                        <h1 class="team-title">{team.name}</h1>
+                        {team.description && (
+                          <p class="team-description-full">{team.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-team-content"
+                    lg="40"
+                    md="40"
+                    sm="30"
+                    xs="30"
+                  />
+
+                  <!-- Players Section -->
+                  {team.players && team.players.length > 0 && (
+                    <div class="team-section">
+                      <h2 class="section-title">Players</h2>
+                      <div class="sp-template sp-template-player-list">
+                        <div class="sp-table-wrapper">
+                          <table class="sp-player-list sp-data-table">
+                            <thead>
+                              <tr>
+                                <th class="data-name">Player</th>
+                                <th class="data-position">Position</th>
+                                <th class="data-height">Height</th>
+                                <th class="data-weight">Weight</th>
+                                <th class="data-jersey">Jersey</th>
+                                {team.players.some((p: any) => p.stats) && (
+                                  <>
+                                    <th class="data-fg">FG%</th>
+                                    <th class="data-ft">FT%</th>
+                                    <th class="data-3p">3P%</th>
+                                    <th class="data-rpg">RPG</th>
+                                    <th class="data-apg">APG</th>
+                                    <th class="data-spg">SPG</th>
+                                    <th class="data-bpg">BPG</th>
+                                    <th class="data-ppg">PPG</th>
+                                    <th class="data-eff">EFF</th>
+                                  </>
+                                )}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {team.players.map((player: any, index: number) => {
+                                const stats = player.stats || {};
+                                const hasStats = Object.keys(stats).length > 0;
+                                return (
+                                  <tr class={index % 2 === 0 ? 'even' : 'odd'}>
+                                    <td class="data-name">
+                                      <a href={`/players/${player.id}`} class="sp-player-name">
+                                        {getPlayerName(player)}
+                                      </a>
+                                    </td>
+                                    <td class="data-position">{player.position || "-"}</td>
+                                    <td class="data-height">{player.height || "-"}</td>
+                                    <td class="data-weight">{player.weight || "-"}</td>
+                                    <td class="data-jersey">{player.jerseyNumber || "-"}</td>
+                                    {hasStats && (
+                                      <>
+                                        <td class="data-fg">{formatPercent(getStat(stats, 'fgPercent') || getStat(stats, 'fg'))}</td>
+                                        <td class="data-ft">{formatPercent(getStat(stats, 'ftPercent') || getStat(stats, 'ft'))}</td>
+                                        <td class="data-3p">{formatPercent(getStat(stats, 'threePointPercent') || getStat(stats, '3p'))}</td>
+                                        <td class="data-rpg">{formatStat(getStat(stats, 'rpg'))}</td>
+                                        <td class="data-apg">{formatStat(getStat(stats, 'apg'))}</td>
+                                        <td class="data-spg">{formatStat(getStat(stats, 'spg'))}</td>
+                                        <td class="data-bpg">{formatStat(getStat(stats, 'bpg'))}</td>
+                                        <td class="data-ppg">{formatStat(getStat(stats, 'ppg'))}</td>
+                                        <td class="data-eff">{formatStat(getStat(stats, 'eff'))}</td>
+                                      </>
+                                    )}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {(!team.players || team.players.length === 0) && (
+                    <div class="team-section">
+                      <h2 class="section-title">Players</h2>
+                      <p class="no-data-message">No players available for this team.</p>
+                    </div>
+                  )}
+
+                  <Spacing
+                    id="stm-spacing-team-staff"
+                    lg="40"
+                    md="40"
+                    sm="30"
+                    xs="30"
+                  />
+
+                  <!-- Staff Section -->
+                  {teamStaff.length > 0 && (
+                    <div class="team-section">
+                      <h2 class="section-title">Staff</h2>
+                      <div class="staff-grid">
+                        {teamStaff.map((teamStaffMember: any) => {
+                          const staff = teamStaffMember.staff;
+                          return (
+                            <div class="staff-card">
+                              {staff.image ? (
+                                <div class="staff-image">
+                                  <img 
+                                    src={staff.image} 
+                                    alt={`${staff.firstName} ${staff.lastName}`}
+                                    loading="lazy"
+                                  />
+                                </div>
+                              ) : (
+                                <div class="staff-image-placeholder">
+                                  <span>{staff.firstName.charAt(0)}{staff.lastName.charAt(0)}</span>
+                                </div>
+                              )}
+                              <div class="staff-info">
+                                <h3 class="staff-name">{staff.firstName} {staff.lastName}</h3>
+                                <p class="staff-role">{formatStaffRole(teamStaffMember.role)}</p>
+                                {staff.bio && (
+                                  <p class="staff-bio">{staff.bio.substring(0, 150)}{staff.bio.length > 150 ? '...' : ''}</p>
+                                )}
+                                {staff.email && (
+                                  <p class="staff-contact">
+                                    <i class="fa fa-envelope" aria-hidden="true"></i>
+                                    <a href={`mailto:${staff.email}`}>{staff.email}</a>
+                                  </p>
+                                )}
+                                {staff.phone && (
+                                  <p class="staff-contact">
+                                    <i class="fa fa-phone" aria-hidden="true"></i>
+                                    <a href={`tel:${staff.phone}`}>{staff.phone}</a>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {teamStaff.length === 0 && (
+                    <div class="team-section">
+                      <h2 class="section-title">Staff</h2>
+                      <p class="no-data-message">No staff members assigned to this team.</p>
+                    </div>
+                  )}
+
+                  <Spacing
+                    id="stm-spacing-team-footer"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+
+  <div class="sp-footer-sponsors">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
+
+  <!-- Additional Scripts and Styles -->
+  <div class="rev-close-btn" aria-hidden="true">
+    <span class="close-left"></span>
+    <span class="close-right"></span>
+  </div>
+
+  <!-- Speculation Rules for Prefetching -->
+  <script is:inline type="speculationrules">
+    {
+      "prefetch": [
+        {
+          "source": "document",
+          "where": {
+            "and": [
+              { "href_matches": "/*" },
+              {
+                "not": {
+                  "href_matches": [
+                    "/wp-*.php",
+                    "/wp-admin/*",
+                    "/wp-content/uploads/*",
+                    "/wp-content/*",
+                    "/wp-content/plugins/*",
+                    "/wp-content/themes/elevate/*",
+                    "/*\\?(.+)"
+                  ]
+                }
+              },
+              { "not": { "selector_matches": "a[rel~=\"nofollow\"]" } },
+              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }
+            ]
+          },
+          "eagerness": "conservative"
+        }
+      ]
+    }
+  </script>
+
+  <!-- Header Sponsors -->
+  <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;" aria-hidden="true">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
+
+  <!-- Legacy Scripts -->
+  <script is:inline type="text/javascript">
+    (function() {
+      if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function ($) {
+          var header = $(".sp-header");
+          var sponsors = $(".sp-header-sponsors");
+          if (header.length && sponsors.length) {
+            header.prepend(sponsors);
+          }
+        });
+      }
+    })();
+  </script>
+
+  <script is:inline type="text/javascript">
+    (function() {
+      if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function ($) {
+          var header = $(".sp-header-loaded");
+          var menu = $(".sp-league-menu");
+          if (header.length && menu.length) {
+            header.prepend(menu);
+          }
+        });
+      }
+    })();
+  </script>
+
+  <script is:inline type="text/javascript">
+    (function() {
+      if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function ($) {
+          var header = $(".sp-header-loaded");
+          var scoreboard = $(".sp-header-scoreboard");
+          if (header.length && scoreboard.length) {
+            header.prepend(scoreboard);
+          }
+        });
+      }
+    })();
+  </script>
+
+  <style>
+    /* Team Detail Page Styles */
+    .team-header {
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .team-header-content {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .team-logo-large {
+      flex-shrink: 0;
+      width: 150px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .team-logo-large img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .team-logo-large-placeholder {
+      width: 150px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #dd3333 0%, #b82828 100%);
+      border-radius: 8px;
+    }
+
+    .team-logo-text-large {
+      font-size: 64px;
+      font-weight: 700;
+      color: #fff;
+      font-family: 'Teko', sans-serif;
+    }
+
+    .team-header-info {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .team-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 48px;
+      line-height: 52px;
+      color: #dd3333;
+      margin: 0 0 1rem 0;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .team-description-full {
+      font-family: 'Rubik', sans-serif;
+      font-size: 16px;
+      line-height: 24px;
+      color: #666;
+      margin: 0;
+    }
+
+    .team-section {
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 32px;
+      line-height: 36px;
+      color: #dd3333;
+      margin: 0 0 1.5rem 0;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .no-data-message {
+      font-family: 'Rubik', sans-serif;
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+      padding: 2rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    /* Player Table Styles - Matching players page */
+    .sp-template-player-list {
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .sp-template-player-list .sp-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 5px;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table thead {
+      background-color: #e21e22;
+      color: #fff;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th {
+      background-color: #e21e22;
+      color: #fff;
+      padding: 13px 7px;
+      text-align: left;
+      text-transform: uppercase;
+      font-weight: normal;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th:first-child,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td:first-child {
+      padding-left: 39px;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-name {
+      text-align: left;
+      padding-left: 20px !important;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-position,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-height,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-weight,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-jersey,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-fg,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-ft,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-3p,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-rpg,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-apg,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-spg,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-bpg,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-ppg,
+    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-eff {
+      text-align: center;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody tr.odd td,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody tr:nth-child(odd) td {
+      background-color: #e8e8e8 !important;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody tr.even td,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody tr:nth-child(even) td {
+      background-color: #fff;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td {
+      background-color: #fff;
+      padding: 13px 7px;
+      text-align: left;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name {
+      text-align: left;
+      padding-left: 5px;
+      color: #535353;
+      font-weight: 700;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name a {
+      color: #535353;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name a:hover {
+      color: #009bdc;
+    }
+
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-position,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-height,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-weight,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-jersey,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-fg,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-ft,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-3p,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-rpg,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-apg,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-spg,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-bpg,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-ppg,
+    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-eff {
+      text-align: center;
+    }
+
+    /* Staff Grid Styles */
+    .staff-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-top: 1.5rem;
+    }
+
+    .staff-card {
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .staff-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .staff-image {
+      width: 100%;
+      height: 200px;
+      overflow: hidden;
+      background: #f8f9fa;
+    }
+
+    .staff-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .staff-image-placeholder {
+      width: 100%;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #dd3333 0%, #b82828 100%);
+      color: #fff;
+      font-size: 48px;
+      font-weight: 700;
+      font-family: 'Teko', sans-serif;
+    }
+
+    .staff-info {
+      padding: 1.5rem;
+    }
+
+    .staff-name {
+      font-family: 'Teko', sans-serif;
+      font-size: 24px;
+      line-height: 28px;
+      color: #dd3333;
+      margin: 0 0 0.5rem 0;
+      font-weight: 700;
+    }
+
+    .staff-role {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      color: #666;
+      margin: 0 0 1rem 0;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .staff-bio {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      color: #666;
+      margin: 0 0 1rem 0;
+    }
+
+    .staff-contact {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      color: #666;
+      margin: 0.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .staff-contact i {
+      color: #dd3333;
+      width: 16px;
+    }
+
+    .staff-contact a {
+      color: #666;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .staff-contact a:hover {
+      color: #dd3333;
+    }
+
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
+    }
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
+    }
+
+    /* Responsive Styles */
+    @media (max-width: 991px) {
+      .team-header-content {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .team-logo-large,
+      .team-logo-large-placeholder {
+        margin: 0 auto;
+      }
+
+      .team-title {
+        font-size: 36px;
+        line-height: 40px;
+      }
+
+      .section-title {
+        font-size: 28px;
+        line-height: 32px;
+      }
+
+      .staff-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1.5rem;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .team-title {
+        font-size: 28px;
+        line-height: 32px;
+      }
+
+      .section-title {
+        font-size: 24px;
+        line-height: 28px;
+      }
+
+      .staff-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .sp-template-player-list table.sp-player-list.sp-data-table {
+        font-size: 12px;
+      }
+
+      .sp-template-player-list table.sp-player-list.sp-data-table thead th,
+      .sp-template-player-list table.sp-player-list.sp-data-table tbody td {
+        padding: 8px 3px;
+      }
+    }
+  </style>
+</Layout>
+

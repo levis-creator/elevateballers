@@ -1,0 +1,534 @@
+---
+export const prerender = false;
+
+import Layout from "../layouts/Layout.astro";
+import TopBar from "../features/layout/components/TopBar.astro";
+import Header from "../features/layout/components/Header.astro";
+import MobileMenu from "../features/layout/components/MobileMenu";
+import Footer from "../features/layout/components/Footer.astro";
+import Spacing from "../shared/components/ui/Spacing.astro";
+import { getUpcomingMatches } from "../features/matches/lib/queries";
+import { formatMatchDate, formatMatchTime } from "../features/matches/lib/utils";
+import PageLoader from "../components/PageLoader";
+import ContentLoader from "../components/ContentLoader";
+
+// Fetch upcoming matches from database
+let matches = [];
+let hasError = false;
+try {
+  matches = await getUpcomingMatches();
+} catch (error) {
+  console.error('Error fetching matches:', error);
+  hasError = true;
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(date: Date | string): string {
+  return formatMatchDate(date);
+}
+
+/**
+ * Format time for display
+ */
+function formatTime(date: Date | string): string {
+  return formatMatchTime(date);
+}
+---
+
+<Layout>
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header />
+    <MobileMenu client:load />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      ></div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-fixtures-header"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+
+                  <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">
+                    UPCOMING FIXTURES
+                  </h2>
+
+                  {hasError ? (
+                    <ContentLoader client:load message="Failed to load fixtures. Please try again later." />
+                  ) : (
+                    <div class="sp-template sp-template-event-list">
+                    <div class="sp-table-wrapper">
+                      <table class="sp-event-list sp-data-table">
+                        <thead>
+                          <tr>
+                            <th class="data-date">Date</th>
+                            <th class="data-time">Time</th>
+                            <th class="data-home">Home</th>
+                            <th class="data-away">Away</th>
+                            <th class="data-venue">Venue</th>
+                            <th class="data-league">League</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matches.length > 0 ? (
+                            matches.map((match, index) => (
+                              <tr class={index % 2 === 0 ? "even" : "odd"}>
+                                <td class="data-date">{formatDate(match.date)}</td>
+                                <td class="data-time">{formatTime(match.date)}</td>
+                                <td class="data-home">
+                                  <a href={`/matches/${match.id}`}>{match.team1Name}</a>
+                                </td>
+                                <td class="data-away">
+                                  <a href={`/matches/${match.id}`}>{match.team2Name}</a>
+                                </td>
+                                <td class="data-venue">-</td>
+                                <td class="data-league">{match.league}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colspan="6" class="data-name" style="text-align: center; padding: 20px;">
+                                No upcoming fixtures available.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  )}
+
+                  <Spacing
+                    id="stm-spacing-fixtures-footer"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+
+    <div class="sp-footer-sponsors">
+      <div class="sportspress"><div class="sp-sponsors"></div></div>
+    </div>
+  </div>
+  <!--main-->
+  <!--wrapper-->
+
+  <div class="rev-close-btn">
+    <span class="close-left"></span>
+    <span class="close-right"></span>
+  </div>
+
+  <script is:inline>
+    window.RS_MODULES = window.RS_MODULES || {};
+    window.RS_MODULES.modules = window.RS_MODULES.modules || {};
+    window.RS_MODULES.waiting = window.RS_MODULES.waiting || [];
+    window.RS_MODULES.defered = true;
+    window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};
+    window.RS_MODULES.type = "compiled";
+  </script>
+  <script is:inline type="speculationrules">
+    {
+      "prefetch": [
+        {
+          "source": "document",
+          "where": {
+            "and": [
+              { "href_matches": "/*" },
+              {
+                "not": {
+                  "href_matches": [
+                    "/wp-*.php",
+                    "/wp-admin/*",
+                    "/wp-content/uploads/*",
+                    "/wp-content/*",
+                    "/wp-content/plugins/*",
+                    "/wp-content/themes/elevate/*",
+                    "/*\\?(.+)"
+                  ]
+                }
+              },
+              { "not": { "selector_matches": "a[rel~=\"nofollow\"]" } },
+              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }
+            ]
+          },
+          "eagerness": "conservative"
+        }
+      ]
+    }
+  </script>
+
+  <style is:inline type="text/css">
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
+    }
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
+    }
+
+    /* Smooth scroll behavior - Matching homepage */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Fixtures page specific styles */
+    .wpb_wrapper h2.heading-font {
+      font-size: 40px;
+      line-height: 44px;
+      margin-bottom: 50px;
+      color: #dd3333 !important;
+    }
+
+    .sp-template-event-list {
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .sp-template-event-list .sp-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 5px;
+    }
+
+    /* Table header - Exact match: red background #e21e22, white text */
+    .sp-template-event-list table.sp-event-list.sp-data-table thead {
+      background-color: #e21e22;
+      color: #fff;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table thead th {
+      background-color: #e21e22;
+      color: #fff;
+      padding: 13px 7px;
+      text-align: center;
+      text-transform: uppercase;
+      font-weight: normal;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table thead th.data-home,
+    .sp-template-event-list table.sp-event-list.sp-data-table thead th.data-away {
+      text-align: left;
+      padding-left: 20px !important;
+    }
+
+    /* Table body - Exact match: white for even, #e8e8e8 for odd */
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody tr.odd td,
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody tr:nth-child(odd) td {
+      background-color: #e8e8e8 !important;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody tr.even td,
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody tr:nth-child(even) td {
+      background-color: #fff;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody td {
+      background-color: #fff;
+      padding: 13px 7px;
+      text-align: center;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody td.data-home,
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody td.data-away {
+      text-align: left;
+      padding-left: 20px;
+      color: #535353;
+      font-weight: 700;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody td a {
+      color: #595959;
+      text-decoration: none;
+    }
+
+    .sp-template-event-list table.sp-event-list.sp-data-table tbody td a:hover {
+      color: #009bdc;
+    }
+
+    /* Responsive styles */
+    @media (max-width: 991px) {
+      .sp-template-event-list .sp-table-wrapper {
+        margin: 0 -15px;
+        padding: 0 15px;
+      }
+
+      .sp-template-event-list table.sp-event-list.sp-data-table {
+        font-size: 14px;
+      }
+
+      .sp-template-event-list table.sp-event-list.sp-data-table thead th,
+      .sp-template-event-list table.sp-event-list.sp-data-table tbody td {
+        padding: 10px 5px;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .sp-template-event-list table.sp-event-list.sp-data-table {
+        font-size: 12px;
+      }
+
+      .sp-template-event-list table.sp-event-list.sp-data-table thead th,
+      .sp-template-event-list table.sp-event-list.sp-data-table tbody td {
+        padding: 8px 3px;
+      }
+    }
+  </style>
+
+  <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
+
+  <script is:inline type="text/javascript">
+    jQuery(document).ready(function ($) {
+      $(".sp-header").prepend($(".sp-header-sponsors"));
+    });
+  </script>
+
+  <script is:inline>
+    (function () {
+      function maybePrefixUrlField() {
+        const value = this.value.trim();
+        if (value !== "" && value.indexOf("http") !== 0) {
+          this.value = "http://" + value;
+        }
+      }
+
+      const urlFields = document.querySelectorAll(
+        '.mc4wp-form input[type="url"]'
+      );
+      for (let j = 0; j < urlFields.length; j++) {
+        urlFields[j].addEventListener("blur", maybePrefixUrlField);
+      }
+    })();
+  </script>
+  <style is:inline type="text/css">
+    /* Hide reCAPTCHA V3 badge */
+    .grecaptcha-badge {
+      visibility: hidden !important;
+    }
+  </style>
+  <script is:inline>
+    const lazyloadRunObserver = () => {
+      const lazyloadBackgrounds = document.querySelectorAll(
+        `.e-con.e-parent:not(.e-lazyloaded)`
+      );
+      const lazyloadBackgroundObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              let lazyloadBackground = entry.target;
+              if (lazyloadBackground) {
+                lazyloadBackground.classList.add("e-lazyloaded");
+              }
+              lazyloadBackgroundObserver.unobserve(entry.target);
+            }
+          });
+        },
+        { rootMargin: "200px 0px 200px 0px" }
+      );
+      lazyloadBackgrounds.forEach((lazyloadBackground) => {
+        lazyloadBackgroundObserver.observe(lazyloadBackground);
+      });
+    };
+    const events = ["DOMContentLoaded", "elementor/lazyload/observe"];
+    events.forEach((event) => {
+      document.addEventListener(event, lazyloadRunObserver);
+    });
+  </script>
+
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.min.js"
+    id="jquery-core-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery-migrate.min.js"
+    id="jquery-migrate-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/perfect-scrollbar.min.js"
+    id="perfect-scrollbar-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/bootstrap.min.js"
+    id="bootstrap-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/select2.full.min.js"
+    id="select2-js"
+    defer="defer"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/owl.carousel.min.js"
+    id="owl-carousel-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.fancybox.pack.js"
+    id="fancybox-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/imagesloaded.min.js"
+    id="imagesloaded-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/isotope.pkgd.min.js"
+    id="isotope-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/waypoints.min.js"
+    id="waypoint-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.counterup.min.js"
+    id="counterup-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/lightbox.js"
+    id="lightbox-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/splash.js"
+    id="stm-theme-scripts-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/header.js"
+    id="stm-theme-scripts-header-js"
+  ></script>
+  <script is:inline type="text/javascript" id="sportspress-js-extra">
+    /* <![CDATA[ */
+    var localized_strings = {
+      days: "days",
+      hrs: "hrs",
+      mins: "mins",
+      secs: "secs",
+      previous: "Previous",
+      next: "Next",
+    };
+    //# sourceURL=sportspress-js-extra
+    /* ]]> */
+  </script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress.js"
+    id="sportspress-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.waypoints.min.js"
+    id="jquery-waypoints-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-match-stats.js"
+    id="sportspress-match-stats-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-scoreboard.js"
+    id="sportspress-scoreboard-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-sponsors.js"
+    id="sportspress-sponsors-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-tournaments.js"
+    id="sportspress-tournaments-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/js_composer_front.min.js"
+    id="wpb_composer_front_js-js"
+  ></script>
+  <script is:inline type="text/javascript">
+    (function () {
+      var c = document.body.className;
+      c = c.replace(/woocommerce-no-js/, "woocommerce-js");
+      document.body.className = c;
+    })();
+  </script>
+  <script is:inline type="text/javascript">
+    jQuery(document).ready(function ($) {
+      // Initialize PerfectScrollbar for event list if needed
+      $(".sp-template-event-list .sp-table-wrapper").each(function () {
+        if (typeof PerfectScrollbar !== "undefined") {
+          new PerfectScrollbar(this);
+        }
+      });
+    });
+  </script>
+  <script is:inline type="text/javascript">
+    jQuery(document).ready(function ($) {
+      $(".sp-header-loaded").prepend($(".sp-league-menu"));
+    });
+  </script>
+  <script is:inline type="text/javascript">
+    jQuery(document).ready(function ($) {
+      $(".sp-header-loaded").prepend($(".sp-header-scoreboard"));
+    });
+  </script>
+</Layout>
+<!-- wrapper -->
+

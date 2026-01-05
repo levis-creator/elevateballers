@@ -15,7 +15,6 @@
     "db:migrate-to-production": "tsx scripts/migrate-db-to-production.ts"
   },
   "dependencies": {
-    "@astrojs/node": "^9.5.1",
     "@astrojs/react": "^4.4.2",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@hookform/resolvers": "^5.2.2",
@@ -52,6 +51,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@astrojs/vercel": "^9.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.16.0",

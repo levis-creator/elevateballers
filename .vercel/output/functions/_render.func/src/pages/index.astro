@@ -1,0 +1,782 @@
+---
+import Layout from "../layouts/Layout.astro";
+import TopBar from "../features/layout/components/TopBar.astro";
+import Header from "../features/layout/components/Header.astro";
+import MobileMenu from "../features/layout/components/MobileMenu";
+import Footer from "../features/layout/components/Footer.astro";
+import MarqueeMatchup from "../features/home/components/MarqueeMatchup.astro";
+import PlayerOfTheWeek from "../features/home/components/PlayerOfTheWeek.astro";
+import StatsSection from "../features/home/components/StatsSection.astro";
+import PostSlider from "../features/home/components/PostSlider";
+import NewsTicker from "../features/home/components/NewsTicker";
+import NextMatchCarousel from "../features/home/components/NextMatchCarousel";
+import LatestNews from "../features/home/components/LatestNews";
+import Sponsors from "../features/home/components/Sponsors";
+import MediaGallery from "../features/media/components/MediaGallery";
+import FeatureGate from "../components/FeatureGate.astro";
+import { isFeatureEnabled } from "../lib/feature-flags";
+import PageLoader from "../components/PageLoader";
+---
+
+<Layout>
+  <PageLoader client:load />
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  
+  <div id="wrapper">
+    {isFeatureEnabled('layout.topbar') && <TopBar />}
+    {isFeatureEnabled('layout.header') && <Header />}
+    {isFeatureEnabled('layout.mobileMenu') && <MobileMenu client:load />}
+    
+    <main id="main" role="main">
+      <!-- Hero Section: Post Slider -->
+      <FeatureGate feature="home.postSlider">
+        <section class="hero-section" aria-label="Featured content">
+          <div class="container">
+            <PostSlider client:load />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- News Ticker Section -->
+      <FeatureGate feature="home.newsTicker">
+        <section class="news-ticker-section" aria-label="Latest news ticker">
+          <NewsTicker client:load />
+        </section>
+      </FeatureGate>
+
+      <!-- Marquee Matchup Section -->
+      <FeatureGate feature="home.marqueeMatchup">
+        <section class="marquee-matchup-section section" aria-label="Featured match">
+          <div class="container">
+            <MarqueeMatchup />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- Next Match Carousel Section -->
+      <FeatureGate feature="home.nextMatchCarousel">
+        <section class="next-match-section section" aria-label="Upcoming matches">
+          <div class="container">
+            <NextMatchCarousel client:load />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- Latest News Section -->
+      <FeatureGate feature="home.latestNews">
+        <section class="latest-news-section section" id="main-content" aria-label="Latest news">
+          <div class="container">
+            <LatestNews client:load />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- Player of the Week Section -->
+      <FeatureGate feature="home.playerOfTheWeek">
+        <section class="player-week-section section" aria-label="Player of the week">
+          <div class="container">
+            <PlayerOfTheWeek />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- Stats Leaders Section -->
+      <FeatureGate feature="home.statsLeaders">
+        <section class="stats-leaders-section section" aria-label="Statistics and leaders">
+        <div class="container">
+          <div class="stats-leaders-header">
+            <h2 class="section-title">Stats Leaders</h2>
+            <a href="http://elevateballers.com/stats/" class="btn btn-primary btn-lg" title="View all statistics">
+              View All Stats
+            </a>
+          </div>
+          
+          <!-- Stats Players Carousel - Legacy support -->
+          <div class="stats-players-wrapper">
+            <div class="stm-player-ids style_2 stm-players-5715 carousel_yes">
+              <div class="clearfix">
+                <div class="stm-carousel-controls-center">
+                  <button 
+                    class="stm-carousel-control-prev" 
+                    aria-label="Previous players"
+                    type="button"
+                  >
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                  </button>
+                  <button 
+                    class="stm-carousel-control-next" 
+                    aria-label="Next players"
+                    type="button"
+                  >
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="stm-player-list-wrapper">
+                <div class="stm-players clearfix"></div>
+              </div>
+            </div>
+          </div>
+          
+          <script type="text/javascript" is:inline>
+            (function () {
+              "use strict";
+              if (typeof jQuery === 'undefined') return;
+              var $ = jQuery;
+              var unique_class = "stm-players-5715";
+              var owl = $("." + unique_class + " .stm-players");
+              if (!owl.length) return;
+              $(document).ready(function () {
+                initOwl(owl, unique_class);
+                var tm = null;
+                $(".vc_tta-tab").on("click", function () {
+                  var tabId = $(this).find("a").attr("href");
+                  var owlTab = $(tabId + " .stm-players");
+                  if (tm) clearTimeout(tm);
+                  tm = setTimeout(function () {
+                    initOwl(owlTab, tabId);
+                    owlTab.trigger("destroy.owl.carousel");
+                    owlTab
+                      .html(
+                        owlTab.find(".owl-stage-outer").html()
+                      )
+                      .removeClass("owl-loaded");
+                    initOwl(owlTab, tabId);
+                  }, 200);
+                });
+
+                function initOwl(owl, uniqId) {
+                  owl.owlCarousel({
+                    items: 4,
+                    dots: false,
+                    autoplay: false,
+                    slideBy: 4,
+                    loop: true,
+                    responsive: {
+                      0: {
+                        items: 1,
+                        slideBy: 1,
+                      },
+                      440: {
+                        items: 2,
+                        slideBy: 2,
+                      },
+                      768: {
+                        items: 3,
+                        slideBy: 3,
+                      },
+                      992: {
+                        items: 3,
+                        slideBy: 3,
+                      },
+                      1100: {
+                        items: 4,
+                        slideBy: 4,
+                      },
+                    },
+                  });
+                  $(
+                    "." +
+                      unique_class +
+                      " .stm-carousel-control-prev"
+                  ).on("click", function () {
+                    owl.trigger("prev.owl.carousel");
+                  });
+                  $(
+                    "." +
+                      unique_class +
+                      " .stm-carousel-control-next"
+                  ).on("click", function () {
+                    owl.trigger("next.owl.carousel");
+                  });
+                }
+              });
+            })();
+          </script>
+        </div>
+      </section>
+      </FeatureGate>
+
+      <!-- Statistics Section -->
+      <FeatureGate feature="home.statsSection">
+        <section class="statistics-section section" aria-label="League statistics">
+          <div class="container">
+            <StatsSection />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- Media Gallery Section -->
+      <FeatureGate feature="home.mediaGallery">
+        <section class="media-gallery-section section" aria-label="Media gallery">
+          <div class="container">
+            <MediaGallery client:load />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- Sponsors Section -->
+      <FeatureGate feature="home.sponsors">
+        <section class="sponsors-section section" aria-label="Our sponsors">
+          <div class="container">
+            <Sponsors client:load />
+          </div>
+        </section>
+      </FeatureGate>
+
+      <!-- Registration CTA Section -->
+      <FeatureGate feature="home.registrationCta">
+        <section class="registration-cta-section section" aria-label="Join the league">
+        <div class="container">
+          <div class="registration-cta-content">
+            <h2 class="registration-title">
+              <a
+                href="https://elevateballers.com/registration-test/"
+                title="Register to Join the League"
+              >
+                Register to Join the League
+              </a>
+            </h2>
+            <p class="registration-description">
+              Be part of the premier basketball league. Join us today and elevate your game!
+            </p>
+            <a
+              class="btn btn-secondary btn-lg"
+              href="http://elevateballers.com/registration-test"
+              title="Join Us"
+            >
+              Join Us
+            </a>
+          </div>
+        </div>
+      </section>
+      </FeatureGate>
+    </main>
+
+    {isFeatureEnabled('layout.footer') && <Footer />}
+
+    <div class="sp-footer-sponsors">
+      <div class="sportspress"><div class="sp-sponsors"></div></div>
+    </div>
+  </div>
+
+  <!-- Additional Scripts and Styles -->
+  <div class="rev-close-btn" aria-hidden="true">
+    <span class="close-left"></span>
+    <span class="close-right"></span>
+  </div>
+
+  <!-- Speculation Rules for Prefetching -->
+  <script is:inline type="speculationrules">
+    {
+      "prefetch": [
+        {
+          "source": "document",
+          "where": {
+            "and": [
+              { "href_matches": "/*" },
+              {
+                "not": {
+                  "href_matches": [
+                    "/wp-*.php",
+                    "/wp-admin/*",
+                    "/wp-content/uploads/*",
+                    "/wp-content/*",
+                    "/wp-content/plugins/*",
+                    "/wp-content/themes/elevate/*",
+                    "/*\\?(.+)"
+                  ]
+                }
+              },
+              { "not": { "selector_matches": "a[rel~=\"nofollow\"]" } },
+              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }
+            ]
+          },
+          "eagerness": "conservative"
+        }
+      ]
+    }
+  </script>
+
+  <!-- Header Sponsors -->
+  <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;" aria-hidden="true">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
+
+  <!-- Legacy Scripts -->
+  <script is:inline type="text/javascript">
+    (function() {
+      if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function ($) {
+          var header = $(".sp-header");
+          var sponsors = $(".sp-header-sponsors");
+          if (header.length && sponsors.length) {
+            header.prepend(sponsors);
+          }
+        });
+      }
+    })();
+  </script>
+
+  <script is:inline>
+    (function () {
+      function maybePrefixUrlField() {
+        const value = this.value.trim();
+        if (value !== "" && value.indexOf("http") !== 0) {
+          this.value = "http://" + value;
+        }
+      }
+
+      const urlFields = document.querySelectorAll(
+        '.mc4wp-form input[type="url"]'
+      );
+      for (let j = 0; j < urlFields.length; j++) {
+        urlFields[j].addEventListener("blur", maybePrefixUrlField);
+      }
+    })();
+  </script>
+
+  <style is:inline type="text/css">
+    /* Hide reCAPTCHA V3 badge */
+    .grecaptcha-badge {
+      visibility: hidden !important;
+    }
+
+    /* Landing Page Specific Styles */
+    .hero-section {
+      padding: 0;
+    }
+
+    .news-ticker-section {
+      width: 100%;
+    }
+
+    .marquee-matchup-section {
+      background-color: var(--color-gray-100, #f0f0f0);
+    }
+
+    .next-match-section {
+      background: var(--color-accent-dark, #2d1e49) url('/images/basketball-game-concept-scaled.jpg') center center no-repeat;
+      background-size: cover;
+      position: relative;
+      color: white;
+    }
+
+    .next-match-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(45, 30, 73, 0.8);
+      z-index: 0;
+    }
+
+    .next-match-section > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .latest-news-section {
+      background-color: var(--color-white, #ffffff);
+    }
+
+    .player-week-section {
+      background-color: var(--color-white, #ffffff);
+    }
+
+    .stats-leaders-section {
+      background-color: var(--color-white, #ffffff);
+    }
+
+    .stats-leaders-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-8, 2rem);
+      flex-wrap: wrap;
+      gap: var(--spacing-4, 1rem);
+    }
+
+    .section-title {
+      margin: 0;
+    }
+
+    .statistics-section {
+      background-color: var(--color-secondary, #ffba00);
+    }
+
+    .media-gallery-section {
+      background-color: var(--color-white, #ffffff);
+    }
+
+    .sponsors-section {
+      background-color: var(--color-gray-100, #f2f4f7);
+    }
+
+    .registration-cta-section {
+      background: var(--color-accent-dark, #301e48) url('/images/award.png') center center no-repeat;
+      background-size: contain;
+      position: relative;
+      text-align: center;
+      color: white;
+    }
+
+    .registration-cta-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .registration-title {
+      font-size: clamp(2rem, 4vw + 1rem, 4.5rem);
+      color: white;
+      margin-bottom: var(--spacing-6, 1.5rem);
+    }
+
+    .registration-title a {
+      color: white;
+      text-decoration: none;
+      transition: color var(--transition-base, 250ms);
+    }
+
+    .registration-title a:hover,
+    .registration-title a:focus {
+      color: var(--color-secondary, #ffba00);
+    }
+
+    .registration-description {
+      font-size: var(--font-size-lg, 1.25rem);
+      margin-bottom: var(--spacing-8, 2rem);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
+    }
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .stats-leaders-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .registration-title {
+        font-size: clamp(1.5rem, 5vw, 3rem);
+      }
+    }
+  </style>
+
+  <!-- External CSS Files -->
+  <link
+    rel="stylesheet"
+    id="stm_post_slider-css"
+    href="/css/stm_post_slider.css"
+    type="text/css"
+    media="all"
+  />
+  <link
+    rel="stylesheet"
+    id="stm_next_match_carousel2-css"
+    href="/css/stm_next_match_carousel2.css"
+    type="text/css"
+    media="all"
+  />
+  <link
+    rel="stylesheet"
+    id="stm_media_tabs_default-css"
+    href="/css/stm_media_tabs_default.css"
+    type="text/css"
+    media="all"
+  />
+  <link
+    rel="stylesheet"
+    id="rs-plugin-settings-css"
+    href="/css/rs6.css"
+    type="text/css"
+    media="all"
+  />
+
+  <!-- External Scripts -->
+  <script
+    is:inline
+    type="text/javascript"
+    src="https://maps.googleapis.com/maps/api/js?ver=4.3.9"
+    id="stm_gmap-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.min.js"
+    id="jquery-core-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery-migrate.min.js"
+    id="jquery-migrate-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/perfect-scrollbar.min.js"
+    id="perfect-scrollbar-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/bootstrap.min.js"
+    id="bootstrap-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/select2.full.min.js"
+    id="select2-js"
+    defer="defer"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/owl.carousel.min.js"
+    id="owl-carousel-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.fancybox.pack.js"
+    id="fancybox-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/imagesloaded.min.js"
+    id="imagesloaded-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/isotope.pkgd.min.js"
+    id="isotope-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/waypoints.min.js"
+    id="waypoint-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.counterup.min.js"
+    id="counterup-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/lightbox.js"
+    id="lightbox-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/splash.js"
+    id="stm-theme-scripts-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/header.js"
+    id="stm-theme-scripts-header-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/ticker_posts.js"
+    id="stm-ticker-posts-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/ajax.submit.js"
+    id="ajax-submit-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/hooks.min.js"
+    id="wp-hooks-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/i18n.min.js"
+    id="wp-i18n-js"
+  ></script>
+  <script is:inline type="text/javascript" id="wp-i18n-js-after">
+    /* <![CDATA[ */
+    wp.i18n.setLocaleData({ "text direction\u0004ltr": ["ltr"] });
+    //# sourceURL=wp-i18n-js-after
+    /* ]]> */
+  </script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/index.js"
+    id="swv-js"
+  ></script>
+  <script is:inline type="text/javascript" id="contact-form-7-js-before">
+    /* <![CDATA[ */
+    var wpcf7 = {
+      api: {
+        root: "https:\/\/elevateballers.com\/wp-json\/",
+        namespace: "contact-form-7\/v1",
+      },
+    };
+    //# sourceURL=contact-form-7-js-before
+    /* ]]> */
+  </script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/index_1.js"
+    id="contact-form-7-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/rbtools.min.js"
+    defer=""
+    async=""
+    id="tp-tools-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/rs6.min.js"
+    defer=""
+    async=""
+    id="revmin-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.dataTables.min.js"
+    id="jquery-datatables-js"
+  ></script>
+  <script is:inline type="text/javascript" id="sportspress-js-extra">
+    /* <![CDATA[ */
+    var localized_strings = {
+      days: "days",
+      hrs: "hrs",
+      mins: "mins",
+      secs: "secs",
+      previous: "Previous",
+      next: "Next",
+    };
+    //# sourceURL=sportspress-js-extra
+    /* ]]> */
+  </script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress.js"
+    id="sportspress-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/jquery.waypoints.min.js"
+    id="jquery-waypoints-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-match-stats.js"
+    id="sportspress-match-stats-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-scoreboard.js"
+    id="sportspress-scoreboard-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-sponsors.js"
+    id="sportspress-sponsors-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/sportspress-tournaments.js"
+    id="sportspress-tournaments-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/js_composer_front.min.js"
+    id="wpb_composer_front_js-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/stm_post_slider.js"
+    id="stm_post_slider-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    id="stm_next_match_carousel2-js-extra"
+  >
+    /* <![CDATA[ */
+    var slides_ = { items: "1", navs_: "disable", dots_: "enable" };
+    //# sourceURL=stm_next_match_carousel2-js-extra
+    /* ]]> */
+  </script>
+  <script
+    is:inline
+    type="text/javascript"
+    src="/js/stm_next_match_carousel2.js"
+    id="stm_next_match_carousel2-js"
+  ></script>
+  <script
+    is:inline
+    type="text/javascript"
+    defer=""
+    src="/js/forms.js"
+    id="mc4wp-forms-api-js"
+  ></script>
+  <script is:inline type="text/javascript">
+    (function() {
+      if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function ($) {
+          var header = $(".sp-header-loaded");
+          var menu = $(".sp-league-menu");
+          if (header.length && menu.length) {
+            header.prepend(menu);
+          }
+        });
+      }
+    })();
+  </script>
+  <script is:inline type="text/javascript">
+    (function() {
+      if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function ($) {
+          var header = $(".sp-header-loaded");
+          var scoreboard = $(".sp-header-scoreboard");
+          if (header.length && scoreboard.length) {
+            header.prepend(scoreboard);
+          }
+        });
+      }
+    })();
+  </script>
+</Layout>

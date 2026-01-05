@@ -1,0 +1,177 @@
+import { e as createComponent, k as renderComponent, r as renderTemplate, h as addAttribute, m as maybeRenderHead } from '../chunks/astro/server_c8H0H61q.mjs';
+import 'piccolore';
+import { $ as $$Layout } from '../chunks/Layout_0fak_qL3.mjs';
+import { $ as $$Footer, M as MobileMenu, a as $$Header, b as $$TopBar, P as PageLoader } from '../chunks/PageLoader_D_5s45Mo.mjs';
+import { $ as $$Spacing } from '../chunks/Spacing_BPc02AQQ.mjs';
+export { renderers } from '../renderers.mjs';
+
+const standings = [
+  {
+    rank: 1,
+    team: "Thunder Hawks",
+    played: 12,
+    won: 10,
+    drawn: 1,
+    lost: 1,
+    goalsFor: 245,
+    goalsAgainst: 180,
+    goalDifference: 65,
+    points: 31
+  },
+  {
+    rank: 2,
+    team: "Fire Dragons",
+    played: 12,
+    won: 9,
+    drawn: 2,
+    lost: 1,
+    goalsFor: 230,
+    goalsAgainst: 175,
+    goalDifference: 55,
+    points: 29
+  },
+  {
+    rank: 3,
+    team: "Storm Riders",
+    played: 12,
+    won: 9,
+    drawn: 0,
+    lost: 3,
+    goalsFor: 220,
+    goalsAgainst: 190,
+    goalDifference: 30,
+    points: 27
+  },
+  {
+    rank: 4,
+    team: "Lightning Bolts",
+    played: 12,
+    won: 8,
+    drawn: 2,
+    lost: 2,
+    goalsFor: 215,
+    goalsAgainst: 185,
+    goalDifference: 30,
+    points: 26
+  },
+  {
+    rank: 5,
+    team: "Eagle Warriors",
+    played: 12,
+    won: 7,
+    drawn: 3,
+    lost: 2,
+    goalsFor: 210,
+    goalsAgainst: 195,
+    goalDifference: 15,
+    points: 24
+  },
+  {
+    rank: 6,
+    team: "Phoenix Rising",
+    played: 12,
+    won: 6,
+    drawn: 4,
+    lost: 2,
+    goalsFor: 205,
+    goalsAgainst: 200,
+    goalDifference: 5,
+    points: 22
+  },
+  {
+    rank: 7,
+    team: "Tiger Claws",
+    played: 12,
+    won: 5,
+    drawn: 3,
+    lost: 4,
+    goalsFor: 195,
+    goalsAgainst: 205,
+    goalDifference: -10,
+    points: 18
+  },
+  {
+    rank: 8,
+    team: "Wolf Pack",
+    played: 12,
+    won: 4,
+    drawn: 4,
+    lost: 4,
+    goalsFor: 185,
+    goalsAgainst: 210,
+    goalDifference: -25,
+    points: 16
+  },
+  {
+    rank: 9,
+    team: "Lion Pride",
+    played: 12,
+    won: 3,
+    drawn: 5,
+    lost: 4,
+    goalsFor: 175,
+    goalsAgainst: 220,
+    goalDifference: -45,
+    points: 14
+  },
+  {
+    rank: 10,
+    team: "Bear Force",
+    played: 12,
+    won: 2,
+    drawn: 4,
+    lost: 6,
+    goalsFor: 165,
+    goalsAgainst: 230,
+    goalDifference: -65,
+    points: 10
+  },
+  {
+    rank: 11,
+    team: "Shark Attack",
+    played: 12,
+    won: 1,
+    drawn: 3,
+    lost: 8,
+    goalsFor: 155,
+    goalsAgainst: 240,
+    goalDifference: -85,
+    points: 6
+  },
+  {
+    rank: 12,
+    team: "Panther Strike",
+    played: 12,
+    won: 0,
+    drawn: 2,
+    lost: 10,
+    goalsFor: 140,
+    goalsAgainst: 250,
+    goalDifference: -110,
+    points: 2
+  }
+];
+
+var __freeze = Object.freeze;
+var __defProp = Object.defineProperty;
+var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __freeze(raw || cooked.slice()) }));
+var _a;
+const $$Standings = createComponent(($$result, $$props, $$slots) => {
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, {}, { "default": ($$result2) => renderTemplate(_a || (_a = __template([" ", " ", '<div id="wrapper"> ', " ", " ", ' <div id="main"> <div class="stm-title-box-unit transparent-header_on title_box-357" style="padding-top: 0; padding-bottom: 0px;"></div> <div class="container"> <section class="wpb-content-wrapper"> <div class="vc_row wpb_row vc_row-fluid"> <div class="wpb_column vc_column_container vc_col-sm-12"> <div class="vc_column-inner"> <div class="wpb_wrapper"> ', ' <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">\nSTANDINGS\n</h2> <div class="sp-template sp-template-league-table"> <div class="sp-table-wrapper"> <table class="sp-league-table sp-data-table"> <thead> <tr> <th class="data-rank">Rank</th> <th class="data-name">Team</th> <th class="data-played">P</th> <th class="data-won">W</th> <th class="data-drawn">D</th> <th class="data-lost">L</th> <th class="data-goals-for">GF</th> <th class="data-goals-against">GA</th> <th class="data-goal-difference">GD</th> <th class="data-points">Pts</th> </tr> </thead> <tbody> ', " </tbody> </table> </div> </div> ", " </div> </div> </div> </div> </section> </div> </div> ", ' <div class="sp-footer-sponsors"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> </div>   <div class="rev-close-btn"> <span class="close-left"></span> <span class="close-right"></span> </div> <script>\n    window.RS_MODULES = window.RS_MODULES || {};\n    window.RS_MODULES.modules = window.RS_MODULES.modules || {};\n    window.RS_MODULES.waiting = window.RS_MODULES.waiting || [];\n    window.RS_MODULES.defered = true;\n    window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};\n    window.RS_MODULES.type = "compiled";\n  <\/script> <script type="speculationrules">\n    {\n      "prefetch": [\n        {\n          "source": "document",\n          "where": {\n            "and": [\n              { "href_matches": "/*" },\n              {\n                "not": {\n                  "href_matches": [\n                    "/wp-*.php",\n                    "/wp-admin/*",\n                    "/wp-content/uploads/*",\n                    "/wp-content/*",\n                    "/wp-content/plugins/*",\n                    "/wp-content/themes/elevate/*",\n                    "/*\\\\?(.+)"\n                  ]\n                }\n              },\n              { "not": { "selector_matches": "a[rel~=\\"nofollow\\"]" } },\n              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }\n            ]\n          },\n          "eagerness": "conservative"\n        }\n      ]\n    }\n  <\/script> <style type="text/css">\n    .sp-footer-sponsors {\n      background: #f4f4f4;\n      color: #363f48;\n    }\n    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {\n      color: #363f48;\n    }\n\n    /* Smooth scroll behavior - Matching homepage */\n    html {\n      scroll-behavior: smooth;\n    }\n\n    /* Standings page specific styles */\n    .wpb_wrapper h2.heading-font {\n      font-size: 40px;\n      line-height: 44px;\n      margin-bottom: 50px;\n      color: #dd3333 !important;\n    }\n\n    .sp-template-league-table {\n      margin-top: 20px;\n      margin-bottom: 20px;\n    }\n\n    .sp-template-league-table .sp-table-wrapper {\n      overflow-x: auto;\n      -webkit-overflow-scrolling: touch;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table {\n      width: 100%;\n      border-collapse: separate;\n      border-spacing: 0 5px;\n    }\n\n    /* Table header - Exact match: red background #e21e22, white text */\n    .sp-template-league-table table.sp-league-table.sp-data-table thead {\n      background-color: #e21e22;\n      color: #fff;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table thead th {\n      background-color: #e21e22;\n      color: #fff;\n      padding: 13px 7px;\n      text-align: center;\n      text-transform: uppercase;\n      font-weight: normal;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table thead th.data-name {\n      text-align: left;\n      padding-left: 20px !important;\n    }\n\n    /* Table body - Exact match: white for even, #e8e8e8 for odd */\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr.odd td,\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr:nth-child(odd) td {\n      background-color: #e8e8e8 !important;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr.even td,\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr:nth-child(even) td {\n      background-color: #fff;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td {\n      background-color: #fff;\n      padding: 13px 7px;\n      text-align: center;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td.data-name {\n      text-align: left;\n      padding-left: 20px;\n      color: #535353;\n      font-weight: 700;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td a {\n      color: #535353;\n      text-decoration: none;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td.data-name a:hover {\n      color: #009bdc;\n    }\n\n    /* Responsive styles */\n    @media (max-width: 991px) {\n      .sp-template-league-table .sp-table-wrapper {\n        margin: 0 -15px;\n        padding: 0 15px;\n      }\n\n      .sp-template-league-table table.sp-league-table.sp-data-table {\n        font-size: 14px;\n      }\n\n      .sp-template-league-table table.sp-league-table.sp-data-table thead th,\n      .sp-template-league-table table.sp-league-table.sp-data-table tbody td {\n        padding: 10px 5px;\n      }\n    }\n\n    @media (max-width: 767px) {\n      .sp-template-league-table table.sp-league-table.sp-data-table {\n        font-size: 12px;\n      }\n\n      .sp-template-league-table table.sp-league-table.sp-data-table thead th,\n      .sp-template-league-table table.sp-league-table.sp-data-table tbody td {\n        padding: 8px 3px;\n      }\n    }\n  </style> <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      $(".sp-header").prepend($(".sp-header-sponsors"));\n    });\n  <\/script> <script>\n    (function () {\n      function maybePrefixUrlField() {\n        const value = this.value.trim();\n        if (value !== "" && value.indexOf("http") !== 0) {\n          this.value = "http://" + value;\n        }\n      }\n\n      const urlFields = document.querySelectorAll(\n        \'.mc4wp-form input[type="url"]\'\n      );\n      for (let j = 0; j < urlFields.length; j++) {\n        urlFields[j].addEventListener("blur", maybePrefixUrlField);\n      }\n    })();\n  <\/script> <style type="text/css">\n    /* Hide reCAPTCHA V3 badge */\n    .grecaptcha-badge {\n      visibility: hidden !important;\n    }\n  </style> <script>\n    const lazyloadRunObserver = () => {\n      const lazyloadBackgrounds = document.querySelectorAll(\n        `.e-con.e-parent:not(.e-lazyloaded)`\n      );\n      const lazyloadBackgroundObserver = new IntersectionObserver(\n        (entries) => {\n          entries.forEach((entry) => {\n            if (entry.isIntersecting) {\n              let lazyloadBackground = entry.target;\n              if (lazyloadBackground) {\n                lazyloadBackground.classList.add("e-lazyloaded");\n              }\n              lazyloadBackgroundObserver.unobserve(entry.target);\n            }\n          });\n        },\n        { rootMargin: "200px 0px 200px 0px" }\n      );\n      lazyloadBackgrounds.forEach((lazyloadBackground) => {\n        lazyloadBackgroundObserver.observe(lazyloadBackground);\n      });\n    };\n    const events = ["DOMContentLoaded", "elementor/lazyload/observe"];\n    events.forEach((event) => {\n      document.addEventListener(event, lazyloadRunObserver);\n    });\n  <\/script> <script type="text/javascript" src="/js/jquery.min.js" id="jquery-core-js"><\/script> <script type="text/javascript" src="/js/jquery-migrate.min.js" id="jquery-migrate-js"><\/script> <script type="text/javascript" src="/js/perfect-scrollbar.min.js" id="perfect-scrollbar-js"><\/script> <script type="text/javascript" src="/js/bootstrap.min.js" id="bootstrap-js"><\/script> <script type="text/javascript" src="/js/select2.full.min.js" id="select2-js" defer="defer"><\/script> <script type="text/javascript" src="/js/owl.carousel.min.js" id="owl-carousel-js"><\/script> <script type="text/javascript" src="/js/jquery.fancybox.pack.js" id="fancybox-js"><\/script> <script type="text/javascript" src="/js/imagesloaded.min.js" id="imagesloaded-js"><\/script> <script type="text/javascript" src="/js/isotope.pkgd.min.js" id="isotope-js"><\/script> <script type="text/javascript" src="/js/waypoints.min.js" id="waypoint-js"><\/script> <script type="text/javascript" src="/js/jquery.counterup.min.js" id="counterup-js"><\/script> <script type="text/javascript" src="/js/lightbox.js" id="lightbox-js"><\/script> <script type="text/javascript" src="/js/splash.js" id="stm-theme-scripts-js"><\/script> <script type="text/javascript" src="/js/header.js" id="stm-theme-scripts-header-js"><\/script> <script type="text/javascript" id="sportspress-js-extra">\n    /* <![CDATA[ */\n    var localized_strings = {\n      days: "days",\n      hrs: "hrs",\n      mins: "mins",\n      secs: "secs",\n      previous: "Previous",\n      next: "Next",\n    };\n    //# sourceURL=sportspress-js-extra\n    /* ]]> */\n  <\/script> <script type="text/javascript" src="/js/sportspress.js" id="sportspress-js"><\/script> <script type="text/javascript" src="/js/jquery.waypoints.min.js" id="jquery-waypoints-js"><\/script> <script type="text/javascript" src="/js/sportspress-match-stats.js" id="sportspress-match-stats-js"><\/script> <script type="text/javascript" src="/js/sportspress-scoreboard.js" id="sportspress-scoreboard-js"><\/script> <script type="text/javascript" src="/js/sportspress-sponsors.js" id="sportspress-sponsors-js"><\/script> <script type="text/javascript" src="/js/sportspress-tournaments.js" id="sportspress-tournaments-js"><\/script> <script type="text/javascript" src="/js/js_composer_front.min.js" id="wpb_composer_front_js-js"><\/script> <script type="text/javascript">\n    (function () {\n      var c = document.body.className;\n      c = c.replace(/woocommerce-no-js/, "woocommerce-js");\n      document.body.className = c;\n    })();\n  <\/script> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      // Initialize PerfectScrollbar for league table if needed\n      $(".sp-template-league-table .sp-table-wrapper").each(function () {\n        if (typeof PerfectScrollbar !== "undefined") {\n          new PerfectScrollbar(this);\n        }\n      });\n    });\n  <\/script> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      $(".sp-header-loaded").prepend($(".sp-league-menu"));\n    });\n  <\/script> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      $(".sp-header-loaded").prepend($(".sp-header-scoreboard"));\n    });\n  <\/script> '], [" ", " ", '<div id="wrapper"> ', " ", " ", ' <div id="main"> <div class="stm-title-box-unit transparent-header_on title_box-357" style="padding-top: 0; padding-bottom: 0px;"></div> <div class="container"> <section class="wpb-content-wrapper"> <div class="vc_row wpb_row vc_row-fluid"> <div class="wpb_column vc_column_container vc_col-sm-12"> <div class="vc_column-inner"> <div class="wpb_wrapper"> ', ' <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">\nSTANDINGS\n</h2> <div class="sp-template sp-template-league-table"> <div class="sp-table-wrapper"> <table class="sp-league-table sp-data-table"> <thead> <tr> <th class="data-rank">Rank</th> <th class="data-name">Team</th> <th class="data-played">P</th> <th class="data-won">W</th> <th class="data-drawn">D</th> <th class="data-lost">L</th> <th class="data-goals-for">GF</th> <th class="data-goals-against">GA</th> <th class="data-goal-difference">GD</th> <th class="data-points">Pts</th> </tr> </thead> <tbody> ', " </tbody> </table> </div> </div> ", " </div> </div> </div> </div> </section> </div> </div> ", ' <div class="sp-footer-sponsors"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> </div>   <div class="rev-close-btn"> <span class="close-left"></span> <span class="close-right"></span> </div> <script>\n    window.RS_MODULES = window.RS_MODULES || {};\n    window.RS_MODULES.modules = window.RS_MODULES.modules || {};\n    window.RS_MODULES.waiting = window.RS_MODULES.waiting || [];\n    window.RS_MODULES.defered = true;\n    window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};\n    window.RS_MODULES.type = "compiled";\n  <\/script> <script type="speculationrules">\n    {\n      "prefetch": [\n        {\n          "source": "document",\n          "where": {\n            "and": [\n              { "href_matches": "/*" },\n              {\n                "not": {\n                  "href_matches": [\n                    "/wp-*.php",\n                    "/wp-admin/*",\n                    "/wp-content/uploads/*",\n                    "/wp-content/*",\n                    "/wp-content/plugins/*",\n                    "/wp-content/themes/elevate/*",\n                    "/*\\\\\\\\?(.+)"\n                  ]\n                }\n              },\n              { "not": { "selector_matches": "a[rel~=\\\\"nofollow\\\\"]" } },\n              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }\n            ]\n          },\n          "eagerness": "conservative"\n        }\n      ]\n    }\n  <\/script> <style type="text/css">\n    .sp-footer-sponsors {\n      background: #f4f4f4;\n      color: #363f48;\n    }\n    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {\n      color: #363f48;\n    }\n\n    /* Smooth scroll behavior - Matching homepage */\n    html {\n      scroll-behavior: smooth;\n    }\n\n    /* Standings page specific styles */\n    .wpb_wrapper h2.heading-font {\n      font-size: 40px;\n      line-height: 44px;\n      margin-bottom: 50px;\n      color: #dd3333 !important;\n    }\n\n    .sp-template-league-table {\n      margin-top: 20px;\n      margin-bottom: 20px;\n    }\n\n    .sp-template-league-table .sp-table-wrapper {\n      overflow-x: auto;\n      -webkit-overflow-scrolling: touch;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table {\n      width: 100%;\n      border-collapse: separate;\n      border-spacing: 0 5px;\n    }\n\n    /* Table header - Exact match: red background #e21e22, white text */\n    .sp-template-league-table table.sp-league-table.sp-data-table thead {\n      background-color: #e21e22;\n      color: #fff;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table thead th {\n      background-color: #e21e22;\n      color: #fff;\n      padding: 13px 7px;\n      text-align: center;\n      text-transform: uppercase;\n      font-weight: normal;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table thead th.data-name {\n      text-align: left;\n      padding-left: 20px !important;\n    }\n\n    /* Table body - Exact match: white for even, #e8e8e8 for odd */\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr.odd td,\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr:nth-child(odd) td {\n      background-color: #e8e8e8 !important;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr.even td,\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody tr:nth-child(even) td {\n      background-color: #fff;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td {\n      background-color: #fff;\n      padding: 13px 7px;\n      text-align: center;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td.data-name {\n      text-align: left;\n      padding-left: 20px;\n      color: #535353;\n      font-weight: 700;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td a {\n      color: #535353;\n      text-decoration: none;\n    }\n\n    .sp-template-league-table table.sp-league-table.sp-data-table tbody td.data-name a:hover {\n      color: #009bdc;\n    }\n\n    /* Responsive styles */\n    @media (max-width: 991px) {\n      .sp-template-league-table .sp-table-wrapper {\n        margin: 0 -15px;\n        padding: 0 15px;\n      }\n\n      .sp-template-league-table table.sp-league-table.sp-data-table {\n        font-size: 14px;\n      }\n\n      .sp-template-league-table table.sp-league-table.sp-data-table thead th,\n      .sp-template-league-table table.sp-league-table.sp-data-table tbody td {\n        padding: 10px 5px;\n      }\n    }\n\n    @media (max-width: 767px) {\n      .sp-template-league-table table.sp-league-table.sp-data-table {\n        font-size: 12px;\n      }\n\n      .sp-template-league-table table.sp-league-table.sp-data-table thead th,\n      .sp-template-league-table table.sp-league-table.sp-data-table tbody td {\n        padding: 8px 3px;\n      }\n    }\n  </style> <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      $(".sp-header").prepend($(".sp-header-sponsors"));\n    });\n  <\/script> <script>\n    (function () {\n      function maybePrefixUrlField() {\n        const value = this.value.trim();\n        if (value !== "" && value.indexOf("http") !== 0) {\n          this.value = "http://" + value;\n        }\n      }\n\n      const urlFields = document.querySelectorAll(\n        \'.mc4wp-form input[type="url"]\'\n      );\n      for (let j = 0; j < urlFields.length; j++) {\n        urlFields[j].addEventListener("blur", maybePrefixUrlField);\n      }\n    })();\n  <\/script> <style type="text/css">\n    /* Hide reCAPTCHA V3 badge */\n    .grecaptcha-badge {\n      visibility: hidden !important;\n    }\n  </style> <script>\n    const lazyloadRunObserver = () => {\n      const lazyloadBackgrounds = document.querySelectorAll(\n        \\`.e-con.e-parent:not(.e-lazyloaded)\\`\n      );\n      const lazyloadBackgroundObserver = new IntersectionObserver(\n        (entries) => {\n          entries.forEach((entry) => {\n            if (entry.isIntersecting) {\n              let lazyloadBackground = entry.target;\n              if (lazyloadBackground) {\n                lazyloadBackground.classList.add("e-lazyloaded");\n              }\n              lazyloadBackgroundObserver.unobserve(entry.target);\n            }\n          });\n        },\n        { rootMargin: "200px 0px 200px 0px" }\n      );\n      lazyloadBackgrounds.forEach((lazyloadBackground) => {\n        lazyloadBackgroundObserver.observe(lazyloadBackground);\n      });\n    };\n    const events = ["DOMContentLoaded", "elementor/lazyload/observe"];\n    events.forEach((event) => {\n      document.addEventListener(event, lazyloadRunObserver);\n    });\n  <\/script> <script type="text/javascript" src="/js/jquery.min.js" id="jquery-core-js"><\/script> <script type="text/javascript" src="/js/jquery-migrate.min.js" id="jquery-migrate-js"><\/script> <script type="text/javascript" src="/js/perfect-scrollbar.min.js" id="perfect-scrollbar-js"><\/script> <script type="text/javascript" src="/js/bootstrap.min.js" id="bootstrap-js"><\/script> <script type="text/javascript" src="/js/select2.full.min.js" id="select2-js" defer="defer"><\/script> <script type="text/javascript" src="/js/owl.carousel.min.js" id="owl-carousel-js"><\/script> <script type="text/javascript" src="/js/jquery.fancybox.pack.js" id="fancybox-js"><\/script> <script type="text/javascript" src="/js/imagesloaded.min.js" id="imagesloaded-js"><\/script> <script type="text/javascript" src="/js/isotope.pkgd.min.js" id="isotope-js"><\/script> <script type="text/javascript" src="/js/waypoints.min.js" id="waypoint-js"><\/script> <script type="text/javascript" src="/js/jquery.counterup.min.js" id="counterup-js"><\/script> <script type="text/javascript" src="/js/lightbox.js" id="lightbox-js"><\/script> <script type="text/javascript" src="/js/splash.js" id="stm-theme-scripts-js"><\/script> <script type="text/javascript" src="/js/header.js" id="stm-theme-scripts-header-js"><\/script> <script type="text/javascript" id="sportspress-js-extra">\n    /* <![CDATA[ */\n    var localized_strings = {\n      days: "days",\n      hrs: "hrs",\n      mins: "mins",\n      secs: "secs",\n      previous: "Previous",\n      next: "Next",\n    };\n    //# sourceURL=sportspress-js-extra\n    /* ]]> */\n  <\/script> <script type="text/javascript" src="/js/sportspress.js" id="sportspress-js"><\/script> <script type="text/javascript" src="/js/jquery.waypoints.min.js" id="jquery-waypoints-js"><\/script> <script type="text/javascript" src="/js/sportspress-match-stats.js" id="sportspress-match-stats-js"><\/script> <script type="text/javascript" src="/js/sportspress-scoreboard.js" id="sportspress-scoreboard-js"><\/script> <script type="text/javascript" src="/js/sportspress-sponsors.js" id="sportspress-sponsors-js"><\/script> <script type="text/javascript" src="/js/sportspress-tournaments.js" id="sportspress-tournaments-js"><\/script> <script type="text/javascript" src="/js/js_composer_front.min.js" id="wpb_composer_front_js-js"><\/script> <script type="text/javascript">\n    (function () {\n      var c = document.body.className;\n      c = c.replace(/woocommerce-no-js/, "woocommerce-js");\n      document.body.className = c;\n    })();\n  <\/script> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      // Initialize PerfectScrollbar for league table if needed\n      $(".sp-template-league-table .sp-table-wrapper").each(function () {\n        if (typeof PerfectScrollbar !== "undefined") {\n          new PerfectScrollbar(this);\n        }\n      });\n    });\n  <\/script> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      $(".sp-header-loaded").prepend($(".sp-league-menu"));\n    });\n  <\/script> <script type="text/javascript">\n    jQuery(document).ready(function ($) {\n      $(".sp-header-loaded").prepend($(".sp-header-scoreboard"));\n    });\n  <\/script> '])), renderComponent($$result2, "PageLoader", PageLoader, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/components/PageLoader", "client:component-export": "default" }), maybeRenderHead(), renderComponent($$result2, "TopBar", $$TopBar, {}), renderComponent($$result2, "Header", $$Header, {}), renderComponent($$result2, "MobileMenu", MobileMenu, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/layout/components/MobileMenu", "client:component-export": "default" }), renderComponent($$result2, "Spacing", $$Spacing, { "id": "stm-spacing-standings-header", "lg": "50", "md": "50", "sm": "40", "xs": "40" }), standings.length > 0 ? standings.map((team, index) => renderTemplate`<tr${addAttribute(index % 2 === 0 ? "even" : "odd", "class")}> <td class="data-rank">${team.rank}</td> <td class="data-name"> ${team.url ? renderTemplate`<a${addAttribute(team.url, "href")}>${team.team}</a>` : team.team} </td> <td class="data-played">${team.played}</td> <td class="data-won">${team.won}</td> <td class="data-drawn">${team.drawn}</td> <td class="data-lost">${team.lost}</td> <td class="data-goals-for">${team.goalsFor}</td> <td class="data-goals-against">${team.goalsAgainst}</td> <td class="data-goal-difference">${team.goalDifference > 0 ? "+" : ""}${team.goalDifference}</td> <td class="data-points">${team.points}</td> </tr>`) : renderTemplate`<tr> <td colspan="10" class="data-name" style="text-align: center; padding: 20px;">
+No standings data available.
+</td> </tr>`, renderComponent($$result2, "Spacing", $$Spacing, { "id": "stm-spacing-standings-footer", "lg": "50", "md": "50", "sm": "40", "xs": "40" }), renderComponent($$result2, "Footer", $$Footer, {})) })} <!-- wrapper -->`;
+}, "C:/Users/User/Desktop/projects/elevateballers/src/pages/standings.astro", void 0);
+
+const $$file = "C:/Users/User/Desktop/projects/elevateballers/src/pages/standings.astro";
+const $$url = "/standings";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: $$Standings,
+  file: $$file,
+  url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };

@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import MediaEditor from '../../../features/cms/components/MediaEditor';
+---
+
+<AdminLayout title="Add Media - Admin">
+  <MediaEditor client:load />
+</AdminLayout>
+

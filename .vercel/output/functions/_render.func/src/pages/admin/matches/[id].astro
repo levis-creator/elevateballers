@@ -1,0 +1,18 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+export async function getStaticPaths() {
+  return [];
+}
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import MatchEditor from '../../../features/cms/components/MatchEditor';
+
+const { id } = Astro.params;
+---
+
+<AdminLayout title="Edit Match - Admin">
+  <MatchEditor matchId={id} client:load />
+</AdminLayout>
+

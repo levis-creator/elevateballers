@@ -1,0 +1,18 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+export async function getStaticPaths() {
+  return [];
+}
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import NewsEditor from '../../../features/cms/components/NewsEditor';
+
+const { id } = Astro.params;
+---
+
+<AdminLayout title="Edit News Article - Admin">
+  <NewsEditor articleId={id} client:load />
+</AdminLayout>
+
