@@ -1,8 +1,8 @@
 import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute, u as unescapeHTML } from '../../../../chunks/astro/server_c8H0H61q.mjs';
 import 'piccolore';
-import { $ as $$AdminLayout } from '../../../../chunks/AdminLayout_CR5Hf1uL.mjs';
-import { c as checkAuth } from '../../../../chunks/button_3jlkDYpB.mjs';
-import { g as getNewsArticleById } from '../../../../chunks/queries_vvMOn9ut.mjs';
+import { $ as $$AdminLayout } from '../../../../chunks/AdminLayout_C6oIy3vZ.mjs';
+import { c as checkAuth } from '../../../../chunks/button_DxR-TZtn.mjs';
+import { g as getNewsArticleById } from '../../../../chunks/queries_E6Jl_Myi.mjs';
 import { r as reverseCategoryMap } from '../../../../chunks/types_DXfYTmyI.mjs';
 import { C as CommentsList } from '../../../../chunks/CommentsList_kC1h_7dG.mjs';
 /* empty css                                         */

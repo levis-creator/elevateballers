@@ -2,11 +2,11 @@ import { e as createComponent, f as createAstro, k as renderComponent, r as rend
 import 'piccolore';
 import { $ as $$Layout } from '../../chunks/Layout_0fak_qL3.mjs';
 import { $ as $$Footer, M as MobileMenu, a as $$Header, b as $$TopBar, P as PageLoader } from '../../chunks/PageLoader_D_5s45Mo.mjs';
-import { J as getNewsArticleBySlug } from '../../chunks/queries_vvMOn9ut.mjs';
+import { J as getNewsArticleBySlug } from '../../chunks/queries_E6Jl_Myi.mjs';
 import { r as reverseCategoryMap } from '../../chunks/types_DXfYTmyI.mjs';
 import { C as CommentsList } from '../../chunks/CommentsList_kC1h_7dG.mjs';
-import { p as prisma } from '../../chunks/prisma_sB1uhqJV.mjs';
-import { $ as $$NewsSidebar, a as $$NewsBreadcrumbs } from '../../chunks/NewsBreadcrumbs_CeB1vn0z.mjs';
+import { p as prisma } from '../../chunks/prisma_Cvn-nyRW.mjs';
+import { $ as $$NewsSidebar, a as $$NewsBreadcrumbs } from '../../chunks/NewsBreadcrumbs_DVvGkpOM.mjs';
 /* empty css                                     */
 export { renderers } from '../../renderers.mjs';
 

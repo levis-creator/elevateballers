@@ -1,7 +1,7 @@
 import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate } from '../../../chunks/astro/server_c8H0H61q.mjs';
 import 'piccolore';
-import { $ as $$AdminLayout } from '../../../chunks/AdminLayout_CR5Hf1uL.mjs';
-import { T as TeamEditor } from '../../../chunks/TeamEditor_DHrLac44.mjs';
+import { $ as $$AdminLayout } from '../../../chunks/AdminLayout_C6oIy3vZ.mjs';
+import { T as TeamEditor } from '../../../chunks/TeamEditor_QMIp8qeu.mjs';
 export { renderers } from '../../../renderers.mjs';
 
 const $$Astro = createAstro();

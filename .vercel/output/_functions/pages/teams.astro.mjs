@@ -2,7 +2,7 @@ import { e as createComponent, f as createAstro, k as renderComponent, r as rend
 import 'piccolore';
 import { $ as $$Layout } from '../chunks/Layout_0fak_qL3.mjs';
 import { $ as $$Footer, M as MobileMenu, a as $$Header, b as $$TopBar, P as PageLoader } from '../chunks/PageLoader_D_5s45Mo.mjs';
-import { I as getTeams } from '../chunks/queries_vvMOn9ut.mjs';
+import { I as getTeams } from '../chunks/queries_E6Jl_Myi.mjs';
 import { $ as $$Spacing } from '../chunks/Spacing_BPc02AQQ.mjs';
 import { C as ContentLoader } from '../chunks/ContentLoader_CZRVSG-V.mjs';
 /* empty css                                 */

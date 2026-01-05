@@ -3,7 +3,7 @@ import 'piccolore';
 import { $ as $$Layout } from '../chunks/Layout_0fak_qL3.mjs';
 import { $ as $$Footer, M as MobileMenu, a as $$Header, b as $$TopBar, P as PageLoader } from '../chunks/PageLoader_D_5s45Mo.mjs';
 import { $ as $$Spacing } from '../chunks/Spacing_BPc02AQQ.mjs';
-import { b as getUpcomingMatches } from '../chunks/queries_WVd1Mo-o.mjs';
+import { b as getUpcomingMatches } from '../chunks/queries_DUy-FH4c.mjs';
 import { f as formatMatchDate, b as formatMatchTime } from '../chunks/utils_D-DJdZHD.mjs';
 import { C as ContentLoader } from '../chunks/ContentLoader_CZRVSG-V.mjs';
 export { renderers } from '../renderers.mjs';
