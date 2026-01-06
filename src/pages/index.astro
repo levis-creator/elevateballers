@@ -21,12 +21,12 @@ import PageLoader from "../components/PageLoader";
 <Layout>
   <PageLoader client:load />
   <a href="#main-content" class="skip-link">Skip to main content</a>
-  
+
   <div id="wrapper">
-    {isFeatureEnabled('layout.topbar') && <TopBar />}
-    {isFeatureEnabled('layout.header') && <Header />}
-    {isFeatureEnabled('layout.mobileMenu') && <MobileMenu client:load />}
-    
+    {isFeatureEnabled("layout.topbar") && <TopBar />}
+    {isFeatureEnabled("layout.header") && <Header />}
+    {isFeatureEnabled("layout.mobileMenu") && <MobileMenu client:load />}
+
     <main id="main" role="main">
       <!-- Hero Section: Post Slider -->
       <FeatureGate feature="home.postSlider">
@@ -46,7 +46,10 @@ import PageLoader from "../components/PageLoader";
 
       <!-- Marquee Matchup Section -->
       <FeatureGate feature="home.marqueeMatchup">
-        <section class="marquee-matchup-section section" aria-label="Featured match">
+        <section
+          class="marquee-matchup-section section"
+          aria-label="Featured match"
+        >
           <div class="container">
             <MarqueeMatchup />
           </div>
@@ -55,7 +58,10 @@ import PageLoader from "../components/PageLoader";
 
       <!-- Next Match Carousel Section -->
       <FeatureGate feature="home.nextMatchCarousel">
-        <section class="next-match-section section" aria-label="Upcoming matches">
+        <section
+          class="next-match-section section"
+          aria-label="Upcoming matches"
+        >
           <div class="container">
             <NextMatchCarousel client:load />
           </div>
@@ -64,7 +70,11 @@ import PageLoader from "../components/PageLoader";
 
       <!-- Latest News Section -->
       <FeatureGate feature="home.latestNews">
-        <section class="latest-news-section section" id="main-content" aria-label="Latest news">
+        <section
+          class="latest-news-section section"
+          id="main-content"
+          aria-label="Latest news"
+        >
           <div class="container">
             <LatestNews client:load />
           </div>
@@ -73,7 +83,10 @@ import PageLoader from "../components/PageLoader";
 
       <!-- Player of the Week Section -->
       <FeatureGate feature="home.playerOfTheWeek">
-        <section class="player-week-section section" aria-label="Player of the week">
+        <section
+          class="player-week-section section"
+          aria-label="Player of the week"
+        >
           <div class="container">
             <PlayerOfTheWeek />
           </div>
@@ -82,124 +95,130 @@ import PageLoader from "../components/PageLoader";
 
       <!-- Stats Leaders Section -->
       <FeatureGate feature="home.statsLeaders">
-        <section class="stats-leaders-section section" aria-label="Statistics and leaders">
-        <div class="container">
-          <div class="stats-leaders-header">
-            <h2 class="section-title">Stats Leaders</h2>
-            <a href="http://elevateballers.com/stats/" class="btn btn-primary btn-lg" title="View all statistics">
-              View All Stats
-            </a>
-          </div>
-          
-          <!-- Stats Players Carousel - Legacy support -->
-          <div class="stats-players-wrapper">
-            <div class="stm-player-ids style_2 stm-players-5715 carousel_yes">
-              <div class="clearfix">
-                <div class="stm-carousel-controls-center">
-                  <button 
-                    class="stm-carousel-control-prev" 
-                    aria-label="Previous players"
-                    type="button"
-                  >
-                    <i class="fa fa-angle-left" aria-hidden="true"></i>
-                  </button>
-                  <button 
-                    class="stm-carousel-control-next" 
-                    aria-label="Next players"
-                    type="button"
-                  >
-                    <i class="fa fa-angle-right" aria-hidden="true"></i>
-                  </button>
+        <section
+          class="stats-leaders-section section"
+          aria-label="Statistics and leaders"
+        >
+          <div class="container">
+            <div class="stats-leaders-header">
+              <h2 class="section-title">Stats Leaders</h2>
+              <a
+                href="http://elevateballers.com/stats/"
+                class="btn btn-primary btn-lg"
+                title="View all statistics"
+              >
+                View All Stats
+              </a>
+            </div>
+
+            <!-- Stats Players Carousel - Legacy support -->
+            <div class="stats-players-wrapper">
+              <div class="stm-player-ids style_2 stm-players-5715 carousel_yes">
+                <div class="clearfix">
+                  <div class="stm-carousel-controls-center">
+                    <button
+                      class="stm-carousel-control-prev"
+                      aria-label="Previous players"
+                      type="button"
+                    >
+                      <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      class="stm-carousel-control-next"
+                      aria-label="Next players"
+                      type="button"
+                    >
+                      <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="stm-player-list-wrapper">
+                  <div class="stm-players clearfix"></div>
                 </div>
               </div>
-              <div class="stm-player-list-wrapper">
-                <div class="stm-players clearfix"></div>
-              </div>
             </div>
-          </div>
-          
-          <script type="text/javascript" is:inline>
-            (function () {
-              "use strict";
-              if (typeof jQuery === 'undefined') return;
-              var $ = jQuery;
-              var unique_class = "stm-players-5715";
-              var owl = $("." + unique_class + " .stm-players");
-              if (!owl.length) return;
-              $(document).ready(function () {
-                initOwl(owl, unique_class);
-                var tm = null;
-                $(".vc_tta-tab").on("click", function () {
-                  var tabId = $(this).find("a").attr("href");
-                  var owlTab = $(tabId + " .stm-players");
-                  if (tm) clearTimeout(tm);
-                  tm = setTimeout(function () {
-                    initOwl(owlTab, tabId);
-                    owlTab.trigger("destroy.owl.carousel");
-                    owlTab
-                      .html(
-                        owlTab.find(".owl-stage-outer").html()
-                      )
-                      .removeClass("owl-loaded");
-                    initOwl(owlTab, tabId);
-                  }, 200);
-                });
 
-                function initOwl(owl, uniqId) {
-                  owl.owlCarousel({
-                    items: 4,
-                    dots: false,
-                    autoplay: false,
-                    slideBy: 4,
-                    loop: true,
-                    responsive: {
-                      0: {
-                        items: 1,
-                        slideBy: 1,
-                      },
-                      440: {
-                        items: 2,
-                        slideBy: 2,
-                      },
-                      768: {
-                        items: 3,
-                        slideBy: 3,
-                      },
-                      992: {
-                        items: 3,
-                        slideBy: 3,
-                      },
-                      1100: {
-                        items: 4,
-                        slideBy: 4,
-                      },
-                    },
+            <script type="text/javascript" is:inline>
+              (function () {
+                "use strict";
+                if (typeof jQuery === "undefined") return;
+                var $ = jQuery;
+                var unique_class = "stm-players-5715";
+                var owl = $("." + unique_class + " .stm-players");
+                if (!owl.length) return;
+                $(document).ready(function () {
+                  initOwl(owl, unique_class);
+                  var tm = null;
+                  $(".vc_tta-tab").on("click", function () {
+                    var tabId = $(this).find("a").attr("href");
+                    var owlTab = $(tabId + " .stm-players");
+                    if (tm) clearTimeout(tm);
+                    tm = setTimeout(function () {
+                      initOwl(owlTab, tabId);
+                      owlTab.trigger("destroy.owl.carousel");
+                      owlTab
+                        .html(owlTab.find(".owl-stage-outer").html())
+                        .removeClass("owl-loaded");
+                      initOwl(owlTab, tabId);
+                    }, 200);
                   });
-                  $(
-                    "." +
-                      unique_class +
-                      " .stm-carousel-control-prev"
-                  ).on("click", function () {
-                    owl.trigger("prev.owl.carousel");
-                  });
-                  $(
-                    "." +
-                      unique_class +
-                      " .stm-carousel-control-next"
-                  ).on("click", function () {
-                    owl.trigger("next.owl.carousel");
-                  });
-                }
-              });
-            })();
-          </script>
-        </div>
-      </section>
+
+                  function initOwl(owl, uniqId) {
+                    owl.owlCarousel({
+                      items: 4,
+                      dots: false,
+                      autoplay: false,
+                      slideBy: 4,
+                      loop: true,
+                      responsive: {
+                        0: {
+                          items: 1,
+                          slideBy: 1,
+                        },
+                        440: {
+                          items: 2,
+                          slideBy: 2,
+                        },
+                        768: {
+                          items: 3,
+                          slideBy: 3,
+                        },
+                        992: {
+                          items: 3,
+                          slideBy: 3,
+                        },
+                        1100: {
+                          items: 4,
+                          slideBy: 4,
+                        },
+                      },
+                    });
+                    $("." + unique_class + " .stm-carousel-control-prev").on(
+                      "click",
+                      function () {
+                        owl.trigger("prev.owl.carousel");
+                      },
+                    );
+                    $("." + unique_class + " .stm-carousel-control-next").on(
+                      "click",
+                      function () {
+                        owl.trigger("next.owl.carousel");
+                      },
+                    );
+                  }
+                });
+              })();
+            </script>
+          </div>
+        </section>
       </FeatureGate>
 
       <!-- Statistics Section -->
       <FeatureGate feature="home.statsSection">
-        <section class="statistics-section section" aria-label="League statistics">
+        <section
+          class="statistics-section section"
+          aria-label="League statistics"
+        >
           <div class="container">
             <StatsSection />
           </div>
@@ -208,7 +227,10 @@ import PageLoader from "../components/PageLoader";
 
       <!-- Media Gallery Section -->
       <FeatureGate feature="home.mediaGallery">
-        <section class="media-gallery-section section" aria-label="Media gallery">
+        <section
+          class="media-gallery-section section"
+          aria-label="Media gallery"
+        >
           <div class="container">
             <MediaGallery client:load />
           </div>
@@ -226,34 +248,38 @@ import PageLoader from "../components/PageLoader";
 
       <!-- Registration CTA Section -->
       <FeatureGate feature="home.registrationCta">
-        <section class="registration-cta-section section" aria-label="Join the league">
-        <div class="container">
-          <div class="registration-cta-content">
-            <h2 class="registration-title">
+        <section
+          class="registration-cta-section section"
+          aria-label="Join the league"
+        >
+          <div class="container">
+            <div class="registration-cta-content">
+              <h2 class="registration-title">
+                <a
+                  href="https://elevateballers.com/registration-test/"
+                  title="Register to Join the League"
+                >
+                  Register to Join the League
+                </a>
+              </h2>
+              <p class="registration-description">
+                Be part of the premier basketball league. Join us today and
+                elevate your game!
+              </p>
               <a
-                href="https://elevateballers.com/registration-test/"
-                title="Register to Join the League"
+                class="btn btn-secondary btn-lg"
+                href="http://elevateballers.com/registration-test"
+                title="Join Us"
               >
-                Register to Join the League
+                Join Us
               </a>
-            </h2>
-            <p class="registration-description">
-              Be part of the premier basketball league. Join us today and elevate your game!
-            </p>
-            <a
-              class="btn btn-secondary btn-lg"
-              href="http://elevateballers.com/registration-test"
-              title="Join Us"
-            >
-              Join Us
-            </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
       </FeatureGate>
     </main>
 
-    {isFeatureEnabled('layout.footer') && <Footer />}
+    {isFeatureEnabled("layout.footer") && <Footer />}
 
     <div class="sp-footer-sponsors">
       <div class="sportspress"><div class="sp-sponsors"></div></div>
@@ -299,14 +325,18 @@ import PageLoader from "../components/PageLoader";
   </script>
 
   <!-- Header Sponsors -->
-  <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;" aria-hidden="true">
+  <div
+    class="sp-header-sponsors"
+    style="margin-top: 10px; margin-right: 10px;"
+    aria-hidden="true"
+  >
     <div class="sportspress"><div class="sp-sponsors"></div></div>
   </div>
 
   <!-- Legacy Scripts -->
   <script is:inline type="text/javascript">
-    (function() {
-      if (typeof jQuery !== 'undefined') {
+    (function () {
+      if (typeof jQuery !== "undefined") {
         jQuery(document).ready(function ($) {
           var header = $(".sp-header");
           var sponsors = $(".sp-header-sponsors");
@@ -328,7 +358,7 @@ import PageLoader from "../components/PageLoader";
       }
 
       const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]'
+        '.mc4wp-form input[type="url"]',
       );
       for (let j = 0; j < urlFields.length; j++) {
         urlFields[j].addEventListener("blur", maybePrefixUrlField);
@@ -356,14 +386,16 @@ import PageLoader from "../components/PageLoader";
     }
 
     .next-match-section {
-      background: var(--color-accent-dark, #2d1e49) url('/images/basketball-game-concept-scaled.jpg') center center no-repeat;
+      background: var(--color-accent-dark, #2d1e49)
+        url("/images/basketball-game-concept-scaled.jpg") center center
+        no-repeat;
       background-size: cover;
       position: relative;
       color: white;
     }
 
     .next-match-section::before {
-      content: '';
+      content: "";
       position: absolute;
       top: 0;
       left: 0;
@@ -416,7 +448,8 @@ import PageLoader from "../components/PageLoader";
     }
 
     .registration-cta-section {
-      background: var(--color-accent-dark, #301e48) url('/images/award.png') center center no-repeat;
+      background: var(--color-accent-dark, #301e48) url("/images/award.png")
+        center center no-repeat;
       background-size: contain;
       position: relative;
       text-align: center;
@@ -507,131 +540,82 @@ import PageLoader from "../components/PageLoader";
     is:inline
     type="text/javascript"
     src="https://maps.googleapis.com/maps/api/js?ver=4.3.9"
-    id="stm_gmap-js"
-  ></script>
+    id="stm_gmap-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery.min.js"
-    id="jquery-core-js"
-  ></script>
+    id="jquery-core-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery-migrate.min.js"
-    id="jquery-migrate-js"
-  ></script>
+    id="jquery-migrate-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/perfect-scrollbar.min.js"
-    id="perfect-scrollbar-js"
-  ></script>
+    id="perfect-scrollbar-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/bootstrap.min.js"
-    id="bootstrap-js"
-  ></script>
+    id="bootstrap-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/select2.full.min.js"
     id="select2-js"
-    defer="defer"
-  ></script>
+    defer="defer"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/owl.carousel.min.js"
-    id="owl-carousel-js"
-  ></script>
+    id="owl-carousel-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery.fancybox.pack.js"
-    id="fancybox-js"
-  ></script>
+    id="fancybox-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/imagesloaded.min.js"
-    id="imagesloaded-js"
-  ></script>
+    id="imagesloaded-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/isotope.pkgd.min.js"
-    id="isotope-js"
-  ></script>
+    id="isotope-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/waypoints.min.js"
-    id="waypoint-js"
-  ></script>
+    id="waypoint-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery.counterup.min.js"
-    id="counterup-js"
-  ></script>
+    id="counterup-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/lightbox.js"
-    id="lightbox-js"
-  ></script>
+    id="lightbox-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/splash.js"
-    id="stm-theme-scripts-js"
-  ></script>
+    id="stm-theme-scripts-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/header.js"
-    id="stm-theme-scripts-header-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/ticker_posts.js"
-    id="stm-ticker-posts-js"
-  ></script>
-
+    id="stm-theme-scripts-header-js"></script>
 
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery.dataTables.min.js"
-    id="jquery-datatables-js"
-  ></script>
-
-
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/stm_post_slider.js"
-    id="stm_post_slider-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    id="stm_next_match_carousel2-js-extra"
-  >
-    /* <![CDATA[ */
-    var slides_ = { items: "1", navs_: "disable", dots_: "enable" };
-    //# sourceURL=stm_next_match_carousel2-js-extra
-    /* ]]> */
-  </script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/stm_next_match_carousel2.js"
-    id="stm_next_match_carousel2-js"
-  ></script>
-
-
+    id="jquery-datatables-js"></script>
 </Layout>
