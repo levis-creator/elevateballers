@@ -1,0 +1,174 @@
+---
+import Layout from "../layouts/Layout.astro";
+import TopBar from "../features/layout/components/TopBar.astro";
+import Header from "../features/layout/components/Header.astro";
+import MobileMenu from "../features/layout/components/MobileMenu";
+import Footer from "../features/layout/components/Footer.astro";
+import Spacing from "../shared/components/ui/Spacing.astro";
+import TournamentBracket from "../features/tournaments/components/TournamentBracket";
+import PageLoader from "../components/PageLoader";
+
+// Mock data for demonstration - mapping to @g-loot/react-tournament-brackets format
+const mockMatches = [
+    {
+        id: "1",
+        nextMatchId: null, // Final
+        tournamentRoundText: "Final",
+        startTime: "2024-06-15",
+        state: "DONE",
+        participants: [
+            {
+                id: "team-1",
+                resultText: "85",
+                isWinner: true,
+                status: null,
+                name: "Lakers",
+                logo: "/images/lakers.png",
+            },
+            {
+                id: "team-2",
+                resultText: "82",
+                isWinner: false,
+                status: null,
+                name: "Warriors",
+                logo: "/images/warriors.png",
+            },
+        ],
+    },
+    {
+        id: "2",
+        nextMatchId: "1",
+        tournamentRoundText: "Semi-Final",
+        startTime: "2024-06-10",
+        state: "DONE",
+        participants: [
+            {
+                id: "team-1",
+                resultText: "90",
+                isWinner: true,
+                status: null,
+                name: "Lakers",
+            },
+            {
+                id: "team-3",
+                resultText: "88",
+                isWinner: false,
+                status: null,
+                name: "Celtics",
+            },
+        ],
+    },
+    {
+        id: "3",
+        nextMatchId: "1",
+        tournamentRoundText: "Semi-Final",
+        startTime: "2024-06-11",
+        state: "DONE",
+        participants: [
+            {
+                id: "team-2",
+                resultText: "95",
+                isWinner: true,
+                status: null,
+                name: "Warriors",
+            },
+            {
+                id: "team-4",
+                resultText: "80",
+                isWinner: false,
+                status: null,
+                name: "Bulls",
+            },
+        ],
+    },
+];
+---
+
+<Layout>
+    <PageLoader client:load />
+    <div id="wrapper">
+        <TopBar />
+        <Header />
+        <MobileMenu client:load />
+        <div id="main">
+            <div
+                class="stm-title-box-unit transparent-header_on title_box-357"
+                style="padding-top: 0; padding-bottom: 0px;"
+            >
+            </div>
+            <div class="container">
+                <section class="wpb-content-wrapper">
+                    <div class="vc_row wpb_row vc_row-fluid">
+                        <div
+                            class="wpb_column vc_column_container vc_col-sm-12"
+                        >
+                            <div class="vc_column-inner">
+                                <div class="wpb_wrapper">
+                                    <Spacing
+                                        id="stm-spacing-tournaments-header"
+                                        lg="50"
+                                        md="50"
+                                        sm="40"
+                                        xs="40"
+                                    />
+
+                                    <h2
+                                        class="heading-font"
+                                        style="text-align: center; margin-bottom: 50px; color: #dd3333;"
+                                    >
+                                        TOURNAMENT BRACKET
+                                    </h2>
+
+                                    <div
+                                        class="bracket-container"
+                                        style="background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow-x: auto;"
+                                    >
+                                        <TournamentBracket
+                                            matches={mockMatches}
+                                            client:load
+                                        />
+                                    </div>
+
+                                    <Spacing
+                                        id="stm-spacing-tournaments-footer"
+                                        lg="50"
+                                        md="50"
+                                        sm="40"
+                                        xs="40"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <Footer />
+
+        <div class="sp-footer-sponsors">
+            <div class="sportspress"><div class="sp-sponsors"></div></div>
+        </div>
+    </div>
+</Layout>
+
+<style is:inline type="text/css">
+    .sp-footer-sponsors {
+        background: #f4f4f4;
+        color: #363f48;
+    }
+
+    .heading-font {
+        font-size: 40px;
+        line-height: 44px;
+        margin-bottom: 50px;
+        color: #dd3333 !important;
+        text-transform: uppercase;
+    }
+
+    .bracket-container {
+        min-height: 500px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+</style>

@@ -23,10 +23,10 @@ export default defineConfig({
       },
     },
     optimizeDeps: {
-      include: ['lucide-react'],
+      include: ['lucide-react', 'react-masonry-css'],
     },
     ssr: {
-      noExternal: ['lucide-react'],
+      noExternal: ['lucide-react', 'react-masonry-css'],
     },
   },
 });
