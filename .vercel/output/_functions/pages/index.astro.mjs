@@ -1,16 +1,20 @@
-import { e as createComponent, f as createAstro, m as maybeRenderHead, h as addAttribute, r as renderTemplate, u as unescapeHTML, k as renderComponent, q as renderSlot } from '../chunks/astro/server_c8H0H61q.mjs';
+import { e as createComponent, f as createAstro, m as maybeRenderHead, h as addAttribute, r as renderTemplate, u as unescapeHTML, q as renderSlot, k as renderComponent } from '../chunks/astro/server_c8H0H61q.mjs';
 import 'piccolore';
-import { $ as $$Layout } from '../chunks/Layout_0fak_qL3.mjs';
+import { $ as $$Layout } from '../chunks/Layout_PYfl9QGE.mjs';
 import { $ as $$Footer, M as MobileMenu, a as $$Header, b as $$TopBar, P as PageLoader } from '../chunks/PageLoader_D_5s45Mo.mjs';
 import 'clsx';
 import { f as formatMatchDate } from '../chunks/utils_D-DJdZHD.mjs';
 import { d as getLeagueName, g as getTeam1Name, a as getTeam1Logo, b as getTeam2Name, c as getTeam2Logo } from '../chunks/league-helpers_BQcVt2so.mjs';
-/* empty css                                 */
-import { $ as $$Spacing } from '../chunks/Spacing_BPc02AQQ.mjs';
-import { jsx, Fragment, jsxs } from 'react/jsx-runtime';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { s as styles } from '../chunks/index.95d291e9_C1QtzMLF.mjs';
+import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
+import React__default, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import CountUp from 'react-countup';
+import { useInView } from 'react-intersection-observer';
+import pkg from 'react-lazy-load-image-component';
 import { create } from 'zustand';
 import { r as reverseCategoryMap } from '../chunks/types_DXfYTmyI.mjs';
+import useEmblaCarousel from 'embla-carousel-react';
+import Lightbox from 'yet-another-react-lightbox';
 import { i as isFeatureEnabled } from '../chunks/feature-flags_DTlWIEXZ.mjs';
 export { renderers } from '../renderers.mjs';
 
@@ -156,9 +160,39 @@ const $$PlayerOfTheWeek = createComponent(($$result, $$props, $$slots) => {
   return renderTemplate`${maybeRenderHead()}<div class="stm-coach-excerption-wrapp"> <div class="stm-title-wrapp"> <h3>PLAYER OF THE WEEK</h3> </div> <div class="clearfix"></div> <div class="stm-data-wrapp"> <div class="stm-photo-wrapp"> <img decoding="async"${addAttribute(player.image, "src")}${addAttribute(player.imageAlt, "alt")}> </div> <div class="stm-excerption-wrapp"> <span class="stm-excerption"><div class="stm-name-sign-wrapp"> <span class="stm-coach-name heading-font">${player.name}</span> ${player.signature} </div> ${unescapeHTML(descriptionHtml)}</span> </div> </div> </div>`;
 }, "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/PlayerOfTheWeek.astro", void 0);
 
-const $$StatsSection = createComponent(($$result, $$props, $$slots) => {
-  return renderTemplate`${maybeRenderHead()}<div class="stm-statistics-wrapper"> <div class="vc_row wpb_row vc_inner vc_row-fluid"> <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3"> <div class="vc_column-inner"> <div class="wpb_wrapper"> <div class="stm-stats-wrapp default"> <img decoding="async"${addAttribute(stats[0].icon, "src")}${addAttribute(stats[0].iconAlt, "alt")}> <div class="stm-stat-info-wrapp"> <span class="stm-stat-points heading-font">${stats[0].value}</span> <span class="stm-stat-title normal_font">${stats[0].label}</span> </div> </div> </div> </div> </div> ${renderComponent($$result, "Spacing", $$Spacing, { "id": "stm-spacing-stat-1", "lg": "0", "md": "0", "sm": "0", "xs": "30" })} <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3"> <div class="vc_column-inner"> <div class="wpb_wrapper"> <div class="stm-stats-wrapp default"> <img decoding="async"${addAttribute(stats[1].icon, "src")}${addAttribute(stats[1].iconAlt, "alt")}> <div class="stm-stat-info-wrapp"> <span class="stm-stat-points heading-font">${stats[1].value}</span> <span class="stm-stat-title normal_font">${stats[1].label}</span> </div> </div> </div> </div> </div> ${renderComponent($$result, "Spacing", $$Spacing, { "id": "stm-spacing-stat-2", "lg": "0", "md": "0", "sm": "30", "xs": "30" })} <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3"> <div class="vc_column-inner"> <div class="wpb_wrapper"> <div class="stm-stats-wrapp default"> <img decoding="async"${addAttribute(stats[2].icon, "src")}${addAttribute(stats[2].iconAlt, "alt")}> <div class="stm-stat-info-wrapp"> <span class="stm-stat-points heading-font">${stats[2].value}</span> <span class="stm-stat-title normal_font">${stats[2].label}</span> </div> </div> </div> </div> </div> ${renderComponent($$result, "Spacing", $$Spacing, { "id": "stm-spacing-stat-3", "lg": "0", "md": "0", "sm": "30", "xs": "30" })} <div class="wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3"> <div class="vc_column-inner"> <div class="wpb_wrapper"> <div class="stm-stats-wrapp default"> <img decoding="async"${addAttribute(stats[3].icon, "src")}${addAttribute(stats[3].iconAlt, "alt")}> <div class="stm-stat-info-wrapp"> <span class="stm-stat-points heading-font">${stats[3].value}</span> <span class="stm-stat-title normal_font">${stats[3].label}</span> </div> </div> </div> </div> </div> </div> </div>`;
-}, "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/StatsSection.astro", void 0);
+const { LazyLoadImage } = pkg;
+function StatsSection() {
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.2
+  });
+  return /* @__PURE__ */ jsx("div", { ref, className: "stm-statistics-wrapper", children: /* @__PURE__ */ jsx("div", { className: "vc_row wpb_row vc_inner vc_row-fluid", children: stats.map((stat, index) => /* @__PURE__ */ jsxs("div", { className: "wpb_column vc_column_container vc_col-sm-6 vc_col-lg-3 vc_col-md-3", children: [
+    /* @__PURE__ */ jsx("div", { className: "vc_column-inner", children: /* @__PURE__ */ jsx("div", { className: "wpb_wrapper", children: /* @__PURE__ */ jsxs("div", { className: "stm-stats-wrapp default", children: [
+      /* @__PURE__ */ jsx(
+        LazyLoadImage,
+        {
+          src: stat.icon,
+          alt: stat.iconAlt || stat.label,
+          effect: "blur",
+          wrapperClassName: "stm-stat-icon-wrapper"
+        }
+      ),
+      /* @__PURE__ */ jsxs("div", { className: "stm-stat-info-wrapp", children: [
+        /* @__PURE__ */ jsx("span", { className: "stm-stat-points heading-font", children: inView ? /* @__PURE__ */ jsx(
+          CountUp,
+          {
+            start: 0,
+            end: stat.value,
+            duration: 2.5,
+            separator: ","
+          }
+        ) : "0" }),
+        /* @__PURE__ */ jsx("span", { className: "stm-stat-title normal_font", children: stat.label })
+      ] })
+    ] }) }) }),
+    /* @__PURE__ */ jsx("div", { className: `stm-spacing-stat-${index + 1} vc_empty_space ${index === 0 ? "visible-xs" : index === 1 ? "visible-sm visible-xs" : index === 2 ? "visible-sm visible-xs" : ""}`, style: { height: "30px" }, children: /* @__PURE__ */ jsx("span", { className: "vc_empty_space_inner" }) })
+  ] }, stat.id)) }) });
+}
 
 const useCarouselStore = create((set, get) => ({
   currentSlide: 0,
@@ -856,6 +890,217 @@ function Sponsors() {
   ] });
 }
 
+function StatsLeadersCarousel() {
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: true,
+    align: "start",
+    slidesToScroll: 1,
+    breakpoints: {
+      "(min-width: 1100px)": { slidesToScroll: 4 },
+      "(min-width: 992px) and (max-width: 1099px)": { slidesToScroll: 3 },
+      "(min-width: 768px) and (max-width: 991px)": { slidesToScroll: 3 },
+      "(min-width: 440px) and (max-width: 767px)": { slidesToScroll: 2 }
+    }
+  });
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+  useEffect(() => {
+    async function fetchPlayers() {
+      try {
+        setLoading(true);
+        setError(null);
+        const mockPlayers = [
+          {
+            id: "1",
+            number: "23",
+            name: "John Doe",
+            position: "Point Guard",
+            image: "/images/players/player-1.jpg",
+            url: "/players/john-doe"
+          },
+          {
+            id: "2",
+            number: "7",
+            name: "Jane Smith",
+            position: "Shooting Guard",
+            image: "/images/players/player-2.jpg",
+            url: "/players/jane-smith"
+          },
+          {
+            id: "3",
+            number: "15",
+            name: "Mike Johnson",
+            position: "Small Forward",
+            image: "/images/players/player-3.jpg",
+            url: "/players/mike-johnson"
+          },
+          {
+            id: "4",
+            number: "32",
+            name: "Sarah Williams",
+            position: "Power Forward",
+            image: "/images/players/player-4.jpg",
+            url: "/players/sarah-williams"
+          },
+          {
+            id: "5",
+            number: "11",
+            name: "David Brown",
+            position: "Center",
+            image: "/images/players/player-5.jpg",
+            url: "/players/david-brown"
+          },
+          {
+            id: "6",
+            number: "3",
+            name: "Emily Davis",
+            position: "Point Guard",
+            image: "/images/players/player-6.jpg",
+            url: "/players/emily-davis"
+          },
+          {
+            id: "7",
+            number: "21",
+            name: "Chris Wilson",
+            position: "Shooting Guard",
+            image: "/images/players/player-7.jpg",
+            url: "/players/chris-wilson"
+          },
+          {
+            id: "8",
+            number: "9",
+            name: "Lisa Anderson",
+            position: "Small Forward",
+            image: "/images/players/player-8.jpg",
+            url: "/players/lisa-anderson"
+          }
+        ];
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        setPlayers(mockPlayers);
+      } catch (err) {
+        console.error("Error fetching players:", err);
+        setError(err instanceof Error ? err.message : "Failed to load players");
+        setPlayers([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPlayers();
+  }, []);
+  if (loading) {
+    return /* @__PURE__ */ jsx("div", { className: "stats-players-wrapper", children: /* @__PURE__ */ jsx("div", { className: "stm-player-ids style_2 stm-players-5715 carousel_yes", children: /* @__PURE__ */ jsx("div", { className: "stm-player-list-wrapper", children: /* @__PURE__ */ jsx("div", { className: "stm-players clearfix", children: /* @__PURE__ */ jsx("div", { style: { padding: "2rem", textAlign: "center" }, children: "Loading players..." }) }) }) }) });
+  }
+  if (error) {
+    console.error("StatsLeadersCarousel error:", error);
+    return null;
+  }
+  if (players.length === 0) {
+    return null;
+  }
+  return /* @__PURE__ */ jsxs("div", { className: "stats-players-wrapper", children: [
+    /* @__PURE__ */ jsxs("div", { className: "stm-player-ids style_2 stm-players-5715 carousel_yes", children: [
+      /* @__PURE__ */ jsx("div", { className: "clearfix", children: /* @__PURE__ */ jsxs("div", { className: "stm-carousel-controls-center", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "stm-carousel-control-prev",
+            onClick: scrollPrev,
+            "aria-label": "Previous players",
+            type: "button",
+            children: /* @__PURE__ */ jsx("i", { className: "fa fa-angle-left", "aria-hidden": "true" })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            className: "stm-carousel-control-next",
+            onClick: scrollNext,
+            "aria-label": "Next players",
+            type: "button",
+            children: /* @__PURE__ */ jsx("i", { className: "fa fa-angle-right", "aria-hidden": "true" })
+          }
+        )
+      ] }) }),
+      /* @__PURE__ */ jsx("div", { className: "stm-player-list-wrapper", children: /* @__PURE__ */ jsx("div", { className: "embla", ref: emblaRef, children: /* @__PURE__ */ jsx("div", { className: "embla__container stm-players clearfix", children: players.map((player) => /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: "embla__slide stm-list-single-player",
+          style: {
+            flex: "0 0 100%",
+            minWidth: 0
+          },
+          children: /* @__PURE__ */ jsxs("a", { href: player.url, title: player.name, children: [
+            /* @__PURE__ */ jsx(
+              "img",
+              {
+                src: player.image,
+                alt: player.name,
+                onError: (e) => {
+                  e.currentTarget.src = "/images/default-player.jpg";
+                }
+              }
+            ),
+            /* @__PURE__ */ jsx("div", { className: "stm-list-single-player-info", children: /* @__PURE__ */ jsxs("div", { className: "inner", children: [
+              /* @__PURE__ */ jsx("div", { className: "player-number", children: player.number }),
+              /* @__PURE__ */ jsx("div", { className: "player-title", children: player.name }),
+              /* @__PURE__ */ jsx("div", { className: "player-position", children: player.position })
+            ] }) })
+          ] })
+        },
+        player.id
+      )) }) }) })
+    ] }),
+    /* @__PURE__ */ jsx("style", { children: `
+        /* Embla Carousel specific styles */
+        .embla {
+          overflow: hidden;
+        }
+        
+        .embla__container {
+          display: flex;
+          gap: 0;
+        }
+        
+        .embla__slide {
+          flex: 0 0 100%;
+          min-width: 0;
+        }
+        
+        /* Responsive breakpoints matching Owl Carousel config */
+        @media (min-width: 440px) {
+          .embla__slide {
+            flex: 0 0 50%;
+          }
+        }
+        
+        @media (min-width: 768px) {
+          .embla__slide {
+            flex: 0 0 33.333%;
+          }
+        }
+        
+        @media (min-width: 992px) {
+          .embla__slide {
+            flex: 0 0 33.333%;
+          }
+        }
+        
+        @media (min-width: 1100px) {
+          .embla__slide {
+            flex: 0 0 25%;
+          }
+        }
+      ` })
+  ] });
+}
+
 const useMediaStore = create((set) => ({
   activeMediaTab: "all_medias",
   setActiveMediaTab: (tab) => set({ activeMediaTab: tab })
@@ -939,11 +1184,252 @@ function filterMediaByType(items, type) {
   return items.filter((item) => item.type === mediaType);
 }
 
+function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
+
+function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
+
+function _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+const defaultProps = {
+  breakpointCols: undefined,
+  // optional, number or object { default: number, [key: number]: number }
+  className: undefined,
+  // required, string
+  columnClassName: undefined,
+  // optional, string
+  // Any React children. Typically an array of JSX items
+  children: undefined,
+  // Custom attributes, however it is advised against
+  // using these to prevent unintended issues and future conflicts
+  // ...any other attribute, will be added to the container
+  columnAttrs: undefined,
+  // object, added to the columns
+  // Deprecated props
+  // The column property is deprecated.
+  // It is an alias of the `columnAttrs` property
+  column: undefined
+};
+const DEFAULT_COLUMNS = 2;
+
+class Masonry extends React__default.Component {
+  constructor(props) {
+    super(props); // Correct scope for when methods are accessed externally
+
+    this.reCalculateColumnCount = this.reCalculateColumnCount.bind(this);
+    this.reCalculateColumnCountDebounce = this.reCalculateColumnCountDebounce.bind(this); // default state
+
+    let columnCount;
+
+    if (this.props.breakpointCols && this.props.breakpointCols.default) {
+      columnCount = this.props.breakpointCols.default;
+    } else {
+      columnCount = parseInt(this.props.breakpointCols) || DEFAULT_COLUMNS;
+    }
+
+    this.state = {
+      columnCount
+    };
+  }
+
+  componentDidMount() {
+    this.reCalculateColumnCount(); // window may not be available in some environments
+
+    if (window) {
+      window.addEventListener('resize', this.reCalculateColumnCountDebounce);
+    }
+  }
+
+  componentDidUpdate() {
+    this.reCalculateColumnCount();
+  }
+
+  componentWillUnmount() {
+    if (window) {
+      window.removeEventListener('resize', this.reCalculateColumnCountDebounce);
+    }
+  }
+
+  reCalculateColumnCountDebounce() {
+    if (!window || !window.requestAnimationFrame) {
+      // IE10+
+      this.reCalculateColumnCount();
+      return;
+    }
+
+    if (window.cancelAnimationFrame) {
+      // IE10+
+      window.cancelAnimationFrame(this._lastRecalculateAnimationFrame);
+    }
+
+    this._lastRecalculateAnimationFrame = window.requestAnimationFrame(() => {
+      this.reCalculateColumnCount();
+    });
+  }
+
+  reCalculateColumnCount() {
+    const windowWidth = window && window.innerWidth || Infinity;
+    let breakpointColsObject = this.props.breakpointCols; // Allow passing a single number to `breakpointCols` instead of an object
+
+    if (typeof breakpointColsObject !== 'object') {
+      breakpointColsObject = {
+        default: parseInt(breakpointColsObject) || DEFAULT_COLUMNS
+      };
+    }
+
+    let matchedBreakpoint = Infinity;
+    let columns = breakpointColsObject.default || DEFAULT_COLUMNS;
+
+    for (let breakpoint in breakpointColsObject) {
+      const optBreakpoint = parseInt(breakpoint);
+      const isCurrentBreakpoint = optBreakpoint > 0 && windowWidth <= optBreakpoint;
+
+      if (isCurrentBreakpoint && optBreakpoint < matchedBreakpoint) {
+        matchedBreakpoint = optBreakpoint;
+        columns = breakpointColsObject[breakpoint];
+      }
+    }
+
+    columns = Math.max(1, parseInt(columns) || 1);
+
+    if (this.state.columnCount !== columns) {
+      this.setState({
+        columnCount: columns
+      });
+    }
+  }
+
+  itemsInColumns() {
+    const currentColumnCount = this.state.columnCount;
+    const itemsInColumns = new Array(currentColumnCount); // Force children to be handled as an array
+
+    const items = React__default.Children.toArray(this.props.children);
+
+    for (let i = 0; i < items.length; i++) {
+      const columnIndex = i % currentColumnCount;
+
+      if (!itemsInColumns[columnIndex]) {
+        itemsInColumns[columnIndex] = [];
+      }
+
+      itemsInColumns[columnIndex].push(items[i]);
+    }
+
+    return itemsInColumns;
+  }
+
+  renderColumns() {
+    const {
+      column,
+      columnAttrs = {},
+      columnClassName
+    } = this.props;
+    const childrenInColumns = this.itemsInColumns();
+    const columnWidth = `${100 / childrenInColumns.length}%`;
+    let className = columnClassName;
+
+    if (className && typeof className !== 'string') {
+      this.logDeprecated('The property "columnClassName" requires a string'); // This is a deprecated default and will be removed soon.
+
+      if (typeof className === 'undefined') {
+        className = 'my-masonry-grid_column';
+      }
+    }
+
+    const columnAttributes = _objectSpread(_objectSpread(_objectSpread({}, column), columnAttrs), {}, {
+      style: _objectSpread(_objectSpread({}, columnAttrs.style), {}, {
+        width: columnWidth
+      }),
+      className
+    });
+
+    return childrenInColumns.map((items, i) => {
+      return /*#__PURE__*/React__default.createElement("div", _extends({}, columnAttributes, {
+        key: i
+      }), items);
+    });
+  }
+
+  logDeprecated(message) {
+    console.error('[Masonry]', message);
+  }
+
+  render() {
+    const _this$props = this.props,
+          {
+      // ignored
+      children,
+      breakpointCols,
+      columnClassName,
+      columnAttrs,
+      column,
+      // used
+      className
+    } = _this$props,
+          rest = _objectWithoutProperties(_this$props, ["children", "breakpointCols", "columnClassName", "columnAttrs", "column", "className"]);
+
+    let classNameOutput = className;
+
+    if (typeof className !== 'string') {
+      this.logDeprecated('The property "className" requires a string'); // This is a deprecated default and will be removed soon.
+
+      if (typeof className === 'undefined') {
+        classNameOutput = 'my-masonry-grid';
+      }
+    }
+
+    return /*#__PURE__*/React__default.createElement("div", _extends({}, rest, {
+      className: classNameOutput
+    }), this.renderColumns());
+  }
+
+}
+
+Masonry.defaultProps = defaultProps;
+
+function MasonryGrid({
+  children,
+  breakpointCols = {
+    default: 4,
+    1100: 3,
+    700: 2,
+    500: 1
+  },
+  className = ""
+}) {
+  return /* @__PURE__ */ jsx(
+    Masonry,
+    {
+      breakpointCols,
+      className: `${styles.masonryGrid} ${className}`,
+      columnClassName: styles.masonryGridColumn,
+      children
+    }
+  );
+}
+
 function MediaGallery() {
   const { activeMediaTab, setActiveMediaTab } = useMediaStore();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxGroup, setLightboxGroup] = useState("all");
   const filteredMedia = useMemo(() => {
     return filterMediaByType(allMediaItems, activeMediaTab);
   }, [activeMediaTab]);
+  const lightboxSlides = useMemo(() => {
+    const groupItems = filteredMedia.filter(
+      (item) => item.fancyboxGroup === lightboxGroup && item.type === "image"
+    );
+    return groupItems.map((item) => ({
+      src: item.url,
+      alt: item.title,
+      title: item.title
+    }));
+  }, [filteredMedia, lightboxGroup]);
   const tabs = [
     { id: "all_medias", label: "All" },
     { id: "image_media", label: "Images" },
@@ -953,95 +1439,170 @@ function MediaGallery() {
     e.preventDefault();
     setActiveMediaTab(tab);
   };
-  const getMediaSizeClass = (index, total) => {
-    if (index === 0) return "stm-360-495";
-    if (index === 1) return "stm-735-240";
-    if (index === 2) return "stm-360-240";
-    if (index === 3) return "stm-360-495";
-    if (index === 4) return "stm-360-240";
-    return "stm-360-240";
+  const handleImageClick = (item, e) => {
+    e.preventDefault();
+    if (item.type === "image" && item.fancyboxGroup) {
+      const groupItems = filteredMedia.filter(
+        (i) => i.fancyboxGroup === item.fancyboxGroup && i.type === "image"
+      );
+      const index = groupItems.findIndex((i) => i.id === item.id);
+      setLightboxGroup(item.fancyboxGroup);
+      setLightboxIndex(index >= 0 ? index : 0);
+      setLightboxOpen(true);
+    } else if (item.type === "audio") {
+      window.open(item.url, "_blank");
+    }
   };
   if (filteredMedia.length === 0) {
     return /* @__PURE__ */ jsx("div", { className: "stm-media-tabs _gallery style_3_3", children: /* @__PURE__ */ jsx("div", { className: "alert alert-info", children: "No media items available." }) });
   }
-  return /* @__PURE__ */ jsxs("div", { className: "stm-media-tabs _gallery style_3_3", children: [
-    /* @__PURE__ */ jsxs("div", { className: "clearfix", children: [
-      /* @__PURE__ */ jsx("div", { className: "stm-title-left", children: /* @__PURE__ */ jsx("h2", { className: "stm-main-title-unit", children: "Media Gallery" }) }),
-      /* @__PURE__ */ jsx("div", { className: "stm-media-tabs-nav", children: /* @__PURE__ */ jsx("ul", { className: "stm-list-duty heading-font", role: "tablist", children: tabs.map((tab) => /* @__PURE__ */ jsx("li", { className: activeMediaTab === tab.id ? "active" : "", children: /* @__PURE__ */ jsx(
-        "a",
-        {
-          href: `#${tab.id}`,
-          "aria-controls": tab.id,
-          role: "tab",
-          "data-toggle": "tab",
-          onClick: (e) => handleTabClick(tab.id, e),
-          children: /* @__PURE__ */ jsx("span", { children: tab.label })
-        }
-      ) }, tab.id)) }) })
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsxs("div", { className: "stm-media-tabs _gallery style_3_3", children: [
+      /* @__PURE__ */ jsxs("div", { className: "clearfix", children: [
+        /* @__PURE__ */ jsx("div", { className: "stm-title-left", children: /* @__PURE__ */ jsx("h2", { className: "stm-main-title-unit", children: "Media Gallery" }) }),
+        /* @__PURE__ */ jsx("div", { className: "stm-media-tabs-nav", children: /* @__PURE__ */ jsx("ul", { className: "stm-list-duty heading-font", role: "tablist", children: tabs.map((tab) => /* @__PURE__ */ jsx("li", { className: activeMediaTab === tab.id ? "active" : "", children: /* @__PURE__ */ jsx(
+          "a",
+          {
+            href: `#${tab.id}`,
+            "aria-controls": tab.id,
+            role: "tab",
+            "data-toggle": "tab",
+            onClick: (e) => handleTabClick(tab.id, e),
+            children: /* @__PURE__ */ jsx("span", { children: tab.label })
+          }
+        ) }, tab.id)) }) })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "tab-content", children: [
+        /* @__PURE__ */ jsx(
+          "div",
+          {
+            role: "tabpanel",
+            className: `tab-pane fade ${activeMediaTab === "all_medias" ? "in active" : ""}`,
+            id: "all_medias",
+            children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit-wider", children: /* @__PURE__ */ jsx(
+              MasonryGrid,
+              {
+                className: "stm-medias-unit clearfix",
+                breakpointCols: {
+                  default: 3,
+                  1100: 3,
+                  700: 2,
+                  500: 1
+                },
+                children: filteredMedia.map((item) => /* @__PURE__ */ jsx(
+                  MediaCard,
+                  {
+                    item,
+                    onClick: handleImageClick
+                  },
+                  item.id
+                ))
+              }
+            ) })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "div",
+          {
+            role: "tabpanel",
+            className: `tab-pane fade ${activeMediaTab === "image_media" ? "in active" : ""}`,
+            id: "image_media",
+            children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit-wider", children: /* @__PURE__ */ jsx(
+              MasonryGrid,
+              {
+                className: "stm-medias-unit clearfix",
+                breakpointCols: {
+                  default: 3,
+                  1100: 3,
+                  700: 2,
+                  500: 1
+                },
+                children: filteredMedia.filter((item) => item.type === "image").map((item) => /* @__PURE__ */ jsx(
+                  MediaCard,
+                  {
+                    item,
+                    onClick: handleImageClick
+                  },
+                  item.id
+                ))
+              }
+            ) })
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          "div",
+          {
+            role: "tabpanel",
+            className: `tab-pane fade ${activeMediaTab === "audio_media" ? "in active" : ""}`,
+            id: "audio_media",
+            children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit-wider", children: /* @__PURE__ */ jsx(
+              MasonryGrid,
+              {
+                className: "stm-medias-unit clearfix",
+                breakpointCols: {
+                  default: 3,
+                  1100: 3,
+                  700: 2,
+                  500: 1
+                },
+                children: filteredMedia.filter((item) => item.type === "audio").map((item) => /* @__PURE__ */ jsx(
+                  MediaCard,
+                  {
+                    item,
+                    onClick: handleImageClick
+                  },
+                  item.id
+                ))
+              }
+            ) })
+          }
+        )
+      ] })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "tab-content", children: [
-      /* @__PURE__ */ jsx(
-        "div",
-        {
-          role: "tabpanel",
-          className: `tab-pane fade ${activeMediaTab === "all_medias" ? "in active" : ""}`,
-          id: "all_medias",
-          children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit-wider", children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit clearfix", children: filteredMedia.map((item, index) => /* @__PURE__ */ jsx(MediaCard, { item, sizeClass: getMediaSizeClass(index, filteredMedia.length) }, item.id)) }) })
+    /* @__PURE__ */ jsx(
+      Lightbox,
+      {
+        open: lightboxOpen,
+        close: () => setLightboxOpen(false),
+        slides: lightboxSlides,
+        index: lightboxIndex,
+        on: {
+          view: ({ index }) => setLightboxIndex(index)
+        },
+        styles: {
+          container: { backgroundColor: "rgba(0, 0, 0, 0.9)" }
+        },
+        carousel: {
+          finite: false
+        },
+        render: {
+          buttonPrev: lightboxSlides.length <= 1 ? () => null : void 0,
+          buttonNext: lightboxSlides.length <= 1 ? () => null : void 0
         }
-      ),
-      /* @__PURE__ */ jsx(
-        "div",
-        {
-          role: "tabpanel",
-          className: `tab-pane fade ${activeMediaTab === "image_media" ? "in active" : ""}`,
-          id: "image_media",
-          children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit-wider", children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit clearfix", children: filteredMedia.filter((item) => item.type === "image").map((item, index) => /* @__PURE__ */ jsx(
-            MediaCard,
-            {
-              item,
-              sizeClass: getMediaSizeClass(index, filteredMedia.length)
-            },
-            item.id
-          )) }) })
-        }
-      ),
-      /* @__PURE__ */ jsx(
-        "div",
-        {
-          role: "tabpanel",
-          className: `tab-pane fade ${activeMediaTab === "audio_media" ? "in active" : ""}`,
-          id: "audio_media",
-          children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit-wider", children: /* @__PURE__ */ jsx("div", { className: "stm-medias-unit clearfix", children: filteredMedia.filter((item) => item.type === "audio").map((item, index) => /* @__PURE__ */ jsx(
-            MediaCard,
-            {
-              item,
-              sizeClass: getMediaSizeClass(index, filteredMedia.length)
-            },
-            item.id
-          )) }) })
-        }
-      )
-    ] })
+      }
+    )
   ] });
 }
-function MediaCard({ item, sizeClass }) {
+function MediaCard({
+  item,
+  onClick
+}) {
   const isAudio = item.type === "audio";
-  const linkProps = isAudio ? {
-    href: "#",
-    "data-url": item.url,
-    className: "stm-iframe",
-    "data-fancybox-group": item.fancyboxGroup
-  } : {
-    href: item.url,
-    className: "stm-fancybox",
-    title: item.title,
-    "data-fancybox-group": item.fancyboxGroup
-  };
-  return /* @__PURE__ */ jsx("div", { className: `${sizeClass} stm-media-single-unit stm-media-single-unit-${item.type}`, children: /* @__PURE__ */ jsx("div", { className: "stm-media-preview", children: /* @__PURE__ */ jsxs("a", { ...linkProps, children: [
-    /* @__PURE__ */ jsx("img", { decoding: "async", src: item.thumbnail, alt: item.thumbnailAlt || item.title }),
-    /* @__PURE__ */ jsx("div", { className: "icon" }),
-    /* @__PURE__ */ jsx("div", { className: "title", children: item.title })
-  ] }) }) });
+  return /* @__PURE__ */ jsx("div", { className: `stm-media-single-unit stm-media-single-unit-${item.type}`, style: { width: "100%", float: "none", padding: "0 0 30px 0" }, children: /* @__PURE__ */ jsx("div", { className: "stm-media-preview", children: /* @__PURE__ */ jsxs(
+    "a",
+    {
+      href: item.url,
+      onClick: (e) => onClick(item, e),
+      className: isAudio ? "stm-iframe" : "stm-fancybox",
+      title: item.title,
+      "data-fancybox-group": item.fancyboxGroup,
+      children: [
+        /* @__PURE__ */ jsx("img", { decoding: "async", src: item.thumbnail, alt: item.thumbnailAlt || item.title }),
+        /* @__PURE__ */ jsx("div", { className: "icon" }),
+        /* @__PURE__ */ jsx("div", { className: "title", children: item.title })
+      ]
+    }
+  ) }) });
 }
 
 const $$Astro = createAstro();
@@ -1056,9 +1617,9 @@ const $$FeatureGate = createComponent(($$result, $$props, $$slots) => {
 var __freeze = Object.freeze;
 var __defProp = Object.defineProperty;
 var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __freeze(raw || cooked.slice()) }));
-var _a, _b;
+var _a;
 const $$Index = createComponent(($$result, $$props, $$slots) => {
-  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, {}, { "default": ($$result2) => renderTemplate(_b || (_b = __template([" ", " ", '<a href="#main-content" class="skip-link">Skip to main content</a> <div id="wrapper"> ', " ", " ", ' <main id="main" role="main"> <!-- Hero Section: Post Slider --> ', " <!-- News Ticker Section --> ", " <!-- Marquee Matchup Section --> ", " <!-- Next Match Carousel Section --> ", " <!-- Latest News Section --> ", " <!-- Player of the Week Section --> ", " <!-- Stats Leaders Section --> ", " <!-- Statistics Section --> ", " <!-- Media Gallery Section --> ", " <!-- Sponsors Section --> ", " <!-- Registration CTA Section --> ", " </main> ", ` <div class="sp-footer-sponsors"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> </div>  <div class="rev-close-btn" aria-hidden="true"> <span class="close-left"></span> <span class="close-right"></span> </div>  <script type="speculationrules">
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, {}, { "default": ($$result2) => renderTemplate(_a || (_a = __template([" ", " ", '<a href="#main-content" class="skip-link">Skip to main content</a> <div id="wrapper"> ', " ", " ", ' <main id="main" role="main"> <!-- Hero Section: Post Slider --> ', " <!-- News Ticker Section --> ", " <!-- Marquee Matchup Section --> ", " <!-- Next Match Carousel Section --> ", " <!-- Latest News Section --> ", " <!-- Player of the Week Section --> ", " <!-- Stats Leaders Section --> ", " <!-- Statistics Section --> ", " <!-- Media Gallery Section --> ", " <!-- Sponsors Section --> ", " <!-- Registration CTA Section --> ", " </main> ", ` <div class="sp-footer-sponsors"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> </div>  <div class="rev-close-btn" aria-hidden="true"> <span class="close-left"></span> <span class="close-right"></span> </div>  <script type="speculationrules">
     {
       "prefetch": [
         {
@@ -1088,8 +1649,8 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
       ]
     }
   <\/script>  <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;" aria-hidden="true"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div>  <script type="text/javascript">
-    (function() {
-      if (typeof jQuery !== 'undefined') {
+    (function () {
+      if (typeof jQuery !== "undefined") {
         jQuery(document).ready(function ($) {
           var header = $(".sp-header");
           var sponsors = $(".sp-header-sponsors");
@@ -1109,7 +1670,7 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
       }
 
       const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]'
+        '.mc4wp-form input[type="url"]',
       );
       for (let j = 0; j < urlFields.length; j++) {
         urlFields[j].addEventListener("blur", maybePrefixUrlField);
@@ -1135,14 +1696,16 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
     }
 
     .next-match-section {
-      background: var(--color-accent-dark, #2d1e49) url('/images/basketball-game-concept-scaled.jpg') center center no-repeat;
+      background: var(--color-accent-dark, #2d1e49)
+        url("/images/basketball-game-concept-scaled.jpg") center center
+        no-repeat;
       background-size: cover;
       position: relative;
       color: white;
     }
 
     .next-match-section::before {
-      content: '';
+      content: "";
       position: absolute;
       top: 0;
       left: 0;
@@ -1195,7 +1758,8 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
     }
 
     .registration-cta-section {
-      background: var(--color-accent-dark, #301e48) url('/images/award.png') center center no-repeat;
+      background: var(--color-accent-dark, #301e48) url("/images/award.png")
+        center center no-repeat;
       background-size: contain;
       position: relative;
       text-align: center;
@@ -1249,12 +1813,7 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
         font-size: clamp(1.5rem, 5vw, 3rem);
       }
     }
-  </style>  <link rel="stylesheet" id="stm_post_slider-css" href="/css/stm_post_slider.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_next_match_carousel2-css" href="/css/stm_next_match_carousel2.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_media_tabs_default-css" href="/css/stm_media_tabs_default.css" type="text/css" media="all"> <link rel="stylesheet" id="rs-plugin-settings-css" href="/css/rs6.css" type="text/css" media="all">  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?ver=4.3.9" id="stm_gmap-js"><\/script> <script type="text/javascript" src="/js/jquery.min.js" id="jquery-core-js"><\/script> <script type="text/javascript" src="/js/jquery-migrate.min.js" id="jquery-migrate-js"><\/script> <script type="text/javascript" src="/js/perfect-scrollbar.min.js" id="perfect-scrollbar-js"><\/script> <script type="text/javascript" src="/js/bootstrap.min.js" id="bootstrap-js"><\/script> <script type="text/javascript" src="/js/select2.full.min.js" id="select2-js" defer="defer"><\/script> <script type="text/javascript" src="/js/owl.carousel.min.js" id="owl-carousel-js"><\/script> <script type="text/javascript" src="/js/jquery.fancybox.pack.js" id="fancybox-js"><\/script> <script type="text/javascript" src="/js/imagesloaded.min.js" id="imagesloaded-js"><\/script> <script type="text/javascript" src="/js/isotope.pkgd.min.js" id="isotope-js"><\/script> <script type="text/javascript" src="/js/waypoints.min.js" id="waypoint-js"><\/script> <script type="text/javascript" src="/js/jquery.counterup.min.js" id="counterup-js"><\/script> <script type="text/javascript" src="/js/lightbox.js" id="lightbox-js"><\/script> <script type="text/javascript" src="/js/splash.js" id="stm-theme-scripts-js"><\/script> <script type="text/javascript" src="/js/header.js" id="stm-theme-scripts-header-js"><\/script> <script type="text/javascript" src="/js/ticker_posts.js" id="stm-ticker-posts-js"><\/script> <script type="text/javascript" src="/js/jquery.dataTables.min.js" id="jquery-datatables-js"><\/script> <script type="text/javascript" src="/js/stm_post_slider.js" id="stm_post_slider-js"><\/script> <script type="text/javascript" id="stm_next_match_carousel2-js-extra">
-    /* <![CDATA[ */
-    var slides_ = { items: "1", navs_: "disable", dots_: "enable" };
-    //# sourceURL=stm_next_match_carousel2-js-extra
-    /* ]]> */
-  <\/script> <script type="text/javascript" src="/js/stm_next_match_carousel2.js" id="stm_next_match_carousel2-js"><\/script> `], [" ", " ", '<a href="#main-content" class="skip-link">Skip to main content</a> <div id="wrapper"> ', " ", " ", ' <main id="main" role="main"> <!-- Hero Section: Post Slider --> ', " <!-- News Ticker Section --> ", " <!-- Marquee Matchup Section --> ", " <!-- Next Match Carousel Section --> ", " <!-- Latest News Section --> ", " <!-- Player of the Week Section --> ", " <!-- Stats Leaders Section --> ", " <!-- Statistics Section --> ", " <!-- Media Gallery Section --> ", " <!-- Sponsors Section --> ", " <!-- Registration CTA Section --> ", " </main> ", ` <div class="sp-footer-sponsors"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> </div>  <div class="rev-close-btn" aria-hidden="true"> <span class="close-left"></span> <span class="close-right"></span> </div>  <script type="speculationrules">
+  </style>  <link rel="stylesheet" id="stm_post_slider-css" href="/css/stm_post_slider.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_next_match_carousel2-css" href="/css/stm_next_match_carousel2.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_media_tabs_default-css" href="/css/stm_media_tabs_default.css" type="text/css" media="all"> <link rel="stylesheet" id="rs-plugin-settings-css" href="/css/rs6.css" type="text/css" media="all">  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?ver=4.3.9" id="stm_gmap-js"><\/script> <script type="text/javascript" src="/js/jquery.min.js" id="jquery-core-js"><\/script> <script type="text/javascript" src="/js/jquery-migrate.min.js" id="jquery-migrate-js"><\/script>  <script type="text/javascript" src="/js/lightbox.js" id="lightbox-js"><\/script> <script type="text/javascript" src="/js/splash.js" id="stm-theme-scripts-js"><\/script> <script type="text/javascript" src="/js/header.js" id="stm-theme-scripts-header-js"><\/script> `], [" ", " ", '<a href="#main-content" class="skip-link">Skip to main content</a> <div id="wrapper"> ', " ", " ", ' <main id="main" role="main"> <!-- Hero Section: Post Slider --> ', " <!-- News Ticker Section --> ", " <!-- Marquee Matchup Section --> ", " <!-- Next Match Carousel Section --> ", " <!-- Latest News Section --> ", " <!-- Player of the Week Section --> ", " <!-- Stats Leaders Section --> ", " <!-- Statistics Section --> ", " <!-- Media Gallery Section --> ", " <!-- Sponsors Section --> ", " <!-- Registration CTA Section --> ", " </main> ", ` <div class="sp-footer-sponsors"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div> </div>  <div class="rev-close-btn" aria-hidden="true"> <span class="close-left"></span> <span class="close-right"></span> </div>  <script type="speculationrules">
     {
       "prefetch": [
         {
@@ -1284,8 +1843,8 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
       ]
     }
   <\/script>  <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;" aria-hidden="true"> <div class="sportspress"><div class="sp-sponsors"></div></div> </div>  <script type="text/javascript">
-    (function() {
-      if (typeof jQuery !== 'undefined') {
+    (function () {
+      if (typeof jQuery !== "undefined") {
         jQuery(document).ready(function ($) {
           var header = $(".sp-header");
           var sponsors = $(".sp-header-sponsors");
@@ -1305,7 +1864,7 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
       }
 
       const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]'
+        '.mc4wp-form input[type="url"]',
       );
       for (let j = 0; j < urlFields.length; j++) {
         urlFields[j].addEventListener("blur", maybePrefixUrlField);
@@ -1331,14 +1890,16 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
     }
 
     .next-match-section {
-      background: var(--color-accent-dark, #2d1e49) url('/images/basketball-game-concept-scaled.jpg') center center no-repeat;
+      background: var(--color-accent-dark, #2d1e49)
+        url("/images/basketball-game-concept-scaled.jpg") center center
+        no-repeat;
       background-size: cover;
       position: relative;
       color: white;
     }
 
     .next-match-section::before {
-      content: '';
+      content: "";
       position: absolute;
       top: 0;
       left: 0;
@@ -1391,7 +1952,8 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
     }
 
     .registration-cta-section {
-      background: var(--color-accent-dark, #301e48) url('/images/award.png') center center no-repeat;
+      background: var(--color-accent-dark, #301e48) url("/images/award.png")
+        center center no-repeat;
       background-size: contain;
       position: relative;
       text-align: center;
@@ -1445,91 +2007,13 @@ const $$Index = createComponent(($$result, $$props, $$slots) => {
         font-size: clamp(1.5rem, 5vw, 3rem);
       }
     }
-  </style>  <link rel="stylesheet" id="stm_post_slider-css" href="/css/stm_post_slider.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_next_match_carousel2-css" href="/css/stm_next_match_carousel2.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_media_tabs_default-css" href="/css/stm_media_tabs_default.css" type="text/css" media="all"> <link rel="stylesheet" id="rs-plugin-settings-css" href="/css/rs6.css" type="text/css" media="all">  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?ver=4.3.9" id="stm_gmap-js"><\/script> <script type="text/javascript" src="/js/jquery.min.js" id="jquery-core-js"><\/script> <script type="text/javascript" src="/js/jquery-migrate.min.js" id="jquery-migrate-js"><\/script> <script type="text/javascript" src="/js/perfect-scrollbar.min.js" id="perfect-scrollbar-js"><\/script> <script type="text/javascript" src="/js/bootstrap.min.js" id="bootstrap-js"><\/script> <script type="text/javascript" src="/js/select2.full.min.js" id="select2-js" defer="defer"><\/script> <script type="text/javascript" src="/js/owl.carousel.min.js" id="owl-carousel-js"><\/script> <script type="text/javascript" src="/js/jquery.fancybox.pack.js" id="fancybox-js"><\/script> <script type="text/javascript" src="/js/imagesloaded.min.js" id="imagesloaded-js"><\/script> <script type="text/javascript" src="/js/isotope.pkgd.min.js" id="isotope-js"><\/script> <script type="text/javascript" src="/js/waypoints.min.js" id="waypoint-js"><\/script> <script type="text/javascript" src="/js/jquery.counterup.min.js" id="counterup-js"><\/script> <script type="text/javascript" src="/js/lightbox.js" id="lightbox-js"><\/script> <script type="text/javascript" src="/js/splash.js" id="stm-theme-scripts-js"><\/script> <script type="text/javascript" src="/js/header.js" id="stm-theme-scripts-header-js"><\/script> <script type="text/javascript" src="/js/ticker_posts.js" id="stm-ticker-posts-js"><\/script> <script type="text/javascript" src="/js/jquery.dataTables.min.js" id="jquery-datatables-js"><\/script> <script type="text/javascript" src="/js/stm_post_slider.js" id="stm_post_slider-js"><\/script> <script type="text/javascript" id="stm_next_match_carousel2-js-extra">
-    /* <![CDATA[ */
-    var slides_ = { items: "1", navs_: "disable", dots_: "enable" };
-    //# sourceURL=stm_next_match_carousel2-js-extra
-    /* ]]> */
-  <\/script> <script type="text/javascript" src="/js/stm_next_match_carousel2.js" id="stm_next_match_carousel2-js"><\/script> `])), renderComponent($$result2, "PageLoader", PageLoader, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/components/PageLoader", "client:component-export": "default" }), maybeRenderHead(), isFeatureEnabled("layout.topbar") && renderTemplate`${renderComponent($$result2, "TopBar", $$TopBar, {})}`, isFeatureEnabled("layout.header") && renderTemplate`${renderComponent($$result2, "Header", $$Header, {})}`, isFeatureEnabled("layout.mobileMenu") && renderTemplate`${renderComponent($$result2, "MobileMenu", MobileMenu, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/layout/components/MobileMenu", "client:component-export": "default" })}`, renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.postSlider" }, { "default": ($$result3) => renderTemplate` <section class="hero-section" aria-label="Featured content"> <div class="container"> ${renderComponent($$result3, "PostSlider", PostSlider, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/PostSlider", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.newsTicker" }, { "default": ($$result3) => renderTemplate` <section class="news-ticker-section" aria-label="Latest news ticker"> ${renderComponent($$result3, "NewsTicker", NewsTicker, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/NewsTicker", "client:component-export": "default" })} </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.marqueeMatchup" }, { "default": ($$result3) => renderTemplate` <section class="marquee-matchup-section section" aria-label="Featured match"> <div class="container"> ${renderComponent($$result3, "MarqueeMatchup", $$MarqueeMatchup, {})} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.nextMatchCarousel" }, { "default": ($$result3) => renderTemplate` <section class="next-match-section section" aria-label="Upcoming matches"> <div class="container"> ${renderComponent($$result3, "NextMatchCarousel", NextMatchCarousel, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/NextMatchCarousel", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.latestNews" }, { "default": ($$result3) => renderTemplate` <section class="latest-news-section section" id="main-content" aria-label="Latest news"> <div class="container"> ${renderComponent($$result3, "LatestNews", LatestNews, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/LatestNews", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.playerOfTheWeek" }, { "default": ($$result3) => renderTemplate` <section class="player-week-section section" aria-label="Player of the week"> <div class="container"> ${renderComponent($$result3, "PlayerOfTheWeek", $$PlayerOfTheWeek, {})} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.statsLeaders" }, { "default": ($$result3) => renderTemplate(_a || (_a = __template([` <section class="stats-leaders-section section" aria-label="Statistics and leaders"> <div class="container"> <div class="stats-leaders-header"> <h2 class="section-title">Stats Leaders</h2> <a href="http://elevateballers.com/stats/" class="btn btn-primary btn-lg" title="View all statistics">
+  </style>  <link rel="stylesheet" id="stm_post_slider-css" href="/css/stm_post_slider.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_next_match_carousel2-css" href="/css/stm_next_match_carousel2.css" type="text/css" media="all"> <link rel="stylesheet" id="stm_media_tabs_default-css" href="/css/stm_media_tabs_default.css" type="text/css" media="all"> <link rel="stylesheet" id="rs-plugin-settings-css" href="/css/rs6.css" type="text/css" media="all">  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?ver=4.3.9" id="stm_gmap-js"><\/script> <script type="text/javascript" src="/js/jquery.min.js" id="jquery-core-js"><\/script> <script type="text/javascript" src="/js/jquery-migrate.min.js" id="jquery-migrate-js"><\/script>  <script type="text/javascript" src="/js/lightbox.js" id="lightbox-js"><\/script> <script type="text/javascript" src="/js/splash.js" id="stm-theme-scripts-js"><\/script> <script type="text/javascript" src="/js/header.js" id="stm-theme-scripts-header-js"><\/script> `])), renderComponent($$result2, "PageLoader", PageLoader, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/components/PageLoader", "client:component-export": "default" }), maybeRenderHead(), isFeatureEnabled("layout.topbar") && renderTemplate`${renderComponent($$result2, "TopBar", $$TopBar, {})}`, isFeatureEnabled("layout.header") && renderTemplate`${renderComponent($$result2, "Header", $$Header, {})}`, isFeatureEnabled("layout.mobileMenu") && renderTemplate`${renderComponent($$result2, "MobileMenu", MobileMenu, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/layout/components/MobileMenu", "client:component-export": "default" })}`, renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.postSlider" }, { "default": ($$result3) => renderTemplate` <section class="hero-section" aria-label="Featured content"> <div class="container"> ${renderComponent($$result3, "PostSlider", PostSlider, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/PostSlider", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.newsTicker" }, { "default": ($$result3) => renderTemplate` <section class="news-ticker-section" aria-label="Latest news ticker"> ${renderComponent($$result3, "NewsTicker", NewsTicker, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/NewsTicker", "client:component-export": "default" })} </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.marqueeMatchup" }, { "default": ($$result3) => renderTemplate` <section class="marquee-matchup-section section" aria-label="Featured match"> <div class="container"> ${renderComponent($$result3, "MarqueeMatchup", $$MarqueeMatchup, {})} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.nextMatchCarousel" }, { "default": ($$result3) => renderTemplate` <section class="next-match-section section" aria-label="Upcoming matches"> <div class="container"> ${renderComponent($$result3, "NextMatchCarousel", NextMatchCarousel, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/NextMatchCarousel", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.latestNews" }, { "default": ($$result3) => renderTemplate` <section class="latest-news-section section" id="main-content" aria-label="Latest news"> <div class="container"> ${renderComponent($$result3, "LatestNews", LatestNews, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/LatestNews", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.playerOfTheWeek" }, { "default": ($$result3) => renderTemplate` <section class="player-week-section section" aria-label="Player of the week"> <div class="container"> ${renderComponent($$result3, "PlayerOfTheWeek", $$PlayerOfTheWeek, {})} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.statsLeaders" }, { "default": ($$result3) => renderTemplate` <section class="stats-leaders-section section" aria-label="Statistics and leaders"> <div class="container"> <div class="stats-leaders-header"> <h2 class="section-title">Stats Leaders</h2> <a href="http://elevateballers.com/stats/" class="btn btn-primary btn-lg" title="View all statistics">
 View All Stats
-</a> </div> <!-- Stats Players Carousel - Legacy support --> <div class="stats-players-wrapper"> <div class="stm-player-ids style_2 stm-players-5715 carousel_yes"> <div class="clearfix"> <div class="stm-carousel-controls-center"> <button class="stm-carousel-control-prev" aria-label="Previous players" type="button"> <i class="fa fa-angle-left" aria-hidden="true"></i> </button> <button class="stm-carousel-control-next" aria-label="Next players" type="button"> <i class="fa fa-angle-right" aria-hidden="true"></i> </button> </div> </div> <div class="stm-player-list-wrapper"> <div class="stm-players clearfix"></div> </div> </div> </div> <script type="text/javascript">
-            (function () {
-              "use strict";
-              if (typeof jQuery === 'undefined') return;
-              var $ = jQuery;
-              var unique_class = "stm-players-5715";
-              var owl = $("." + unique_class + " .stm-players");
-              if (!owl.length) return;
-              $(document).ready(function () {
-                initOwl(owl, unique_class);
-                var tm = null;
-                $(".vc_tta-tab").on("click", function () {
-                  var tabId = $(this).find("a").attr("href");
-                  var owlTab = $(tabId + " .stm-players");
-                  if (tm) clearTimeout(tm);
-                  tm = setTimeout(function () {
-                    initOwl(owlTab, tabId);
-                    owlTab.trigger("destroy.owl.carousel");
-                    owlTab
-                      .html(
-                        owlTab.find(".owl-stage-outer").html()
-                      )
-                      .removeClass("owl-loaded");
-                    initOwl(owlTab, tabId);
-                  }, 200);
-                });
-
-                function initOwl(owl, uniqId) {
-                  owl.owlCarousel({
-                    items: 4,
-                    dots: false,
-                    autoplay: false,
-                    slideBy: 4,
-                    loop: true,
-                    responsive: {
-                      0: {
-                        items: 1,
-                        slideBy: 1,
-                      },
-                      440: {
-                        items: 2,
-                        slideBy: 2,
-                      },
-                      768: {
-                        items: 3,
-                        slideBy: 3,
-                      },
-                      992: {
-                        items: 3,
-                        slideBy: 3,
-                      },
-                      1100: {
-                        items: 4,
-                        slideBy: 4,
-                      },
-                    },
-                  });
-                  $(
-                    "." +
-                      unique_class +
-                      " .stm-carousel-control-prev"
-                  ).on("click", function () {
-                    owl.trigger("prev.owl.carousel");
-                  });
-                  $(
-                    "." +
-                      unique_class +
-                      " .stm-carousel-control-next"
-                  ).on("click", function () {
-                    owl.trigger("next.owl.carousel");
-                  });
-                }
-              });
-            })();
-          <\/script> </div> </section> `]))) }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.statsSection" }, { "default": ($$result3) => renderTemplate` <section class="statistics-section section" aria-label="League statistics"> <div class="container"> ${renderComponent($$result3, "StatsSection", $$StatsSection, {})} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.mediaGallery" }, { "default": ($$result3) => renderTemplate` <section class="media-gallery-section section" aria-label="Media gallery"> <div class="container"> ${renderComponent($$result3, "MediaGallery", MediaGallery, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/media/components/MediaGallery", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.sponsors" }, { "default": ($$result3) => renderTemplate` <section class="sponsors-section section" aria-label="Our sponsors"> <div class="container"> ${renderComponent($$result3, "Sponsors", Sponsors, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/Sponsors", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.registrationCta" }, { "default": ($$result3) => renderTemplate` <section class="registration-cta-section section" aria-label="Join the league"> <div class="container"> <div class="registration-cta-content"> <h2 class="registration-title"> <a href="https://elevateballers.com/registration-test/" title="Register to Join the League">
+</a> </div> <!-- Stats Players Carousel - React Component --> ${renderComponent($$result3, "StatsLeadersCarousel", StatsLeadersCarousel, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/StatsLeadersCarousel", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.statsSection" }, { "default": ($$result3) => renderTemplate` <section class="statistics-section section" aria-label="League statistics"> <div class="container"> ${renderComponent($$result3, "StatsSection", StatsSection, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/StatsSection", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.mediaGallery" }, { "default": ($$result3) => renderTemplate` <section class="media-gallery-section section" aria-label="Media gallery"> <div class="container"> ${renderComponent($$result3, "MediaGallery", MediaGallery, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/media/components/MediaGallery", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.sponsors" }, { "default": ($$result3) => renderTemplate` <section class="sponsors-section section" aria-label="Our sponsors"> <div class="container"> ${renderComponent($$result3, "Sponsors", Sponsors, { "client:load": true, "client:component-hydration": "load", "client:component-path": "C:/Users/User/Desktop/projects/elevateballers/src/features/home/components/Sponsors", "client:component-export": "default" })} </div> </section> ` }), renderComponent($$result2, "FeatureGate", $$FeatureGate, { "feature": "home.registrationCta" }, { "default": ($$result3) => renderTemplate` <section class="registration-cta-section section" aria-label="Join the league"> <div class="container"> <div class="registration-cta-content"> <h2 class="registration-title"> <a href="https://elevateballers.com/registration-test/" title="Register to Join the League">
 Register to Join the League
 </a> </h2> <p class="registration-description">
-Be part of the premier basketball league. Join us today and elevate your game!
+Be part of the premier basketball league. Join us today and
+                elevate your game!
 </p> <a class="btn btn-secondary btn-lg" href="http://elevateballers.com/registration-test" title="Join Us">
 Join Us
 </a> </div> </div> </section> ` }), isFeatureEnabled("layout.footer") && renderTemplate`${renderComponent($$result2, "Footer", $$Footer, {})}`) })}`;

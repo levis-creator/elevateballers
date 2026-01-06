@@ -1,6 +1,6 @@
 import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, h as addAttribute, m as maybeRenderHead, u as unescapeHTML, w as defineScriptVars } from '../chunks/astro/server_c8H0H61q.mjs';
 import 'piccolore';
-import { $ as $$Layout } from '../chunks/Layout_0fak_qL3.mjs';
+import { $ as $$Layout } from '../chunks/Layout_PYfl9QGE.mjs';
 import { $ as $$Footer, M as MobileMenu, a as $$Header, b as $$TopBar, P as PageLoader } from '../chunks/PageLoader_D_5s45Mo.mjs';
 import { I as getTeams } from '../chunks/queries_E6Jl_Myi.mjs';
 import { $ as $$Spacing } from '../chunks/Spacing_BPc02AQQ.mjs';

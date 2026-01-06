@@ -1,6 +1,6 @@
 import { renderers } from './renderers.mjs';
 import { c as createExports, s as serverEntrypointModule } from './chunks/_@astrojs-ssr-adapter_cZ1XN0_6.mjs';
-import { manifest } from './manifest_C6cBLVfw.mjs';
+import { manifest } from './manifest_CxPOMAeX.mjs';
 
 const serverIslandMap = new Map();;
 
@@ -86,8 +86,9 @@ const _page78 = () => import('./pages/players.astro.mjs');
 const _page79 = () => import('./pages/standings.astro.mjs');
 const _page80 = () => import('./pages/teams/_slug_.astro.mjs');
 const _page81 = () => import('./pages/teams.astro.mjs');
-const _page82 = () => import('./pages/upcoming-fixtures.astro.mjs');
-const _page83 = () => import('./pages/index.astro.mjs');
+const _page82 = () => import('./pages/tournaments.astro.mjs');
+const _page83 = () => import('./pages/upcoming-fixtures.astro.mjs');
+const _page84 = () => import('./pages/index.astro.mjs');
 const pageMap = new Map([
     ["node_modules/astro/dist/assets/endpoint/generic.js", _page0],
     ["src/pages/about-club.astro", _page1],
@@ -171,8 +172,9 @@ const pageMap = new Map([
     ["src/pages/standings.astro", _page79],
     ["src/pages/teams/[slug].astro", _page80],
     ["src/pages/teams.astro", _page81],
-    ["src/pages/upcoming-fixtures.astro", _page82],
-    ["src/pages/index.astro", _page83]
+    ["src/pages/tournaments.astro", _page82],
+    ["src/pages/upcoming-fixtures.astro", _page83],
+    ["src/pages/index.astro", _page84]
 ]);
 
 const _manifest = Object.assign(manifest, {
@@ -183,7 +185,7 @@ const _manifest = Object.assign(manifest, {
     middleware: () => import('./_noop-middleware.mjs')
 });
 const _args = {
-    "middlewareSecret": "8662c829-3d8e-4eb7-984f-8ebbbcd6a0ad",
+    "middlewareSecret": "0571bd16-2407-470b-9015-5a9418515574",
     "skewProtection": false
 };
 const _exports = createExports(_manifest, _args);
