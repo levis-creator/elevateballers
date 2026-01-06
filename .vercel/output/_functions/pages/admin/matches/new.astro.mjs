@@ -1,6 +1,6 @@
 import { e as createComponent, k as renderComponent, r as renderTemplate } from '../../../chunks/astro/server_c8H0H61q.mjs';
 import 'piccolore';
-import { $ as $$AdminLayout } from '../../../chunks/AdminLayout_C6oIy3vZ.mjs';
+import { $ as $$AdminLayout } from '../../../chunks/AdminLayout_D0bLXC3H.mjs';
 import { M as MatchEditor } from '../../../chunks/MatchEditor_H7Iw1NEU.mjs';
 export { renderers } from '../../../renderers.mjs';
 

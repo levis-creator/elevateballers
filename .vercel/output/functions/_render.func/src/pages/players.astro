@@ -4,10 +4,11 @@ import TopBar from "../features/layout/components/TopBar.astro";
 import Header from "../features/layout/components/Header.astro";
 import MobileMenu from "../features/layout/components/MobileMenu";
 import Footer from "../features/layout/components/Footer.astro";
-import TeamPlayerTable from "../features/team/components/TeamPlayerTable.astro";
+// import TeamPlayerTable from "../features/team/components/TeamPlayerTable";
 import { playerCategories } from "../features/team/data/teamData";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
+import TeamPlayerTable from "@/features/team/components/TeamPlayerTable.astro";
 ---
 
 <Layout>
@@ -20,7 +21,8 @@ import PageLoader from "../components/PageLoader";
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
         style="padding-top: 0; padding-bottom: 0px;"
-      ></div>
+      >
+      </div>
       <div class="container">
         <section class="wpb-content-wrapper">
           <div class="vc_row wpb_row vc_row-fluid">
@@ -35,18 +37,26 @@ import PageLoader from "../components/PageLoader";
                     xs="40"
                   />
 
-                  <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">
+                  <h2
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 50px; color: #dd3333;"
+                  >
                     PLAYERS
                   </h2>
 
-                  {playerCategories.map((category) => (
-                    <div class="player-category-section">
-                      <h3 class="heading-font category-heading">
-                        {category.name}
-                      </h3>
-                      <TeamPlayerTable players={category.players} />
-                    </div>
-                  ))}
+                  {
+                    playerCategories.map((category) => (
+                      <div class="player-category-section">
+                        <h3 class="heading-font category-heading">
+                          {category.name}
+                        </h3>
+                        <TeamPlayerTable
+                          players={category.players}
+                          client:load
+                        />
+                      </div>
+                    ))
+                  }
 
                   <Spacing
                     id="stm-spacing-players-footer"
@@ -188,39 +198,96 @@ import PageLoader from "../components/PageLoader";
       font-weight: normal;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th:first-child,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td:first-child {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th:first-child,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td:first-child {
       padding-left: 39px;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-name {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-name {
       text-align: left;
       padding-left: 20px !important;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-position,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-height,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-weight,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-fg,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-ft,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-3p,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-rpg,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-apg,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-spg,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-bpg,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-ppg,
-    .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-eff {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-position,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-height,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-weight,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-fg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-ft,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-3p,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-rpg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-apg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-spg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-bpg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-ppg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      thead
+      th.data-eff {
       text-align: center;
     }
 
     /* Table body - Exact match: white for even, #e8e8e8 for odd */
     .sp-template-player-list table.sp-player-list.sp-data-table tbody tr.odd td,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody tr:nth-child(odd) td {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      tr:nth-child(odd)
+      td {
       background-color: #e8e8e8 !important;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody tr.even td,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody tr:nth-child(even) td {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      tr.even
+      td,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      tr:nth-child(even)
+      td {
       background-color: #fff;
     }
 
@@ -230,25 +297,64 @@ import PageLoader from "../components/PageLoader";
       text-align: left;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-name {
       text-align: left;
       padding-left: 5px;
       color: #535353;
       font-weight: 700;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-position,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-height,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-weight,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-fg,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-ft,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-3p,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-rpg,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-apg,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-spg,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-bpg,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-ppg,
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-eff {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-position,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-height,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-weight,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-fg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-ft,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-3p,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-rpg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-apg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-spg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-bpg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-ppg,
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-eff {
       text-align: center;
     }
 
@@ -258,16 +364,28 @@ import PageLoader from "../components/PageLoader";
       text-decoration: none;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td a:hover {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td
+      a:hover {
       color: #009bdc;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name a {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-name
+      a {
       color: #535353;
       text-decoration: none;
     }
 
-    .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name a:hover {
+    .sp-template-player-list
+      table.sp-player-list.sp-data-table
+      tbody
+      td.data-name
+      a:hover {
       color: #009bdc;
     }
 
@@ -287,16 +405,28 @@ import PageLoader from "../components/PageLoader";
         padding: 10px 5px;
       }
 
-      .sp-template-player-list table.sp-player-list.sp-data-table thead th:first-child,
-      .sp-template-player-list table.sp-player-list.sp-data-table tbody td:first-child {
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        thead
+        th:first-child,
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        tbody
+        td:first-child {
         padding-left: 10px;
       }
 
-      .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-name {
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        thead
+        th.data-name {
         padding-left: 10px !important;
       }
 
-      .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name {
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        tbody
+        td.data-name {
         padding-left: 5px;
       }
     }
@@ -311,16 +441,28 @@ import PageLoader from "../components/PageLoader";
         padding: 8px 3px;
       }
 
-      .sp-template-player-list table.sp-player-list.sp-data-table thead th:first-child,
-      .sp-template-player-list table.sp-player-list.sp-data-table tbody td:first-child {
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        thead
+        th:first-child,
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        tbody
+        td:first-child {
         padding-left: 8px;
       }
 
-      .sp-template-player-list table.sp-player-list.sp-data-table thead th.data-name {
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        thead
+        th.data-name {
         padding-left: 8px !important;
       }
 
-      .sp-template-player-list table.sp-player-list.sp-data-table tbody td.data-name {
+      .sp-template-player-list
+        table.sp-player-list.sp-data-table
+        tbody
+        td.data-name {
         padding-left: 5px;
       }
     }
@@ -346,7 +488,7 @@ import PageLoader from "../components/PageLoader";
       }
 
       const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]'
+        '.mc4wp-form input[type="url"]',
       );
       for (let j = 0; j < urlFields.length; j++) {
         urlFields[j].addEventListener("blur", maybePrefixUrlField);
@@ -362,7 +504,7 @@ import PageLoader from "../components/PageLoader";
   <script is:inline>
     const lazyloadRunObserver = () => {
       const lazyloadBackgrounds = document.querySelectorAll(
-        `.e-con.e-parent:not(.e-lazyloaded)`
+        `.e-con.e-parent:not(.e-lazyloaded)`,
       );
       const lazyloadBackgroundObserver = new IntersectionObserver(
         (entries) => {
@@ -376,7 +518,7 @@ import PageLoader from "../components/PageLoader";
             }
           });
         },
-        { rootMargin: "200px 0px 200px 0px" }
+        { rootMargin: "200px 0px 200px 0px" },
       );
       lazyloadBackgrounds.forEach((lazyloadBackground) => {
         lazyloadBackgroundObserver.observe(lazyloadBackground);
@@ -392,101 +534,29 @@ import PageLoader from "../components/PageLoader";
     is:inline
     type="text/javascript"
     src="/js/jquery.min.js"
-    id="jquery-core-js"
-  ></script>
+    id="jquery-core-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery-migrate.min.js"
-    id="jquery-migrate-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/perfect-scrollbar.min.js"
-    id="perfect-scrollbar-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/bootstrap.min.js"
-    id="bootstrap-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/select2.full.min.js"
-    id="select2-js"
-    defer="defer"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/owl.carousel.min.js"
-    id="owl-carousel-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.fancybox.pack.js"
-    id="fancybox-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/imagesloaded.min.js"
-    id="imagesloaded-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/isotope.pkgd.min.js"
-    id="isotope-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/waypoints.min.js"
-    id="waypoint-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.counterup.min.js"
-    id="counterup-js"
-  ></script>
+    id="jquery-migrate-js"></script>
+  <!-- Legacy Scripts (Select2, Fancybox, Counterup, etc.) removed in favor of React components -->
   <script
     is:inline
     type="text/javascript"
     src="/js/lightbox.js"
-    id="lightbox-js"
-  ></script>
+    id="lightbox-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/splash.js"
-    id="stm-theme-scripts-js"
-  ></script>
+    id="stm-theme-scripts-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/header.js"
-    id="stm-theme-scripts-header-js"
-  ></script>
+    id="stm-theme-scripts-header-js"></script>
 
-
-
-  <script is:inline type="text/javascript">
-    jQuery(document).ready(function ($) {
-      // Initialize PerfectScrollbar for player table if needed
-      $(".sp-template-player-list .sp-table-wrapper").each(function () {
-        if (typeof PerfectScrollbar !== "undefined") {
-          new PerfectScrollbar(this);
-        }
-      });
-    });
-  </script>
-
+  <!-- PerfectScrollbar initialization removed - using native scrolling -->
 </Layout>
 <!-- wrapper -->
-

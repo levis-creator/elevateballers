@@ -1,6 +1,6 @@
 import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead, q as renderSlot } from './astro/server_c8H0H61q.mjs';
 import 'piccolore';
-import { $ as $$Layout } from './Layout_0fak_qL3.mjs';
+import { $ as $$Layout } from './Layout_PYfl9QGE.mjs';
 import { B as Button, a as cn, c as checkAuth } from './button_DxR-TZtn.mjs';
 import { jsxs, Fragment, jsx } from 'react/jsx-runtime';
 import { useState, useEffect } from 'react';

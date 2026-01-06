@@ -18,7 +18,8 @@ import PageLoader from "../components/PageLoader";
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
         style="padding-top: 0; padding-bottom: 0px;"
-      ></div>
+      >
+      </div>
       <div class="container">
         <section class="wpb-content-wrapper">
           <div class="vc_row wpb_row vc_row-fluid">
@@ -33,38 +34,57 @@ import PageLoader from "../components/PageLoader";
                     xs="40"
                   />
 
-                  <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">
+                  <h2
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 50px; color: #dd3333;"
+                  >
                     ABOUT
                   </h2>
 
-                  <div class="about-content" style="max-width: 900px; margin: 0 auto;">
-                    <div class="normal_font" style="line-height: 1.8; color: #363f48;">
+                  <div
+                    class="about-content"
+                    style="max-width: 900px; margin: 0 auto;"
+                  >
+                    <div
+                      class="normal_font"
+                      style="line-height: 1.8; color: #363f48;"
+                    >
                       <p style="margin-bottom: 20px;">
-                        Elevate Ballers is a premier basketball league dedicated to promoting excellence, 
-                        sportsmanship, and community engagement through competitive basketball. Founded with 
-                        a vision to elevate the game and the community, we have been serving basketball 
-                        enthusiasts of all ages and skill levels.
+                        Elevate Ballers is a premier basketball league dedicated
+                        to promoting excellence, sportsmanship, and community
+                        engagement through competitive basketball. Founded with
+                        a vision to elevate the game and the community, we have
+                        been serving basketball enthusiasts of all ages and
+                        skill levels.
                       </p>
                       <p style="margin-bottom: 20px;">
-                        Our mission is to provide a platform for athletes to showcase their skills, 
-                        develop their talents, and compete at the highest level while fostering a 
-                        sense of community and sportsmanship. We believe that basketball is more than 
-                        just a game—it's a vehicle for personal growth, teamwork, and community building.
+                        Our mission is to provide a platform for athletes to
+                        showcase their skills, develop their talents, and
+                        compete at the highest level while fostering a sense of
+                        community and sportsmanship. We believe that basketball
+                        is more than just a game—it's a vehicle for personal
+                        growth, teamwork, and community building.
                       </p>
                       <p style="margin-bottom: 20px;">
-                        We offer multiple leagues including Ballers League, Junior Ballers, Senior Ballers, 
-                        Women's League, and Veterans divisions. Each league is designed to provide competitive 
-                        opportunities while maintaining a focus on skill development and fair play.
+                        We offer multiple leagues including Ballers League,
+                        Junior Ballers, Senior Ballers, Women's League, and
+                        Veterans divisions. Each league is designed to provide
+                        competitive opportunities while maintaining a focus on
+                        skill development and fair play.
                       </p>
                       <p style="margin-bottom: 20px;">
-                        Our state-of-the-art facilities at Pepo Lane, off Dagoretti Road, provide the perfect 
-                        environment for training and competition. With multiple courts and professional coaching 
-                        staff, we ensure that every player has the opportunity to reach their full potential.
+                        Our state-of-the-art facilities at Pepo Lane, off
+                        Dagoretti Road, provide the perfect environment for
+                        training and competition. With multiple courts and
+                        professional coaching staff, we ensure that every player
+                        has the opportunity to reach their full potential.
                       </p>
                       <p style="margin-bottom: 20px;">
-                        At Elevate Ballers, we are committed to creating an inclusive environment where everyone 
-                        can participate, learn, and grow. Whether you're a seasoned player or just starting out, 
-                        we welcome you to join our basketball family.
+                        At Elevate Ballers, we are committed to creating an
+                        inclusive environment where everyone can participate,
+                        learn, and grow. Whether you're a seasoned player or
+                        just starting out, we welcome you to join our basketball
+                        family.
                       </p>
                     </div>
                   </div>
@@ -189,7 +209,7 @@ import PageLoader from "../components/PageLoader";
       }
 
       const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]'
+        '.mc4wp-form input[type="url"]',
       );
       for (let j = 0; j < urlFields.length; j++) {
         urlFields[j].addEventListener("blur", maybePrefixUrlField);
@@ -205,7 +225,7 @@ import PageLoader from "../components/PageLoader";
   <script is:inline>
     const lazyloadRunObserver = () => {
       const lazyloadBackgrounds = document.querySelectorAll(
-        `.e-con.e-parent:not(.e-lazyloaded)`
+        `.e-con.e-parent:not(.e-lazyloaded)`,
       );
       const lazyloadBackgroundObserver = new IntersectionObserver(
         (entries) => {
@@ -219,7 +239,7 @@ import PageLoader from "../components/PageLoader";
             }
           });
         },
-        { rootMargin: "200px 0px 200px 0px" }
+        { rootMargin: "200px 0px 200px 0px" },
       );
       lazyloadBackgrounds.forEach((lazyloadBackground) => {
         lazyloadBackgroundObserver.observe(lazyloadBackground);
@@ -235,87 +255,28 @@ import PageLoader from "../components/PageLoader";
     is:inline
     type="text/javascript"
     src="/js/jquery.min.js"
-    id="jquery-core-js"
-  ></script>
+    id="jquery-core-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery-migrate.min.js"
-    id="jquery-migrate-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/perfect-scrollbar.min.js"
-    id="perfect-scrollbar-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/bootstrap.min.js"
-    id="bootstrap-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/select2.full.min.js"
-    id="select2-js"
-    defer="defer"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/owl.carousel.min.js"
-    id="owl-carousel-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.fancybox.pack.js"
-    id="fancybox-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/imagesloaded.min.js"
-    id="imagesloaded-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/isotope.pkgd.min.js"
-    id="isotope-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/waypoints.min.js"
-    id="waypoint-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.counterup.min.js"
-    id="counterup-js"
-  ></script>
+    id="jquery-migrate-js"></script>
+  <!-- Legacy Scripts (Select2, Fancybox, Counterup, etc.) removed in favor of React components -->
   <script
     is:inline
     type="text/javascript"
     src="/js/lightbox.js"
-    id="lightbox-js"
-  ></script>
+    id="lightbox-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/splash.js"
-    id="stm-theme-scripts-js"
-  ></script>
+    id="stm-theme-scripts-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/header.js"
-    id="stm-theme-scripts-header-js"
-  ></script>
+    id="stm-theme-scripts-header-js"></script>
   <script is:inline type="text/javascript" id="sportspress-js-extra">
     /* <![CDATA[ */
     var localized_strings = {
@@ -330,19 +291,13 @@ import PageLoader from "../components/PageLoader";
     /* ]]> */
   </script>
 
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.waypoints.min.js"
-    id="jquery-waypoints-js"
-  ></script>
- 
+  <!-- waypoints script removed -->
+
   <script
     is:inline
     type="text/javascript"
     src="/js/js_composer_front.min.js"
-    id="wpb_composer_front_js-js"
-  ></script>
+    id="wpb_composer_front_js-js"></script>
   <script is:inline type="text/javascript">
     (function () {
       var c = document.body.className;
@@ -362,4 +317,3 @@ import PageLoader from "../components/PageLoader";
   </script>
 </Layout>
 <!-- wrapper -->
-
