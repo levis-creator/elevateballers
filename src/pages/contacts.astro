@@ -18,7 +18,8 @@ import PageLoader from "../components/PageLoader";
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
         style="padding-top: 0; padding-bottom: 0px;"
-      ></div>
+      >
+      </div>
       <div class="container">
         <section class="wpb-content-wrapper">
           <div class="vc_row wpb_row vc_row-fluid">
@@ -33,7 +34,10 @@ import PageLoader from "../components/PageLoader";
                     xs="40"
                   />
 
-                  <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">
+                  <h2
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 50px; color: #dd3333;"
+                  >
                     CONTACTS
                   </h2>
 
@@ -41,41 +45,73 @@ import PageLoader from "../components/PageLoader";
                     <div class="wpb_column vc_column_container vc_col-sm-6">
                       <div class="vc_column-inner">
                         <div class="wpb_wrapper">
-                          <div class="contact-info normal_font" style="margin-bottom: 30px;">
-                            <h3 class="heading-font" style="color: #dd3333; margin-bottom: 20px; font-size: 24px;">
+                          <div
+                            class="contact-info normal_font"
+                            style="margin-bottom: 30px;"
+                          >
+                            <h3
+                              class="heading-font"
+                              style="color: #dd3333; margin-bottom: 20px; font-size: 24px;"
+                            >
                               Contact Information
                             </h3>
-                            <table class="stm-list-duty normal_font" style="width: 100%;">
+                            <table
+                              class="stm-list-duty normal_font"
+                              style="width: 100%;"
+                            >
                               <tbody>
                                 <tr>
                                   <td style="padding: 10px 0;">
-                                    <div style="display: flex; align-items: center;">
-                                      <i class="fa fa-map-marker" style="margin-right: 15px; color: #dd3333; font-size: 18px;"></i>
+                                    <div
+                                      style="display: flex; align-items: center;"
+                                    >
+                                      <i
+                                        class="fa fa-map-marker"
+                                        style="margin-right: 15px; color: #dd3333; font-size: 18px;"
+                                      ></i>
                                       <span>Pepo Lane, off Dagoretti Road</span>
                                     </div>
                                   </td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 10px 0;">
-                                    <div style="display: flex; align-items: center;">
-                                      <i class="fa fa-phone" style="margin-right: 15px; color: #dd3333; font-size: 18px;"></i>
+                                    <div
+                                      style="display: flex; align-items: center;"
+                                    >
+                                      <i
+                                        class="fa fa-phone"
+                                        style="margin-right: 15px; color: #dd3333; font-size: 18px;"
+                                      ></i>
                                       <span>0703913923</span>
                                     </div>
                                   </td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 10px 0;">
-                                    <div style="display: flex; align-items: center;">
-                                      <i class="fa fa-fax" style="margin-right: 15px; color: #dd3333; font-size: 18px;"></i>
+                                    <div
+                                      style="display: flex; align-items: center;"
+                                    >
+                                      <i
+                                        class="fa fa-fax"
+                                        style="margin-right: 15px; color: #dd3333; font-size: 18px;"
+                                      ></i>
                                       <span>0729259496</span>
                                     </div>
                                   </td>
                                 </tr>
                                 <tr>
                                   <td style="padding: 10px 0;">
-                                    <div style="display: flex; align-items: center;">
-                                      <i class="fa fa-envelope" style="margin-right: 15px; color: #dd3333; font-size: 18px;"></i>
-                                      <a href="mailto:ballers@elevateballers.com" style="color: #595959; text-decoration: none;">
+                                    <div
+                                      style="display: flex; align-items: center;"
+                                    >
+                                      <i
+                                        class="fa fa-envelope"
+                                        style="margin-right: 15px; color: #dd3333; font-size: 18px;"
+                                      ></i>
+                                      <a
+                                        href="mailto:ballers@elevateballers.com"
+                                        style="color: #595959; text-decoration: none;"
+                                      >
                                         ballers@elevateballers.com
                                       </a>
                                     </div>
@@ -83,8 +119,13 @@ import PageLoader from "../components/PageLoader";
                                 </tr>
                                 <tr>
                                   <td style="padding: 10px 0;">
-                                    <div style="display: flex; align-items: center;">
-                                      <i class="fa fa-clock-o" style="margin-right: 15px; color: #dd3333; font-size: 18px;"></i>
+                                    <div
+                                      style="display: flex; align-items: center;"
+                                    >
+                                      <i
+                                        class="fa fa-clock-o"
+                                        style="margin-right: 15px; color: #dd3333; font-size: 18px;"
+                                      ></i>
                                       <span>Sat-Sun 8am - 6pm</span>
                                     </div>
                                   </td>
@@ -99,7 +140,10 @@ import PageLoader from "../components/PageLoader";
                       <div class="vc_column-inner">
                         <div class="wpb_wrapper">
                           <div class="contact-form-wrapper">
-                            <h3 class="heading-font" style="color: #dd3333; margin-bottom: 20px; font-size: 24px;">
+                            <h3
+                              class="heading-font"
+                              style="color: #dd3333; margin-bottom: 20px; font-size: 24px;"
+                            >
                               Send us a Message
                             </h3>
                             <form class="contact-form" method="post" action="#">
@@ -286,7 +330,7 @@ import PageLoader from "../components/PageLoader";
       }
 
       const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]'
+        '.mc4wp-form input[type="url"]',
       );
       for (let j = 0; j < urlFields.length; j++) {
         urlFields[j].addEventListener("blur", maybePrefixUrlField);
@@ -302,7 +346,7 @@ import PageLoader from "../components/PageLoader";
   <script is:inline>
     const lazyloadRunObserver = () => {
       const lazyloadBackgrounds = document.querySelectorAll(
-        `.e-con.e-parent:not(.e-lazyloaded)`
+        `.e-con.e-parent:not(.e-lazyloaded)`,
       );
       const lazyloadBackgroundObserver = new IntersectionObserver(
         (entries) => {
@@ -316,7 +360,7 @@ import PageLoader from "../components/PageLoader";
             }
           });
         },
-        { rootMargin: "200px 0px 200px 0px" }
+        { rootMargin: "200px 0px 200px 0px" },
       );
       lazyloadBackgrounds.forEach((lazyloadBackground) => {
         lazyloadBackgroundObserver.observe(lazyloadBackground);
@@ -332,87 +376,28 @@ import PageLoader from "../components/PageLoader";
     is:inline
     type="text/javascript"
     src="/js/jquery.min.js"
-    id="jquery-core-js"
-  ></script>
+    id="jquery-core-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery-migrate.min.js"
-    id="jquery-migrate-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/perfect-scrollbar.min.js"
-    id="perfect-scrollbar-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/bootstrap.min.js"
-    id="bootstrap-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/select2.full.min.js"
-    id="select2-js"
-    defer="defer"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/owl.carousel.min.js"
-    id="owl-carousel-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.fancybox.pack.js"
-    id="fancybox-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/imagesloaded.min.js"
-    id="imagesloaded-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/isotope.pkgd.min.js"
-    id="isotope-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/waypoints.min.js"
-    id="waypoint-js"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.counterup.min.js"
-    id="counterup-js"
-  ></script>
+    id="jquery-migrate-js"></script>
+  <!-- Legacy Scripts (Select2, Fancybox, Counterup, etc.) removed in favor of React components -->
   <script
     is:inline
     type="text/javascript"
     src="/js/lightbox.js"
-    id="lightbox-js"
-  ></script>
+    id="lightbox-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/splash.js"
-    id="stm-theme-scripts-js"
-  ></script>
+    id="stm-theme-scripts-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/header.js"
-    id="stm-theme-scripts-header-js"
-  ></script>
+    id="stm-theme-scripts-header-js"></script>
   <script is:inline type="text/javascript" id="sportspress-js-extra">
     /* <![CDATA[ */
     var localized_strings = {
@@ -427,13 +412,11 @@ import PageLoader from "../components/PageLoader";
     /* ]]> */
   </script>
 
-  
   <script
     is:inline
     type="text/javascript"
     src="/js/js_composer_front.min.js"
-    id="wpb_composer_front_js-js"
-  ></script>
+    id="wpb_composer_front_js-js"></script>
   <script is:inline type="text/javascript">
     (function () {
       var c = document.body.className;
@@ -453,4 +436,3 @@ import PageLoader from "../components/PageLoader";
   </script>
 </Layout>
 <!-- wrapper -->
-

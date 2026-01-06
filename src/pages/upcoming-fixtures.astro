@@ -8,10 +8,7 @@ import MobileMenu from "../features/layout/components/MobileMenu";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import { getUpcomingMatches } from "../features/matches/lib/queries";
-import {
-  formatMatchDate,
-  formatMatchTime,
-} from "../features/matches/lib/utils";
+import { FixturesTable } from "../features/matches/components/FixturesTable";
 import PageLoader from "../components/PageLoader";
 import ContentLoader from "../components/ContentLoader";
 
@@ -23,20 +20,6 @@ try {
 } catch (error) {
   console.error("Error fetching matches:", error);
   hasError = true;
-}
-
-/**
- * Format date for display
- */
-function formatDate(date: Date | string): string {
-  return formatMatchDate(date);
-}
-
-/**
- * Format time for display
- */
-function formatTime(date: Date | string): string {
-  return formatMatchTime(date);
 }
 ---
 
@@ -81,56 +64,7 @@ function formatTime(date: Date | string): string {
                       />
                     ) : (
                       <div class="sp-template sp-template-event-list">
-                        <div class="sp-table-wrapper">
-                          <table class="sp-event-list sp-data-table">
-                            <thead>
-                              <tr>
-                                <th class="data-date">Date</th>
-                                <th class="data-time">Time</th>
-                                <th class="data-home">Home</th>
-                                <th class="data-away">Away</th>
-                                <th class="data-venue">Venue</th>
-                                <th class="data-league">League</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {matches.length > 0 ? (
-                                matches.map((match, index) => (
-                                  <tr class={index % 2 === 0 ? "even" : "odd"}>
-                                    <td class="data-date">
-                                      {formatDate(match.date)}
-                                    </td>
-                                    <td class="data-time">
-                                      {formatTime(match.date)}
-                                    </td>
-                                    <td class="data-home">
-                                      <a href={`/matches/${match.id}`}>
-                                        {match.team1Name}
-                                      </a>
-                                    </td>
-                                    <td class="data-away">
-                                      <a href={`/matches/${match.id}`}>
-                                        {match.team2Name}
-                                      </a>
-                                    </td>
-                                    <td class="data-venue">-</td>
-                                    <td class="data-league">{match.league}</td>
-                                  </tr>
-                                ))
-                              ) : (
-                                <tr>
-                                  <td
-                                    colspan="6"
-                                    class="data-name"
-                                    style="text-align: center; padding: 20px;"
-                                  >
-                                    No upcoming fixtures available.
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
+                        <FixturesTable matches={matches} client:load />
                       </div>
                     )
                   }
@@ -406,58 +340,7 @@ function formatTime(date: Date | string): string {
     });
   </script>
 
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.min.js"
-    id="jquery-core-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery-migrate.min.js"
-    id="jquery-migrate-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/perfect-scrollbar.min.js"
-    id="perfect-scrollbar-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/bootstrap.min.js"
-    id="bootstrap-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/select2.full.min.js"
-    id="select2-js"
-    defer="defer"></script>
-
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.fancybox.pack.js"
-    id="fancybox-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/imagesloaded.min.js"
-    id="imagesloaded-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/isotope.pkgd.min.js"
-    id="isotope-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/waypoints.min.js"
-    id="waypoint-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.counterup.min.js"
-    id="counterup-js"></script>
+  <!-- Legacy Scripts (Select2, Fancybox, Counterup, etc.) removed in favor of React components -->
   <script
     is:inline
     type="text/javascript"
@@ -477,12 +360,6 @@ function formatTime(date: Date | string): string {
   <script
     is:inline
     type="text/javascript"
-    src="/js/jquery.waypoints.min.js"
-    id="jquery-waypoints-js"></script>
-
-  <script
-    is:inline
-    type="text/javascript"
     src="/js/js_composer_front.min.js"
     id="wpb_composer_front_js-js"></script>
   <script is:inline type="text/javascript">
@@ -492,16 +369,7 @@ function formatTime(date: Date | string): string {
       document.body.className = c;
     })();
   </script>
-  <script is:inline type="text/javascript">
-    jQuery(document).ready(function ($) {
-      // Initialize PerfectScrollbar for event list if needed
-      $(".sp-template-event-list .sp-table-wrapper").each(function () {
-        if (typeof PerfectScrollbar !== "undefined") {
-          new PerfectScrollbar(this);
-        }
-      });
-    });
-  </script>
+
   <script is:inline type="text/javascript">
     jQuery(document).ready(function ($) {
       $(".sp-header-loaded").prepend($(".sp-league-menu"));

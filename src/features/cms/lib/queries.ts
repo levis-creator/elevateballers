@@ -1,5 +1,5 @@
 import { prisma } from '../../../lib/prisma';
-import type { NewsCategory, NewsArticleWithAuthor, Match, Player, Team, TeamWithPlayers, TeamWithPlayerCount, Staff, StaffWithTeams, TeamStaff, TeamStaffWithStaff, MatchStatus, Media, MediaType, PageContent, SiteSetting, CommentWithAuthor, StaffRole, League, LeagueWithMatchCount, Season, SeasonWithCounts, MatchWithTeamsAndLeagueAndSeason, MatchPlayerWithDetails, MatchEventWithDetails, MatchWithFullDetails } from '../types';
+import type { NewsCategory, NewsArticleWithAuthor, Match, Player, Team, TeamWithPlayers, TeamWithPlayerCount, Staff, StaffWithTeams, TeamStaff, TeamStaffWithStaff, MatchStatus, MatchStage, Media, MediaType, PageContent, SiteSetting, CommentWithAuthor, StaffRole, League, LeagueWithMatchCount, Season, SeasonWithCounts, MatchWithTeamsAndLeagueAndSeason, MatchPlayerWithDetails, MatchEventWithDetails, MatchWithFullDetails } from '../types';
 import { categoryMap, reverseCategoryMap } from '../types';
 
 /**
@@ -241,7 +241,7 @@ export async function getTeamById(id: string, includeUnapproved: boolean = false
  */
 export async function getTeamBySlug(slug: string): Promise<TeamWithPlayers | null> {
   return await prisma.team.findUnique({
-    where: { 
+    where: {
       slug,
       approved: true, // Only return approved teams for public access
     },
@@ -428,7 +428,7 @@ async function getRepliesRecursive(parentId: string, approvedOnly: boolean = tru
   const whereClause: any = {
     parentId,
   };
-  
+
   if (approvedOnly) {
     whereClause.approved = true;
   }
@@ -644,7 +644,7 @@ export async function getStaffByTeam(teamId: string): Promise<TeamStaffWithStaff
  */
 export async function getLeagues(activeOnly = false): Promise<LeagueWithMatchCount[]> {
   const where = activeOnly ? { active: true } : {};
-  
+
   return await prisma.league.findMany({
     where,
     // @ts-expect-error - Prisma types will be correct after full sync
@@ -706,7 +706,7 @@ export async function getSeasons(activeOnly = false, leagueId?: string): Promise
   if (leagueId) {
     where.leagueId = leagueId;
   }
-  
+
   return await prisma.season.findMany({
     where,
     // @ts-expect-error - Prisma types will be correct after full sync
@@ -750,7 +750,7 @@ export async function getSeasonBySlug(slug: string, leagueId?: string): Promise<
   if (leagueId) {
     where.leagueId = leagueId;
   }
-  
+
   return await prisma.season.findFirst({
     where,
     // @ts-expect-error - Prisma types will be correct after full sync
@@ -923,4 +923,31 @@ export async function getMatchWithFullDetails(matchId: string): Promise<MatchWit
     console.error('Error in getMatchWithFullDetails:', error);
     throw error;
   }
+}
+
+/**
+ * Get matches for a tournament (Playoffs, Finals, etc.)
+ */
+export async function getTournamentMatches(leagueId?: string, seasonId?: string): Promise<MatchWithTeamsAndLeagueAndSeason[]> {
+  const where: any = {
+    stage: {
+      in: ['PLAYOFF', 'QUARTER_FINALS', 'SEMI_FINALS', 'CHAMPIONSHIP']
+    }
+  };
+
+  if (leagueId) where.leagueId = leagueId;
+  if (seasonId) where.seasonId = seasonId;
+
+  return await prisma.match.findMany({
+    where,
+    include: {
+      team1: true,
+      team2: true,
+      league: true,
+      season: true,
+    },
+    orderBy: {
+      date: 'asc',
+    },
+  }) as MatchWithTeamsAndLeagueAndSeason[];
 }
