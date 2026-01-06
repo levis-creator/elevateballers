@@ -8,7 +8,10 @@ import MobileMenu from "../features/layout/components/MobileMenu";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import { getUpcomingMatches } from "../features/matches/lib/queries";
-import { formatMatchDate, formatMatchTime } from "../features/matches/lib/utils";
+import {
+  formatMatchDate,
+  formatMatchTime,
+} from "../features/matches/lib/utils";
 import PageLoader from "../components/PageLoader";
 import ContentLoader from "../components/ContentLoader";
 
@@ -18,7 +21,7 @@ let hasError = false;
 try {
   matches = await getUpcomingMatches();
 } catch (error) {
-  console.error('Error fetching matches:', error);
+  console.error("Error fetching matches:", error);
   hasError = true;
 }
 
@@ -47,7 +50,8 @@ function formatTime(date: Date | string): string {
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
         style="padding-top: 0; padding-bottom: 0px;"
-      ></div>
+      >
+      </div>
       <div class="container">
         <section class="wpb-content-wrapper">
           <div class="vc_row wpb_row vc_row-fluid">
@@ -62,54 +66,74 @@ function formatTime(date: Date | string): string {
                     xs="40"
                   />
 
-                  <h2 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">
+                  <h2
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 50px; color: #dd3333;"
+                  >
                     UPCOMING FIXTURES
                   </h2>
 
-                  {hasError ? (
-                    <ContentLoader client:load message="Failed to load fixtures. Please try again later." />
-                  ) : (
-                    <div class="sp-template sp-template-event-list">
-                    <div class="sp-table-wrapper">
-                      <table class="sp-event-list sp-data-table">
-                        <thead>
-                          <tr>
-                            <th class="data-date">Date</th>
-                            <th class="data-time">Time</th>
-                            <th class="data-home">Home</th>
-                            <th class="data-away">Away</th>
-                            <th class="data-venue">Venue</th>
-                            <th class="data-league">League</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matches.length > 0 ? (
-                            matches.map((match, index) => (
-                              <tr class={index % 2 === 0 ? "even" : "odd"}>
-                                <td class="data-date">{formatDate(match.date)}</td>
-                                <td class="data-time">{formatTime(match.date)}</td>
-                                <td class="data-home">
-                                  <a href={`/matches/${match.id}`}>{match.team1Name}</a>
-                                </td>
-                                <td class="data-away">
-                                  <a href={`/matches/${match.id}`}>{match.team2Name}</a>
-                                </td>
-                                <td class="data-venue">-</td>
-                                <td class="data-league">{match.league}</td>
+                  {
+                    hasError ? (
+                      <ContentLoader
+                        client:load
+                        message="Failed to load fixtures. Please try again later."
+                      />
+                    ) : (
+                      <div class="sp-template sp-template-event-list">
+                        <div class="sp-table-wrapper">
+                          <table class="sp-event-list sp-data-table">
+                            <thead>
+                              <tr>
+                                <th class="data-date">Date</th>
+                                <th class="data-time">Time</th>
+                                <th class="data-home">Home</th>
+                                <th class="data-away">Away</th>
+                                <th class="data-venue">Venue</th>
+                                <th class="data-league">League</th>
                               </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colspan="6" class="data-name" style="text-align: center; padding: 20px;">
-                                No upcoming fixtures available.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  )}
+                            </thead>
+                            <tbody>
+                              {matches.length > 0 ? (
+                                matches.map((match, index) => (
+                                  <tr class={index % 2 === 0 ? "even" : "odd"}>
+                                    <td class="data-date">
+                                      {formatDate(match.date)}
+                                    </td>
+                                    <td class="data-time">
+                                      {formatTime(match.date)}
+                                    </td>
+                                    <td class="data-home">
+                                      <a href={`/matches/${match.id}`}>
+                                        {match.team1Name}
+                                      </a>
+                                    </td>
+                                    <td class="data-away">
+                                      <a href={`/matches/${match.id}`}>
+                                        {match.team2Name}
+                                      </a>
+                                    </td>
+                                    <td class="data-venue">-</td>
+                                    <td class="data-league">{match.league}</td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td
+                                    colspan="6"
+                                    class="data-name"
+                                    style="text-align: center; padding: 20px;"
+                                  >
+                                    No upcoming fixtures available.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )
+                  }
 
                   <Spacing
                     id="stm-spacing-fixtures-footer"
@@ -231,20 +255,34 @@ function formatTime(date: Date | string): string {
       font-weight: normal;
     }
 
-    .sp-template-event-list table.sp-event-list.sp-data-table thead th.data-home,
-    .sp-template-event-list table.sp-event-list.sp-data-table thead th.data-away {
+    .sp-template-event-list
+      table.sp-event-list.sp-data-table
+      thead
+      th.data-home,
+    .sp-template-event-list
+      table.sp-event-list.sp-data-table
+      thead
+      th.data-away {
       text-align: left;
       padding-left: 20px !important;
     }
 
     /* Table body - Exact match: white for even, #e8e8e8 for odd */
     .sp-template-event-list table.sp-event-list.sp-data-table tbody tr.odd td,
-    .sp-template-event-list table.sp-event-list.sp-data-table tbody tr:nth-child(odd) td {
+    .sp-template-event-list
+      table.sp-event-list.sp-data-table
+      tbody
+      tr:nth-child(odd)
+      td {
       background-color: #e8e8e8 !important;
     }
 
     .sp-template-event-list table.sp-event-list.sp-data-table tbody tr.even td,
-    .sp-template-event-list table.sp-event-list.sp-data-table tbody tr:nth-child(even) td {
+    .sp-template-event-list
+      table.sp-event-list.sp-data-table
+      tbody
+      tr:nth-child(even)
+      td {
       background-color: #fff;
     }
 
@@ -254,8 +292,14 @@ function formatTime(date: Date | string): string {
       text-align: center;
     }
 
-    .sp-template-event-list table.sp-event-list.sp-data-table tbody td.data-home,
-    .sp-template-event-list table.sp-event-list.sp-data-table tbody td.data-away {
+    .sp-template-event-list
+      table.sp-event-list.sp-data-table
+      tbody
+      td.data-home,
+    .sp-template-event-list
+      table.sp-event-list.sp-data-table
+      tbody
+      td.data-away {
       text-align: left;
       padding-left: 20px;
       color: #535353;
@@ -320,7 +364,7 @@ function formatTime(date: Date | string): string {
       }
 
       const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]'
+        '.mc4wp-form input[type="url"]',
       );
       for (let j = 0; j < urlFields.length; j++) {
         urlFields[j].addEventListener("blur", maybePrefixUrlField);
@@ -336,7 +380,7 @@ function formatTime(date: Date | string): string {
   <script is:inline>
     const lazyloadRunObserver = () => {
       const lazyloadBackgrounds = document.querySelectorAll(
-        `.e-con.e-parent:not(.e-lazyloaded)`
+        `.e-con.e-parent:not(.e-lazyloaded)`,
       );
       const lazyloadBackgroundObserver = new IntersectionObserver(
         (entries) => {
@@ -350,7 +394,7 @@ function formatTime(date: Date | string): string {
             }
           });
         },
-        { rootMargin: "200px 0px 200px 0px" }
+        { rootMargin: "200px 0px 200px 0px" },
       );
       lazyloadBackgrounds.forEach((lazyloadBackground) => {
         lazyloadBackgroundObserver.observe(lazyloadBackground);
@@ -366,114 +410,81 @@ function formatTime(date: Date | string): string {
     is:inline
     type="text/javascript"
     src="/js/jquery.min.js"
-    id="jquery-core-js"
-  ></script>
+    id="jquery-core-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery-migrate.min.js"
-    id="jquery-migrate-js"
-  ></script>
+    id="jquery-migrate-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/perfect-scrollbar.min.js"
-    id="perfect-scrollbar-js"
-  ></script>
+    id="perfect-scrollbar-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/bootstrap.min.js"
-    id="bootstrap-js"
-  ></script>
+    id="bootstrap-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/select2.full.min.js"
     id="select2-js"
-    defer="defer"
-  ></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/owl.carousel.min.js"
-    id="owl-carousel-js"
-  ></script>
+    defer="defer"></script>
+
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery.fancybox.pack.js"
-    id="fancybox-js"
-  ></script>
+    id="fancybox-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/imagesloaded.min.js"
-    id="imagesloaded-js"
-  ></script>
+    id="imagesloaded-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/isotope.pkgd.min.js"
-    id="isotope-js"
-  ></script>
+    id="isotope-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/waypoints.min.js"
-    id="waypoint-js"
-  ></script>
+    id="waypoint-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery.counterup.min.js"
-    id="counterup-js"
-  ></script>
+    id="counterup-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/lightbox.js"
-    id="lightbox-js"
-  ></script>
+    id="lightbox-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/splash.js"
-    id="stm-theme-scripts-js"
-  ></script>
+    id="stm-theme-scripts-js"></script>
   <script
     is:inline
     type="text/javascript"
     src="/js/header.js"
-    id="stm-theme-scripts-header-js"
-  ></script>
-  <script is:inline type="text/javascript" id="sportspress-js-extra">
-    /* <![CDATA[ */
-    var localized_strings = {
-      days: "days",
-      hrs: "hrs",
-      mins: "mins",
-      secs: "secs",
-      previous: "Previous",
-      next: "Next",
-    };
-    //# sourceURL=sportspress-js-extra
-    /* ]]> */
-  </script>
+    id="stm-theme-scripts-header-js"></script>
 
   <script
     is:inline
     type="text/javascript"
     src="/js/jquery.waypoints.min.js"
-    id="jquery-waypoints-js"
-  ></script>
- 
+    id="jquery-waypoints-js"></script>
+
   <script
     is:inline
     type="text/javascript"
     src="/js/js_composer_front.min.js"
-    id="wpb_composer_front_js-js"
-  ></script>
+    id="wpb_composer_front_js-js"></script>
   <script is:inline type="text/javascript">
     (function () {
       var c = document.body.className;
@@ -503,4 +514,3 @@ function formatTime(date: Date | string): string {
   </script>
 </Layout>
 <!-- wrapper -->
-
