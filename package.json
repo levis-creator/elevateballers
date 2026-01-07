@@ -24,6 +24,7 @@
   "dependencies": {
     "@astrojs/node": "^9.5.1",
     "@astrojs/react": "^4.4.2",
+    "@astrojs/vercel": "^8.0.4",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "@hookform/resolvers": "^5.2.2",
@@ -73,7 +74,6 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@astrojs/vercel": "^8.0.4",
     "@ngrok/ngrok": "^1.2.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
