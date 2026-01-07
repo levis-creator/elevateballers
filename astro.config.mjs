@@ -9,12 +9,7 @@ import { resolve } from 'path';
 export default defineConfig({
   integrations: [react()],
   output: 'server',
-  adapter: vercel({
-    webAnalytics: {
-      enabled: true,
-    },
-    functionPerRoute: false,
-  }),
+  adapter: vercel(),
   trailingSlash: 'ignore',
   vite: {
     resolve: {
