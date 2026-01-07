@@ -27,7 +27,7 @@
   "dependencies": {
     "@astrojs/node": "^9.5.1",
     "@astrojs/react": "^4.4.2",
-    "@astrojs/vercel": "^8.0.4",
+    "@astrojs/vercel": "^9.0.2",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "@hookform/resolvers": "^5.2.2",
