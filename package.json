@@ -73,7 +73,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@astrojs/vercel": "^9.0.2",
+    "@astrojs/vercel": "^8.0.4",
     "@ngrok/ngrok": "^1.2.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
