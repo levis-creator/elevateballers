@@ -8,7 +8,6 @@ import { resolve } from 'path';
 // https://astro.build/config
 export default defineConfig({
   integrations: [react()],
-  output: 'server',
   adapter: vercel(),
   trailingSlash: 'ignore',
   vite: {
