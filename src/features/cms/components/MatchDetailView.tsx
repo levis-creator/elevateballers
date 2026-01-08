@@ -231,6 +231,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
         body: JSON.stringify({
           ...formData,
           minute: parseInt(formData.minute),
+          teamId: formData.teamId || undefined,
           playerId: formData.playerId || undefined,
           assistPlayerId: formData.assistPlayerId || undefined,
           period: formData.period ? parseInt(formData.period) : undefined,
