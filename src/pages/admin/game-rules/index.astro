@@ -1,0 +1,11 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import GameRulesList from '../../../features/game-tracking/components/GameRulesList';
+---
+
+<AdminLayout title="Game Rules Management - Admin">
+  <GameRulesList client:load />
+</AdminLayout>

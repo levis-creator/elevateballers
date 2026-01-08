@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import ReportGenerator from '../../../features/reports/components/ReportGenerator';
+---
+
+<AdminLayout title="Reports - Admin">
+  <div className="space-y-6">
+    <div className="pb-6 border-b">
+      <h1 className="text-3xl font-heading font-semibold mb-2">Generate Report</h1>
+      <p className="text-muted-foreground">Create PDF or CSV reports from match and player data</p>
+    </div>
+    <ReportGenerator
+      client:load
+      onGenerate={(reportGenerationId) => {
+        // Could redirect to a report history page or show success message
+        console.log('Report generated:', reportGenerationId);
+      }}
+    />
+  </div>
+</AdminLayout>

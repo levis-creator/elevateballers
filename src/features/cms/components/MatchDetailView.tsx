@@ -27,6 +27,9 @@ import {
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../matches/lib/team-helpers';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 import AddNewPlayerModal from './AddNewPlayerModal';
+import GameTrackingPanel from '../../game-tracking/components/GameTrackingPanel';
+import { formatClockTime } from '../../game-tracking/lib/utils';
+import { getPeriodLabel } from '../../game-tracking/lib/utils';
 
 interface MatchDetailViewProps {
   matchId: string;
@@ -53,6 +56,8 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   SUBSTITUTION_OUT: 'Sub Out',
   TIMEOUT: 'Timeout',
   INJURY: 'Injury',
+  BREAK: 'Break',
+  PLAY_RESUMED: 'Play Resumed',
   OTHER: 'Other',
 };
 
@@ -71,6 +76,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [gameState, setGameState] = useState<any>(null);
   const [formData, setFormData] = useState({
     eventType: 'TWO_POINT_MADE' as string,
     minute: '',
@@ -78,6 +84,8 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
     playerId: '',
     assistPlayerId: '',
     description: '',
+    period: '',
+    secondsRemaining: '',
   });
   const [icons, setIcons] = useState<{
     AlertCircle?: ComponentType<any>;
@@ -106,7 +114,10 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
 
   useEffect(() => {
     fetchMatchTeams();
-  }, [team1Id, team2Id]);
+    if (isOpen) {
+      fetchGameState();
+    }
+  }, [team1Id, team2Id, isOpen]);
 
   useEffect(() => {
     if (formData.teamId) {
@@ -115,6 +126,17 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
       setPlayers([]);
     }
   }, [formData.teamId]);
+
+  useEffect(() => {
+    if (gameState && isOpen) {
+      setFormData((prev) => ({
+        ...prev,
+        period: prev.period || String(gameState.period || 1),
+        secondsRemaining: prev.secondsRemaining || (gameState.clockSeconds !== null && gameState.clockSeconds !== undefined ? String(gameState.clockSeconds) : ''),
+      }));
+    }
+  }, [gameState, isOpen]);
+
 
   const fetchMatchTeams = async () => {
     try {
@@ -154,14 +176,47 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
     }
   };
 
+  const fetchGameState = async () => {
+    try {
+      const response = await fetch(`/api/games/${matchId}/state`);
+      if (response.ok) {
+        const state = await response.json();
+        setGameState(state);
+      }
+    } catch (err) {
+      console.error('Failed to fetch game state:', err);
+    }
+  };
+
   const needsPlayer = (eventType: string) => {
     // Events that don't require a player
-    return !['TIMEOUT'].includes(eventType);
+    return !['TIMEOUT', 'BREAK', 'PLAY_RESUMED'].includes(eventType);
+  };
+
+  const requiresPlayer = (eventType: string) => {
+    // Events that MUST have a player (not optional)
+    return !['TIMEOUT', 'BREAK', 'PLAY_RESUMED', 'OTHER'].includes(eventType);
+  };
+
+  const needsTeam = (eventType: string) => {
+    // Events that don't need team selection (game-level events)
+    return !['BREAK', 'PLAY_RESUMED'].includes(eventType);
   };
 
   const needsAssist = (eventType: string) => {
     // Events that can have an assist
     return ['TWO_POINT_MADE', 'THREE_POINT_MADE'].includes(eventType);
+  };
+
+  const shouldShowMinute = (eventType: string) => {
+    // Events where minute field is less relevant (use period/seconds instead)
+    // For most events, minute is still useful as fallback
+    return true;
+  };
+
+  const shouldShowPeriodAndSeconds = (eventType: string) => {
+    // All events benefit from period and seconds tracking
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -178,6 +233,8 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
           minute: parseInt(formData.minute),
           playerId: formData.playerId || undefined,
           assistPlayerId: formData.assistPlayerId || undefined,
+          period: formData.period ? parseInt(formData.period) : undefined,
+          secondsRemaining: formData.secondsRemaining ? parseInt(formData.secondsRemaining) : undefined,
         }),
       });
 
@@ -194,6 +251,8 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
         playerId: '',
         assistPlayerId: '',
         description: '',
+        period: gameState?.period ? String(gameState.period) : '',
+        secondsRemaining: gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : '',
       });
     } catch (err: any) {
       setError(err.message || 'Failed to add event');
@@ -222,6 +281,8 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
     { value: 'SUBSTITUTION_OUT', label: 'Substitution Out' },
     { value: 'TIMEOUT', label: 'Timeout' },
     { value: 'INJURY', label: 'Injury' },
+    { value: 'BREAK', label: 'Break' },
+    { value: 'PLAY_RESUMED', label: 'Play Resumed' },
     { value: 'OTHER', label: 'Other' },
   ];
 
@@ -293,44 +354,49 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="modal-teamId">
-                Team <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={formData.teamId}
-                onValueChange={(value) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    teamId: value,
-                    playerId: '',
-                    assistPlayerId: '',
-                  }));
-                }}
-                required
-              >
-                <SelectTrigger id="modal-teamId">
-                  <SelectValue placeholder="Select a team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {needsTeam(formData.eventType) && (
+              <div className="space-y-2">
+                <Label htmlFor="modal-teamId">
+                  Team <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.teamId}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      teamId: value,
+                      playerId: '',
+                      assistPlayerId: '',
+                    }));
+                  }}
+                  required={needsTeam(formData.eventType)}
+                >
+                  <SelectTrigger id="modal-teamId">
+                    <SelectValue placeholder="Select a team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {needsPlayer(formData.eventType) && (
               <div className="space-y-2">
-                <Label htmlFor="modal-playerId">Player</Label>
+                <Label htmlFor="modal-playerId">
+                  Player {requiresPlayer(formData.eventType) && <span className="text-destructive">*</span>}
+                </Label>
                 <Select
                   value={formData.playerId}
                   onValueChange={(value) =>
                     setFormData((prev) => ({ ...prev, playerId: value }))
                   }
                   disabled={!formData.teamId}
+                  required={requiresPlayer(formData.eventType)}
                 >
                   <SelectTrigger id="modal-playerId">
                     <SelectValue placeholder="Select a player" />
@@ -345,6 +411,48 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                 </Select>
               </div>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="modal-period">
+                Period <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="modal-period"
+                type="number"
+                value={formData.period}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, period: e.target.value }))
+                }
+                required
+                min="1"
+                max="10"
+                placeholder="1"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="modal-secondsRemaining">
+                Seconds Remaining
+              </Label>
+              <Input
+                id="modal-secondsRemaining"
+                type="number"
+                value={formData.secondsRemaining}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, secondsRemaining: e.target.value }))
+                }
+                min="0"
+                max="7200"
+                placeholder={gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : "Auto from clock"}
+              />
+              {gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined && (
+                <p className="text-xs text-muted-foreground">
+                  Current: {Math.floor(gameState.clockSeconds / 60)}:{(gameState.clockSeconds % 60).toString().padStart(2, '0')}
+                </p>
+              )}
+            </div>
           </div>
 
           {needsAssist(formData.eventType) && (
@@ -1023,6 +1131,11 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
             </CardContent>
           </Card>
 
+      {/* Game Tracking Panel */}
+      {match.status === 'LIVE' || match.status === 'UPCOMING' ? (
+        <GameTrackingPanel matchId={matchId} match={match} />
+      ) : null}
+
       {/* Match Players */}
           <Card>
             <CardHeader>
@@ -1198,7 +1311,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                           )}
                                 <div className="flex-1">
                                   <div className="font-semibold mb-1">
-                            {EVENT_TYPE_LABELS[event.eventType] || event.eventType} - {event.minute}'
+                            {EVENT_TYPE_LABELS[event.eventType] || event.eventType} - {event.period ? `${getPeriodLabel(event.period)} ` : ''}{event.secondsRemaining ? formatClockTime(event.secondsRemaining) : `${event.minute}'`}
                           </div>
                                   <div className="text-sm text-muted-foreground space-y-1">
                             {event.player && (
@@ -1272,7 +1385,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                           )}
                                 <div className="flex-1">
                                   <div className="font-semibold mb-1">
-                            {EVENT_TYPE_LABELS[event.eventType] || event.eventType} - {event.minute}'
+                            {EVENT_TYPE_LABELS[event.eventType] || event.eventType} - {event.period ? `${getPeriodLabel(event.period)} ` : ''}{event.secondsRemaining ? formatClockTime(event.secondsRemaining) : `${event.minute}'`}
                           </div>
                                   <div className="text-sm text-muted-foreground space-y-1">
                             {event.player && (
@@ -1346,7 +1459,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                               <div className="font-semibold">
                         {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
                     </div>
-                              <Badge variant="outline">{getTeamName(event.teamId)}</Badge>
+                              {event.teamId && <Badge variant="outline">{getTeamName(event.teamId)}</Badge>}
                             </div>
                       {event.player && (
                               <div className="text-sm text-muted-foreground">

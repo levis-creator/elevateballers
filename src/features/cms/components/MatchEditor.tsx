@@ -79,6 +79,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
     team2Score: '',
     status: 'UPCOMING' as MatchStatus,
     stage: '' as MatchStage | '',
+    duration: '',
   });
 
   // Define fetch functions first
@@ -131,6 +132,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
         team2Score: match.team2Score?.toString() || '',
         status: match.status,
         stage: (match.stage as MatchStage) || '',
+        duration: match.duration?.toString() || '',
       });
 
       // Fetch seasons for the selected league
@@ -404,6 +406,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
         stage: MatchStage | null;
         team1Score: number | null;
         team2Score: number | null;
+        duration: number | null;
         leagueId?: string;
         league?: string;
         seasonId?: string;
@@ -419,6 +422,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
         stage: (formData.stage as MatchStage) || null,
         team1Score: formData.team1Score ? Number.parseInt(formData.team1Score, 10) : null,
         team2Score: formData.team2Score ? Number.parseInt(formData.team2Score, 10) : null,
+        duration: formData.duration ? Number.parseInt(formData.duration, 10) : null,
       };
 
       // Use league ID if selected, otherwise use fallback field
@@ -743,7 +747,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
             <CardDescription>Match scores and current status</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="team1Score">Team 1 Score</Label>
                 <Input
@@ -768,6 +772,22 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   disabled={saving}
                   placeholder="0"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (minutes)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={formData.duration}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, duration: e.target.value }))}
+                  min="0"
+                  disabled={saving}
+                  placeholder="e.g. 40"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Total match duration in minutes
+                </p>
               </div>
 
               <div className="space-y-2">

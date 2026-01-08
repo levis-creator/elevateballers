@@ -34,7 +34,8 @@ function getConnectionPool(): Pool {
       connectionString,
       max: process.env.NODE_ENV === 'production' ? 1 : 10, // Single connection per function in production
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000, // Increased timeout for serverless cold starts
+      connectionTimeoutMillis: 15000, // Increased timeout for connection establishment (15 seconds)
+      statement_timeout: 30000, // Statement timeout: 30 seconds (prevents queries from running indefinitely)
       // Enable connection pooling for serverless (important for Vercel)
       allowExitOnIdle: true,
     });
