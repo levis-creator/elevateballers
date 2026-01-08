@@ -183,6 +183,7 @@ export type CreateMatchInput = {
   team2Score?: number;
   status?: MatchStatus;
   stage?: import('@prisma/client').MatchStage;
+  duration?: number; // Match duration in minutes
 };
 
 export type UpdateMatchInput = Partial<CreateMatchInput>;
@@ -335,11 +336,13 @@ export type CreateMatchEventInput = {
   matchId: string;
   eventType: MatchEventType;
   minute: number;
-  teamId: string;
+  teamId?: string;
   playerId?: string;
   assistPlayerId?: string;
   description?: string;
   metadata?: Record<string, any>;
+  period?: number;
+  secondsRemaining?: number;
 };
 
 export type UpdateMatchEventInput = Partial<Omit<CreateMatchEventInput, 'matchId' | 'eventType'>>;

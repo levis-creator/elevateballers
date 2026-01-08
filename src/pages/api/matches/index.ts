@@ -165,6 +165,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: data.status || 'UPCOMING',
       // Only pass stage if it's a valid value (not empty string or __none placeholder)
       stage: data.stage && data.stage !== '__none' && data.stage.trim() !== '' ? data.stage : undefined,
+      duration: data.duration,
     });
 
     return new Response(JSON.stringify(match), {

@@ -353,6 +353,7 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
   if (data.team1Score !== undefined) updateData.team1Score = data.team1Score;
   if (data.team2Score !== undefined) updateData.team2Score = data.team2Score;
   if (data.status !== undefined) updateData.status = data.status;
+  if (data.duration !== undefined) updateData.duration = data.duration;
   // Only include stage if it has a valid value (not empty string)
   if (data.stage !== undefined) {
     if (data.stage && data.stage.trim() !== '') {
@@ -1120,11 +1121,84 @@ export async function deleteMatchPlayer(id: string): Promise<boolean> {
  */
 export async function createMatchEvent(data: CreateMatchEventInput): Promise<MatchEvent | null> {
   try {
+    // Get current game state if period/secondsRemaining not provided
+    let period = data.period;
+    let secondsRemaining = data.secondsRemaining;
+
+    if (period === undefined || secondsRemaining === undefined) {
+      const match = await prisma.match.findUnique({
+        where: { id: data.matchId },
+        select: {
+          currentPeriod: true,
+          clockSeconds: true,
+        },
+      });
+
+      if (match) {
+        period = period ?? match.currentPeriod;
+        secondsRemaining = secondsRemaining ?? match.clockSeconds ?? undefined;
+      } else {
+        period = period ?? 1;
+      }
+    }
+
+    // Calculate sequence number
+    const { getNextSequenceNumber } = await import('../../game-tracking/lib/utils');
+    const sequenceNumber = await getNextSequenceNumber(data.matchId, prisma);
+
+    // If PLAY_RESUMED event, update match period and clock
+    if (data.eventType === 'PLAY_RESUMED') {
+      const match = await prisma.match.findUnique({
+        where: { id: data.matchId },
+        include: { gameRules: true },
+      });
+
+      if (match) {
+        const rules = match.gameRules;
+        const periodLengthSeconds = (rules?.minutesPerPeriod ?? 10) * 60;
+        const targetPeriod = period ?? match.currentPeriod;
+        const targetSeconds = secondsRemaining ?? periodLengthSeconds;
+
+        // Update match period and clock in transaction with event creation
+        return await prisma.$transaction(async (tx) => {
+          // Update match period and clock
+          await tx.match.update({
+            where: { id: data.matchId },
+            data: {
+              currentPeriod: targetPeriod,
+              clockSeconds: targetSeconds,
+              clockRunning: false, // Clock starts paused when resuming
+            },
+          });
+
+          // Create the event
+          return await tx.matchEvent.create({
+            data: {
+              matchId: data.matchId,
+              eventType: data.eventType,
+              minute: data.minute,
+              period: targetPeriod,
+              secondsRemaining: targetSeconds,
+              sequenceNumber,
+              teamId: data.teamId,
+              playerId: data.playerId,
+              assistPlayerId: data.assistPlayerId,
+              description: data.description,
+              metadata: data.metadata,
+            },
+          });
+        });
+      }
+    }
+
     return await prisma.matchEvent.create({
       data: {
         matchId: data.matchId,
         eventType: data.eventType,
         minute: data.minute,
+        period: period ?? 1,
+        secondsRemaining: secondsRemaining ?? null,
+        sequenceNumber,
         teamId: data.teamId,
         playerId: data.playerId,
         assistPlayerId: data.assistPlayerId,
@@ -1143,6 +1217,53 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
  */
 export async function updateMatchEvent(id: string, data: UpdateMatchEventInput): Promise<MatchEvent | null> {
   try {
+    // Get the existing event to check if it's PLAY_RESUMED
+    const existingEvent = await prisma.matchEvent.findUnique({
+      where: { id },
+      select: { eventType: true, matchId: true },
+    });
+
+    if (!existingEvent) {
+      return null;
+    }
+
+    // If updating PLAY_RESUMED event and period/secondsRemaining changed, update match
+    if (existingEvent.eventType === 'PLAY_RESUMED' && (data.period !== undefined || data.secondsRemaining !== undefined)) {
+      const match = await prisma.match.findUnique({
+        where: { id: existingEvent.matchId },
+        include: { gameRules: true },
+      });
+
+      if (match) {
+        const rules = match.gameRules;
+        const periodLengthSeconds = (rules?.minutesPerPeriod ?? 10) * 60;
+        const targetPeriod = data.period ?? match.currentPeriod;
+        const targetSeconds = data.secondsRemaining ?? periodLengthSeconds;
+
+        // Update match period and clock in transaction with event update
+        return await prisma.$transaction(async (tx) => {
+          // Update match period and clock
+          await tx.match.update({
+            where: { id: existingEvent.matchId },
+            data: {
+              currentPeriod: targetPeriod,
+              clockSeconds: targetSeconds,
+            },
+          });
+
+          // Update the event with resolved period/seconds
+          return await tx.matchEvent.update({
+            where: { id },
+            data: {
+              ...data,
+              period: targetPeriod,
+              secondsRemaining: targetSeconds,
+            },
+          });
+        });
+      }
+    }
+
     return await prisma.matchEvent.update({
       where: { id },
       data,

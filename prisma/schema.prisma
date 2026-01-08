@@ -88,29 +88,47 @@ model Season {
 }
 
 model Match {
-  id           String        @id @default(cuid())
-  team1Name    String?       @map("team1_name")
-  team1Logo    String?       @map("team1_logo")
-  team2Name    String?       @map("team2_name")
-  team2Logo    String?       @map("team2_logo")
-  date         DateTime
-  team1Score   Int?          @map("team1_score")
-  team2Score   Int?          @map("team2_score")
-  status       MatchStatus   @default(UPCOMING)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  leagueId     String?       @map("league_id")
-  leagueName   String?       @map("league_name")
-  seasonId     String?       @map("season_id")
-  team1Id      String?       @map("team1_id")
-  team2Id      String?       @map("team2_id")
-  stage        MatchStage?
-  events       MatchEvent[]
-  matchPlayers MatchPlayer[]
-  league       League?       @relation(fields: [leagueId], references: [id])
-  season       Season?       @relation(fields: [seasonId], references: [id])
-  team1        Team?         @relation("Team1Matches", fields: [team1Id], references: [id])
-  team2        Team?         @relation("Team2Matches", fields: [team2Id], references: [id])
+  id               String           @id @default(cuid())
+  team1Name        String?          @map("team1_name")
+  team1Logo        String?          @map("team1_logo")
+  team2Name        String?          @map("team2_name")
+  team2Logo        String?          @map("team2_logo")
+  date             DateTime
+  team1Score       Int?             @map("team1_score")
+  team2Score       Int?             @map("team2_score")
+  status           MatchStatus      @default(UPCOMING)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  leagueId         String?          @map("league_id")
+  leagueName       String?          @map("league_name")
+  seasonId         String?          @map("season_id")
+  team1Id          String?          @map("team1_id")
+  team2Id          String?          @map("team2_id")
+  stage            MatchStage?
+  gameRulesId      String?          @map("game_rules_id")
+  currentPeriod    Int              @default(1) @map("current_period")
+  clockSeconds     Int?             @map("clock_seconds")
+  clockRunning     Boolean          @default(false) @map("clock_running")
+  possessionTeamId String?          @map("possession_team_id")
+  team1Timeouts    Int              @default(0) @map("team1_timeouts")
+  team2Timeouts    Int              @default(0) @map("team2_timeouts")
+  team1Fouls       Int              @default(0) @map("team1_fouls")
+  team2Fouls       Int              @default(0) @map("team2_fouls")
+  duration         Int?             @map("duration") // Match duration in minutes
+  trackingMode     GameTrackingMode @default(BOTH) @map("tracking_mode")
+  events           MatchEvent[]
+  matchPlayers     MatchPlayer[]
+  periods          MatchPeriod[]
+  timeouts         Timeout[]
+  substitutions    Substitution[]
+  gameStates       GameState[]
+  jumpBalls        JumpBall[]
+  league           League?          @relation(fields: [leagueId], references: [id])
+  season           Season?          @relation(fields: [seasonId], references: [id])
+  team1            Team?            @relation("Team1Matches", fields: [team1Id], references: [id])
+  team2            Team?            @relation("Team2Matches", fields: [team2Id], references: [id])
+  gameRules        GameRules?       @relation(fields: [gameRulesId], references: [id])
+  possessionTeam   Team?            @relation("PossessionMatches", fields: [possessionTeamId], references: [id])
 
   @@index([date])
   @@index([status])
@@ -119,25 +137,31 @@ model Match {
   @@index([team2Id])
   @@index([leagueId])
   @@index([seasonId])
+  @@index([gameRulesId])
+  @@index([possessionTeamId])
   @@map("matches")
 }
 
 model Team {
-  id           String                   @id @default(cuid())
-  name         String                   @unique
-  logo         String?
-  description  String?
-  approved     Boolean                  @default(false)
-  createdAt    DateTime                 @default(now()) @map("created_at")
-  updatedAt    DateTime                 @updatedAt @map("updated_at")
-  slug         String                   @unique
-  matchEvents  MatchEvent[]
-  matchPlayers MatchPlayer[]
-  team1Matches Match[]                  @relation("Team1Matches")
-  team2Matches Match[]                  @relation("Team2Matches")
-  players      Player[]
-  staff        TeamStaff[]
-  notifications RegistrationNotification[]
+  id                String                     @id @default(cuid())
+  name              String                     @unique
+  logo              String?
+  description       String?
+  approved          Boolean                    @default(false)
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+  slug              String                     @unique
+  matchEvents       MatchEvent[]
+  matchPlayers      MatchPlayer[]
+  team1Matches      Match[]                    @relation("Team1Matches")
+  team2Matches      Match[]                    @relation("Team2Matches")
+  possessionMatches Match[]                    @relation("PossessionMatches")
+  timeouts          Timeout[]
+  substitutions     Substitution[]
+  jumpBallPossession JumpBall[]              @relation("JumpBallPossession")
+  players           Player[]
+  staff             TeamStaff[]
+  notifications     RegistrationNotification[]
 
   @@index([name])
   @@index([slug])
@@ -146,25 +170,29 @@ model Team {
 }
 
 model Player {
-  id           String                   @id @default(cuid())
-  image        String?
-  bio          String?
-  position     String?
-  jerseyNumber Int?                      @map("jersey_number")
-  stats        Json?
-  approved     Boolean                  @default(false)
-  createdAt    DateTime                  @default(now()) @map("created_at")
-  updatedAt    DateTime                  @updatedAt @map("updated_at")
-  teamId       String?                   @map("team_id")
-  firstName    String?                   @map("first_name")
-  height       String?
-  lastName     String?                   @map("last_name")
-  weight       String?
-  assistEvents MatchEvent[]              @relation("AssistEvents")
-  matchEvents  MatchEvent[]
-  matchPlayers MatchPlayer[]
-  team         Team?                     @relation(fields: [teamId], references: [id])
-  notifications RegistrationNotification[]
+  id               String                     @id @default(cuid())
+  image            String?
+  bio              String?
+  position         String?
+  jerseyNumber     Int?                       @map("jersey_number")
+  stats            Json?
+  approved         Boolean                    @default(false)
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  updatedAt        DateTime                   @updatedAt @map("updated_at")
+  teamId           String?                    @map("team_id")
+  firstName        String?                    @map("first_name")
+  height           String?
+  lastName         String?                    @map("last_name")
+  weight           String?
+  assistEvents     MatchEvent[]               @relation("AssistEvents")
+  matchEvents      MatchEvent[]
+  matchPlayers     MatchPlayer[]
+  substitutionsIn  Substitution[]             @relation("SubstitutionIn")
+  substitutionsOut Substitution[]             @relation("SubstitutionOut")
+  jumpBallsAsPlayer1 JumpBall[]               @relation("JumpBallPlayer1")
+  jumpBallsAsPlayer2 JumpBall[]               @relation("JumpBallPlayer2")
+  team             Team?                      @relation(fields: [teamId], references: [id])
+  notifications    RegistrationNotification[]
 
   @@index([teamId])
   @@index([approved])
@@ -218,17 +246,17 @@ model SiteSetting {
 }
 
 model Staff {
-  id        String                   @id @default(cuid())
-  firstName String
-  lastName  String
-  email     String?
-  phone     String?
-  role      StaffRole
-  bio       String?
-  image     String?
-  createdAt DateTime                 @default(now()) @map("created_at")
-  updatedAt DateTime                 @updatedAt @map("updated_at")
-  teams     TeamStaff[]
+  id            String                     @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String?
+  role          StaffRole
+  bio           String?
+  image         String?
+  createdAt     DateTime                   @default(now()) @map("created_at")
+  updatedAt     DateTime                   @updatedAt @map("updated_at")
+  teams         TeamStaff[]
   notifications RegistrationNotification[]
 
   @@index([role])
@@ -277,49 +305,62 @@ model Comment {
 }
 
 model MatchPlayer {
-  id            String   @id @default(cuid())
-  matchId       String   @map("match_id")
-  playerId      String   @map("player_id")
-  teamId        String   @map("team_id")
-  started       Boolean  @default(false)
-  position      String?
-  jerseyNumber  Int?     @map("jersey_number")
-  minutesPlayed Int?     @map("minutes_played")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player        Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  id               String              @id @default(cuid())
+  matchId          String              @map("match_id")
+  playerId         String              @map("player_id")
+  teamId           String              @map("team_id")
+  started          Boolean             @default(false)
+  position         String?
+  jerseyNumber     Int?                @map("jersey_number")
+  homeJerseyNumber Int?                @map("home_jersey_number")
+  awayJerseyNumber Int?                @map("away_jersey_number")
+  minutesPlayed    Int?                @map("minutes_played")
+  isActive         Boolean             @default(false) @map("is_active")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  match            Match               @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player           Player              @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team             Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playingTimeSegments PlayerPlayingTime[]
 
   @@unique([matchId, playerId, teamId])
   @@index([matchId])
   @@index([playerId])
   @@index([teamId])
+  @@index([isActive])
   @@map("match_players")
 }
 
 model MatchEvent {
-  id             String         @id @default(cuid())
-  matchId        String         @map("match_id")
-  eventType      MatchEventType @map("event_type")
-  minute         Int
-  playerId       String?        @map("player_id")
-  teamId         String         @map("team_id")
-  assistPlayerId String?        @map("assist_player_id")
-  description    String?
-  metadata       Json?
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  assistPlayer   Player?        @relation("AssistEvents", fields: [assistPlayerId], references: [id])
-  match          Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player         Player?        @relation(fields: [playerId], references: [id])
-  team           Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  id               String         @id @default(cuid())
+  matchId          String         @map("match_id")
+  eventType        MatchEventType @map("event_type")
+  minute           Int
+  period           Int            @default(1)
+  secondsRemaining Int?           @map("seconds_remaining")
+  sequenceNumber   Int            @default(0) @map("sequence_number")
+  playerId         String?        @map("player_id")
+  teamId           String?        @map("team_id")
+  assistPlayerId   String?        @map("assist_player_id")
+  description      String?
+  metadata         Json?
+  isUndone         Boolean        @default(false) @map("is_undone")
+  undoneAt         DateTime?      @map("undone_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  assistPlayer     Player?        @relation("AssistEvents", fields: [assistPlayerId], references: [id])
+  match            Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player           Player?        @relation(fields: [playerId], references: [id])
+  team             Team?          @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([matchId])
   @@index([playerId])
   @@index([teamId])
   @@index([eventType])
   @@index([minute])
+  @@index([period])
+  @@index([sequenceNumber])
+  @@index([isUndone])
   @@map("match_events")
 }
 
@@ -390,23 +431,26 @@ enum MatchEventType {
   SUBSTITUTION_OUT
   TIMEOUT
   INJURY
+  BREAK
+  PLAY_RESUMED
+  JUMP_BALL
   OTHER
 }
 
 model RegistrationNotification {
-  id          String                      @id @default(cuid())
-  type        RegistrationNotificationType
-  teamId      String?                     @map("team_id")
-  playerId    String?                     @map("player_id")
-  staffId     String?                     @map("staff_id")
-  message     String
-  read        Boolean                     @default(false)
-  metadata    Json?
-  createdAt   DateTime                    @default(now()) @map("created_at")
-  updatedAt   DateTime                    @updatedAt @map("updated_at")
-  team        Team?                       @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  player      Player?                     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  staff       Staff?                      @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  id        String                       @id @default(cuid())
+  type      RegistrationNotificationType
+  teamId    String?                      @map("team_id")
+  playerId  String?                      @map("player_id")
+  staffId   String?                      @map("staff_id")
+  message   String
+  read      Boolean                      @default(false)
+  metadata  Json?
+  createdAt DateTime                     @default(now()) @map("created_at")
+  updatedAt DateTime                     @updatedAt @map("updated_at")
+  team      Team?                        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player    Player?                      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  staff     Staff?                       @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@index([type])
   @@index([read])
@@ -420,4 +464,253 @@ enum RegistrationNotificationType {
   TEAM_REGISTERED
   PLAYER_REGISTERED
   PLAYER_AUTO_LINKED
+}
+
+enum GameTrackingMode {
+  TEAM
+  INDIVIDUAL
+  BOTH
+}
+
+enum TimeoutType {
+  SIXTY_SECOND
+  THIRTY_SECOND
+}
+
+model GameRules {
+  id                     String   @id @default(cuid())
+  name                   String
+  description            String?
+  numberOfPeriods        Int      @default(4) @map("number_of_periods")
+  minutesPerPeriod       Int      @default(10) @map("minutes_per_period")
+  overtimeLength         Int      @default(5) @map("overtime_length")
+  halftimePeriod         Int      @default(2) @map("halftime_period") // Period that ends at halftime (2 for 4 quarters, 1 for 2 halves)
+  halftimeDurationMinutes Int     @default(15) @map("halftime_duration_minutes") // Duration of halftime break in minutes
+  timeouts60Second       Int      @default(6) @map("timeouts_60_second")
+  timeouts30Second       Int      @default(2) @map("timeouts_30_second")
+  timeoutsPerOvertime    Int      @default(2) @map("timeouts_per_overtime")
+  resetTimeoutsPerPeriod Boolean  @default(false) @map("reset_timeouts_per_period")
+  foulsForBonus          Int      @default(5) @map("fouls_for_bonus")
+  foulsForDoubleBonus    Int      @default(10) @map("fouls_for_double_bonus")
+  enableThreePointShots  Boolean  @default(true) @map("enable_three_point_shots")
+  foulsToFoulOut         Int      @default(5) @map("fouls_to_foul_out")
+  displayGameClock       Boolean  @default(true) @map("display_game_clock")
+  trackTurnoverTypes     Boolean  @default(false) @map("track_turnover_types")
+  trackFoulTypes         Boolean  @default(false) @map("track_foul_types")
+  trackPlayingTime       Boolean  @default(false) @map("track_playing_time")
+  recordShotLocations    Boolean  @default(false) @map("record_shot_locations")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  matches                Match[]
+
+  @@index([name])
+  @@map("game_rules")
+}
+
+model GameState {
+  id               String   @id @default(cuid())
+  matchId          String   @map("match_id")
+  period           Int
+  clockSeconds     Int      @map("clock_seconds")
+  clockRunning     Boolean  @default(false) @map("clock_running")
+  team1Score       Int      @default(0) @map("team1_score")
+  team2Score       Int      @default(0) @map("team2_score")
+  team1Fouls       Int      @default(0) @map("team1_fouls")
+  team2Fouls       Int      @default(0) @map("team2_fouls")
+  team1Timeouts    Int      @default(0) @map("team1_timeouts")
+  team2Timeouts    Int      @default(0) @map("team2_timeouts")
+  possessionTeamId String?  @map("possession_team_id")
+  snapshot         Json?    @map("snapshot")
+  createdAt        DateTime @default(now()) @map("created_at")
+  match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([createdAt])
+  @@map("game_states")
+}
+
+model MatchPeriod {
+  id           String    @id @default(cuid())
+  matchId      String    @map("match_id")
+  periodNumber Int       @map("period_number")
+  startTime    DateTime  @map("start_time")
+  endTime      DateTime? @map("end_time")
+  team1Score   Int       @default(0) @map("team1_score")
+  team2Score   Int       @default(0) @map("team2_score")
+  team1Fouls   Int       @default(0) @map("team1_fouls")
+  team2Fouls   Int       @default(0) @map("team2_fouls")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  match        Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, periodNumber])
+  @@index([matchId])
+  @@index([periodNumber])
+  @@map("match_periods")
+}
+
+model Timeout {
+  id               String      @id @default(cuid())
+  matchId          String      @map("match_id")
+  teamId           String      @map("team_id")
+  period           Int
+  timeoutType      TimeoutType @map("timeout_type")
+  secondsRemaining Int?        @map("seconds_remaining")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  match            Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team             Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([teamId])
+  @@index([period])
+  @@map("timeouts")
+}
+
+model Substitution {
+  id               String   @id @default(cuid())
+  matchId          String   @map("match_id")
+  teamId           String   @map("team_id")
+  playerInId       String   @map("player_in_id")
+  playerOutId      String   @map("player_out_id")
+  period           Int
+  secondsRemaining Int?     @map("seconds_remaining")
+  createdAt        DateTime @default(now()) @map("created_at")
+  match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playerIn         Player   @relation("SubstitutionIn", fields: [playerInId], references: [id])
+  playerOut        Player   @relation("SubstitutionOut", fields: [playerOutId], references: [id])
+
+  @@index([matchId])
+  @@index([teamId])
+  @@index([playerInId])
+  @@index([playerOutId])
+  @@index([period])
+  @@map("substitutions")
+}
+
+model PlayerPlayingTime {
+  id               String      @id @default(cuid())
+  matchPlayerId    String      @map("match_player_id")
+  period           Int
+  entryTime        DateTime    @map("entry_time")
+  exitTime         DateTime?   @map("exit_time")
+  secondsPlayed    Int?        @map("seconds_played")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  matchPlayer      MatchPlayer @relation(fields: [matchPlayerId], references: [id], onDelete: Cascade)
+
+  @@index([matchPlayerId])
+  @@index([period])
+  @@map("player_playing_time")
+}
+
+model JumpBall {
+  id                String   @id @default(cuid())
+  matchId           String   @map("match_id")
+  period            Int
+  player1Id         String   @map("player1_id")
+  player2Id         String   @map("player2_id")
+  possessionTeamId  String?  @map("possession_team_id")
+  secondsRemaining  Int?     @map("seconds_remaining")
+  createdAt         DateTime @default(now()) @map("created_at")
+  match             Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player1           Player   @relation("JumpBallPlayer1", fields: [player1Id], references: [id])
+  player2           Player   @relation("JumpBallPlayer2", fields: [player2Id], references: [id])
+  possessionTeam    Team?    @relation("JumpBallPossession", fields: [possessionTeamId], references: [id])
+
+  @@index([matchId])
+  @@index([period])
+  @@index([player1Id])
+  @@index([player2Id])
+  @@map("jump_balls")
+}
+
+model EventHistory {
+  id              String    @id @default(cuid())
+  matchEventId    String    @map("match_event_id")
+  action          String    // CREATE, UPDATE, DELETE, UNDO
+  previousValue   Json?     @map("previous_value")
+  newValue        Json?     @map("new_value")
+  changedBy       String?   @map("changed_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([matchEventId])
+  @@index([createdAt])
+  @@map("event_history")
+}
+
+enum ReportType {
+  GAME_STATISTICS
+  KEY_GAME_STATISTICS
+  PLAYER_STATISTICS
+  TEAM_STATISTICS
+  PLAY_BY_PLAY
+  SHOT_CHART
+  TURNOVER_TYPES
+  FOUL_TYPES
+}
+
+enum ReportFormat {
+  PDF
+  CSV
+}
+
+model ReportTemplate {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  reportType  ReportType  @map("report_type")
+  format      ReportFormat @default(PDF)
+  template    Json        // Template configuration/structure
+  isDefault   Boolean     @default(false) @map("is_default")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  generations ReportGeneration[]
+
+  @@index([reportType])
+  @@index([format])
+  @@index([isDefault])
+  @@map("report_templates")
+}
+
+model ReportGeneration {
+  id            String         @id @default(cuid())
+  templateId    String?        @map("template_id")
+  reportType    ReportType     @map("report_type")
+  format        ReportFormat
+  fileName      String         @map("file_name")
+  filePath      String?        @map("file_path")
+  fileUrl       String?        @map("file_url")
+  parameters    Json?          // Query parameters used (matchId, playerId, etc.)
+  generatedBy   String?        @map("generated_by")
+  status        String         @default("PENDING") // PENDING, COMPLETED, FAILED
+  errorMessage  String?        @map("error_message")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  template      ReportTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  emailReports  EmailReport[]
+
+  @@index([templateId])
+  @@index([reportType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("report_generations")
+}
+
+model EmailReport {
+  id               String           @id @default(cuid())
+  reportGenerationId String         @map("report_generation_id")
+  recipientEmail   String           @map("recipient_email")
+  recipientName    String?          @map("recipient_name")
+  subject          String
+  status           String           @default("PENDING") // PENDING, SENT, FAILED
+  sentAt           DateTime?        @map("sent_at")
+  errorMessage     String?          @map("error_message")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  reportGeneration ReportGeneration @relation(fields: [reportGenerationId], references: [id], onDelete: Cascade)
+
+  @@index([reportGenerationId])
+  @@index([status])
+  @@index([recipientEmail])
+  @@index([createdAt])
+  @@map("email_reports")
 }

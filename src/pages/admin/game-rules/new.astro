@@ -1,0 +1,22 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import GameRulesEditor from '../../../features/game-tracking/components/GameRulesEditor';
+---
+
+<AdminLayout title="Create Game Rules - Admin">
+  <div className="space-y-6">
+    <div className="pb-6 border-b">
+      <h1 className="text-3xl font-heading font-semibold mb-2">Create Game Rules</h1>
+      <p className="text-muted-foreground">Configure a new set of game rules</p>
+    </div>
+    <GameRulesEditor
+      client:load
+      onSave={(rules) => {
+        window.location.href = '/admin/game-rules';
+      }}
+    />
+  </div>
+</AdminLayout>

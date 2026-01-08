@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Player, Team, MatchEventWithDetails, MatchEventType } from '../types';
+import { getPeriodLabel, formatClockTime } from '../../game-tracking/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,6 +53,8 @@ const EVENT_TYPES: { value: MatchEventType; label: string; icon: any }[] = [
   { value: 'SUBSTITUTION_OUT', label: 'Substitution Out', icon: Users },
   { value: 'TIMEOUT', label: 'Timeout', icon: Clock },
   { value: 'INJURY', label: 'Injury', icon: Activity },
+  { value: 'BREAK', label: 'Break', icon: Clock },
+  { value: 'PLAY_RESUMED', label: 'Play Resumed', icon: Activity },
   { value: 'OTHER', label: 'Other', icon: Activity },
 ];
 
@@ -63,6 +66,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
+  const [gameState, setGameState] = useState<any>(null);
   const [formData, setFormData] = useState({
     eventType: 'TWO_POINT_MADE' as MatchEventType,
     minute: '',
@@ -70,12 +74,15 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
     playerId: '',
     assistPlayerId: '',
     description: '',
+    period: '',
+    secondsRemaining: '',
   });
 
   useEffect(() => {
     if (matchId) {
       fetchMatchEvents();
       fetchTeams();
+      fetchGameState();
     }
   }, [matchId]);
 
@@ -84,6 +91,16 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
       fetchPlayersForTeam(formData.teamId);
     }
   }, [formData.teamId]);
+
+  useEffect(() => {
+    if (gameState && showAddForm) {
+      setFormData((prev) => ({
+        ...prev,
+        period: prev.period || String(gameState.period || 1),
+        secondsRemaining: prev.secondsRemaining || (gameState.clockSeconds !== null && gameState.clockSeconds !== undefined ? String(gameState.clockSeconds) : ''),
+      }));
+    }
+  }, [gameState, showAddForm]);
 
   const fetchMatchEvents = async () => {
     try {
@@ -128,6 +145,18 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
     }
   };
 
+  const fetchGameState = async () => {
+    try {
+      const response = await fetch(`/api/games/${matchId}/state`);
+      if (response.ok) {
+        const state = await response.json();
+        setGameState(state);
+      }
+    } catch (err) {
+      console.error('Failed to fetch game state:', err);
+    }
+  };
+
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -139,8 +168,11 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
         body: JSON.stringify({
           ...formData,
           minute: parseInt(formData.minute),
+          teamId: formData.teamId || undefined,
           playerId: formData.playerId || undefined,
           assistPlayerId: formData.assistPlayerId || undefined,
+          period: formData.period ? parseInt(formData.period) : undefined,
+          secondsRemaining: formData.secondsRemaining ? parseInt(formData.secondsRemaining) : undefined,
         }),
       });
 
@@ -157,6 +189,8 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
         playerId: '',
         assistPlayerId: '',
         description: '',
+        period: gameState?.period ? String(gameState.period) : '',
+        secondsRemaining: gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : '',
       });
       fetchMatchEvents();
     } catch (err: any) {
@@ -188,19 +222,41 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
     return event?.label || eventType;
   };
 
-  const getTeamName = (teamId: string) => {
+  const getTeamName = (teamId: string | null | undefined) => {
+    if (!teamId) return '';
     const team = teams.find((t) => t.id === teamId);
     return team?.name || 'Unknown Team';
   };
 
   const needsPlayer = (eventType: MatchEventType) => {
     // Events that don't require a player
-    return !['TIMEOUT'].includes(eventType);
+    return !['TIMEOUT', 'BREAK', 'PLAY_RESUMED'].includes(eventType);
+  };
+
+  const requiresPlayer = (eventType: MatchEventType) => {
+    // Events that MUST have a player (not optional)
+    return !['TIMEOUT', 'BREAK', 'PLAY_RESUMED', 'OTHER'].includes(eventType);
+  };
+
+  const needsTeam = (eventType: MatchEventType) => {
+    // Events that don't need team selection (game-level events)
+    return !['BREAK', 'PLAY_RESUMED'].includes(eventType);
   };
 
   const needsAssist = (eventType: MatchEventType) => {
     // Events that can have an assist
     return ['TWO_POINT_MADE', 'THREE_POINT_MADE'].includes(eventType);
+  };
+
+  const shouldShowMinute = (eventType: MatchEventType) => {
+    // Events where minute field is less relevant (use period/seconds instead)
+    // For most events, minute is still useful as fallback
+    return true;
+  };
+
+  const shouldShowPeriodAndSeconds = (eventType: MatchEventType) => {
+    // All events benefit from period and seconds tracking
+    return true;
   };
 
   if (loading) {
@@ -289,44 +345,49 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="teamId">
-                    Team <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.teamId}
-                    onValueChange={(value) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        teamId: value,
-                        playerId: '',
-                        assistPlayerId: '',
-                      }));
-                    }}
-                    required
-                  >
-                    <SelectTrigger id="teamId">
-                      <SelectValue placeholder="Select a team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {needsTeam(formData.eventType) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamId">
+                      Team <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={formData.teamId}
+                      onValueChange={(value) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          teamId: value,
+                          playerId: '',
+                          assistPlayerId: '',
+                        }));
+                      }}
+                      required
+                    >
+                      <SelectTrigger id="teamId">
+                        <SelectValue placeholder="Select a team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {needsPlayer(formData.eventType) && (
                   <div className="space-y-2">
-                    <Label htmlFor="playerId">Player</Label>
+                    <Label htmlFor="playerId">
+                      Player {requiresPlayer(formData.eventType) && <span className="text-destructive">*</span>}
+                    </Label>
                     <Select
                       value={formData.playerId}
                       onValueChange={(value) =>
                         setFormData((prev) => ({ ...prev, playerId: value }))
                       }
                       disabled={!formData.teamId}
+                      required={requiresPlayer(formData.eventType)}
                     >
                       <SelectTrigger id="playerId">
                         <SelectValue placeholder="Select a player" />
@@ -341,6 +402,48 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     </Select>
                   </div>
                 )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="period">
+                    Period <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="period"
+                    type="number"
+                    value={formData.period}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, period: e.target.value }))
+                    }
+                    required
+                    min="1"
+                    max="10"
+                    placeholder="1"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="secondsRemaining">
+                    Seconds Remaining
+                  </Label>
+                  <Input
+                    id="secondsRemaining"
+                    type="number"
+                    value={formData.secondsRemaining}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, secondsRemaining: e.target.value }))
+                    }
+                    min="0"
+                    max="7200"
+                    placeholder={gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : "Auto from clock"}
+                  />
+                  {gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined && (
+                    <p className="text-xs text-muted-foreground">
+                      Current: {Math.floor(gameState.clockSeconds / 60)}:{(gameState.clockSeconds % 60).toString().padStart(2, '0')}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {needsAssist(formData.eventType) && (
@@ -415,12 +518,15 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                       <EventIcon className="h-5 w-5" />
                       <div>
                         <div className="font-semibold">
-                          {getEventLabel(event.eventType)} - {event.minute}'
+                          {getEventLabel(event.eventType)} - {event.period ? `${getPeriodLabel(event.period)} ` : ''}{event.secondsRemaining ? formatClockTime(event.secondsRemaining) : `${event.minute}'`}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {getTeamName(event.teamId)}
-                          {event.player && (
+                          {event.teamId && getTeamName(event.teamId)}
+                          {event.teamId && event.player && (
                             <> • {event.player.firstName} {event.player.lastName}</>
+                          )}
+                          {!event.teamId && event.player && (
+                            <>{event.player.firstName} {event.player.lastName}</>
                           )}
                           {event.assistPlayer && (
                             <> (Assist: {event.assistPlayer.firstName} {event.assistPlayer.lastName})</>
