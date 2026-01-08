@@ -7,6 +7,11 @@ interface League {
   active: boolean;
 }
 
+interface Team {
+  id: string;
+  name: string;
+}
+
 interface TeamFormData {
   name: string;
   coachName: string;
@@ -38,6 +43,8 @@ export default function LeagueRegistrationForm() {
   const [success, setSuccess] = useState<string | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [leaguesLoading, setLeaguesLoading] = useState(true);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
 
   const [teamFormData, setTeamFormData] = useState<TeamFormData>({
     name: '',
@@ -79,6 +86,26 @@ export default function LeagueRegistrationForm() {
     };
 
     fetchLeagues();
+  }, []);
+
+  // Fetch teams from database
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        setTeamsLoading(true);
+        const response = await fetch('/api/teams');
+        if (response.ok) {
+          const data = await response.json();
+          setTeams(data);
+        }
+      } catch (err) {
+        console.error('Error fetching teams:', err);
+      } finally {
+        setTeamsLoading(false);
+      }
+    };
+
+    fetchTeams();
   }, []);
 
   const handleTeamSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -521,16 +548,23 @@ export default function LeagueRegistrationForm() {
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', color: '#363f48', fontWeight: '600' }}>
-                Team Name
+                Team Name <span style={{ color: '#dd3333' }}>*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="teamName"
                 value={playerFormData.teamName}
                 onChange={handlePlayerChange}
-                placeholder="Enter team name (if applicable)"
+                disabled={teamsLoading}
+                required
                 style={{ width: '100%', padding: '12px', border: '1px solid #d8d8d8', borderRadius: '3px', fontFamily: 'Rubik', fontSize: '14px' }}
-              />
+              >
+                <option value="">Select Team</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.name}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
