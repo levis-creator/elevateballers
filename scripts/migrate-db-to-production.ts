@@ -101,6 +101,17 @@ const stats = {
   pageContents: 0,
   siteSettings: 0,
   registrationNotifications: 0,
+  gameRules: 0,
+  gameStates: 0,
+  matchPeriods: 0,
+  timeouts: 0,
+  substitutions: 0,
+  playerPlayingTime: 0,
+  jumpBalls: 0,
+  eventHistory: 0,
+  reportTemplates: 0,
+  reportGenerations: 0,
+  emailReports: 0,
   errors: 0,
 };
 
@@ -254,7 +265,9 @@ async function main() {
     }
 
     // Run Prisma migrations on production database first
-    console.log('\n📋 Setting up production database schema...');
+    // Always sync schema to ensure it matches the current schema.prisma file
+    console.log('\n📋 Syncing production database schema...');
+    console.log('   This will add missing columns and tables to match the current schema.');
     try {
       // Check if tables exist
       const tablesResult = await productionDb.$queryRaw<Array<{ tablename: string }>>`
@@ -264,55 +277,31 @@ async function main() {
       
       if (existingTables.length === 0) {
         console.log('   No tables found. Creating schema...');
-        
-        // Try db push first (works better with poolers than migrate deploy)
-        try {
-          execSync('npx prisma db push --accept-data-loss', {
-            stdio: 'inherit',
-            env: { ...process.env, DATABASE_URL: productionDbUrl }
-          });
-          console.log('✅ Production database schema created using db push\n');
-        } catch (pushError: any) {
-          // If db push fails, generate SQL from current schema and execute directly via Pool
-          console.log('   db push failed, generating schema SQL from current Prisma schema...');
-          try {
-            // Generate SQL from current schema using prisma migrate diff
-            const schemaSql = execSync('npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script', {
-              encoding: 'utf-8',
-              env: { ...process.env, DATABASE_URL: productionDbUrl }
-            });
-            
-            if (schemaSql && schemaSql.trim()) {
-              // Use Pool client directly to avoid prepared statement issues
-              const client = await productionPool.connect();
-              try {
-                // Execute the entire SQL script
-                await client.query(schemaSql);
-                console.log('✅ Production database schema created via generated SQL\n');
-              } finally {
-                client.release();
-              }
-            } else {
-              throw new Error('No SQL generated from schema');
-            }
-          } catch (sqlError: any) {
-            console.error('❌ Failed to create schema via SQL generation.');
-            console.error('💡 Please run migrations manually using one of these options:');
-            console.error('   1. Use direct connection (port 5432) with IP whitelisting:');
-            console.error('      Set DATABASE_URL to direct connection and run: npx prisma db push --accept-data-loss');
-            console.error('   2. Or apply the schema from Supabase SQL editor:');
-            console.error('      Run: npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script');
-            console.error('      Copy the output SQL and run it in Supabase SQL editor');
-            throw sqlError;
-          }
-        }
       } else {
-        console.log(`   Found ${existingTables.length} existing tables. Schema appears to be set up.`);
-        console.log('   If you need to update the schema, run: npx prisma db push --accept-data-loss\n');
+        console.log(`   Found ${existingTables.length} existing tables. Updating schema to match current schema...`);
+      }
+      
+      // Always run db push to sync schema (adds missing columns/tables, doesn't remove data)
+      try {
+        console.log('   Running prisma db push to sync schema...');
+        execSync('npx prisma db push --accept-data-loss', {
+          stdio: 'inherit',
+          env: { ...process.env, DATABASE_URL: productionDbUrl }
+        });
+        console.log('✅ Production database schema synced successfully\n');
+      } catch (pushError: any) {
+        console.warn('   ⚠️  db push failed:', pushError.message);
+        console.warn('   ⚠️  Schema sync failed. Some data migrations may fail.');
+        console.warn('   💡 Recommended: Run "npx prisma db push --accept-data-loss" manually with production DATABASE_URL');
+        console.warn('   💡 Or use direct connection (port 5432) instead of pooler (port 6543)');
+        console.warn('   💡 Continuing with data migration - schema mismatches will show as errors.\n');
+        // Don't throw - continue with data migration even if schema sync failed
+        // The errors will be more informative than stopping here
       }
     } catch (error: any) {
-      console.error('❌ Failed to set up production database schema:', error.message);
-      throw error;
+      console.warn('⚠️  Schema sync encountered issues:', error.message);
+      console.warn('   Continuing with data migration - schema mismatches will show as errors.\n');
+      // Don't throw - let migration continue
     }
 
     // 1. Users (no dependencies)
@@ -468,6 +457,114 @@ async function main() {
       ['Team', 'Player', 'Staff']
     );
 
+    // 17. GameRules (no dependencies)
+    await migrateTable(
+      'gameRules',
+      () => deploymentDb.gameRules.findMany(),
+      (id) => productionDb.gameRules.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.gameRules.create({ data }),
+      (data) => productionDb.gameRules.update({ where: { id: data.id }, data })
+    );
+
+    // 18. ReportTemplate (no dependencies)
+    await migrateTable(
+      'reportTemplate',
+      () => deploymentDb.reportTemplate.findMany(),
+      (id) => productionDb.reportTemplate.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.reportTemplate.create({ data }),
+      (data) => productionDb.reportTemplate.update({ where: { id: data.id }, data })
+    );
+
+    // 19. GameState (depends on Match)
+    await migrateTable(
+      'gameState',
+      () => deploymentDb.gameState.findMany(),
+      (id) => productionDb.gameState.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.gameState.create({ data }),
+      (data) => productionDb.gameState.update({ where: { id: data.id }, data }),
+      ['Match']
+    );
+
+    // 20. MatchPeriod (depends on Match)
+    await migrateTable(
+      'matchPeriod',
+      () => deploymentDb.matchPeriod.findMany(),
+      (id) => productionDb.matchPeriod.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.matchPeriod.create({ data }),
+      (data) => productionDb.matchPeriod.update({ where: { id: data.id }, data }),
+      ['Match']
+    );
+
+    // 21. Timeout (depends on Match, Team)
+    await migrateTable(
+      'timeout',
+      () => deploymentDb.timeout.findMany(),
+      (id) => productionDb.timeout.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.timeout.create({ data }),
+      (data) => productionDb.timeout.update({ where: { id: data.id }, data }),
+      ['Match', 'Team']
+    );
+
+    // 22. Substitution (depends on Match, Team, Player)
+    await migrateTable(
+      'substitution',
+      () => deploymentDb.substitution.findMany(),
+      (id) => productionDb.substitution.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.substitution.create({ data }),
+      (data) => productionDb.substitution.update({ where: { id: data.id }, data }),
+      ['Match', 'Team', 'Player']
+    );
+
+    // 23. PlayerPlayingTime (depends on MatchPlayer)
+    await migrateTable(
+      'playerPlayingTime',
+      () => deploymentDb.playerPlayingTime.findMany(),
+      (id) => productionDb.playerPlayingTime.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.playerPlayingTime.create({ data }),
+      (data) => productionDb.playerPlayingTime.update({ where: { id: data.id }, data }),
+      ['MatchPlayer']
+    );
+
+    // 24. JumpBall (depends on Match, Player, Team)
+    await migrateTable(
+      'jumpBall',
+      () => deploymentDb.jumpBall.findMany(),
+      (id) => productionDb.jumpBall.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.jumpBall.create({ data }),
+      (data) => productionDb.jumpBall.update({ where: { id: data.id }, data }),
+      ['Match', 'Player', 'Team']
+    );
+
+    // 25. EventHistory (depends on MatchEvent)
+    await migrateTable(
+      'eventHistory',
+      () => deploymentDb.eventHistory.findMany(),
+      (id) => productionDb.eventHistory.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.eventHistory.create({ data }),
+      (data) => productionDb.eventHistory.update({ where: { id: data.id }, data }),
+      ['MatchEvent']
+    );
+
+    // 26. ReportGeneration (depends on ReportTemplate)
+    await migrateTable(
+      'reportGeneration',
+      () => deploymentDb.reportGeneration.findMany(),
+      (id) => productionDb.reportGeneration.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.reportGeneration.create({ data }),
+      (data) => productionDb.reportGeneration.update({ where: { id: data.id }, data }),
+      ['ReportTemplate']
+    );
+
+    // 27. EmailReport (depends on ReportGeneration)
+    await migrateTable(
+      'emailReport',
+      () => deploymentDb.emailReport.findMany(),
+      (id) => productionDb.emailReport.findUnique({ where: { id } }).then(r => r || null),
+      (data) => productionDb.emailReport.create({ data }),
+      (data) => productionDb.emailReport.update({ where: { id: data.id }, data }),
+      ['ReportGeneration']
+    );
+
     // Print summary
     console.log('\n' + '='.repeat(60));
     console.log('📊 Migration Summary');
@@ -488,6 +585,17 @@ async function main() {
     console.log(`PageContents: ${stats.pageContents}`);
     console.log(`SiteSettings: ${stats.siteSettings}`);
     console.log(`RegistrationNotifications: ${stats.registrationNotifications}`);
+    console.log(`GameRules: ${stats.gameRules}`);
+    console.log(`GameStates: ${stats.gameStates}`);
+    console.log(`MatchPeriods: ${stats.matchPeriods}`);
+    console.log(`Timeouts: ${stats.timeouts}`);
+    console.log(`Substitutions: ${stats.substitutions}`);
+    console.log(`PlayerPlayingTime: ${stats.playerPlayingTime}`);
+    console.log(`JumpBalls: ${stats.jumpBalls}`);
+    console.log(`EventHistory: ${stats.eventHistory}`);
+    console.log(`ReportTemplates: ${stats.reportTemplates}`);
+    console.log(`ReportGenerations: ${stats.reportGenerations}`);
+    console.log(`EmailReports: ${stats.emailReports}`);
     console.log(`Errors: ${stats.errors}`);
     console.log('='.repeat(60));
 

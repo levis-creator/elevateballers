@@ -4,6 +4,7 @@ export default {
   content: [
     './src/pages/admin/**/*.{astro,tsx,ts}',
     './src/features/cms/**/*.{astro,tsx,ts}',
+    './src/features/game-tracking/**/*.{astro,tsx,ts}',
     './src/components/ui/**/*.{tsx,ts}',
   ],
   theme: {
