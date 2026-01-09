@@ -19,12 +19,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function SeasonList() {
   const [seasons, setSeasons] = useState<SeasonWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [icons, setIcons] = useState<{
     Plus?: ComponentType<any>;
     Search?: ComponentType<any>;
@@ -108,6 +111,59 @@ export default function SeasonList() {
       (season.description && season.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(new Set(filteredSeasons.map(season => season.id)));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedItems.size} season(s)?\n\nThis action cannot be undone. Leagues and matches associated with these seasons will have their season reference removed.`
+    );
+    if (!confirmed) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const response = await fetch('/api/seasons/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedItems) }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete seasons');
+      }
+
+      clearSelection();
+      fetchSeasons();
+    } catch (err: any) {
+      setError('Error deleting seasons: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const allSelected = filteredSeasons.length > 0 && selectedItems.size === filteredSeasons.length;
+
   const PlusIcon = icons.Plus;
   const SearchIcon = icons.Search;
   const EditIcon = icons.Edit;
@@ -169,22 +225,56 @@ export default function SeasonList() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-        <div className="relative flex-1">
-          <label htmlFor="season-search" className="sr-only">Search seasons</label>
-          {SearchIcon ? (
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          ) : null}
-          <Input
-            id="season-search"
-            type="text"
-            placeholder="Search seasons..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-            aria-label="Search seasons by name or description"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <label htmlFor="season-search" className="sr-only">Search seasons</label>
+            {SearchIcon ? (
+              <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            ) : null}
+            <Input
+              id="season-search"
+              type="text"
+              placeholder="Search seasons..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              aria-label="Search seasons by name or description"
+            />
+          </div>
         </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedItems.size > 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <div className="text-sm font-medium text-foreground">
+                  {selectedItems.size} season(s) selected
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkActionLoading}
+                  >
+                    {Trash2Icon ? <Trash2Icon size={16} className="mr-2" /> : null}
+                    Delete
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    disabled={isBulkActionLoading}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Empty State */}
@@ -224,6 +314,13 @@ export default function SeasonList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all seasons"
+                  />
+                </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
                     {CalendarRangeIcon ? <CalendarRangeIcon size={16} /> : null}
@@ -250,6 +347,13 @@ export default function SeasonList() {
             <TableBody>
               {filteredSeasons.map((season) => (
                 <TableRow key={season.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedItems.has(season.id)}
+                      onCheckedChange={(checked) => handleSelectItem(season.id, checked as boolean)}
+                      aria-label={`Select ${season.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <strong className="font-semibold text-foreground">{season.name}</strong>

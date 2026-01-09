@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function StaffList() {
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -27,6 +28,8 @@ export default function StaffList() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [icons, setIcons] = useState<{
     Plus?: ComponentType<any>;
     Search?: ComponentType<any>;
@@ -138,6 +141,59 @@ export default function StaffList() {
       member.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(new Set(filteredStaff.map(member => member.id)));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedItems.size} staff member(s)?\n\nThis action cannot be undone. Team assignments will be removed.`
+    );
+    if (!confirmed) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const response = await fetch('/api/staff/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedItems) }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete staff');
+      }
+
+      clearSelection();
+      fetchStaff();
+    } catch (err: any) {
+      setError('Error deleting staff: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const allSelected = filteredStaff.length > 0 && selectedItems.size === filteredStaff.length;
+
   const PlusIcon = icons.Plus;
   const SearchIcon = icons.Search;
   const ListIcon = icons.List;
@@ -202,44 +258,78 @@ export default function StaffList() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-        <div className="relative flex-1">
-          <label htmlFor="staff-search" className="sr-only">Search staff</label>
-          {SearchIcon ? (
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          ) : null}
-          <Input
-            id="staff-search"
-            type="text"
-            placeholder="Search staff..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-            aria-label="Search staff by name, email, phone, or role"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <label htmlFor="staff-search" className="sr-only">Search staff</label>
+            {SearchIcon ? (
+              <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            ) : null}
+            <Input
+              id="staff-search"
+              type="text"
+              placeholder="Search staff..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              aria-label="Search staff by name, email, phone, or role"
+            />
+          </div>
+          <div className="flex gap-2 bg-background p-1 rounded-lg border">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setViewMode('table')}
+              title="Table View"
+              aria-label="Switch to table view"
+              aria-pressed={viewMode === 'table'}
+            >
+              {ListIcon ? <ListIcon size={16} /> : null}
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+              aria-label="Switch to grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              {GridIcon ? <GridIcon size={16} /> : null}
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2 bg-background p-1 rounded-lg border">
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => setViewMode('table')}
-            title="Table View"
-            aria-label="Switch to table view"
-            aria-pressed={viewMode === 'table'}
-          >
-            {ListIcon ? <ListIcon size={16} /> : null}
-          </Button>
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-            title="Grid View"
-            aria-label="Switch to grid view"
-            aria-pressed={viewMode === 'grid'}
-          >
-            {GridIcon ? <GridIcon size={16} /> : null}
-          </Button>
-        </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedItems.size > 0 && viewMode === 'table' && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <div className="text-sm font-medium text-foreground">
+                  {selectedItems.size} staff member(s) selected
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkActionLoading}
+                  >
+                    {Trash2Icon ? <Trash2Icon size={16} className="mr-2" /> : null}
+                    Delete
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    disabled={isBulkActionLoading}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Empty State */}
@@ -279,6 +369,13 @@ export default function StaffList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all staff members"
+                  />
+                </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
                     {UserIcon ? <UserIcon size={16} /> : null}
@@ -309,6 +406,13 @@ export default function StaffList() {
             <TableBody>
               {filteredStaff.map((member) => (
                 <TableRow key={member.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedItems.has(member.id)}
+                      onCheckedChange={(checked) => handleSelectItem(member.id, checked as boolean)}
+                      aria-label={`Select ${member.firstName} ${member.lastName}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {member.image ? (

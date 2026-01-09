@@ -19,12 +19,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function PageContentList() {
   const [pages, setPages] = useState<PageContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [icons, setIcons] = useState<{
     Plus?: ComponentType<any>;
     Search?: ComponentType<any>;
@@ -102,6 +105,59 @@ export default function PageContentList() {
       page.slug.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(new Set(filteredPages.map(page => page.id)));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedItems.size} page(s)?\n\nThis action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const response = await fetch('/api/pages/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedItems) }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete pages');
+      }
+
+      clearSelection();
+      fetchPages();
+    } catch (err: any) {
+      setError('Error deleting pages: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const allSelected = filteredPages.length > 0 && selectedItems.size === filteredPages.length;
+
   const PlusIcon = icons.Plus;
   const SearchIcon = icons.Search;
   const EditIcon = icons.Edit;
@@ -161,22 +217,56 @@ export default function PageContentList() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-        <div className="relative flex-1">
-          <label htmlFor="page-search" className="sr-only">Search pages</label>
-          {SearchIcon ? (
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          ) : null}
-          <Input
-            id="page-search"
-            type="text"
-            placeholder="Search pages..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-            aria-label="Search pages by title or slug"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <label htmlFor="page-search" className="sr-only">Search pages</label>
+            {SearchIcon ? (
+              <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            ) : null}
+            <Input
+              id="page-search"
+              type="text"
+              placeholder="Search pages..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              aria-label="Search pages by title or slug"
+            />
+          </div>
         </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedItems.size > 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <div className="text-sm font-medium text-foreground">
+                  {selectedItems.size} page(s) selected
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkActionLoading}
+                  >
+                    {Trash2Icon ? <Trash2Icon size={16} className="mr-2" /> : null}
+                    Delete
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    disabled={isBulkActionLoading}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Empty State */}
@@ -212,6 +302,13 @@ export default function PageContentList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all pages"
+                  />
+                </TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Status</TableHead>
@@ -222,6 +319,13 @@ export default function PageContentList() {
             <TableBody>
               {filteredPages.map((page) => (
                 <TableRow key={page.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedItems.has(page.id)}
+                      onCheckedChange={(checked) => handleSelectItem(page.id, checked as boolean)}
+                      aria-label={`Select ${page.title}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <strong className="font-semibold text-foreground">{page.title}</strong>
                   </TableCell>
