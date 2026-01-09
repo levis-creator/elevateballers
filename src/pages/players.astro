@@ -4,11 +4,62 @@ import TopBar from "../features/layout/components/TopBar.astro";
 import Header from "../features/layout/components/Header.astro";
 import MobileMenu from "../features/layout/components/MobileMenu";
 import Footer from "../features/layout/components/Footer.astro";
-// import TeamPlayerTable from "../features/team/components/TeamPlayerTable";
-import { playerCategories } from "../features/team/data/teamData";
+import { getPlayers } from "../features/cms/lib/queries";
+import type { Player } from "../features/cms/types";
+import type { TeamPlayer } from "../features/team/data/teamData";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
 import TeamPlayerTable from "../features/team/components/TeamPlayerTable.astro";
+
+// Fetch all approved players (getPlayers filters by approved: true for public access)
+let players: Player[] = [];
+try {
+  players = await getPlayers(undefined, false); // false = only approved players
+} catch (error) {
+  console.error('Error fetching players:', error);
+}
+
+// Helper function to get stat from JSON stats object
+function getStat(stats: any, key: string): number {
+  if (!stats || typeof stats !== 'object') return 0;
+  return stats[key] || 0;
+}
+
+// Transform database Player to TeamPlayer format
+function transformPlayerToTeamPlayer(player: Player): TeamPlayer {
+  const stats = player.stats || {};
+  const name = [player.firstName, player.lastName]
+    .filter(Boolean)
+    .join(' ') || 'Unknown Player';
+  
+  return {
+    id: player.id,
+    name,
+    position: player.position || '',
+    height: player.height || '',
+    weight: player.weight || '',
+    fgPercent: getStat(stats, 'fgPercent') || getStat(stats, 'fg') || 0,
+    ftPercent: getStat(stats, 'ftPercent') || getStat(stats, 'ft') || 0,
+    threePointPercent: getStat(stats, 'threePointPercent') || getStat(stats, '3p') || 0,
+    rpg: getStat(stats, 'rpg') || 0,
+    apg: getStat(stats, 'apg') || 0,
+    spg: getStat(stats, 'spg') || 0,
+    bpg: getStat(stats, 'bpg') || 0,
+    ppg: getStat(stats, 'ppg') || 0,
+    eff: getStat(stats, 'eff') || 0,
+    image: player.image || undefined,
+    url: `/players/${player.id}`,
+  };
+}
+
+// Transform all players
+const teamPlayers: TeamPlayer[] = players.map(transformPlayerToTeamPlayer);
+
+// Create a single category with all approved players
+const playerCategories = teamPlayers.length > 0 ? [{
+  name: "ALL PLAYERS",
+  players: teamPlayers,
+}] : [];
 ---
 
 <Layout>

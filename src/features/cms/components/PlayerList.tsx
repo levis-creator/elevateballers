@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 export default function PlayerList() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -40,6 +41,8 @@ export default function PlayerList() {
     User?: ComponentType<any>;
     Shield?: ComponentType<any>;
     MapPin?: ComponentType<any>;
+    CheckCircle?: ComponentType<any>;
+    XCircle?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -58,6 +61,8 @@ export default function PlayerList() {
         User: mod.User,
         Shield: mod.Shield,
         MapPin: mod.MapPin,
+        CheckCircle: mod.CheckCircle,
+        XCircle: mod.XCircle,
       });
     });
   }, []);
@@ -129,6 +134,8 @@ export default function PlayerList() {
   const UserIcon = icons.User;
   const ShieldIcon = icons.Shield;
   const MapPinIcon = icons.MapPin;
+  const CheckCircleIcon = icons.CheckCircle;
+  const XCircleIcon = icons.XCircle;
 
   if (loading) {
     return (
@@ -276,6 +283,7 @@ export default function PlayerList() {
                   </div>
                 </TableHead>
                 <TableHead>Jersey #</TableHead>
+                <TableHead>Approved</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -323,6 +331,19 @@ export default function PlayerList() {
                   </TableCell>
                   <TableCell>
                     {player.jerseyNumber || <span className="text-muted-foreground">-</span>}
+                  </TableCell>
+                  <TableCell>
+                    {(player as any).approved ? (
+                      <Badge className="bg-green-500 text-white">
+                        {CheckCircleIcon ? <CheckCircleIcon size={14} className="mr-1" /> : null}
+                        Approved
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        {XCircleIcon ? <XCircleIcon size={14} className="mr-1" /> : null}
+                        Pending
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
