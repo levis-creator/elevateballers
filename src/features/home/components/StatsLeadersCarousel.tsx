@@ -14,8 +14,22 @@ interface Player {
 }
 
 /**
+ * API Player response interface
+ */
+interface ApiPlayer {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  jerseyNumber: number | null;
+  position: string | null;
+  image: string | null;
+  approved: boolean;
+}
+
+/**
  * StatsLeadersCarousel component
  * Replaces Owl Carousel with Embla Carousel for the Stats Leaders section
+ * Fetches and displays only approved players from the API
  * Maintains the exact same visual design and responsive behavior
  */
 export default function StatsLeadersCarousel() {
@@ -45,86 +59,47 @@ export default function StatsLeadersCarousel() {
     if (emblaApi) emblaApi.scrollNext();
   }, [emblaApi]);
 
-  // Fetch players data
+  // Fetch players data - only approved players are returned by the API for public access
   useEffect(() => {
     async function fetchPlayers() {
       try {
         setLoading(true);
         setError(null);
 
-        // TODO: Replace with actual API endpoint when available
-        // For now, using mock data that matches the expected structure
-        const mockPlayers: Player[] = [
-          {
-            id: '1',
-            number: '23',
-            name: 'John Doe',
-            position: 'Point Guard',
-            image: '/images/players/player-1.jpg',
-            url: '/players/john-doe',
-          },
-          {
-            id: '2',
-            number: '7',
-            name: 'Jane Smith',
-            position: 'Shooting Guard',
-            image: '/images/players/player-2.jpg',
-            url: '/players/jane-smith',
-          },
-          {
-            id: '3',
-            number: '15',
-            name: 'Mike Johnson',
-            position: 'Small Forward',
-            image: '/images/players/player-3.jpg',
-            url: '/players/mike-johnson',
-          },
-          {
-            id: '4',
-            number: '32',
-            name: 'Sarah Williams',
-            position: 'Power Forward',
-            image: '/images/players/player-4.jpg',
-            url: '/players/sarah-williams',
-          },
-          {
-            id: '5',
-            number: '11',
-            name: 'David Brown',
-            position: 'Center',
-            image: '/images/players/player-5.jpg',
-            url: '/players/david-brown',
-          },
-          {
-            id: '6',
-            number: '3',
-            name: 'Emily Davis',
-            position: 'Point Guard',
-            image: '/images/players/player-6.jpg',
-            url: '/players/emily-davis',
-          },
-          {
-            id: '7',
-            number: '21',
-            name: 'Chris Wilson',
-            position: 'Shooting Guard',
-            image: '/images/players/player-7.jpg',
-            url: '/players/chris-wilson',
-          },
-          {
-            id: '8',
-            number: '9',
-            name: 'Lisa Anderson',
-            position: 'Small Forward',
-            image: '/images/players/player-8.jpg',
-            url: '/players/lisa-anderson',
-          },
-        ];
+        const response = await fetch('/api/players');
+        if (!response.ok) {
+          throw new Error('Failed to fetch players');
+        }
 
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        const apiPlayers: ApiPlayer[] = await response.json();
 
-        setPlayers(mockPlayers);
+        // Transform API players to component format
+        // The API already filters by approved: true for public access
+        const transformedPlayers: Player[] = apiPlayers
+          .filter((player) => player.approved === true) // Extra safety check
+          .map((player) => {
+            // Build full name
+            const name = [player.firstName, player.lastName]
+              .filter(Boolean)
+              .join(' ') || 'Unknown Player';
+
+            // Build jersey number string
+            const number = player.jerseyNumber?.toString() || '';
+
+            // Use player image or default placeholder
+            const image = player.image || '/images/default-player.png';
+
+            return {
+              id: player.id,
+              number,
+              name,
+              position: player.position || '',
+              image,
+              url: `/players/${player.id}`,
+            };
+          });
+
+        setPlayers(transformedPlayers);
       } catch (err) {
         console.error('Error fetching players:', err);
         setError(err instanceof Error ? err.message : 'Failed to load players');
@@ -203,7 +178,7 @@ export default function StatsLeadersCarousel() {
                       alt={player.name}
                       onError={(e) => {
                         // Fallback to placeholder if image fails to load
-                        e.currentTarget.src = '/images/default-player.jpg';
+                        e.currentTarget.src = '/images/default-player.png';
                       }}
                     />
                     <div className="stm-list-single-player-info">
