@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function PlayerList() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -27,6 +28,8 @@ export default function PlayerList() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [icons, setIcons] = useState<{
     Plus?: ComponentType<any>;
     Search?: ComponentType<any>;
@@ -121,6 +124,83 @@ export default function PlayerList() {
     );
   });
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(new Set(filteredPlayers.map(player => player.id!)));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedItems.size} player(s)?\n\nThis action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const response = await fetch('/api/players/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedItems) }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete players');
+      }
+
+      clearSelection();
+      fetchPlayers();
+    } catch (err: any) {
+      setError('Error deleting players: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    setIsBulkActionLoading(true);
+    try {
+      const response = await fetch('/api/players/bulk-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedItems), approved: true }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to approve players');
+      }
+
+      clearSelection();
+      fetchPlayers();
+    } catch (err: any) {
+      setError('Error approving players: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const allSelected = filteredPlayers.length > 0 && selectedItems.size === filteredPlayers.length;
+
   const PlusIcon = icons.Plus;
   const SearchIcon = icons.Search;
   const ListIcon = icons.List;
@@ -187,44 +267,87 @@ export default function PlayerList() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-        <div className="relative flex-1">
-          <label htmlFor="player-search" className="sr-only">Search players</label>
-          {SearchIcon ? (
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          ) : null}
-          <Input
-            id="player-search"
-            type="text"
-            placeholder="Search players..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-            aria-label="Search players by name, team, or position"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <label htmlFor="player-search" className="sr-only">Search players</label>
+            {SearchIcon ? (
+              <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            ) : null}
+            <Input
+              id="player-search"
+              type="text"
+              placeholder="Search players..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              aria-label="Search players by name, team, or position"
+            />
+          </div>
+          <div className="flex gap-2 bg-background p-1 rounded-lg border">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setViewMode('table')}
+              title="Table View"
+              aria-label="Switch to table view"
+              aria-pressed={viewMode === 'table'}
+            >
+              {ListIcon ? <ListIcon size={16} /> : null}
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+              aria-label="Switch to grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              {GridIcon ? <GridIcon size={16} /> : null}
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2 bg-background p-1 rounded-lg border">
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => setViewMode('table')}
-            title="Table View"
-            aria-label="Switch to table view"
-            aria-pressed={viewMode === 'table'}
-          >
-            {ListIcon ? <ListIcon size={16} /> : null}
-          </Button>
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-            title="Grid View"
-            aria-label="Switch to grid view"
-            aria-pressed={viewMode === 'grid'}
-          >
-            {GridIcon ? <GridIcon size={16} /> : null}
-          </Button>
-        </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedItems.size > 0 && viewMode === 'table' && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <div className="text-sm font-medium text-foreground">
+                  {selectedItems.size} player(s) selected
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleBulkApprove}
+                    disabled={isBulkActionLoading}
+                  >
+                    {CheckCircleIcon ? <CheckCircleIcon size={16} className="mr-2" /> : null}
+                    Approve
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkActionLoading}
+                  >
+                    {Trash2Icon ? <Trash2Icon size={16} className="mr-2" /> : null}
+                    Delete
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    disabled={isBulkActionLoading}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Empty State */}
@@ -264,6 +387,13 @@ export default function PlayerList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all players"
+                  />
+                </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
                     {UserIcon ? <UserIcon size={16} /> : null}
@@ -290,6 +420,13 @@ export default function PlayerList() {
             <TableBody>
               {filteredPlayers.map((player) => (
                 <TableRow key={player.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedItems.has(player.id!)}
+                      onCheckedChange={(checked) => handleSelectItem(player.id!, checked as boolean)}
+                      aria-label={`Select ${getPlayerName(player)}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {player.image ? (

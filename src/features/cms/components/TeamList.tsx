@@ -18,12 +18,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function TeamList() {
   const [teams, setTeams] = useState<TeamWithPlayerCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [icons, setIcons] = useState<{
     Plus?: ComponentType<any>;
     Search?: ComponentType<any>;
@@ -37,6 +41,8 @@ export default function TeamList() {
     FileText?: ComponentType<any>;
     Eye?: ComponentType<any>;
     Briefcase?: ComponentType<any>;
+    CheckCircle?: ComponentType<any>;
+    XCircle?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -54,6 +60,8 @@ export default function TeamList() {
         FileText: mod.FileText,
         Eye: mod.Eye,
         Briefcase: mod.Briefcase,
+        CheckCircle: mod.CheckCircle,
+        XCircle: mod.XCircle,
       });
     });
   }, []);
@@ -103,6 +111,84 @@ export default function TeamList() {
       (team.description && team.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(new Set(filteredTeams.map(team => team.id)));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedItems.size} team(s)?\n\nThis action cannot be undone. Players associated with these teams will have their team reference removed.`
+    );
+    if (!confirmed) return;
+
+    setIsBulkActionLoading(true);
+    try {
+      const response = await fetch('/api/teams/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedItems) }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete teams');
+      }
+
+      clearSelection();
+      fetchTeams();
+    } catch (err: any) {
+      setError('Error deleting teams: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    setIsBulkActionLoading(true);
+    try {
+      const response = await fetch('/api/teams/bulk-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedItems), approved: true }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to approve teams');
+      }
+
+      clearSelection();
+      fetchTeams();
+    } catch (err: any) {
+      setError('Error approving teams: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const allSelected = filteredTeams.length > 0 && selectedItems.size === filteredTeams.length;
+  const someSelected = selectedItems.size > 0 && selectedItems.size < filteredTeams.length;
+
   const PlusIcon = icons.Plus;
   const SearchIcon = icons.Search;
   const EditIcon = icons.Edit;
@@ -115,6 +201,8 @@ export default function TeamList() {
   const FileTextIcon = icons.FileText;
   const EyeIcon = icons.Eye;
   const BriefcaseIcon = icons.Briefcase;
+  const CheckCircleIcon = icons.CheckCircle;
+  const XCircleIcon = icons.XCircle;
 
   if (loading) {
     return (
@@ -166,22 +254,65 @@ export default function TeamList() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-        <div className="relative flex-1">
-          <label htmlFor="team-search" className="sr-only">Search teams</label>
-          {SearchIcon ? (
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          ) : null}
-          <Input
-            id="team-search"
-            type="text"
-            placeholder="Search teams..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-            aria-label="Search teams by name or description"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <label htmlFor="team-search" className="sr-only">Search teams</label>
+            {SearchIcon ? (
+              <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            ) : null}
+            <Input
+              id="team-search"
+              type="text"
+              placeholder="Search teams..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              aria-label="Search teams by name or description"
+            />
+          </div>
         </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedItems.size > 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <div className="text-sm font-medium text-foreground">
+                  {selectedItems.size} team(s) selected
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleBulkApprove}
+                    disabled={isBulkActionLoading}
+                  >
+                    {CheckCircleIcon ? <CheckCircleIcon size={16} className="mr-2" /> : null}
+                    Approve
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkActionLoading}
+                  >
+                    {Trash2Icon ? <Trash2Icon size={16} className="mr-2" /> : null}
+                    Delete
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    disabled={isBulkActionLoading}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Empty State */}
@@ -221,6 +352,13 @@ export default function TeamList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all teams"
+                  />
+                </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
                     {ShieldIcon ? <ShieldIcon size={16} /> : null}
@@ -239,12 +377,20 @@ export default function TeamList() {
                     Description
                   </div>
                 </TableHead>
+                <TableHead>Approved</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTeams.map((team) => (
                 <TableRow key={team.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedItems.has(team.id)}
+                      onCheckedChange={(checked) => handleSelectItem(team.id, checked as boolean)}
+                      aria-label={`Select ${team.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {team.logo ? (
@@ -253,7 +399,7 @@ export default function TeamList() {
                           alt={team.name}
                           className="w-12 h-12 rounded-lg object-cover border-2 border-border"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/images/placeholder-team.jpg';
+                            (e.target as HTMLImageElement).src = '/images/placeholder-team.png';
                           }}
                         />
                       ) : (
@@ -279,6 +425,19 @@ export default function TeamList() {
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {team.approved ? (
+                      <Badge className="bg-green-500 text-white">
+                        {CheckCircleIcon ? <CheckCircleIcon size={14} className="mr-1" /> : null}
+                        Approved
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        {XCircleIcon ? <XCircleIcon size={14} className="mr-1" /> : null}
+                        Pending
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell>
