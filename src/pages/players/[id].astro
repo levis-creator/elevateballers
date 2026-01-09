@@ -21,6 +21,10 @@ try {
   if (!player) {
     return Astro.redirect('/404', 302);
   }
+  // Only allow public access to approved players
+  if (!player.approved) {
+    return Astro.redirect('/404', 302);
+  }
 } catch (error) {
   console.error('Error fetching player:', error);
   return Astro.redirect('/404', 302);
