@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, Save, X, AlertCircle, CheckCircle, Info, Loader2, Briefcase } from 'lucide-react';
+import ImageUpload from '@/components/ImageUpload';
 
 interface StaffEditorProps {
   staffId?: string;
@@ -234,33 +235,14 @@ export default function StaffEditor({ staffId }: StaffEditorProps) {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="image">Image URL</Label>
-              <Input
-                id="image"
-                type="url"
-                value={formData.image}
-                onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
-                disabled={saving}
-                placeholder="https://example.com/image.jpg"
-              />
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                URL to the staff member's photo
-              </p>
-              {formData.image && (
-                <div className="mt-2 border rounded-lg overflow-hidden">
-                  <img
-                    src={formData.image}
-                    alt="Preview"
-                    className="w-full max-h-[300px] object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+            <ImageUpload
+              value={formData.image}
+              onChange={(url) => setFormData((prev) => ({ ...prev, image: url }))}
+              disabled={saving}
+              label="Image"
+              helperText="URL to the staff member's photo"
+              folder="staff"
+            />
           </CardContent>
         </Card>
 

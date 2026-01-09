@@ -1,6 +1,7 @@
 import { useState, useEffect, type ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { tekoFont, navActive, navHover } from '../lib/ui-helpers';
 
 export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -189,7 +190,7 @@ export default function AdminSidebar() {
             data-astro-prefetch
           >
             {BasketballIcon ? <BasketballIcon size={24} className="!text-primary mr-2" /> : <span className="w-6 h-6 mr-2" />}
-            <span className="text-xl font-bold !text-white">Elevate CMS</span>
+            <span className="text-xl font-bold !text-white" style={tekoFont}>Elevate CMS</span>
           </a>
         </div>
 
@@ -206,8 +207,8 @@ export default function AdminSidebar() {
                   "flex items-center px-6 py-3.5 !text-white no-underline",
                   "transition-all duration-200",
                   "border-l-[3px] border-transparent",
-                  "hover:bg-white/10 hover:border-primary",
-                  isActive && "bg-primary/15 border-primary font-semibold",
+                  navHover,
+                  isActive && navActive,
                   "text-[0.95rem] font-medium"
                 )}
                 {...(isActive && { 'aria-current': 'page' })}
@@ -230,7 +231,7 @@ export default function AdminSidebar() {
               "flex items-center px-6 py-3.5 !text-white no-underline",
               "transition-all duration-200",
               "border-l-[3px] border-transparent",
-              "hover:bg-white/10 hover:border-primary",
+              navHover,
               "text-[0.95rem] font-medium"
             )}
             onClick={handleNavClick}

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Save, X, AlertCircle, CheckCircle, Info, Loader2, Users } from 'lucide-react';
+import ImageUpload from '@/components/ImageUpload';
 
 interface TeamEditorProps {
   teamId?: string;
@@ -160,33 +161,14 @@ export default function TeamEditor({ teamId }: TeamEditorProps) {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="logo">Logo URL</Label>
-              <Input
-                id="logo"
-                type="url"
-                value={formData.logo}
-                onChange={(e) => setFormData((prev) => ({ ...prev, logo: e.target.value }))}
-                disabled={saving}
-                placeholder="https://example.com/logo.png"
-              />
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                URL to the team's logo image
-              </p>
-              {formData.logo && (
-                <div className="mt-2 border rounded-lg overflow-hidden">
-                  <img
-                    src={formData.logo}
-                    alt="Preview"
-                    className="w-full max-h-[300px] object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+            <ImageUpload
+              value={formData.logo}
+              onChange={(url) => setFormData((prev) => ({ ...prev, logo: url }))}
+              disabled={saving}
+              label="Logo"
+              helperText="URL to the team's logo image"
+              folder="teams"
+            />
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
