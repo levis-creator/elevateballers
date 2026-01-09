@@ -86,6 +86,10 @@ export const env = {
   // JWT
   JWT_SECRET: () => requireEnv('JWT_SECRET'),
   
+  // Supabase (optional - only needed if using Supabase Storage)
+  SUPABASE_URL: () => getEnv('SUPABASE_URL'),
+  SUPABASE_SERVICE_ROLE_KEY: () => getEnv('SUPABASE_SERVICE_ROLE_KEY'),
+  
   // Environment
   NODE_ENV: () => getEnv('NODE_ENV', 'development'),
   isProduction: () => isProduction(),

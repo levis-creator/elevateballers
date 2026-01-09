@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, Save, X, AlertCircle, CheckCircle, Info, Loader2, FileText } from 'lucide-react';
+import ImageUpload from '@/components/ImageUpload';
 
 // Quill-based rich text editor component
 function RichTextEditor({ 
@@ -524,31 +525,15 @@ export default function NewsEditor({ articleId }: NewsEditorProps) {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="image">Featured Image URL</Label>
-                <Input
-                  id="image"
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
-                  disabled={saving}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
+              <ImageUpload
+                value={formData.image}
+                onChange={(url) => setFormData((prev) => ({ ...prev, image: url }))}
+                disabled={saving}
+                label="Featured Image"
+                helperText="Featured image for the news article (supports both upload and external URLs)"
+                folder="news"
+              />
             </div>
-
-            {formData.image && (
-              <div className="mt-2 border rounded-lg overflow-hidden">
-                <img
-                  src={formData.image}
-                  alt="Preview"
-                  className="w-full max-h-[300px] object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
           </CardContent>
         </Card>
 
