@@ -115,25 +115,31 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
       </div>
 
       {/* Controls Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <TimeoutControls
-          matchId={matchId}
-          match={match}
-          gameState={gameState}
-          onTimeoutRecorded={() => fetchGameState(matchId)}
-        />
-        <SubstitutionPanel
-          matchId={matchId}
-          match={match}
-          gameState={gameState}
-          onSubstitutionRecorded={() => fetchGameState(matchId)}
-        />
-        <QuickEventButtons
-          matchId={matchId}
-          match={match}
-          gameState={gameState}
-          onEventRecorded={() => fetchGameState(matchId)}
-        />
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <TimeoutControls
+            matchId={matchId}
+            match={match}
+            gameState={gameState}
+            onTimeoutRecorded={() => fetchGameState(matchId)}
+          />
+        </div>
+        <div className="flex-1">
+          <SubstitutionPanel
+            matchId={matchId}
+            match={match}
+            gameState={gameState}
+            onSubstitutionRecorded={() => fetchGameState(matchId)}
+          />
+        </div>
+        <div className="flex-1">
+          <QuickEventButtons
+            matchId={matchId}
+            match={match}
+            gameState={gameState}
+            onEventRecorded={() => fetchGameState(matchId)}
+          />
+        </div>
       </div>
 
       {/* Play-by-Play Log */}
