@@ -824,7 +824,7 @@ export async function getMatchEvents(matchId: string): Promise<MatchEventWithDet
       team: true,
     },
     orderBy: {
-      minute: 'asc',
+      createdAt: 'desc',
     },
   }) as MatchEventWithDetails[];
 }
@@ -841,7 +841,7 @@ export async function getMatchEventsByTeam(matchId: string, teamId: string): Pro
       team: true,
     },
     orderBy: {
-      minute: 'asc',
+      createdAt: 'desc',
     },
   }) as MatchEventWithDetails[];
 }
@@ -858,7 +858,7 @@ export async function getMatchEventsByType(matchId: string, eventType: string): 
       team: true,
     },
     orderBy: {
-      minute: 'asc',
+      createdAt: 'desc',
     },
   }) as MatchEventWithDetails[];
 }
