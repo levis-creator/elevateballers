@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, X, Activity, Target, Square as CardIcon, Users, Clock, AlertCircle, Circle, Shield } from 'lucide-react';
+import { Plus, X, Activity, Target, Square as CardIcon, Users, Clock, AlertCircle, Circle, Shield, Pencil } from 'lucide-react';
 
 interface MatchEventsManagerProps {
   matchId: string;
@@ -65,6 +65,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editEventId, setEditEventId] = useState<string | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   const [gameState, setGameState] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -198,6 +199,93 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
     }
   };
 
+  const handleStartEdit = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/matches/${matchId}/events/${eventId}`);
+      if (!response.ok) throw new Error('Failed to fetch event');
+      const event = await response.json();
+
+      setFormData({
+        eventType: event.eventType,
+        minute: String(event.minute || ''),
+        teamId: event.teamId || '',
+        playerId: event.playerId || '',
+        assistPlayerId: event.assistPlayerId || '',
+        description: event.description || '',
+        period: event.period ? String(event.period) : '',
+        secondsRemaining: event.secondsRemaining ? String(event.secondsRemaining) : '',
+      });
+
+      if (event.teamId) {
+        await fetchPlayersForTeam(event.teamId);
+      }
+
+      setEditEventId(eventId);
+      setShowAddForm(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load event for editing');
+    }
+  };
+
+  const handleUpdateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!editEventId) return;
+
+    try {
+      const response = await fetch(`/api/matches/${matchId}/events/${editEventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          minute: parseInt(formData.minute),
+          teamId: formData.teamId || undefined,
+          playerId: formData.playerId || undefined,
+          assistPlayerId: formData.assistPlayerId || undefined,
+          period: formData.period ? parseInt(formData.period) : undefined,
+          secondsRemaining: formData.secondsRemaining ? parseInt(formData.secondsRemaining) : undefined,
+          description: formData.description || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update event');
+      }
+
+      setShowAddForm(false);
+      setEditEventId(null);
+      setFormData({
+        eventType: 'TWO_POINT_MADE',
+        minute: '',
+        teamId: formData.teamId,
+        playerId: '',
+        assistPlayerId: '',
+        description: '',
+        period: gameState?.period ? String(gameState.period) : '',
+        secondsRemaining: gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : '',
+      });
+      fetchMatchEvents();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update event');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setShowAddForm(false);
+    setEditEventId(null);
+    setFormData({
+      eventType: 'TWO_POINT_MADE',
+      minute: '',
+      teamId: formData.teamId,
+      playerId: '',
+      assistPlayerId: '',
+      description: '',
+      period: gameState?.period ? String(gameState.period) : '',
+      secondsRemaining: gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : '',
+    });
+  };
+
   const handleDeleteEvent = async (id: string) => {
     try {
       const response = await fetch(`/api/matches/${matchId}/events/${id}`, {
@@ -294,10 +382,10 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
       {showAddForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add Match Event</CardTitle>
+            <CardTitle>{editEventId ? 'Edit Match Event' : 'Add Match Event'}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAddEvent} className="space-y-4">
+            <form onSubmit={editEventId ? handleUpdateEvent : handleAddEvent} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="eventType">
@@ -313,6 +401,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                       }))
                     }
                     required
+                    disabled={!!editEventId}
                   >
                     <SelectTrigger id="eventType">
                       <SelectValue />
@@ -485,11 +574,11 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit">Add Event</Button>
+                <Button type="submit">{editEventId ? 'Update Event' : 'Add Event'}</Button>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowAddForm(false)}
+                  onClick={handleCancelEdit}
                 >
                   Cancel
                 </Button>
@@ -535,13 +624,22 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                         </div>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setDeleteEventId(event.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleStartEdit(event.id)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDeleteEventId(event.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 );
               })}

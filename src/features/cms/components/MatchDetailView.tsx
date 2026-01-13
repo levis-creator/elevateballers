@@ -24,6 +24,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../matches/lib/team-helpers';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 import AddNewPlayerModal from './AddNewPlayerModal';
@@ -61,7 +77,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
-// Add Match Event Modal Component
+// Add/Edit Match Event Modal Component
 interface AddMatchEventModalProps {
   matchId: string;
   team1Id: string | null;
@@ -69,9 +85,10 @@ interface AddMatchEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editEventId?: string | null;
 }
 
-function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSuccess }: AddMatchEventModalProps) {
+function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSuccess, editEventId }: AddMatchEventModalProps) {
   const [teams, setTeams] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -219,29 +236,90 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
     return true;
   };
 
+  useEffect(() => {
+    if (editEventId && isOpen) {
+      fetchEventData();
+    } else if (isOpen && !editEventId) {
+      // Reset form for new event
+      if (gameState) {
+        setFormData({
+          eventType: 'TWO_POINT_MADE',
+          minute: '',
+          teamId: '',
+          playerId: '',
+          assistPlayerId: '',
+          description: '',
+          period: gameState.period ? String(gameState.period) : '',
+          secondsRemaining: gameState.clockSeconds !== null && gameState.clockSeconds !== undefined ? String(gameState.clockSeconds) : '',
+        });
+      }
+    }
+  }, [editEventId, isOpen, gameState]);
+
+  const fetchEventData = async () => {
+    if (!editEventId) return;
+    try {
+      const response = await fetch(`/api/matches/${matchId}/events/${editEventId}`);
+      if (!response.ok) throw new Error('Failed to fetch event');
+      const event = await response.json();
+
+      setFormData({
+        eventType: event.eventType,
+        minute: String(event.minute || ''),
+        teamId: event.teamId || '',
+        playerId: event.playerId || '',
+        assistPlayerId: event.assistPlayerId || '',
+        description: event.description || '',
+        period: event.period ? String(event.period) : '',
+        secondsRemaining: event.secondsRemaining ? String(event.secondsRemaining) : '',
+      });
+
+      if (event.teamId) {
+        await fetchPlayersForTeam(event.teamId);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load event');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/matches/${matchId}/events`, {
-        method: 'POST',
+      const url = editEventId 
+        ? `/api/matches/${matchId}/events/${editEventId}`
+        : `/api/matches/${matchId}/events`;
+      const method = editEventId ? 'PUT' : 'POST';
+      
+      const body = editEventId ? {
+        minute: parseInt(formData.minute),
+        teamId: formData.teamId || undefined,
+        playerId: formData.playerId || undefined,
+        assistPlayerId: formData.assistPlayerId || undefined,
+        period: formData.period ? parseInt(formData.period) : undefined,
+        secondsRemaining: formData.secondsRemaining ? parseInt(formData.secondsRemaining) : undefined,
+        description: formData.description || undefined,
+      } : {
+        ...formData,
+        minute: parseInt(formData.minute),
+        teamId: formData.teamId || undefined,
+        playerId: formData.playerId || undefined,
+        assistPlayerId: formData.assistPlayerId || undefined,
+        period: formData.period ? parseInt(formData.period) : undefined,
+        secondsRemaining: formData.secondsRemaining ? parseInt(formData.secondsRemaining) : undefined,
+      };
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          minute: parseInt(formData.minute),
-          teamId: formData.teamId || undefined,
-          playerId: formData.playerId || undefined,
-          assistPlayerId: formData.assistPlayerId || undefined,
-          period: formData.period ? parseInt(formData.period) : undefined,
-          secondsRemaining: formData.secondsRemaining ? parseInt(formData.secondsRemaining) : undefined,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add event');
+        throw new Error(errorData.error || `Failed to ${editEventId ? 'update' : 'add'} event`);
       }
 
       onSuccess();
@@ -256,7 +334,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
         secondsRemaining: gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : '',
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to add event');
+      setError(err.message || `Failed to ${editEventId ? 'update' : 'add'} event`);
     } finally {
       setLoading(false);
     }
@@ -295,9 +373,9 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
     }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Match Event</DialogTitle>
+          <DialogTitle>{editEventId ? 'Edit Match Event' : 'Add Match Event'}</DialogTitle>
           <DialogDescription>
-            Record an event that occurred during this match (goal, card, substitution, etc.).
+            {editEventId ? 'Update the event details.' : 'Record an event that occurred during this match (goal, card, substitution, etc.).'}
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -322,6 +400,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                   }))
                 }
                 required
+                disabled={!!editEventId}
               >
                 <SelectTrigger id="modal-eventType">
                   <SelectValue />
@@ -502,10 +581,10 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
               {loading ? (
                 <>
                   {icons.Loader2 ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 h-4 w-4" />}
-                  Adding...
+                  {editEventId ? 'Updating...' : 'Adding...'}
                 </>
               ) : (
-                'Add Event'
+                editEventId ? 'Update Event' : 'Add Event'
               )}
             </Button>
           </DialogFooter>
@@ -843,6 +922,8 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [error, setError] = useState('');
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [editEventId, setEditEventId] = useState<string | null>(null);
+  const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   const [icons, setIcons] = useState<{
     Calendar?: ComponentType<any>;
     Clock?: ComponentType<any>;
@@ -857,6 +938,10 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
     AlertCircle?: ComponentType<any>;
     Loader2?: ComponentType<any>;
     Shirt?: ComponentType<any>;
+    Pencil?: ComponentType<any>;
+    X?: ComponentType<any>;
+    MoreVertical?: ComponentType<any>;
+    Trash2?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -876,6 +961,10 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         AlertCircle: mod.AlertCircle,
         Loader2: mod.Loader2,
         Shirt: mod.Shirt,
+        Pencil: mod.Pencil,
+        X: mod.X,
+        MoreVertical: mod.MoreVertical,
+        Trash2: mod.Trash2,
       });
     });
   }, []);
@@ -982,6 +1071,31 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const getEventsByTeam = (teamId: string) => {
     if (!match?.events) return [];
     return match.events.filter((e) => e.teamId === teamId);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/matches/${matchId}/events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete event');
+      setDeleteEventId(null);
+      fetchMatchDetails();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete event');
+      setDeleteEventId(null);
+    }
+  };
+
+  const handleEditEvent = (eventId: string) => {
+    setEditEventId(eventId);
+    setShowAddEventModal(true);
+  };
+
+  const handleCloseEventModal = () => {
+    setShowAddEventModal(false);
+    setEditEventId(null);
   };
 
   const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' => {
@@ -1263,7 +1377,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
             </CardHeader>
             <CardContent>
               {match.events && match.events.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[600px] overflow-y-auto pr-2">
                   {team1Id && (
                 <div>
                       <h3 className="text-lg font-semibold mb-4 pb-2 border-b">
@@ -1330,6 +1444,28 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                             )}
                                   </div>
                           </div>
+                        </div>
+                        <div className="flex items-center justify-end mt-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                {icons.MoreVertical ? <icons.MoreVertical className="h-4 w-4" /> : <span className="h-4 w-4" />}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditEvent(event.id)}>
+                                {icons.Pencil ? <icons.Pencil className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setDeleteEventId(event.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                {icons.Trash2 ? <icons.Trash2 className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     );
@@ -1405,6 +1541,28 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                                   </div>
                           </div>
                         </div>
+                        <div className="flex items-center justify-end mt-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                {icons.MoreVertical ? <icons.MoreVertical className="h-4 w-4" /> : <span className="h-4 w-4" />}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditEvent(event.id)}>
+                                {icons.Pencil ? <icons.Pencil className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setDeleteEventId(event.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                {icons.Trash2 ? <icons.Trash2 className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     );
                   })}
@@ -1431,7 +1589,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                   {match.events
                     .sort((a, b) => a.minute - b.minute)
               .map((event, index) => (
@@ -1477,6 +1635,28 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                           {event.description}
                         </div>
                       )}
+                            <div className="flex items-center justify-end mt-3 pt-3 border-t">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    {icons.MoreVertical ? <icons.MoreVertical className="h-4 w-4" /> : <span className="h-4 w-4" />}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditEvent(event.id)}>
+                                    {icons.Pencil ? <icons.Pencil className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteEventId(event.id)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    {icons.Trash2 ? <icons.Trash2 className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </CardContent>
                         </Card>
                 </div>
@@ -1505,20 +1685,39 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         />
       )}
 
-      {/* Add Match Event Modal */}
+      {/* Add/Edit Match Event Modal */}
       {match && (
         <AddMatchEventModal
           matchId={matchId}
           team1Id={team1Id}
           team2Id={team2Id}
           isOpen={showAddEventModal}
-          onClose={() => setShowAddEventModal(false)}
+          onClose={handleCloseEventModal}
           onSuccess={() => {
-            setShowAddEventModal(false);
+            handleCloseEventModal();
             fetchMatchDetails();
           }}
+          editEventId={editEventId}
         />
       )}
+
+      {/* Delete Event Confirmation Dialog */}
+      <AlertDialog open={deleteEventId !== null} onOpenChange={(open) => !open && setDeleteEventId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this event? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteEventId && handleDeleteEvent(deleteEventId)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
             </div>
   );
 
