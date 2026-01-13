@@ -3,7 +3,7 @@
  * Displays and controls the game clock
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatClockTime } from '../lib/utils';
@@ -38,6 +38,26 @@ export default function GameClock({
     }
   }, [gameState?.clockSeconds, gameState?.clockRunning, setLocalClockSeconds]);
 
+  // Ref to track if auto-pause was triggered to prevent multiple triggers
+  const autoPauseTriggeredRef = useRef(false);
+
+  // Auto-pause when clock reaches 0
+  useEffect(() => {
+    if (
+      gameState?.clockRunning &&
+      localClockSeconds !== null &&
+      localClockSeconds <= 0 &&
+      !autoPauseTriggeredRef.current
+    ) {
+      autoPauseTriggeredRef.current = true;
+      onToggleClock();
+    }
+    // Reset the ref when clock is not running or clock seconds changes to a positive value
+    if (!gameState?.clockRunning || (localClockSeconds !== null && localClockSeconds > 0)) {
+      autoPauseTriggeredRef.current = false;
+    }
+  }, [gameState?.clockRunning, localClockSeconds, onToggleClock]);
+
   // Local countdown timer - only runs when clock is running
   useEffect(() => {
     if (!gameState || !gameState.clockRunning) {
@@ -47,7 +67,7 @@ export default function GameClock({
     const interval = setInterval(() => {
       setLocalClockSeconds((prev) => {
         if (prev === null || prev <= 0) {
-          return prev;
+          return 0; // Stop at 0, prevent negative values
         }
         return prev - 1;
       });

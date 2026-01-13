@@ -12,6 +12,7 @@ interface GameTrackingState {
   isLoading: boolean;
   error: string | null;
   matchId: string | null;
+  isToggling: boolean; // Flag to prevent multiple simultaneous toggle requests
 
   // Actions
   setMatchId: (matchId: string) => void;
@@ -32,18 +33,27 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
   isLoading: false,
   error: null,
   matchId: null,
+  isToggling: false,
 
   setMatchId: (matchId) => set({ matchId }),
 
-  setGameState: (state) => set({ 
-    gameState: state, 
-    localClockSeconds: state?.clockSeconds ?? null,
-    error: null 
-  }),
+  setGameState: (state) => {
+    // Validate and ensure localClockSeconds is properly initialized from gameState
+    const clockSeconds = state?.clockSeconds ?? null;
+    const validatedClockSeconds = clockSeconds !== null && clockSeconds < 0 ? 0 : clockSeconds;
+    set({ 
+      gameState: state, 
+      localClockSeconds: validatedClockSeconds,
+      error: null 
+    });
+  },
 
-  setLocalClockSeconds: (seconds) => set((state) => ({ 
-    localClockSeconds: typeof seconds === 'function' ? seconds(state.localClockSeconds) : seconds 
-  })),
+  setLocalClockSeconds: (seconds) => set((state) => {
+    const newSeconds = typeof seconds === 'function' ? seconds(state.localClockSeconds) : seconds;
+    // Validate: prevent negative clock values
+    const validatedSeconds = newSeconds !== null && newSeconds < 0 ? 0 : newSeconds;
+    return { localClockSeconds: validatedSeconds };
+  }),
 
   setLoading: (loading) => set({ isLoading: loading }),
 
@@ -68,9 +78,15 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
       const currentLocalClock = get().localClockSeconds;
       const shouldUpdateClock = !state?.clockRunning;
       
+      // Validate clock seconds - prevent negative values
+      const serverClockSeconds = state?.clockSeconds ?? null;
+      const validatedClockSeconds = serverClockSeconds !== null && serverClockSeconds < 0 
+        ? 0 
+        : serverClockSeconds;
+      
       set({ 
         gameState: state, 
-        localClockSeconds: shouldUpdateClock ? (state?.clockSeconds ?? null) : currentLocalClock,
+        localClockSeconds: shouldUpdateClock ? validatedClockSeconds : currentLocalClock,
         isLoading: false, 
         error: null 
       });
@@ -91,9 +107,13 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
         throw new Error('Failed to update game state');
       }
       const updatedState = await response.json();
+      // Validate clock seconds - prevent negative values
+      const clockSeconds = updatedState?.clockSeconds ?? null;
+      const validatedClockSeconds = clockSeconds !== null && clockSeconds < 0 ? 0 : clockSeconds;
+      
       set({ 
         gameState: updatedState, 
-        localClockSeconds: updatedState?.clockSeconds ?? null,
+        localClockSeconds: validatedClockSeconds,
         isLoading: false 
       });
     } catch (error: any) {
@@ -113,9 +133,13 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
         throw new Error('Failed to start game');
       }
       const state = await response.json();
+      // Validate clock seconds - prevent negative values
+      const clockSeconds = state?.clockSeconds ?? null;
+      const validatedClockSeconds = clockSeconds !== null && clockSeconds < 0 ? 0 : clockSeconds;
+      
       set({ 
         gameState: state, 
-        localClockSeconds: state?.clockSeconds ?? null,
+        localClockSeconds: validatedClockSeconds,
         isLoading: false 
       });
     } catch (error: any) {
@@ -124,16 +148,25 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
   },
 
   toggleClock: async (matchId, running) => {
-    set({ isLoading: true, error: null });
+    // Prevent multiple simultaneous toggle requests
+    if (get().isToggling) {
+      return;
+    }
+    
+    set({ isLoading: true, error: null, isToggling: true });
     try {
+      const currentGameState = get().gameState;
       const currentLocalClock = get().localClockSeconds;
-      const currentRunning = get().gameState?.clockRunning;
-      // Determine if we're pausing: if currently running, we're pausing (toggling to false)
-      const isPausing = currentRunning === true;
+      const currentRunning = currentGameState?.clockRunning ?? false;
       
-      // When pausing, send the current local clock seconds to save it
-      const requestBody: any = { running };
-      if (isPausing && currentLocalClock !== null) {
+      // Determine the new running state: use provided value, or toggle if undefined
+      const newRunning = running !== undefined ? running : !currentRunning;
+      
+      // When pausing (transitioning from running to stopped), send local clock seconds to save it
+      // When resuming (stopped to running), don't send clock seconds - let server use its stored value
+      const requestBody: any = { running: newRunning };
+      if (newRunning === false && currentRunning === true && currentLocalClock !== null) {
+        // Pausing: send the current local clock seconds
         requestBody.clockSeconds = currentLocalClock;
       }
 
@@ -146,13 +179,18 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
         throw new Error('Failed to toggle clock');
       }
       const state = await response.json();
+      // Validate clock seconds - prevent negative values
+      const clockSeconds = state?.clockSeconds ?? null;
+      const validatedClockSeconds = clockSeconds !== null && clockSeconds < 0 ? 0 : clockSeconds;
+      
       set({ 
         gameState: state, 
-        localClockSeconds: state?.clockSeconds ?? null,
-        isLoading: false 
+        localClockSeconds: validatedClockSeconds,
+        isLoading: false,
+        isToggling: false
       });
     } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+      set({ error: error.message, isLoading: false, isToggling: false });
     }
   },
 
@@ -161,6 +199,7 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
     localClockSeconds: null,
     isLoading: false, 
     error: null, 
-    matchId: null 
+    matchId: null,
+    isToggling: false
   }),
 }));

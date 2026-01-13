@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Player, Team, MatchPlayerWithDetails } from '../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,9 +32,10 @@ interface MatchPlayersManagerProps {
   team1Id?: string | null;
   team2Id?: string | null;
   onPlayerAdded?: () => void;
+  refreshTrigger?: number;
 }
 
-export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlayerAdded }: MatchPlayersManagerProps) {
+export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlayerAdded, refreshTrigger }: MatchPlayersManagerProps) {
   const [players, setPlayers] = useState<MatchPlayerWithDetails[]>([]);
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -54,7 +55,6 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
 
   useEffect(() => {
     if (matchId) {
-      fetchMatchPlayers();
       fetchTeams();
     }
   }, [matchId]);
@@ -65,7 +65,7 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
     }
   }, [formData.teamId]);
 
-  const fetchMatchPlayers = async () => {
+  const fetchMatchPlayers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/matches/${matchId}/players`);
@@ -77,7 +77,19 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchId]);
+
+  useEffect(() => {
+    if (matchId) {
+      fetchMatchPlayers();
+    }
+  }, [matchId, fetchMatchPlayers]);
+
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      fetchMatchPlayers();
+    }
+  }, [refreshTrigger, fetchMatchPlayers]);
 
   const fetchTeams = async () => {
     try {
@@ -366,6 +378,16 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
                         </Badge>
                       )}
                       {mp.started && <Badge variant="default">Started</Badge>}
+                      {mp.isActive && (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
+                          Active
+                        </Badge>
+                      )}
+                      {!mp.isActive && mp.started && (
+                        <Badge variant="outline" className="bg-gray-500/10 text-gray-700 border-gray-500/20">
+                          Inactive
+                        </Badge>
+                      )}
                       {mp.position && (
                         <span className="text-sm text-muted-foreground">({mp.position})</span>
                       )}
@@ -413,6 +435,16 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
                         </Badge>
                       )}
                       {mp.started && <Badge variant="default">Started</Badge>}
+                      {mp.isActive && (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
+                          Active
+                        </Badge>
+                      )}
+                      {!mp.isActive && mp.started && (
+                        <Badge variant="outline" className="bg-gray-500/10 text-gray-700 border-gray-500/20">
+                          Inactive
+                        </Badge>
+                      )}
                       {mp.position && (
                         <span className="text-sm text-muted-foreground">({mp.position})</span>
                       )}

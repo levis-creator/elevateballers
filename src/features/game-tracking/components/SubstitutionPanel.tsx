@@ -41,6 +41,7 @@ export default function SubstitutionPanel({
   const [playerInId, setPlayerInId] = useState<string>('');
   const [playerOutId, setPlayerOutId] = useState<string>('');
   const [matchPlayers, setMatchPlayers] = useState<MatchPlayerWithDetails[]>([]);
+  const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,20 @@ export default function SubstitutionPanel({
       }
     } catch (err) {
       console.error('Failed to fetch match players:', err);
+    }
+  };
+
+  const fetchTeamPlayers = async (teamIdToFetch: string) => {
+    try {
+      const response = await fetch(`/api/players?teamId=${teamIdToFetch}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeamPlayers(data || []);
+      } else {
+        console.error('Failed to fetch team players:', response.status, response.statusText);
+      }
+    } catch (err) {
+      console.error('Failed to fetch team players:', err);
     }
   };
 
@@ -94,7 +109,37 @@ export default function SubstitutionPanel({
     // Reset player selections when team changes
     setPlayerInId('');
     setPlayerOutId('');
+    
+    // Fetch all players from the team
+    if (teamId) {
+      fetchTeamPlayers(teamId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
+
+  // Clear player selections when selected players are no longer available
+  useEffect(() => {
+    if (teamId) {
+      const currentMatchTeamPlayers = matchPlayers.filter((mp) => mp.teamId === teamId && mp.player);
+      const hasAnyActive = currentMatchTeamPlayers.some((mp) => mp.isActive);
+      const currentActivePlayers = hasAnyActive
+        ? currentMatchTeamPlayers.filter((mp) => mp.isActive)
+        : currentMatchTeamPlayers.filter((mp) => mp.started);
+      const currentMatchPlayerIds = new Set(currentMatchTeamPlayers.map((mp) => mp.playerId));
+      const currentPlayersNotInMatch = teamPlayers.filter((player) => !currentMatchPlayerIds.has(player.id));
+
+      // Clear playerOutId if selected player is no longer in active list
+      if (playerOutId && !currentActivePlayers.find(mp => mp.playerId === playerOutId)) {
+        setPlayerOutId('');
+      }
+
+      // Clear playerInId if selected player is now in the match
+      if (playerInId && currentMatchPlayerIds.has(playerInId)) {
+        setPlayerInId('');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchPlayers, teamPlayers, teamId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +175,9 @@ export default function SubstitutionPanel({
       setPlayerInId('');
       setPlayerOutId('');
       await fetchMatchPlayers();
+      if (teamId) {
+        await fetchTeamPlayers(teamId);
+      }
       setError(null);
       onSubstitutionRecorded?.();
     } catch (err: any) {
@@ -157,15 +205,24 @@ export default function SubstitutionPanel({
         team2Id && { id: team2Id, name: team2Name },
       ].filter(Boolean) as Array<{ id: string; name: string }>;
 
-  const teamPlayers = teamId
-    ? matchPlayers.filter((mp) => mp.teamId === teamId)
+  const matchTeamPlayers = teamId
+    ? matchPlayers.filter((mp) => mp.teamId === teamId && mp.player)
     : [];
 
-  const activePlayers = teamPlayers.filter((mp) => mp.isActive);
-  const inactivePlayers = teamPlayers.filter((mp) => !mp.isActive);
+  // Determine active players: use isActive if any players have it set, otherwise fall back to started
+  const hasAnyActivePlayers = matchTeamPlayers.some((mp) => mp.isActive);
+  const activePlayers = hasAnyActivePlayers
+    ? matchTeamPlayers.filter((mp) => mp.isActive)
+    : matchTeamPlayers.filter((mp) => mp.started);
 
-  const getPlayerDisplayName = (player: Player) => {
-    return `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`;
+  // Get players NOT in the match (for "Player In" dropdown)
+  const matchPlayerIds = new Set(matchTeamPlayers.map((mp) => mp.playerId));
+  const playersNotInMatch = teamPlayers.filter((player) => !matchPlayerIds.has(player.id));
+
+  const getPlayerDisplayName = (player: Player | null | undefined) => {
+    if (!player) return 'Unknown Player';
+    const name = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown Player';
+    return player.jerseyNumber ? `${name} (#${player.jerseyNumber})` : name;
   };
 
   return (
@@ -221,7 +278,7 @@ export default function SubstitutionPanel({
                 </Select>
                 {activePlayers.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    No active players available
+                    No players available to substitute out
                   </p>
                 )}
               </div>
@@ -234,22 +291,22 @@ export default function SubstitutionPanel({
                   value={playerInId}
                   onValueChange={setPlayerInId}
                   required
-                  disabled={inactivePlayers.length === 0}
+                  disabled={playersNotInMatch.length === 0}
                 >
                   <SelectTrigger id="substitution-player-in">
                     <SelectValue placeholder="Select player to add" />
                   </SelectTrigger>
                   <SelectContent>
-                    {inactivePlayers.map((mp) => (
-                      <SelectItem key={mp.id} value={mp.playerId}>
-                        {getPlayerDisplayName(mp.player)}
+                    {playersNotInMatch.map((player) => (
+                      <SelectItem key={player.id} value={player.id}>
+                        {getPlayerDisplayName(player)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {inactivePlayers.length === 0 && (
+                {playersNotInMatch.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    No inactive players available
+                    No players available to substitute in
                   </p>
                 )}
               </div>
@@ -283,7 +340,9 @@ export default function SubstitutionPanel({
               !teamId ||
               !playerInId ||
               !playerOutId ||
-              playerInId === playerOutId
+              playerInId === playerOutId ||
+              activePlayers.length === 0 ||
+              playersNotInMatch.length === 0
             }
             className="w-full"
           >
