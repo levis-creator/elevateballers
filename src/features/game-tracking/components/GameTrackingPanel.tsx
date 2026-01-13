@@ -33,6 +33,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
     startGame,
     toggleClock,
   } = useGameTrackingStore();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     if (matchId) {
@@ -46,7 +47,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
       return () => clearInterval(interval);
     }
-  }, [matchId, match?.status]);
+  }, [matchId, match?.status, fetchGameState]);
 
   const handleStartGame = async () => {
     await startGame(matchId);
@@ -54,6 +55,11 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   const handleToggleClock = async () => {
     await toggleClock(matchId);
+  };
+
+  const handleEventRecorded = async () => {
+    await fetchGameState(matchId);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const team1Name = match ? getTeam1Name(match) : undefined;
@@ -129,7 +135,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             matchId={matchId}
             match={match}
             gameState={gameState}
-            onSubstitutionRecorded={() => fetchGameState(matchId)}
+            onSubstitutionRecorded={handleEventRecorded}
           />
         </div>
         <div className="flex-1">
@@ -137,7 +143,8 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             matchId={matchId}
             match={match}
             gameState={gameState}
-            onEventRecorded={() => fetchGameState(matchId)}
+            onEventRecorded={handleEventRecorded}
+            refreshTrigger={refreshTrigger}
           />
         </div>
       </div>

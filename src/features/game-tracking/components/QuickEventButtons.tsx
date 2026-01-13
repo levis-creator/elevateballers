@@ -3,7 +3,7 @@
  * Provides rapid event entry buttons for common game events
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,25 +15,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Zap } from 'lucide-react';
+import { AlertCircle, Zap, CheckCircle } from 'lucide-react';
 import type { GameStateData } from '../types';
 import type { Match, Player } from '@prisma/client';
+import type { MatchPlayerWithDetails } from '../../cms/types';
 import { getTeam1Id, getTeam2Id, getTeam1Name, getTeam2Name } from '../../matches/lib/team-helpers';
 import { useGameTrackingStore } from '../stores/useGameTrackingStore';
-
-interface MatchPlayer {
-  id: string;
-  playerId: string;
-  teamId: string;
-  isActive: boolean;
-  player: Player;
-}
 
 interface QuickEventButtonsProps {
   matchId: string;
   match: Match | null;
   gameState: GameStateData | null;
   onEventRecorded?: () => void;
+  refreshTrigger?: number;
 }
 
 type QuickEventType =
@@ -72,13 +66,15 @@ export default function QuickEventButtons({
   match,
   gameState,
   onEventRecorded,
+  refreshTrigger,
 }: QuickEventButtonsProps) {
   const { localClockSeconds } = useGameTrackingStore();
   const [teamId, setTeamId] = useState<string>('');
   const [playerId, setPlayerId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [matchPlayers, setMatchPlayers] = useState<MatchPlayer[]>([]);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [matchPlayers, setMatchPlayers] = useState<MatchPlayerWithDetails[]>([]);
 
   const team1Id = match ? getTeam1Id(match) : null;
   const team2Id = match ? getTeam2Id(match) : null;
@@ -90,22 +86,32 @@ export default function QuickEventButtons({
     team2Id && { id: team2Id, name: team2Name },
   ].filter(Boolean) as Array<{ id: string; name: string }>;
 
+  // Filter players for the selected team, with fallback logic
   const teamPlayers = teamId
-    ? matchPlayers.filter((mp) => mp.teamId === teamId && mp.isActive)
+    ? (() => {
+        const currentMatchTeamPlayers = matchPlayers.filter((mp) => mp.teamId === teamId && mp.player);
+        const hasAnyActive = currentMatchTeamPlayers.some((mp) => mp.isActive);
+        // If any players are active, show only active players; otherwise show players who started
+        return hasAnyActive
+          ? currentMatchTeamPlayers.filter((mp) => mp.isActive)
+          : currentMatchTeamPlayers.filter((mp) => mp.started);
+      })()
     : [];
 
-  const fetchMatchPlayers = async () => {
+  const fetchMatchPlayers = useCallback(async () => {
     if (!matchId) return;
     try {
       const response = await fetch(`/api/matches/${matchId}/players`);
       if (response.ok) {
         const data = await response.json();
-        setMatchPlayers(data);
+        setMatchPlayers(data || []);
+      } else {
+        console.error('Failed to fetch match players:', response.status, response.statusText);
       }
     } catch (err) {
       console.error('Failed to fetch match players:', err);
     }
-  };
+  }, [matchId]);
 
   // Set default team when component mounts
   useEffect(() => {
@@ -120,12 +126,29 @@ export default function QuickEventButtons({
     if (matchId) {
       fetchMatchPlayers();
     }
-  }, [matchId]);
+  }, [matchId, fetchMatchPlayers]);
 
   // Reset player selection when team changes
   useEffect(() => {
     setPlayerId('');
   }, [teamId]);
+
+  // Refresh match players when refreshTrigger changes (e.g., after substitutions)
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      fetchMatchPlayers();
+    }
+  }, [refreshTrigger, fetchMatchPlayers]);
+
+  // Auto-hide success message after 3 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const handleQuickEvent = async (eventType: QuickEventType) => {
     if (!teamId || !playerId) {
@@ -163,11 +186,15 @@ export default function QuickEventButtons({
       }
 
       setError(null);
+      setSuccess('Event recorded successfully!');
+      // Clear inputs after successful event recording
+      setPlayerId('');
       onEventRecorded?.();
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to record event';
       console.error('Quick event error:', err);
       setError(errorMessage);
+      setSuccess(null);
     } finally {
       setLoading(false);
     }
@@ -233,6 +260,13 @@ export default function QuickEventButtons({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert className="border-green-500/50 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 

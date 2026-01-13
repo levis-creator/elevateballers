@@ -135,4 +135,3 @@ export const formLabel = "text-sm font-semibold text-slate-700";
  * Helper text with smaller size and muted slate color
  */
 export const formHelperText = "text-xs text-slate-500";
-
