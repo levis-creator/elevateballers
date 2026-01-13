@@ -1121,6 +1121,9 @@ export async function deleteMatchPlayer(id: string): Promise<boolean> {
  */
 export async function createMatchEvent(data: CreateMatchEventInput): Promise<MatchEvent | null> {
   try {
+    // Import scoring utilities
+    const { isScoringEvent, updateMatchScoresFromEvents } = await import('../../game-tracking/lib/score-calculation');
+
     // Get current game state if period/secondsRemaining not provided
     let period = data.period;
     let secondsRemaining = data.secondsRemaining;
@@ -1145,6 +1148,8 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
     // Calculate sequence number
     const { getNextSequenceNumber } = await import('../../game-tracking/lib/utils');
     const sequenceNumber = await getNextSequenceNumber(data.matchId, prisma);
+
+    const isScoring = isScoringEvent(data.eventType);
 
     // If PLAY_RESUMED event, update match period and clock
     if (data.eventType === 'PLAY_RESUMED') {
@@ -1172,7 +1177,7 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
           });
 
           // Create the event
-          return await tx.matchEvent.create({
+          const event = await tx.matchEvent.create({
             data: {
               matchId: data.matchId,
               eventType: data.eventType,
@@ -1187,10 +1192,44 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
               metadata: data.metadata,
             },
           });
+
+          // Update scores if scoring event (PLAY_RESUMED is not scoring, but keeping pattern consistent)
+          if (isScoring) {
+            await updateMatchScoresFromEvents(data.matchId, tx);
+          }
+
+          return event;
         });
       }
     }
 
+    // For scoring events, use transaction to ensure atomicity
+    if (isScoring) {
+      return await prisma.$transaction(async (tx) => {
+        const event = await tx.matchEvent.create({
+          data: {
+            matchId: data.matchId,
+            eventType: data.eventType,
+            minute: data.minute,
+            period: period ?? 1,
+            secondsRemaining: secondsRemaining ?? null,
+            sequenceNumber,
+            teamId: data.teamId,
+            playerId: data.playerId,
+            assistPlayerId: data.assistPlayerId,
+            description: data.description,
+            metadata: data.metadata,
+          },
+        });
+
+        // Update scores after creating scoring event
+        await updateMatchScoresFromEvents(data.matchId, tx);
+
+        return event;
+      });
+    }
+
+    // Non-scoring events don't need transaction
     return await prisma.matchEvent.create({
       data: {
         matchId: data.matchId,
@@ -1217,15 +1256,24 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
  */
 export async function updateMatchEvent(id: string, data: UpdateMatchEventInput): Promise<MatchEvent | null> {
   try {
-    // Get the existing event to check if it's PLAY_RESUMED
+    // Import scoring utilities
+    const { isScoringEvent, updateMatchScoresFromEvents } = await import('../../game-tracking/lib/score-calculation');
+
+    // Get the existing event to check if it's PLAY_RESUMED and for score recalculation
     const existingEvent = await prisma.matchEvent.findUnique({
       where: { id },
-      select: { eventType: true, matchId: true },
+      select: { eventType: true, matchId: true, isUndone: true },
     });
 
     if (!existingEvent) {
       return null;
     }
+
+    const wasScoringEvent = isScoringEvent(existingEvent.eventType);
+    const isNowScoringEvent = data.eventType ? isScoringEvent(data.eventType) : wasScoringEvent;
+    const isUndoneChanged = data.isUndone !== undefined && data.isUndone !== existingEvent.isUndone;
+    const eventTypeChanged = data.eventType !== undefined && data.eventType !== existingEvent.eventType;
+    const needsScoreRecalculation = (wasScoringEvent || isNowScoringEvent) && (isUndoneChanged || eventTypeChanged);
 
     // If updating PLAY_RESUMED event and period/secondsRemaining changed, update match
     if (existingEvent.eventType === 'PLAY_RESUMED' && (data.period !== undefined || data.secondsRemaining !== undefined)) {
@@ -1252,7 +1300,7 @@ export async function updateMatchEvent(id: string, data: UpdateMatchEventInput):
           });
 
           // Update the event with resolved period/seconds
-          return await tx.matchEvent.update({
+          const updatedEvent = await tx.matchEvent.update({
             where: { id },
             data: {
               ...data,
@@ -1260,10 +1308,33 @@ export async function updateMatchEvent(id: string, data: UpdateMatchEventInput):
               secondsRemaining: targetSeconds,
             },
           });
+
+          // Update scores if needed (PLAY_RESUMED is not scoring, but keeping pattern consistent)
+          if (needsScoreRecalculation) {
+            await updateMatchScoresFromEvents(existingEvent.matchId, tx);
+          }
+
+          return updatedEvent;
         });
       }
     }
 
+    // For scoring events that need recalculation, use transaction
+    if (needsScoreRecalculation) {
+      return await prisma.$transaction(async (tx) => {
+        const updatedEvent = await tx.matchEvent.update({
+          where: { id },
+          data,
+        });
+
+        // Recalculate scores after update
+        await updateMatchScoresFromEvents(existingEvent.matchId, tx);
+
+        return updatedEvent;
+      });
+    }
+
+    // Non-scoring events or scoring events without changes that affect scores
     return await prisma.matchEvent.update({
       where: { id },
       data,
@@ -1279,9 +1350,40 @@ export async function updateMatchEvent(id: string, data: UpdateMatchEventInput):
  */
 export async function deleteMatchEvent(id: string): Promise<boolean> {
   try {
-    await prisma.matchEvent.delete({
+    // Import scoring utilities
+    const { isScoringEvent, updateMatchScoresFromEvents } = await import('../../game-tracking/lib/score-calculation');
+
+    // Get the event before deleting to check if it's a scoring event
+    const existingEvent = await prisma.matchEvent.findUnique({
       where: { id },
+      select: { eventType: true, matchId: true },
     });
+
+    if (!existingEvent) {
+      return false;
+    }
+
+    const wasScoringEvent = isScoringEvent(existingEvent.eventType);
+
+    // If it's a scoring event, recalculate scores after deletion
+    // (calculateScoresFromEvents already filters out undone events, so we always recalculate)
+    if (wasScoringEvent) {
+      await prisma.$transaction(async (tx) => {
+        // Delete the event
+        await tx.matchEvent.delete({
+          where: { id },
+        });
+
+        // Recalculate scores after deleting scoring event
+        await updateMatchScoresFromEvents(existingEvent.matchId, tx);
+      });
+    } else {
+      // Non-scoring events don't need score recalculation
+      await prisma.matchEvent.delete({
+        where: { id },
+      });
+    }
+
     return true;
   } catch (error) {
     console.error('Error deleting match event:', error);
