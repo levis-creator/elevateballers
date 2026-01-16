@@ -169,6 +169,11 @@ export async function getFilteredMatches(
     }
   }
 
+  // Season filter
+  if (filter.seasonId) {
+    where.seasonId = filter.seasonId;
+  }
+
   // Team filter - matches where team is either team1 or team2
   if (filter.teamId) {
     const teamFilter = {

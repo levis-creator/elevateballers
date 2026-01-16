@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
+import SeasonMatchesList from '../../../../features/cms/components/SeasonMatchesList';
+import { checkAuth } from '../../../../features/cms/lib/auth-astro';
+
+const user = await checkAuth(Astro.request);
+if (!user) {
+  return Astro.redirect('/admin/login', 302);
+}
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/leagues', 302);
+}
+---
+
+<AdminLayout title="Season Matches - Admin">
+  <SeasonMatchesList seasonId={id} client:load />
+</AdminLayout>

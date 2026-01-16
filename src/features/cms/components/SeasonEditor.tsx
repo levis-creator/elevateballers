@@ -25,6 +25,7 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [leagues, setLeagues] = useState<League[]>([]);
+  const [currentLeagueId, setCurrentLeagueId] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -61,13 +62,15 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
       const season: Season = await response.json();
 
       const seasonWithLeague = season as Season & { league: League };
+      const leagueId = seasonWithLeague.league?.id || (season as any).leagueId || '';
+      setCurrentLeagueId(leagueId);
       setFormData({
         name: season.name,
         slug: season.slug,
         description: season.description || '',
         startDate: new Date(season.startDate).toISOString().slice(0, 10),
         endDate: new Date(season.endDate).toISOString().slice(0, 10),
-        leagueId: seasonWithLeague.league?.id || (season as any).leagueId || '',
+        leagueId: leagueId,
         active: season.active,
       });
     } catch (err: any) {
@@ -107,7 +110,13 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
         throw new Error(errorData.error || 'Failed to save season');
       }
 
-      window.location.href = '/admin/seasons';
+      // Redirect to league editor if we have leagueId, otherwise to leagues list
+      const redirectLeagueId = formData.leagueId || currentLeagueId;
+      if (redirectLeagueId) {
+        window.location.href = `/admin/leagues/${redirectLeagueId}`;
+      } else {
+        window.location.href = '/admin/leagues';
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to save season');
     } finally {
@@ -138,9 +147,9 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
           </p>
         </div>
         <Button variant="outline" asChild>
-          <a href="/admin/seasons" data-astro-prefetch>
+          <a href={currentLeagueId ? `/admin/leagues/${currentLeagueId}` : '/admin/leagues'} data-astro-prefetch>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to List
+            Back to {currentLeagueId ? 'League' : 'Leagues'}
           </a>
         </Button>
       </div>
@@ -292,7 +301,7 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
             )}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <a href="/admin/seasons" data-astro-prefetch>
+            <a href={currentLeagueId || formData.leagueId ? `/admin/leagues/${currentLeagueId || formData.leagueId}` : '/admin/leagues'} data-astro-prefetch>
               <X className="mr-2 h-4 w-4" />
               Cancel
             </a>

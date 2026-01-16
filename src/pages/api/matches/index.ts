@@ -90,6 +90,12 @@ export const GET: APIRoute = async ({ request }) => {
       filter.teamId = teamIdParam;
     }
     
+    // Season filter
+    const seasonIdParam = url.searchParams.get('seasonId');
+    if (seasonIdParam) {
+      filter.seasonId = seasonIdParam;
+    }
+    
     // Date range filters
     const dateFromParam = url.searchParams.get('dateFrom');
     const dateToParam = url.searchParams.get('dateTo');
