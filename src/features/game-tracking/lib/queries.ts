@@ -159,7 +159,7 @@ export async function getGameStateHistory(matchId: string): Promise<GameStateWit
 }
 
 /**
- * Get match periods
+ * Get match quarters
  */
 export async function getMatchPeriods(matchId: string): Promise<MatchPeriod[]> {
   return await prisma.matchPeriod.findMany({
@@ -169,7 +169,7 @@ export async function getMatchPeriods(matchId: string): Promise<MatchPeriod[]> {
 }
 
 /**
- * Get match period by number
+ * Get match quarter by number
  */
 export async function getMatchPeriod(
   matchId: string,
@@ -200,7 +200,7 @@ export async function getMatchTimeouts(matchId: string): Promise<TimeoutWithRela
 }
 
 /**
- * Get timeouts for a specific period
+ * Get timeouts for a specific quarter
  */
 export async function getPeriodTimeouts(
   matchId: string,
@@ -271,7 +271,7 @@ export async function getMatchSubstitutions(matchId: string): Promise<Substituti
 }
 
 /**
- * Get substitutions for a specific period
+ * Get substitutions for a specific quarter
  */
 export async function getPeriodSubstitutions(
   matchId: string,
@@ -338,7 +338,7 @@ export async function getMatchJumpBalls(matchId: string): Promise<JumpBallWithRe
 }
 
 /**
- * Get jump balls for a specific period
+ * Get jump balls for a specific quarter
  */
 export async function getPeriodJumpBalls(
   matchId: string,

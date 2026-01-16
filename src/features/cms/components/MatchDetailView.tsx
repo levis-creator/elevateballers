@@ -232,7 +232,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
   };
 
   const shouldShowPeriodAndSeconds = (eventType: string) => {
-    // All events benefit from period and seconds tracking
+    // All events benefit from quarter and seconds tracking
     return true;
   };
 
@@ -496,7 +496,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="modal-period">
-                Period <span className="text-destructive">*</span>
+                Quarter <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="modal-period"

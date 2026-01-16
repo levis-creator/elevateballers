@@ -330,7 +330,7 @@ export default function SeasonList() {
                 <TableHead>
                   <div className="flex items-center gap-2">
                     {CalendarRangeIcon ? <CalendarRangeIcon size={16} /> : null}
-                    Period
+                    Quarter
                   </div>
                 </TableHead>
                 <TableHead>League</TableHead>

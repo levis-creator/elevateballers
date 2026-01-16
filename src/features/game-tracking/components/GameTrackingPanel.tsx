@@ -113,6 +113,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
         <div>
           <GameClock
             gameState={gameState}
+            match={match}
             onToggleClock={handleToggleClock}
             onStartGame={match?.status !== 'LIVE' ? handleStartGame : undefined}
             isLoading={isLoading}

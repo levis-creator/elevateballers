@@ -130,7 +130,7 @@ export function generatePlayerStatisticsCSV(data: {
  */
 export function generatePlayByPlayCSV(events: any[]): string {
   const rows = events.map((event) => ({
-    Period: event.period,
+    Quarter: event.period,
     Time: event.secondsRemaining
       ? `${Math.floor(event.secondsRemaining / 60)}:${(event.secondsRemaining % 60).toString().padStart(2, '0')}`
       : `${event.minute}'`,

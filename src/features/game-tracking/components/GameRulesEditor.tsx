@@ -154,13 +154,13 @@ export default function GameRulesEditor({ rulesId, onSave }: GameRulesEditorProp
 
       <Card>
         <CardHeader>
-          <CardTitle>Period Configuration</CardTitle>
+          <CardTitle>Quarter Configuration</CardTitle>
           <CardDescription>Game structure settings</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="numberOfPeriods">Number of Periods</Label>
+              <Label htmlFor="numberOfPeriods">Number of Quarters</Label>
               <Input
                 id="numberOfPeriods"
                 type="number"
@@ -170,7 +170,7 @@ export default function GameRulesEditor({ rulesId, onSave }: GameRulesEditorProp
               />
             </div>
             <div>
-              <Label htmlFor="minutesPerPeriod">Minutes per Period</Label>
+              <Label htmlFor="minutesPerPeriod">Minutes per Quarter</Label>
               <Input
                 id="minutesPerPeriod"
                 type="number"
@@ -192,7 +192,7 @@ export default function GameRulesEditor({ rulesId, onSave }: GameRulesEditorProp
               />
             </div>
             <div>
-              <Label htmlFor="halftimePeriod">Halftime Period</Label>
+              <Label htmlFor="halftimePeriod">Halftime Quarter</Label>
               <Input
                 id="halftimePeriod"
                 type="number"
@@ -258,7 +258,7 @@ export default function GameRulesEditor({ rulesId, onSave }: GameRulesEditorProp
               checked={formData.resetTimeoutsPerPeriod}
               onCheckedChange={(checked) => handleChange('resetTimeoutsPerPeriod', checked)}
             />
-            <Label htmlFor="resetTimeoutsPerPeriod">Reset timeouts per period</Label>
+            <Label htmlFor="resetTimeoutsPerPeriod">Reset timeouts per quarter</Label>
           </div>
         </CardContent>
       </Card>

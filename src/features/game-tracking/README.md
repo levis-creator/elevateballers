@@ -5,12 +5,12 @@ Comprehensive basketball game tracking system for real-time game state managemen
 ## Overview
 
 The game tracking feature provides:
-- Real-time game state management (clock, score, periods, fouls, timeouts)
+- Real-time game state management (clock, score, quarters, fouls, timeouts)
 - Play-by-play event logging
 - Game rules configuration
 - Timeout tracking
 - Substitution tracking
-- Period management
+- Quarter management
 
 ## Architecture
 
@@ -19,7 +19,7 @@ src/features/game-tracking/
 ├── lib/
 │   ├── queries.ts      # Database read operations
 │   ├── mutations.ts    # Database write operations
-│   └── utils.ts        # Utility functions (clock formatting, period management)
+│   └── utils.ts        # Utility functions (clock formatting, quarter management)
 ├── types.ts            # TypeScript type definitions
 └── README.md           # This file
 ```
@@ -28,26 +28,26 @@ src/features/game-tracking/
 
 ### GameRules
 Customizable game rules per match/league:
-- Number of periods, minutes per period
-- Halftime configuration (which period ends at halftime, halftime duration)
+- Number of quarters, minutes per quarter
+- Halftime configuration (which quarter ends at halftime, halftime duration)
 - Timeout configuration (60s, 30s, overtime)
 - Foul limits (bonus, double bonus, foul out)
 - Feature flags (track turnover types, foul types, shot locations, etc.)
 
 ### GameState
 Real-time game state snapshot:
-- Period, clock seconds, clock running
+- Quarter, clock seconds, clock running
 - Scores, fouls, timeouts per team
 - Possession team
 
 ### MatchPeriod
-Period tracking with start/end times and period-specific scores/fouls.
+Quarter tracking with start/end times and quarter-specific scores/fouls.
 
 ### Timeout
-Timeout records with team, period, type (60s/30s), and timing.
+Timeout records with team, quarter, type (60s/30s), and timing.
 
 ### Substitution
-Substitution records with players in/out, period, and timing.
+Substitution records with players in/out, quarter, and timing.
 
 ## API Routes
 
@@ -123,7 +123,7 @@ const display = formatClockTime(600); // "10:00"
 const parsed = parseClockTime("10:00"); // 600
 ```
 
-### Period Management
+### Quarter Management
 
 ```typescript
 import { getPeriodLabel, isOvertimePeriod } from '../features/game-tracking/lib/utils';
@@ -136,8 +136,8 @@ const isOT = isOvertimePeriod(5, 4); // true
 ## Integration with Match Events
 
 Match events now include:
-- `period` - Period number
-- `secondsRemaining` - Seconds remaining in period
+- `period` - Quarter number
+- `secondsRemaining` - Seconds remaining in quarter
 - `sequenceNumber` - Event sequence for ordering
 - `isUndone` - Soft delete flag for undo functionality
 

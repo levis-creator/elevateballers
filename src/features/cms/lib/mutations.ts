@@ -1124,7 +1124,7 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
     // Import scoring utilities
     const { isScoringEvent, updateMatchScoresFromEvents } = await import('../../game-tracking/lib/score-calculation');
 
-    // Get current game state if period/secondsRemaining not provided
+    // Get current game state if quarter/secondsRemaining not provided
     let period = data.period;
     let secondsRemaining = data.secondsRemaining;
 
@@ -1151,7 +1151,7 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
 
     const isScoring = isScoringEvent(data.eventType);
 
-    // If PLAY_RESUMED event, update match period and clock
+    // If PLAY_RESUMED event, update match quarter and clock
     if (data.eventType === 'PLAY_RESUMED') {
       const match = await prisma.match.findUnique({
         where: { id: data.matchId },
@@ -1275,7 +1275,7 @@ export async function updateMatchEvent(id: string, data: UpdateMatchEventInput):
     const eventTypeChanged = data.eventType !== undefined && data.eventType !== existingEvent.eventType;
     const needsScoreRecalculation = (wasScoringEvent || isNowScoringEvent) && (isUndoneChanged || eventTypeChanged);
 
-    // If updating PLAY_RESUMED event and period/secondsRemaining changed, update match
+    // If updating PLAY_RESUMED event and quarter/secondsRemaining changed, update match
     if (existingEvent.eventType === 'PLAY_RESUMED' && (data.period !== undefined || data.secondsRemaining !== undefined)) {
       const match = await prisma.match.findUnique({
         where: { id: existingEvent.matchId },

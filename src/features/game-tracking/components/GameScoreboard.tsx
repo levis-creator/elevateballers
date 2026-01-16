@@ -1,6 +1,6 @@
 /**
  * Game Scoreboard Component
- * Displays scores, fouls, timeouts, and period information
+ * Displays scores, fouls, timeouts, and quarter information
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
