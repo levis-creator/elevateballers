@@ -31,7 +31,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Edit, Users, Shield, User, FileText, Plus, Briefcase, Mail, Phone, X, Info, AlertCircle, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Edit, Users, Shield, User, FileText, Plus, Briefcase, Mail, Phone, X, Info, AlertCircle, Loader2, CheckCircle, XCircle, Trophy, Calendar, Clock } from 'lucide-react';
+import { calculateTeamMatchStats, formatFieldGoalPercentage } from '../lib/matchStats';
 
 interface TeamViewProps {
   teamId: string;
@@ -52,6 +53,9 @@ export default function TeamView({ teamId }: TeamViewProps) {
   const [addingStaff, setAddingStaff] = useState(false);
   const [removeStaffId, setRemoveStaffId] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [matchStats, setMatchStats] = useState<Record<string, any>>({});
+  const [loadingMatches, setLoadingMatches] = useState(true);
 
   useEffect(() => {
     fetchTeam();
@@ -61,6 +65,7 @@ export default function TeamView({ teamId }: TeamViewProps) {
     if (team) {
       fetchTeamStaff();
       fetchAvailableStaff();
+      fetchTeamMatches();
     }
   }, [team?.id]);
 
@@ -236,6 +241,111 @@ export default function TeamView({ teamId }: TeamViewProps) {
     (s) => !staff.some((ts) => ts.staffId === s.id)
   );
 
+  const fetchTeamMatches = async () => {
+    if (!team) return;
+    try {
+      setLoadingMatches(true);
+      const response = await fetch(`/api/matches?teamId=${team.id}&sort=date-desc`);
+      if (response.ok) {
+        const data = await response.json();
+        setMatches(data);
+        
+        // Fetch stats for completed matches
+        const statsPromises = data
+          .filter((match: any) => match.status === 'COMPLETED')
+          .map(async (match: any) => {
+            try {
+              const eventsRes = await fetch(`/api/matches/${match.id}/events?teamId=${team.id}`);
+              if (eventsRes.ok) {
+                const events = await eventsRes.json();
+                const stats = calculateTeamMatchStats(team.id, events);
+                return { matchId: match.id, stats };
+              }
+            } catch (err) {
+              console.error(`Error fetching stats for match ${match.id}:`, err);
+            }
+            return { matchId: match.id, stats: null };
+          });
+        
+        const statsResults = await Promise.all(statsPromises);
+        const statsMap: Record<string, any> = {};
+        statsResults.forEach(({ matchId, stats }) => {
+          if (stats) statsMap[matchId] = stats;
+        });
+        setMatchStats(statsMap);
+      }
+    } catch (err) {
+      console.error('Error fetching team matches:', err);
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
+
+  // Group matches by league and sort within each league
+  const getMatchesByLeague = () => {
+    const leagueMap = new Map<string, any[]>();
+    
+    matches.forEach((match) => {
+      const leagueKey = match.league?.id || match.leagueId || 'no-league';
+      const leagueName = match.league?.name || match.leagueName || 'No League';
+      
+      if (!leagueMap.has(leagueKey)) {
+        leagueMap.set(leagueKey, {
+          leagueId: leagueKey,
+          leagueName,
+          matches: [],
+        });
+      }
+      
+      leagueMap.get(leagueKey)!.matches.push(match);
+    });
+    
+    // Sort matches within each league by date (most recent first)
+    leagueMap.forEach((leagueData) => {
+      leagueData.matches.sort((a: any, b: any) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA; // Descending order (most recent first)
+      });
+    });
+    
+    return Array.from(leagueMap.values());
+  };
+
+  const getTeamScore = (match: any) => {
+    if (!team) return null;
+    if (match.team1Id === team.id) return match.team1Score;
+    if (match.team2Id === team.id) return match.team2Score;
+    return null;
+  };
+
+  const getOpponentScore = (match: any) => {
+    if (!team) return null;
+    if (match.team1Id === team.id) return match.team2Score;
+    if (match.team2Id === team.id) return match.team1Score;
+    return null;
+  };
+
+  const getOpponent = (match: any) => {
+    if (!team) return null;
+    if (match.team1Id === team.id) {
+      return match.team2 || { name: match.team2Name || 'Opponent' };
+    }
+    if (match.team2Id === team.id) {
+      return match.team1 || { name: match.team1Name || 'Opponent' };
+    }
+    return null;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -400,7 +510,13 @@ export default function TeamView({ teamId }: TeamViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {players.map((player) => (
-                <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <Card 
+                  key={player.id} 
+                  className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full"
+                  onClick={() => {
+                    window.location.href = `/admin/players/view/${player.id}`;
+                  }}
+                >
                   {player.image ? (
                     <div className="w-full h-48 overflow-hidden bg-muted">
                       <img
@@ -444,7 +560,7 @@ export default function TeamView({ teamId }: TeamViewProps) {
                         {player.bio.length > 100 ? `${player.bio.substring(0, 100)}...` : player.bio}
                       </p>
                     )}
-                    <div className="pt-4 border-t">
+                    <div className="pt-4 border-t" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="sm" asChild className="w-full">
                         <a href={`/admin/players/${player.id}`} data-astro-prefetch>
                           <Edit className="mr-2 h-4 w-4" />
@@ -568,6 +684,177 @@ export default function TeamView({ teamId }: TeamViewProps) {
                     </div>
                   </CardContent>
                 </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Matches Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-6 w-6" />
+                Matches ({matches.length})
+              </CardTitle>
+              <CardDescription>All matches involving this team, organized by league</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingMatches ? (
+            <div className="space-y-4">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          ) : matches.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed rounded-lg">
+              <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">No matches yet</h3>
+              <p className="text-muted-foreground">This team hasn't played any matches yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {getMatchesByLeague().map((leagueData) => (
+                <div key={leagueData.leagueId} className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-xl font-semibold text-foreground">{leagueData.leagueName}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {leagueData.matches.length} {leagueData.matches.length === 1 ? 'match' : 'matches'}
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {leagueData.matches.map((match: any) => {
+                      const teamScore = getTeamScore(match);
+                      const opponentScore = getOpponentScore(match);
+                      const opponent = getOpponent(match);
+                      const isWin = match.status === 'COMPLETED' && teamScore !== null && opponentScore !== null && teamScore > opponentScore;
+                      const isLoss = match.status === 'COMPLETED' && teamScore !== null && opponentScore !== null && teamScore < opponentScore;
+                      const isDraw = match.status === 'COMPLETED' && teamScore !== null && opponentScore !== null && teamScore === opponentScore;
+                      const stats = matchStats[match.id];
+                      
+                      return (
+                        <Card key={match.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="space-y-4">
+                              {/* Match Header */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-lg">{team.name}</span>
+                                      {match.status === 'COMPLETED' && teamScore !== null && (
+                                        <span className={`text-2xl font-bold ${isWin ? 'text-green-600' : isLoss ? 'text-red-600' : 'text-gray-600'}`}>
+                                          {teamScore}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-muted-foreground">vs</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-lg">{opponent?.name || 'Opponent'}</span>
+                                      {match.status === 'COMPLETED' && opponentScore !== null && (
+                                        <span className={`text-2xl font-bold ${isLoss ? 'text-green-600' : isWin ? 'text-red-600' : 'text-gray-600'}`}>
+                                          {opponentScore}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="h-4 w-4" />
+                                      {formatDate(match.date)}
+                                    </div>
+                                    {match.stage && (
+                                      <Badge variant="outline">{match.stage.replace(/_/g, ' ')}</Badge>
+                                    )}
+                                    <Badge
+                                      variant={
+                                        match.status === 'LIVE'
+                                          ? 'destructive'
+                                          : match.status === 'COMPLETED'
+                                          ? 'default'
+                                          : 'secondary'
+                                      }
+                                    >
+                                      {match.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <a href={`/admin/matches/view/${match.id}`} data-astro-prefetch>
+                                      View Details
+                                    </a>
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Match Statistics Summary */}
+                              {match.status === 'COMPLETED' && stats && (
+                                <div className="pt-4 border-t">
+                                  <h4 className="text-sm font-semibold mb-3 text-muted-foreground">Team Statistics</h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                      <div className="text-muted-foreground">Points</div>
+                                      <div className="font-semibold text-lg">{stats.points}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">FG</div>
+                                      <div className="font-semibold">
+                                        {stats.fieldGoalsMade}/{stats.fieldGoalsAttempted}
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          ({formatFieldGoalPercentage(stats.fieldGoalsMade, stats.fieldGoalsAttempted)})
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">3PT</div>
+                                      <div className="font-semibold">
+                                        {stats.threePointersMade}/{stats.threePointersAttempted}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">FT</div>
+                                      <div className="font-semibold">
+                                        {stats.freeThrowsMade}/{stats.freeThrowsAttempted}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">Rebounds</div>
+                                      <div className="font-semibold">{stats.rebounds}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">Assists</div>
+                                      <div className="font-semibold">{stats.assists}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">Steals</div>
+                                      <div className="font-semibold">{stats.steals}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">Blocks</div>
+                                      <div className="font-semibold">{stats.blocks}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">Turnovers</div>
+                                      <div className="font-semibold">{stats.turnovers}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-muted-foreground">Fouls</div>
+                                      <div className="font-semibold">{stats.fouls}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
           )}

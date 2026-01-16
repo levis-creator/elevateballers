@@ -169,6 +169,42 @@ export async function getFilteredMatches(
     }
   }
 
+  // Team filter - matches where team is either team1 or team2
+  if (filter.teamId) {
+    const teamFilter = {
+      OR: [
+        { team1Id: filter.teamId },
+        { team2Id: filter.teamId },
+      ],
+    };
+
+    // If search filter also exists, we need to combine OR conditions
+    if (filter.search) {
+      const searchFilter = {
+        OR: [
+          { team1Name: { contains: filter.search, mode: 'insensitive' } },
+          { team2Name: { contains: filter.search, mode: 'insensitive' } },
+          { league: { contains: filter.search, mode: 'insensitive' } },
+        ],
+      };
+      // Combine both filters with AND
+      where.AND = [
+        teamFilter,
+        searchFilter,
+      ];
+    } else {
+      // Just apply team filter
+      where.OR = teamFilter.OR;
+    }
+  } else if (filter.search) {
+    // Only search filter, no team filter
+    where.OR = [
+      { team1Name: { contains: filter.search, mode: 'insensitive' } },
+      { team2Name: { contains: filter.search, mode: 'insensitive' } },
+      { league: { contains: filter.search, mode: 'insensitive' } },
+    ];
+  }
+
   // Date range filter
   if (filter.dateFrom || filter.dateTo) {
     where.date = {};
@@ -178,15 +214,6 @@ export async function getFilteredMatches(
     if (filter.dateTo) {
       where.date.lte = filter.dateTo;
     }
-  }
-
-  // Search filter (team names or league)
-  if (filter.search) {
-    where.OR = [
-      { team1Name: { contains: filter.search, mode: 'insensitive' } },
-      { team2Name: { contains: filter.search, mode: 'insensitive' } },
-      { league: { contains: filter.search, mode: 'insensitive' } },
-    ];
   }
 
   // Sort options

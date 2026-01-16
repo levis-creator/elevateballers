@@ -46,6 +46,9 @@ export default function GameClock({
 }: GameClockProps) {
   const { localClockSeconds, setLocalClockSeconds, updateGameState } = useGameTrackingStore();
   
+  // Check if match is live
+  const isMatchLive = match?.status === 'LIVE';
+  
   // Extract gameRules from match with fallback defaults
   const gameRules = match?.gameRules;
   const numberOfPeriods = gameRules?.numberOfPeriods ?? 4;
@@ -136,6 +139,11 @@ export default function GameClock({
 
   // Keyboard shortcuts
   useEffect(() => {
+    // Disable keyboard shortcuts if match is not live
+    if (!isMatchLive) {
+      return;
+    }
+
     const handleKeyPress = (e: KeyboardEvent) => {
       // Only handle if not typing in an input
       if (
@@ -180,7 +188,7 @@ export default function GameClock({
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [gameState, isLoading, onToggleClock, localClockSeconds, match, setLocalClockSeconds, updateGameState]);
+  }, [gameState, isLoading, onToggleClock, localClockSeconds, match, setLocalClockSeconds, updateGameState, isMatchLive]);
 
   // Calculate display time from local clock seconds
   const displayTime = localClockSeconds !== null ? formatClockTime(localClockSeconds) : '00:00';
@@ -195,7 +203,7 @@ export default function GameClock({
 
   // Handle manual time input submission
   const handleTimeSubmit = async () => {
-    if (!gameState || !match) return;
+    if (!gameState || !match || !isMatchLive) return;
 
     const parsedSeconds = parseClockTime(timeInput);
     if (parsedSeconds === null || parsedSeconds < 0) {
@@ -224,7 +232,7 @@ export default function GameClock({
 
   // Handle quarter change
   const handlePeriodChange = async (newPeriod: number) => {
-    if (!gameState || !match || gameState.clockRunning) return;
+    if (!gameState || !match || gameState.clockRunning || !isMatchLive) return;
 
     setPeriodInput(newPeriod);
 
@@ -236,7 +244,7 @@ export default function GameClock({
 
   // Handle duration change
   const handleDurationChange = async () => {
-    if (!gameState || !match || gameState.clockRunning) return;
+    if (!gameState || !match || gameState.clockRunning || !isMatchLive) return;
 
     const parsedSeconds = parseClockTime(durationInput);
     if (parsedSeconds === null || parsedSeconds < 0) {
@@ -257,7 +265,7 @@ export default function GameClock({
 
   // Adjust time by seconds (only when paused)
   const adjustTime = async (seconds: number) => {
-    if (!gameState || !match || gameState.clockRunning) return;
+    if (!gameState || !match || gameState.clockRunning || !isMatchLive) return;
 
     const newSeconds = Math.max(0, (localClockSeconds ?? 0) + seconds);
     setLocalClockSeconds(newSeconds);
@@ -270,7 +278,7 @@ export default function GameClock({
 
   // Handle reset - reset to the duration that was set (manually or quarter start)
   const handleReset = async () => {
-    if (!gameState || !match || gameState.clockRunning) return;
+    if (!gameState || !match || gameState.clockRunning || !isMatchLive) return;
 
     // Use the set duration if available, otherwise fall back to quarter duration
     let resetSeconds: number;
@@ -332,12 +340,12 @@ export default function GameClock({
                 : ''
             }`}
             onClick={() => {
-              if (!gameState.clockRunning && !isEditingTime) {
+              if (!gameState.clockRunning && !isEditingTime && isMatchLive) {
                 setIsEditingTime(true);
                 setTimeInput(displayTime);
               }
             }}
-            style={{ cursor: gameState.clockRunning ? 'default' : 'pointer' }}
+            style={{ cursor: (gameState.clockRunning || !isMatchLive) ? 'default' : 'pointer' }}
           >
             {isEditingTime ? (
               <Input
@@ -363,7 +371,7 @@ export default function GameClock({
           <div className="flex items-center justify-center gap-2">
             <Button
               onClick={onToggleClock}
-              disabled={isLoading}
+              disabled={isLoading || !isMatchLive}
               variant={gameState.clockRunning ? 'destructive' : 'default'}
               size="default"
               className="flex-1"
@@ -382,7 +390,7 @@ export default function GameClock({
             </Button>
             <Button
               onClick={openSettings}
-              disabled={isLoading || gameState.clockRunning}
+              disabled={isLoading || gameState.clockRunning || !isMatchLive}
               variant="outline"
               size="default"
               className="px-3"
@@ -391,8 +399,8 @@ export default function GameClock({
             </Button>
           </div>
 
-          {/* Quick Time Adjustments (only when paused) */}
-          {!gameState.clockRunning && (
+          {/* Quick Time Adjustments (only when paused and match is live) */}
+          {!gameState.clockRunning && isMatchLive && (
             <div className="space-y-2 pt-2 border-t">
               <div className="flex items-center justify-center gap-1.5 flex-wrap">
                 <Button
@@ -471,6 +479,15 @@ export default function GameClock({
             </div>
           )}
 
+          {/* Message when match is not live */}
+          {!isMatchLive && (
+            <div className="pt-2 border-t">
+              <p className="text-xs text-muted-foreground text-center">
+                Timer controls are disabled until match is live
+              </p>
+            </div>
+          )}
+
           {/* Keyboard Shortcuts Hint */}
           <div className="text-[10px] text-muted-foreground pt-1">
             <div>Space: Play/Pause | ↑↓: Adjust Time | R: Reset</div>
@@ -500,14 +517,14 @@ export default function GameClock({
                   }}
                   variant="outline"
                   size="sm"
-                  disabled={periodInput <= 1 || gameState.clockRunning}
+                  disabled={periodInput <= 1 || gameState.clockRunning || !isMatchLive}
                 >
                   <ChevronDown className="w-4 h-4" />
                 </Button>
                 <Select
                   value={periodInput.toString()}
                   onValueChange={(value) => handlePeriodChange(parseInt(value))}
-                  disabled={gameState.clockRunning}
+                  disabled={gameState.clockRunning || !isMatchLive}
                 >
                   <SelectTrigger className="flex-1">
                     <SelectValue />
@@ -526,7 +543,7 @@ export default function GameClock({
                   }}
                   variant="outline"
                   size="sm"
-                  disabled={gameState.clockRunning}
+                  disabled={gameState.clockRunning || !isMatchLive}
                 >
                   <ChevronUp className="w-4 h-4" />
                 </Button>
@@ -542,7 +559,7 @@ export default function GameClock({
                 onChange={(e) => setDurationInput(e.target.value)}
                 placeholder="10:00"
                 className="font-mono"
-                disabled={gameState.clockRunning}
+                disabled={gameState.clockRunning || !isMatchLive}
               />
             </div>
           </div>
@@ -552,7 +569,7 @@ export default function GameClock({
             </Button>
             <Button 
               onClick={handleDurationChange}
-              disabled={gameState.clockRunning}
+              disabled={gameState.clockRunning || !isMatchLive}
             >
               Apply
             </Button>
@@ -581,7 +598,7 @@ export default function GameClock({
             <Button variant="outline" onClick={() => setShowResetConfirm(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleReset}>
+            <Button variant="destructive" onClick={handleReset} disabled={!isMatchLive}>
               Reset
             </Button>
           </DialogFooter>

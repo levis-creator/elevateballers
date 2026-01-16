@@ -1,0 +1,26 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+export async function getStaticPaths() {
+  return [];
+}
+
+import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
+import { checkAuth } from '../../../../features/cms/lib/auth-astro';
+import PlayerView from '../../../../features/cms/components/PlayerView';
+
+const user = await checkAuth(Astro.request);
+if (!user) {
+  return Astro.redirect('/admin/login', 302);
+}
+
+const { id } = Astro.params;
+if (!id) {
+  return Astro.redirect('/admin/players', 302);
+}
+---
+
+<AdminLayout title="View Player - Admin">
+  <PlayerView playerId={id} client:load />
+</AdminLayout>

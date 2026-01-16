@@ -87,14 +87,18 @@ interface AddMatchEventModalProps {
   onClose: () => void;
   onSuccess: () => void;
   editEventId?: string | null;
+  matchStatus?: string;
 }
 
-function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSuccess, editEventId }: AddMatchEventModalProps) {
+function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSuccess, editEventId, matchStatus }: AddMatchEventModalProps) {
   const [teams, setTeams] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [gameState, setGameState] = useState<any>(null);
+  const isCompleted = matchStatus === 'COMPLETED';
+  const isLive = matchStatus === 'LIVE';
+  const isNotLive = matchStatus !== 'LIVE';
   const [formData, setFormData] = useState({
     eventType: 'TWO_POINT_MADE' as string,
     minute: '',
@@ -285,6 +289,19 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Block submission if match is not live
+    if (isNotLive) {
+      setError('Match must be live to add or edit events');
+      return;
+    }
+    
+    // Block submission if match is completed
+    if (isCompleted) {
+      setError('Cannot add or edit events in a completed match');
+      return;
+    }
+    
     setError('');
     setLoading(true);
 
@@ -379,6 +396,14 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
             {editEventId ? 'Update the event details.' : 'Record an event that occurred during this match (goal, card, substitution, etc.).'}
           </DialogDescription>
         </DialogHeader>
+        {isNotLive && (
+          <Alert variant="destructive">
+            {icons.AlertCircle ? <icons.AlertCircle className="h-4 w-4" /> : <span className="h-4 w-4" />}
+            <AlertDescription>
+              <strong>Match is not live.</strong> {isCompleted ? 'Cannot add or edit events in a completed match.' : 'Match must be live to add or edit events.'}
+            </AlertDescription>
+          </Alert>
+        )}
         {error && (
           <Alert variant="destructive">
             {icons.AlertCircle ? <icons.AlertCircle className="h-4 w-4" /> : <span className="h-4 w-4" />}
@@ -401,7 +426,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                   }))
                 }
                 required
-                disabled={!!editEventId}
+                disabled={!!editEventId || isNotLive}
               >
                 <SelectTrigger id="modal-eventType">
                   <SelectValue />
@@ -432,6 +457,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                 min="0"
                 max="120"
                 placeholder="23"
+                disabled={isNotLive}
               />
             </div>
 
@@ -451,6 +477,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                     }));
                   }}
                   required={needsTeam(formData.eventType)}
+                  disabled={isNotLive}
                 >
                   <SelectTrigger id="modal-teamId">
                     <SelectValue placeholder="Select a team" />
@@ -476,7 +503,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                   onValueChange={(value) =>
                     setFormData((prev) => ({ ...prev, playerId: value }))
                   }
-                  disabled={!formData.teamId}
+                  disabled={!formData.teamId || isNotLive}
                   required={requiresPlayer(formData.eventType)}
                 >
                   <SelectTrigger id="modal-playerId">
@@ -510,6 +537,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                 min="1"
                 max="10"
                 placeholder="1"
+                disabled={isNotLive}
               />
             </div>
 
@@ -527,6 +555,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                 min="0"
                 max="7200"
                 placeholder={gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : "Auto from clock"}
+                disabled={isNotLive}
               />
               {gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined && (
                 <p className="text-xs text-muted-foreground">
@@ -544,7 +573,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                 onValueChange={(value) =>
                   setFormData((prev) => ({ ...prev, assistPlayerId: value === "__none" ? "" : value }))
                 }
-                disabled={!formData.teamId}
+                disabled={!formData.teamId || isNotLive}
               >
                 <SelectTrigger id="modal-assistPlayerId">
                   <SelectValue placeholder="No assist" />
@@ -571,6 +600,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
                 setFormData((prev) => ({ ...prev, description: e.target.value }))
               }
               placeholder="Additional details about the event..."
+              disabled={isNotLive}
             />
           </div>
 
@@ -578,7 +608,7 @@ function AddMatchEventModal({ matchId, team1Id, team2Id, isOpen, onClose, onSucc
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || isNotLive}>
               {loading ? (
                 <>
                   {icons.Loader2 ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 h-4 w-4" />}
@@ -926,7 +956,8 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   const [isEndingGame, setIsEndingGame] = useState(false);
-  const { endGame } = useGameTrackingStore();
+  const [isStartingGame, setIsStartingGame] = useState(false);
+  const { endGame, startGame } = useGameTrackingStore();
   const [icons, setIcons] = useState<{
     Calendar?: ComponentType<any>;
     Clock?: ComponentType<any>;
@@ -1107,10 +1138,22 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
     return 'secondary';
   };
 
+  // Early return if no matchId
+  if (!matchId) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Alert variant="destructive">
+          <AlertDescription>Match ID is required</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   if (loading || (!match && !error)) {
     return (
-      <div className="space-y-4">
+      <div className="max-w-7xl mx-auto p-6 space-y-4">
         <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
     );
@@ -1150,6 +1193,30 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         </div>
         {match && (
           <div className="flex gap-2">
+            {match.status === 'UPCOMING' && (
+              <Button
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to start this game? This will change the match status to LIVE.')) {
+                    setIsStartingGame(true);
+                    try {
+                      await startGame(matchId);
+                      // Refresh the page to show updated status
+                      window.location.reload();
+                    } catch (error) {
+                      console.error('Failed to start game:', error);
+                      alert('Failed to start game. Please try again.');
+                      setIsStartingGame(false);
+                    }
+                  }
+                }}
+                disabled={isStartingGame}
+                variant="default"
+                size="default"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isStartingGame ? 'Starting...' : 'Start Match'}
+              </Button>
+            )}
             {match.status === 'LIVE' && (
               <Button
                 onClick={async () => {
@@ -1173,7 +1240,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                 {isEndingGame ? 'Ending...' : 'End Game'}
               </Button>
             )}
-            <Button asChild>
+            <Button asChild disabled={match?.status === 'COMPLETED'}>
               <a href={`/admin/matches/${matchId}`} data-astro-prefetch>
                 {icons.Edit ? <icons.Edit className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
             Edit Match
@@ -1274,6 +1341,18 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
             </CardContent>
           </Card>
 
+      {/* Alert for non-live matches */}
+      {match.status !== 'LIVE' && (
+        <Alert>
+          {icons.AlertCircle ? <icons.AlertCircle className="h-4 w-4" /> : <span className="h-4 w-4" />}
+          <AlertDescription>
+            <strong>Match is not live.</strong> {match.status === 'UPCOMING' 
+              ? 'Start the match to enable event tracking and timer controls. You can still add players to the match.' 
+              : 'This match has been completed. Event tracking and timer controls are no longer available.'}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Game Tracking Panel */}
       {match.status === 'LIVE' || match.status === 'UPCOMING' ? (
         <GameTrackingPanel matchId={matchId} match={match} />
@@ -1292,7 +1371,11 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                 </span>
               )}
                 </CardTitle>
-                <Button size="sm" variant="outline" onClick={() => setShowAddPlayerModal(true)}>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setShowAddPlayerModal(true)}
+                >
                   {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
             Add Player
                 </Button>
@@ -1397,7 +1480,12 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                 </span>
               )}
                 </CardTitle>
-                <Button size="sm" variant="outline" onClick={() => setShowAddEventModal(true)}>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setShowAddEventModal(true)}
+                  disabled={match?.status !== 'LIVE'}
+                >
                   {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
               Add Event
                 </Button>
@@ -1481,13 +1569,17 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditEvent(event.id)}>
+                              <DropdownMenuItem 
+                                onClick={() => handleEditEvent(event.id)}
+                                disabled={match?.status !== 'LIVE'}
+                              >
                                 {icons.Pencil ? <icons.Pencil className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setDeleteEventId(event.id)}
                                 className="text-destructive focus:text-destructive"
+                                disabled={match?.status !== 'LIVE'}
                               >
                                 {icons.Trash2 ? <icons.Trash2 className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
                                 Delete
@@ -1577,13 +1669,17 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditEvent(event.id)}>
+                              <DropdownMenuItem 
+                                onClick={() => handleEditEvent(event.id)}
+                                disabled={match?.status !== 'LIVE'}
+                              >
                                 {icons.Pencil ? <icons.Pencil className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setDeleteEventId(event.id)}
                                 className="text-destructive focus:text-destructive"
+                                disabled={match?.status !== 'LIVE'}
                               >
                                 {icons.Trash2 ? <icons.Trash2 className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
                                 Delete
@@ -1671,13 +1767,17 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEditEvent(event.id)}>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleEditEvent(event.id)}
+                                    disabled={match?.status !== 'LIVE'}
+                                  >
                                     {icons.Pencil ? <icons.Pencil className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
                                     Edit
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => setDeleteEventId(event.id)}
                                     className="text-destructive focus:text-destructive"
+                                    disabled={match?.status !== 'LIVE'}
                                   >
                                     {icons.Trash2 ? <icons.Trash2 className="h-4 w-4 mr-2" /> : <span className="h-4 w-4 mr-2" />}
                                     Delete
@@ -1726,6 +1826,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
             fetchMatchDetails();
           }}
           editEventId={editEventId}
+          matchStatus={match?.status}
         />
       )}
 
