@@ -46,6 +46,7 @@ import AddNewPlayerModal from './AddNewPlayerModal';
 import GameTrackingPanel from '../../game-tracking/components/GameTrackingPanel';
 import { formatClockTime } from '../../game-tracking/lib/utils';
 import { getPeriodLabel } from '../../game-tracking/lib/utils';
+import { useGameTrackingStore } from '../../game-tracking/stores/useGameTrackingStore';
 
 interface MatchDetailViewProps {
   matchId: string;
@@ -924,6 +925,8 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
+  const [isEndingGame, setIsEndingGame] = useState(false);
+  const { endGame } = useGameTrackingStore();
   const [icons, setIcons] = useState<{
     Calendar?: ComponentType<any>;
     Clock?: ComponentType<any>;
@@ -1146,12 +1149,37 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           <h1 className="text-3xl font-heading font-semibold text-foreground">Match Details</h1>
         </div>
         {match && (
-          <Button asChild>
-            <a href={`/admin/matches/${matchId}`} data-astro-prefetch>
-              {icons.Edit ? <icons.Edit className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
-          Edit Match
-        </a>
-          </Button>
+          <div className="flex gap-2">
+            {match.status === 'LIVE' && (
+              <Button
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to end this game? This action cannot be undone.')) {
+                    setIsEndingGame(true);
+                    try {
+                      await endGame(matchId);
+                      // Refresh the page to show updated status
+                      window.location.reload();
+                    } catch (error) {
+                      console.error('Failed to end game:', error);
+                      alert('Failed to end game. Please try again.');
+                      setIsEndingGame(false);
+                    }
+                  }
+                }}
+                disabled={isEndingGame}
+                variant="destructive"
+                size="default"
+              >
+                {isEndingGame ? 'Ending...' : 'End Game'}
+              </Button>
+            )}
+            <Button asChild>
+              <a href={`/admin/matches/${matchId}`} data-astro-prefetch>
+                {icons.Edit ? <icons.Edit className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
+            Edit Match
+          </a>
+            </Button>
+          </div>
         )}
       </div>
 
