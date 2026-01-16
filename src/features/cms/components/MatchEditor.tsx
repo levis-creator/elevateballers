@@ -125,7 +125,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
         team2Name: getTeam2Name(match),
         team2Logo: getTeam2Logo(match) || '',
         leagueId: leagueId,
-        league: getLeagueName(match),
+        league: '',
         seasonId: seasonId,
         date: new Date(match.date).toISOString().slice(0, 16),
         team1Score: match.team1Score?.toString() || '',
@@ -329,15 +329,15 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
     const errors: string[] = [];
 
     // Team validation
-    if (!formData.team1Id && !formData.team1Name?.trim()) {
+    if (!formData.team1Id) {
       errors.push('Team 1 is required');
     }
-    if (!formData.team2Id && !formData.team2Name?.trim()) {
+    if (!formData.team2Id) {
       errors.push('Team 2 is required');
     }
 
     // League validation
-    if (!formData.leagueId && !formData.league?.trim()) {
+    if (!formData.leagueId) {
       errors.push('League is required');
     }
 
@@ -363,22 +363,6 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
       const score = Number.parseInt(formData.team2Score, 10);
       if (isNaN(score) || score < 0 || score > 999) {
         errors.push('Team 2 score must be between 0 and 999');
-      }
-    }
-
-    // URL validation for logos
-    if (formData.team1Logo && !formData.team1Id) {
-      try {
-        new URL(formData.team1Logo);
-      } catch {
-        errors.push('Team 1 logo must be a valid URL');
-      }
-    }
-    if (formData.team2Logo && !formData.team2Id) {
-      try {
-        new URL(formData.team2Logo);
-      } catch {
-        errors.push('Team 2 logo must be a valid URL');
       }
     }
 
@@ -425,11 +409,9 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
         duration: formData.duration ? Number.parseInt(formData.duration, 10) : null,
       };
 
-      // Use league ID if selected, otherwise use fallback field
+      // Use league ID
       if (formData.leagueId) {
         payload.leagueId = formData.leagueId;
-      } else {
-        payload.league = formData.league;
       }
 
       // Use season ID if selected
@@ -554,7 +536,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
               <TeamSelect
                 id="team1Id"
                 label="Team 1"
-                  value={formData.team1Id}
+                value={formData.team1Id}
                 teams={team1Options}
                 loading={teamsLoading}
                 saving={saving}
@@ -564,8 +546,8 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   setFormData((prev) => ({
                     ...prev,
                     team1Id: value,
-                    team1Name: selectedTeam ? selectedTeam.name : prev.team1Name,
-                    team1Logo: selectedTeam ? selectedTeam.logo || '' : prev.team1Logo,
+                    team1Name: selectedTeam ? selectedTeam.name : '',
+                    team1Logo: selectedTeam ? selectedTeam.logo || '' : '',
                     // Clear team2 if it's the same team
                     ...(prev.team2Id === value 
                       ? { team2Id: '', team2Name: '', team2Logo: '' }
@@ -573,20 +555,12 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                     ),
                   }));
                 }}
-                customName={formData.team1Name}
-                customLogo={formData.team1Logo}
-                onCustomNameChange={(name) =>
-                  setFormData((prev) => ({ ...prev, team1Name: name }))
-                }
-                onCustomLogoChange={(logo) =>
-                  setFormData((prev) => ({ ...prev, team1Logo: logo }))
-                }
               />
 
               <TeamSelect
                 id="team2Id"
                 label="Team 2"
-                  value={formData.team2Id}
+                value={formData.team2Id}
                 teams={team2Options}
                 loading={teamsLoading}
                 saving={saving}
@@ -596,8 +570,8 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   setFormData((prev) => ({
                     ...prev,
                     team2Id: value,
-                    team2Name: selectedTeam ? selectedTeam.name : prev.team2Name,
-                    team2Logo: selectedTeam ? selectedTeam.logo || '' : prev.team2Logo,
+                    team2Name: selectedTeam ? selectedTeam.name : '',
+                    team2Logo: selectedTeam ? selectedTeam.logo || '' : '',
                     // Clear team1 if it's the same team
                     ...(prev.team1Id === value 
                       ? { team1Id: '', team1Name: '', team1Logo: '' }
@@ -605,14 +579,6 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                     ),
                   }));
                 }}
-                customName={formData.team2Name}
-                customLogo={formData.team2Logo}
-                onCustomNameChange={(name) =>
-                  setFormData((prev) => ({ ...prev, team2Name: name }))
-                }
-                onCustomLogoChange={(logo) =>
-                  setFormData((prev) => ({ ...prev, team2Logo: logo }))
-                }
               />
             </div>
           </CardContent>
@@ -647,12 +613,11 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   League <span className="text-destructive">*</span>
                 </Label>
                 <Select
-                  value={formData.leagueId || "__custom"}
+                  value={formData.leagueId}
                   onValueChange={(value) => {
                     setFormData((prev) => ({
                       ...prev,
-                      leagueId: value === "__custom" ? "" : value,
-                      league: '',
+                      leagueId: value,
                       seasonId: '', // Reset season when league changes
                     }));
                   }}
@@ -660,10 +625,9 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   disabled={saving}
                 >
                   <SelectTrigger id="leagueId">
-                    <SelectValue placeholder="Select a league or enter custom..." />
+                    <SelectValue placeholder="Select a league from database..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__custom">Custom League</SelectItem>
                     {leagues.map((league) => (
                       <SelectItem key={league.id} value={league.id}>
                         {league.name}
@@ -671,18 +635,6 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                {!formData.leagueId && (
-                  <Input
-                    id="league"
-                    type="text"
-                    placeholder="League Name"
-                    value={formData.league}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, league: e.target.value }))}
-                    required={!formData.leagueId}
-                    disabled={saving}
-                    className="mt-2"
-                  />
-                )}
               </div>
             </div>
 
