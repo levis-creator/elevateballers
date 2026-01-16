@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 
     if (!teamId || !playerInId || !playerOutId || !period) {
       return new Response(
-        JSON.stringify({ error: 'teamId, playerInId, playerOutId, and period are required' }),
+        JSON.stringify({ error: 'teamId, playerInId, playerOutId, and quarter are required' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },

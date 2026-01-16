@@ -213,7 +213,7 @@ export async function startGame(matchId: string, gameRulesId?: string): Promise<
       },
     });
 
-    // Create first period
+    // Create first quarter
     await createMatchPeriod({
       matchId,
       periodNumber: 1,
@@ -457,7 +457,7 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
 }
 
 /**
- * Create match period
+ * Create match quarter
  */
 export async function createMatchPeriod(data: CreateMatchPeriodInput): Promise<MatchPeriod | null> {
   try {
@@ -473,13 +473,13 @@ export async function createMatchPeriod(data: CreateMatchPeriodInput): Promise<M
       },
     });
   } catch (error) {
-    console.error('Error creating match period:', error);
+    console.error('Error creating match quarter:', error);
     return null;
   }
 }
 
 /**
- * Update match period
+ * Update match quarter
  */
 export async function updateMatchPeriod(
   matchId: string,
@@ -497,13 +497,13 @@ export async function updateMatchPeriod(
       data,
     });
   } catch (error) {
-    console.error('Error updating match period:', error);
+    console.error('Error updating match quarter:', error);
     return null;
   }
 }
 
 /**
- * End current period and start next period
+ * End current quarter and start next quarter
  */
 export async function endPeriod(matchId: string): Promise<boolean> {
   try {
@@ -538,8 +538,8 @@ export async function endPeriod(matchId: string): Promise<boolean> {
       team2Fouls: match.team2Fouls,
     });
 
-    // Reset fouls for new period (if needed)
-    const resetFouls = true; // Typically fouls reset each period
+    // Reset fouls for new quarter (if needed)
+    const resetFouls = true; // Typically fouls reset each quarter
 
     // Reset timeouts if configured
     const resetTimeouts = rules?.resetTimeoutsPerPeriod ?? false;
@@ -547,7 +547,7 @@ export async function endPeriod(matchId: string): Promise<boolean> {
 
     // Create halftime event if we're at halftime transition
     if (isHalftime && halftimeSequenceNumber !== null) {
-      // Calculate minute (end of period = 0 minutes remaining = full period length in minutes)
+      // Calculate minute (end of quarter = 0 minutes remaining = full quarter length in minutes)
       const minute = rules?.minutesPerPeriod ?? 10;
 
       await prisma.matchEvent.create({
@@ -578,7 +578,7 @@ export async function endPeriod(matchId: string): Promise<boolean> {
       },
     });
 
-    // Create new period record
+    // Create new quarter record
     await createMatchPeriod({
       matchId,
       periodNumber: nextPeriod,
@@ -589,7 +589,7 @@ export async function endPeriod(matchId: string): Promise<boolean> {
       team2Fouls: resetFouls ? 0 : match.team2Fouls,
     });
 
-    // Create "break over" event if we're starting the period after halftime
+    // Create "break over" event if we're starting the quarter after halftime
     if (isHalftime) {
       const { getNextSequenceNumber } = await import('./utils');
       const breakOverSequenceNumber = await getNextSequenceNumber(matchId, prisma);
@@ -609,7 +609,7 @@ export async function endPeriod(matchId: string): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error('Error ending period:', error);
+    console.error('Error ending quarter:', error);
     return false;
   }
 }

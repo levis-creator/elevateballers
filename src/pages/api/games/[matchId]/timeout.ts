@@ -11,7 +11,7 @@ export const prerender = false;
  * Get timeouts for a match with optional filtering
  * 
  * Query parameters:
- * - period: Filter by period number
+ * - period: Filter by quarter number
  * - teamId: Filter by team ID
  * - timeoutType: Filter by timeout type (SIXTY_SECOND, THIRTY_SECOND)
  * - limit: Limit number of results

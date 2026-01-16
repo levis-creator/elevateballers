@@ -9,7 +9,7 @@ export const prerender = false;
  * GET /api/games/[matchId]/jump-ball
  * Get jump balls for a match
  * Query parameters:
- * - period: Filter by period number
+ * - period: Filter by quarter number
  */
 export const GET: APIRoute = async ({ params, request }) => {
   try {
@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     if (periodParam) {
       const period = parseInt(periodParam, 10);
       if (isNaN(period)) {
-        return new Response(JSON.stringify({ error: 'Invalid period number' }), {
+        return new Response(JSON.stringify({ error: 'Invalid quarter number' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
         });
@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 
     if (!period || !player1Id || !player2Id) {
       return new Response(
-        JSON.stringify({ error: 'Period, player1Id, and player2Id are required' }),
+        JSON.stringify({ error: 'Quarter, player1Id, and player2Id are required' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },

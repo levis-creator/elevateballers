@@ -48,7 +48,7 @@ export const DEFAULT_TEMPLATES: Omit<CreateReportTemplateInput, 'name' | 'descri
     reportType: 'PLAY_BY_PLAY',
     format: 'CSV',
     template: {
-      columns: ['period', 'time', 'event', 'player', 'team', 'description'],
+      columns: ['quarter', 'time', 'event', 'player', 'team', 'description'],
     },
     isDefault: true,
   },

@@ -226,8 +226,8 @@ export default function GameRulesList() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Periods</TableHead>
-                <TableHead>Minutes/Period</TableHead>
+                <TableHead>Quarters</TableHead>
+                <TableHead>Minutes/Quarter</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

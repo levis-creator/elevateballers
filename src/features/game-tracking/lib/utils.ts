@@ -1,6 +1,6 @@
 /**
  * Game tracking utility functions
- * Clock utilities, period management, and game state helpers
+ * Clock utilities, quarter management, and game state helpers
  */
 
 /**
@@ -37,21 +37,21 @@ export function parseClockTime(timeString: string): number | null {
 }
 
 /**
- * Calculate total seconds for a period based on minutes
+ * Calculate total seconds for a quarter based on minutes
  */
 export function periodSeconds(minutes: number): number {
   return minutes * 60;
 }
 
 /**
- * Check if period is overtime
+ * Check if quarter is overtime
  */
 export function isOvertimePeriod(period: number, numberOfPeriods: number): boolean {
   return period > numberOfPeriods;
 }
 
 /**
- * Get period label (e.g., "1st", "2nd", "Halftime", "OT1", "OT2")
+ * Get quarter label (e.g., "1st", "2nd", "Halftime", "OT1", "OT2")
  */
 export function getPeriodLabel(period: number, numberOfPeriods: number = 4, halftimePeriod: number = 2): string {
   if (period <= numberOfPeriods) {
@@ -66,7 +66,7 @@ export function getPeriodLabel(period: number, numberOfPeriods: number = 4, half
 }
 
 /**
- * Check if a period ends at halftime
+ * Check if a quarter ends at halftime
  */
 export function isHalftimePeriod(period: number, halftimePeriod: number): boolean {
   return period === halftimePeriod;
@@ -131,7 +131,7 @@ export function getBonusStatus(teamFouls: number, foulsForBonus: number): string
 }
 
 /**
- * Validate clock seconds (must be non-negative and within period length)
+ * Validate clock seconds (must be non-negative and within quarter length)
  */
 export function validateClockSeconds(
   seconds: number,
@@ -142,7 +142,7 @@ export function validateClockSeconds(
 }
 
 /**
- * Calculate period start time based on period number and period length
+ * Calculate quarter start time based on quarter number and quarter length
  */
 export function calculatePeriodStartTime(
   period: number,

@@ -316,7 +316,7 @@ export default function SubstitutionPanel({
           {gameState && (
             <div className="text-sm text-muted-foreground space-y-1">
               <div>
-                Period: {gameState.period}
+                Quarter: {gameState.period}
               </div>
               {(localClockSeconds !== null || gameState.clockSeconds !== null) && (
                 <div>
