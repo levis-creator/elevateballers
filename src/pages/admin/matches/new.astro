@@ -4,9 +4,17 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import MatchEditor from '../../../features/cms/components/MatchEditor';
+import { checkAuth } from '../../../features/cms/lib/auth-astro';
+
+const user = await checkAuth(Astro.request);
+if (!user) {
+  return Astro.redirect('/admin/login', 302);
+}
+
+const seasonId = Astro.url.searchParams.get('seasonId') || undefined;
 ---
 
 <AdminLayout title="Create Match - Admin">
-  <MatchEditor client:load />
+  <MatchEditor seasonId={seasonId} client:load />
 </AdminLayout>
 

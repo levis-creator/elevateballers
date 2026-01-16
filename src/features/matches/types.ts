@@ -23,6 +23,7 @@ export type MatchFilter = {
   stage?: MatchStage;
   league?: string;
   leagueId?: string;
+  seasonId?: string;
   teamId?: string;
   dateFrom?: Date;
   dateTo?: Date;

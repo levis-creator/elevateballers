@@ -1,14 +1,7 @@
 ---
 export const prerender = false;
-export const ssr = false;
-
-export async function getStaticPaths() {
-  return [];
-}
-
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import SeasonEditor from '../../../features/cms/components/SeasonEditor';
 import { checkAuth } from '../../../features/cms/lib/auth-astro';
+import { getSeasonById } from '../../../features/cms/lib/queries';
 
 const user = await checkAuth(Astro.request);
 if (!user) {
@@ -16,9 +9,16 @@ if (!user) {
 }
 
 const { id } = Astro.params;
+
+// Try to fetch season to get leagueId for redirect
+let redirectUrl = '/admin/leagues';
+if (id) {
+  const season = await getSeasonById(id);
+  if (season?.leagueId) {
+    redirectUrl = `/admin/leagues/${season.leagueId}`;
+  }
+}
 ---
 
-<AdminLayout title="Edit Season - Admin">
-  <SeasonEditor seasonId={id} client:load />
-</AdminLayout>
+<Astro.response.redirect(redirectUrl, 302) />
 

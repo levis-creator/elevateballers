@@ -20,7 +20,6 @@ export default function AdminSidebar() {
     LogOut?: ComponentType<any>;
     Basketball?: ComponentType<any>;
     Trophy?: ComponentType<any>;
-    CalendarRange?: ComponentType<any>;
     Menu?: ComponentType<any>;
     X?: ComponentType<any>;
   }>({});
@@ -42,7 +41,6 @@ export default function AdminSidebar() {
         LogOut: mod.LogOut,
         Basketball: mod.Basketball,
         Trophy: mod.Trophy,
-        CalendarRange: mod.CalendarRange,
         Menu: mod.Menu,
         X: mod.X,
       });
@@ -88,7 +86,6 @@ export default function AdminSidebar() {
     { href: '/admin/news', icon: icons.Newspaper, label: 'News Articles' },
     { href: '/admin/matches', icon: icons.Calendar, label: 'Matches' },
     { href: '/admin/leagues', icon: icons.Trophy, label: 'Leagues' },
-    { href: '/admin/seasons', icon: icons.CalendarRange, label: 'Seasons' },
     { href: '/admin/teams', icon: icons.Shield, label: 'Teams' },
     { href: '/admin/players', icon: icons.Users, label: 'Players' },
     { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff' },

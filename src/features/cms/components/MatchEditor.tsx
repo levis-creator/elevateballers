@@ -46,9 +46,10 @@ const logWarn = isDev ? console.warn : () => {};
 
 interface MatchEditorProps {
   matchId?: string;
+  seasonId?: string;
 }
 
-export default function MatchEditor({ matchId }: MatchEditorProps) {
+export default function MatchEditor({ matchId, seasonId: initialSeasonId }: MatchEditorProps) {
   const [loading, setLoading] = useState(!!matchId);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({
@@ -73,7 +74,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
     team2Logo: '',
     leagueId: '',
     league: '',
-    seasonId: '',
+    seasonId: initialSeasonId || '',
     date: '',
     team1Score: '',
     team2Score: '',
@@ -296,23 +297,44 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
       fetchMatch();
     }
     
+    // If initialSeasonId is provided, fetch the season to get the leagueId
+    if (initialSeasonId && !matchId) {
+      fetch(`/api/seasons/${initialSeasonId}`)
+        .then(res => res.json())
+        .then((season: any) => {
+          if (season?.leagueId) {
+            setFormData(prev => ({ ...prev, leagueId: season.leagueId, seasonId: initialSeasonId }));
+            fetchSeasons(season.leagueId);
+          }
+        })
+        .catch(err => logError('Failed to fetch season:', err));
+    }
+    
     // Cleanup on unmount
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [matchId, fetchTeams, fetchLeagues, fetchMatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, initialSeasonId]);
 
   useEffect(() => {
     // Fetch seasons when league is selected
     if (formData.leagueId) {
       fetchSeasons(formData.leagueId);
+      // If we have initialSeasonId but league changed, clear it unless it belongs to new league
+      if (!initialSeasonId && formData.seasonId !== initialSeasonId) {
+        setFormData((prev) => ({ ...prev, seasonId: '' }));
+      }
     } else {
       setSeasons([]);
-      setFormData((prev) => ({ ...prev, seasonId: '' }));
+      if (!initialSeasonId) {
+        setFormData((prev) => ({ ...prev, seasonId: '' }));
+      }
     }
-  }, [formData.leagueId, fetchSeasons]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.leagueId]);
 
   // Filter teams to exclude the selected team from the other team's options
   const team1Options = useMemo(() => {
@@ -546,7 +568,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 value={formData.team1Id}
                 teams={team1Options}
                 loading={teamsLoading}
-                saving={isDisabled}
+                saving={saving}
                 error={errors.teams}
                 onSelect={(value) => {
                   const selectedTeam = teams.find((t) => t.id === value);
@@ -570,7 +592,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 value={formData.team2Id}
                 teams={team2Options}
                 loading={teamsLoading}
-                saving={isDisabled}
+                saving={saving}
                 error={errors.teams}
                 onSelect={(value) => {
                   const selectedTeam = teams.find((t) => t.id === value);
@@ -610,7 +632,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.date}
                   onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
                   required
-                  disabled={isDisabled}
+                  disabled={saving || loading}
                 />
               </div>
 
@@ -629,7 +651,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                     }));
                   }}
                   required
-                  disabled={isDisabled}
+                  disabled={saving || loading}
                 >
                   <SelectTrigger id="leagueId">
                     <SelectValue placeholder="Select a league from database..." />
@@ -651,7 +673,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
               <Select
                 value={formData.seasonId || "__none"}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, seasonId: value === "__none" ? "" : value }))}
-                disabled={isDisabled || !formData.leagueId}
+                disabled={saving || loading || !formData.leagueId}
               >
                 <SelectTrigger id="seasonId">
                   <SelectValue placeholder={formData.leagueId ? "Select a season" : "Select a league first"} />
@@ -677,7 +699,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 <Select
                   value={formData.stage || "__none"}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, stage: (value === "__none" ? "" : value) as MatchStage || '' }))}
-                  disabled={isDisabled}
+                  disabled={saving || loading}
                 >
                   <SelectTrigger id="stage">
                     <SelectValue placeholder="Select stage (optional)" />
@@ -715,7 +737,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.team1Score}
                   onChange={(e) => setFormData((prev) => ({ ...prev, team1Score: e.target.value }))}
                   min="0"
-                  disabled={isDisabled}
+                  disabled={saving || loading}
                   placeholder="0"
                 />
               </div>
@@ -728,7 +750,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.team2Score}
                   onChange={(e) => setFormData((prev) => ({ ...prev, team2Score: e.target.value }))}
                   min="0"
-                  disabled={isDisabled}
+                  disabled={saving || loading}
                   placeholder="0"
                 />
               </div>
@@ -741,7 +763,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.duration}
                   onChange={(e) => setFormData((prev) => ({ ...prev, duration: e.target.value }))}
                   min="0"
-                  disabled={isDisabled}
+                  disabled={saving || loading}
                   placeholder="e.g. 40"
                 />
                 <p className="text-sm text-muted-foreground">
@@ -754,7 +776,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 <Select
                   value={formData.status}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as MatchStatus }))}
-                  disabled={isDisabled}
+                  disabled={saving || loading}
                 >
                   <SelectTrigger id="status">
                     <SelectValue />
@@ -773,7 +795,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
         </Card>
 
         <div className="flex gap-3 pt-4">
-          <Button type="submit" disabled={isDisabled}>
+          <Button type="submit" disabled={saving || loading}>
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

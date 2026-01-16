@@ -39,6 +39,7 @@ export default function LeagueList() {
     MoreVertical?: ComponentType<any>;
     CheckCircle?: ComponentType<any>;
     XCircle?: ComponentType<any>;
+    Eye?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function LeagueList() {
         MoreVertical: mod.MoreVertical,
         CheckCircle: mod.CheckCircle,
         XCircle: mod.XCircle,
+        Eye: mod.Eye,
       });
     });
   }, []);
@@ -166,6 +168,7 @@ export default function LeagueList() {
   const MoreVerticalIcon = icons.MoreVertical;
   const CheckCircleIcon = icons.CheckCircle;
   const XCircleIcon = icons.XCircle;
+  const EyeIcon = icons.Eye;
 
   if (loading) {
     return (
@@ -390,6 +393,12 @@ export default function LeagueList() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <a href={`/admin/leagues/${league.id}/view`} data-astro-prefetch>
+                            {EyeIcon ? <EyeIcon size={16} className="mr-2" /> : null}
+                            View
+                          </a>
+                        </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <a href={`/admin/leagues/${league.id}`} data-astro-prefetch>
                             {EditIcon ? <EditIcon size={16} className="mr-2" /> : null}
