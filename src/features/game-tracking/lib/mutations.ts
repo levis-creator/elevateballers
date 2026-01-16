@@ -232,6 +232,59 @@ export async function startGame(matchId: string, gameRulesId?: string): Promise<
 }
 
 /**
+ * End game (set match status to COMPLETED)
+ */
+export async function endGame(matchId: string): Promise<boolean> {
+  try {
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { gameRules: true },
+    });
+
+    if (!match) {
+      return false;
+    }
+
+    // End the current period if game is live
+    if (match.status === 'LIVE') {
+      const currentPeriod = await prisma.matchPeriod.findFirst({
+        where: {
+          matchId,
+          periodNumber: match.currentPeriod,
+        },
+      });
+
+      if (currentPeriod && !currentPeriod.endTime) {
+        await prisma.matchPeriod.update({
+          where: { id: currentPeriod.id },
+          data: {
+            endTime: new Date(),
+            team1Score: match.team1Score ?? 0,
+            team2Score: match.team2Score ?? 0,
+            team1Fouls: match.team1Fouls,
+            team2Fouls: match.team2Fouls,
+          },
+        });
+      }
+    }
+
+    // Update match status to COMPLETED and stop the clock
+    await prisma.match.update({
+      where: { id: matchId },
+      data: {
+        status: 'COMPLETED',
+        clockRunning: false,
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error ending game:', error);
+    return false;
+  }
+}
+
+/**
  * Pause/resume game clock
  */
 export async function toggleGameClock(matchId: string, running?: boolean, clockSeconds?: number): Promise<boolean> {

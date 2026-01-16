@@ -31,6 +31,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
     error,
     fetchGameState,
     startGame,
+    endGame,
     toggleClock,
   } = useGameTrackingStore();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -51,6 +52,16 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   const handleStartGame = async () => {
     await startGame(matchId);
+  };
+
+  const handleEndGame = async () => {
+    if (window.confirm('Are you sure you want to end this game? This action cannot be undone.')) {
+      await endGame(matchId);
+      // Refresh match data
+      if (match) {
+        window.location.reload();
+      }
+    }
   };
 
   const handleToggleClock = async () => {
@@ -96,6 +107,29 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   return (
     <div className="space-y-4">
+      {/* End Game Button - Prominently displayed for live games */}
+      {match?.status === 'LIVE' && (
+        <Card className="border-red-500 border-2">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">Game is Live</h3>
+                <p className="text-sm text-muted-foreground">Click below to end the game</p>
+              </div>
+              <Button
+                onClick={handleEndGame}
+                disabled={isLoading}
+                variant="destructive"
+                size="lg"
+                className="min-w-[150px]"
+              >
+                {isLoading ? 'Ending...' : 'End Game'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Scoreboard */}
         <div className="md:col-span-2">
@@ -106,6 +140,8 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             team2Name={team2Name}
             team1Logo={team1Logo}
             team2Logo={team2Logo}
+            team1Id={match?.team1Id || null}
+            team2Id={match?.team2Id || null}
           />
         </div>
 

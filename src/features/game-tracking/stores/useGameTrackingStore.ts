@@ -23,6 +23,7 @@ interface GameTrackingState {
   fetchGameState: (matchId: string) => Promise<void>;
   updateGameState: (matchId: string, updates: Partial<GameStateData>) => Promise<void>;
   startGame: (matchId: string, gameRulesId?: string) => Promise<void>;
+  endGame: (matchId: string) => Promise<void>;
   toggleClock: (matchId: string, running?: boolean) => Promise<void>;
   reset: () => void;
 }
@@ -131,6 +132,31 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
       });
       if (!response.ok) {
         throw new Error('Failed to start game');
+      }
+      const state = await response.json();
+      // Validate clock seconds - prevent negative values
+      const clockSeconds = state?.clockSeconds ?? null;
+      const validatedClockSeconds = clockSeconds !== null && clockSeconds < 0 ? 0 : clockSeconds;
+      
+      set({ 
+        gameState: state, 
+        localClockSeconds: validatedClockSeconds,
+        isLoading: false 
+      });
+    } catch (error: any) {
+      set({ error: error.message, isLoading: false });
+    }
+  },
+
+  endGame: async (matchId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`/api/games/${matchId}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to end game');
       }
       const state = await response.json();
       // Validate clock seconds - prevent negative values

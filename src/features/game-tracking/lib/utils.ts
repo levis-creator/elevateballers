@@ -155,3 +155,28 @@ export function calculatePeriodStartTime(
   startTime.setMinutes(startTime.getMinutes() + minutesOffset);
   return startTime;
 }
+
+/**
+ * Calculate remaining fouls until bonus
+ */
+export function getFoulsUntilBonus(teamFouls: number, foulsForBonus: number): number {
+  return Math.max(0, foulsForBonus - teamFouls);
+}
+
+/**
+ * Calculate score difference and determine leader
+ */
+export function calculateScoreDifference(
+  team1Score: number,
+  team2Score: number
+): { diff: number; leader: 'team1' | 'team2' | 'tie' } {
+  const diff = Math.abs(team1Score - team2Score);
+  
+  if (team1Score > team2Score) {
+    return { diff, leader: 'team1' };
+  } else if (team2Score > team1Score) {
+    return { diff, leader: 'team2' };
+  } else {
+    return { diff: 0, leader: 'tie' };
+  }
+}

@@ -3,6 +3,7 @@
  * Displays detailed information about a single match
  */
 
+import { useState, useEffect } from 'react';
 import type { Match } from '@prisma/client';
 import {
   formatMatchDate,
@@ -14,12 +15,35 @@ import {
 } from '../lib/utils';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../lib/team-helpers';
 import { getLeagueName } from '../lib/league-helpers';
+import { useGameTrackingStore } from '../../game-tracking/stores/useGameTrackingStore';
+import { Button } from '@/components/ui/button';
 
 interface MatchDetailProps {
   match: Match;
 }
 
-export default function MatchDetail({ match }: MatchDetailProps) {
+export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
+  const [match, setMatch] = useState(initialMatch);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { startGame, endGame } = useGameTrackingStore();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        // User is not authenticated
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
   const statusColor = getMatchStatusColor(match.status);
   const statusLabel = getMatchStatusLabel(match.status);
   const hasScore = match.team1Score !== null && match.team2Score !== null;
@@ -28,6 +52,45 @@ export default function MatchDetail({ match }: MatchDetailProps) {
   const team1Logo = getTeam1Logo(match);
   const team2Name = getTeam2Name(match);
   const team2Logo = getTeam2Logo(match);
+
+  const handleStartGame = async () => {
+    setIsLoading(true);
+    try {
+      await startGame(match.id);
+      // Refresh match data
+      const response = await fetch(`/api/matches/${match.id}`);
+      if (response.ok) {
+        const updatedMatch = await response.json();
+        setMatch(updatedMatch);
+      }
+    } catch (error) {
+      console.error('Failed to start game:', error);
+      alert('Failed to start game. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEndGame = async () => {
+    if (!confirm('Are you sure you want to end this game? This action cannot be undone.')) {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await endGame(match.id);
+      // Refresh match data
+      const response = await fetch(`/api/matches/${match.id}`);
+      if (response.ok) {
+        const updatedMatch = await response.json();
+        setMatch(updatedMatch);
+      }
+    } catch (error) {
+      console.error('Failed to end game:', error);
+      alert('Failed to end game. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="match-detail">
@@ -96,6 +159,62 @@ export default function MatchDetail({ match }: MatchDetailProps) {
           <p>Match scheduled for {formatMatchDateTime(match.date)}</p>
         </div>
       )}
+
+      {/* Game Control Buttons */}
+      <div className="match-detail-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid #f1f5f9', minHeight: '60px' }}>
+        {match.status === 'UPCOMING' && (
+          <button
+            onClick={handleStartGame}
+            disabled={isLoading}
+            className="match-control-button start-button"
+            style={{
+              minWidth: '150px',
+              padding: '0.75rem 1.5rem',
+              fontSize: '1rem',
+              fontWeight: '600',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              backgroundColor: '#10b981',
+              color: 'white',
+              transition: 'all 0.2s',
+            }}
+          >
+            {isLoading ? 'Starting...' : 'Start Game'}
+          </button>
+        )}
+        {match.status === 'LIVE' && (
+          <button
+            onClick={handleEndGame}
+            disabled={isLoading}
+            className="match-control-button end-button"
+            style={{
+              minWidth: '150px',
+              padding: '0.75rem 1.5rem',
+              fontSize: '1rem',
+              fontWeight: '600',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              backgroundColor: '#ef4444',
+              color: 'white',
+              transition: 'all 0.2s',
+            }}
+          >
+            {isLoading ? 'Ending...' : 'End Game'}
+          </button>
+        )}
+        {match.status === 'COMPLETED' && (
+          <div className="match-status-completed" style={{ textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+            <p>This match has been completed.</p>
+          </div>
+        )}
+        {match.status !== 'UPCOMING' && match.status !== 'LIVE' && match.status !== 'COMPLETED' && (
+          <div style={{ color: '#64748b', fontSize: '0.875rem' }}>
+            Match status: {match.status}
+          </div>
+        )}
+      </div>
 
       <style>{`
         .match-detail {
@@ -226,6 +345,61 @@ export default function MatchDetail({ match }: MatchDetailProps) {
           background: #f8fafc;
           border-radius: 8px;
           color: #64748b;
+        }
+
+        .match-detail-controls {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 1rem;
+          margin-top: 2rem;
+          padding-top: 2rem;
+          border-top: 2px solid #f1f5f9;
+          min-height: 60px;
+        }
+
+        .match-control-button {
+          min-width: 150px;
+          padding: 0.75rem 1.5rem;
+          font-size: 1rem;
+          font-weight: 600;
+          border-radius: 8px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .match-control-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .start-button {
+          background-color: #10b981 !important;
+          color: white !important;
+        }
+
+        .start-button:hover:not(:disabled) {
+          background-color: #059669 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .end-button {
+          background-color: #ef4444 !important;
+          color: white !important;
+        }
+
+        .end-button:hover:not(:disabled) {
+          background-color: #dc2626 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .match-status-completed {
+          text-align: center;
+          color: #64748b;
+          font-size: 0.875rem;
         }
 
         @media (max-width: 768px) {
