@@ -66,6 +66,7 @@ export const POST: APIRoute = async ({ request }) => {
       position: data.position,
       jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : undefined,
       stats: data.stats,
+      approved: true, // Admin-created players are approved by default
     });
 
     return new Response(JSON.stringify(player), {

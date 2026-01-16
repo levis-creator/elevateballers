@@ -98,6 +98,7 @@ export const POST: APIRoute = async ({ request }) => {
       name: data.name,
       logo: data.logo,
       description: data.description,
+      approved: true, // Admin-created teams are approved by default
     });
 
     return new Response(JSON.stringify(team), {
