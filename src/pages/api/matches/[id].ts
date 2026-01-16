@@ -44,6 +44,19 @@ export const GET: APIRoute = async ({ params, url }) => {
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requireAdmin(request);
+    
+    // Check if match is completed - block all edits
+    const existingMatch = await getMatchById(params.id!);
+    if (existingMatch && existingMatch.status === 'COMPLETED') {
+      return new Response(
+        JSON.stringify({ error: 'Cannot edit a completed match' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     const data = await request.json();
 
     // Convert date string to Date if provided

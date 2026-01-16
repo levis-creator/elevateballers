@@ -53,17 +53,33 @@ export const PUT: APIRoute = async ({ params, request }) => {
   }
 
   try {
+    // Check if match is completed - block editing events
+    const matchEvent = await getMatchEventById(id);
+    if (matchEvent) {
+      const { getMatchById } = await import('@/features/cms/lib/queries');
+      const match = await getMatchById(matchEvent.matchId);
+      if (match && match.status === 'COMPLETED') {
+        return new Response(
+          JSON.stringify({ error: 'Cannot edit events in a completed match' }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+    
     const body = await request.json();
-    const matchEvent = await updateMatchEvent(id, body);
+    const updatedEvent = await updateMatchEvent(id, body);
 
-    if (!matchEvent) {
+    if (!updatedEvent) {
       return new Response(JSON.stringify({ error: 'Failed to update match event' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify(matchEvent), {
+    return new Response(JSON.stringify(updatedEvent), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -95,6 +111,22 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   }
 
   try {
+    // Check if match is completed - block deleting events
+    const matchEvent = await getMatchEventById(id);
+    if (matchEvent) {
+      const { getMatchById } = await import('@/features/cms/lib/queries');
+      const match = await getMatchById(matchEvent.matchId);
+      if (match && match.status === 'COMPLETED') {
+        return new Response(
+          JSON.stringify({ error: 'Cannot delete events from a completed match' }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+    
     const success = await deleteMatchEvent(id);
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to delete match event' }), {

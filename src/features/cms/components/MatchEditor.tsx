@@ -371,6 +371,13 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Block submission if match is completed
+    if (matchId && formData.status === 'COMPLETED') {
+      setErrors({ teams: '', leagues: '', match: '', save: 'Cannot edit a completed match' });
+      return;
+    }
+    
     setSaving(true);
     setErrors({ teams: '', leagues: '', match: '', save: '' });
 
@@ -539,7 +546,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 value={formData.team1Id}
                 teams={team1Options}
                 loading={teamsLoading}
-                saving={saving}
+                saving={isDisabled}
                 error={errors.teams}
                 onSelect={(value) => {
                   const selectedTeam = teams.find((t) => t.id === value);
@@ -563,7 +570,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 value={formData.team2Id}
                 teams={team2Options}
                 loading={teamsLoading}
-                saving={saving}
+                saving={isDisabled}
                 error={errors.teams}
                 onSelect={(value) => {
                   const selectedTeam = teams.find((t) => t.id === value);
@@ -603,7 +610,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.date}
                   onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
                   required
-                  disabled={saving}
+                  disabled={isDisabled}
                 />
               </div>
 
@@ -622,7 +629,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                     }));
                   }}
                   required
-                  disabled={saving}
+                  disabled={isDisabled}
                 >
                   <SelectTrigger id="leagueId">
                     <SelectValue placeholder="Select a league from database..." />
@@ -644,7 +651,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
               <Select
                 value={formData.seasonId || "__none"}
                 onValueChange={(value) => setFormData((prev) => ({ ...prev, seasonId: value === "__none" ? "" : value }))}
-                disabled={saving || !formData.leagueId}
+                disabled={isDisabled || !formData.leagueId}
               >
                 <SelectTrigger id="seasonId">
                   <SelectValue placeholder={formData.leagueId ? "Select a season" : "Select a league first"} />
@@ -670,7 +677,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 <Select
                   value={formData.stage || "__none"}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, stage: (value === "__none" ? "" : value) as MatchStage || '' }))}
-                  disabled={saving}
+                  disabled={isDisabled}
                 >
                   <SelectTrigger id="stage">
                     <SelectValue placeholder="Select stage (optional)" />
@@ -708,7 +715,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.team1Score}
                   onChange={(e) => setFormData((prev) => ({ ...prev, team1Score: e.target.value }))}
                   min="0"
-                  disabled={saving}
+                  disabled={isDisabled}
                   placeholder="0"
                 />
               </div>
@@ -721,7 +728,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.team2Score}
                   onChange={(e) => setFormData((prev) => ({ ...prev, team2Score: e.target.value }))}
                   min="0"
-                  disabled={saving}
+                  disabled={isDisabled}
                   placeholder="0"
                 />
               </div>
@@ -734,7 +741,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                   value={formData.duration}
                   onChange={(e) => setFormData((prev) => ({ ...prev, duration: e.target.value }))}
                   min="0"
-                  disabled={saving}
+                  disabled={isDisabled}
                   placeholder="e.g. 40"
                 />
                 <p className="text-sm text-muted-foreground">
@@ -747,7 +754,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
                 <Select
                   value={formData.status}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as MatchStatus }))}
-                  disabled={saving}
+                  disabled={isDisabled}
                 >
                   <SelectTrigger id="status">
                     <SelectValue />
@@ -766,7 +773,7 @@ export default function MatchEditor({ matchId }: MatchEditorProps) {
         </Card>
 
         <div className="flex gap-3 pt-4">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={isDisabled}>
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

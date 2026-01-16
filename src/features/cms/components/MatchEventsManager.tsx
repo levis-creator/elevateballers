@@ -68,6 +68,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   const [gameState, setGameState] = useState<any>(null);
+  const [matchStatus, setMatchStatus] = useState<string>('');
   const [formData, setFormData] = useState({
     eventType: 'TWO_POINT_MADE' as MatchEventType,
     minute: '',
@@ -84,8 +85,21 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
       fetchMatchEvents();
       fetchTeams();
       fetchGameState();
+      fetchMatchStatus();
     }
   }, [matchId]);
+
+  const fetchMatchStatus = async () => {
+    try {
+      const response = await fetch(`/api/matches/${matchId}`);
+      if (response.ok) {
+        const match = await response.json();
+        setMatchStatus(match.status || '');
+      }
+    } catch (err) {
+      console.error('Failed to fetch match status:', err);
+    }
+  };
 
   useEffect(() => {
     if (formData.teamId) {
@@ -160,6 +174,13 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Block if match is completed
+    if (matchStatus === 'COMPLETED') {
+      setError('Cannot add events to a completed match');
+      return;
+    }
+    
     setError('');
 
     try {
@@ -229,6 +250,13 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
 
   const handleUpdateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Block if match is completed
+    if (matchStatus === 'COMPLETED') {
+      setError('Cannot edit events in a completed match');
+      return;
+    }
+    
     setError('');
 
     if (!editEventId) return;
@@ -287,6 +315,13 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
   };
 
   const handleDeleteEvent = async (id: string) => {
+    // Block if match is completed
+    if (matchStatus === 'COMPLETED') {
+      setError('Cannot delete events from a completed match');
+      setDeleteEventId(null);
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/matches/${matchId}/events/${id}`, {
         method: 'DELETE',
@@ -366,11 +401,21 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
         <Button
           size="sm"
           onClick={() => setShowAddForm(!showAddForm)}
+          disabled={matchStatus === 'COMPLETED'}
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Event
         </Button>
       </div>
+
+      {matchStatus === 'COMPLETED' && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Match is completed.</strong> Cannot add or edit events in a completed match.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -401,7 +446,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                       }))
                     }
                     required
-                    disabled={!!editEventId}
+                    disabled={!!editEventId || matchStatus === 'COMPLETED'}
                   >
                     <SelectTrigger id="eventType">
                       <SelectValue />
@@ -431,6 +476,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     min="0"
                     max="120"
                     placeholder="23"
+                    disabled={matchStatus === 'COMPLETED'}
                   />
                 </div>
 
@@ -450,6 +496,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                         }));
                       }}
                       required
+                      disabled={matchStatus === 'COMPLETED'}
                     >
                       <SelectTrigger id="teamId">
                         <SelectValue placeholder="Select a team" />
@@ -475,7 +522,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                       onValueChange={(value) =>
                         setFormData((prev) => ({ ...prev, playerId: value }))
                       }
-                      disabled={!formData.teamId}
+                      disabled={!formData.teamId || matchStatus === 'COMPLETED'}
                       required={requiresPlayer(formData.eventType)}
                     >
                       <SelectTrigger id="playerId">
@@ -509,6 +556,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     min="1"
                     max="10"
                     placeholder="1"
+                    disabled={matchStatus === 'COMPLETED'}
                   />
                 </div>
 
@@ -526,6 +574,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     min="0"
                     max="7200"
                     placeholder={gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : "Auto from clock"}
+                    disabled={matchStatus === 'COMPLETED'}
                   />
                   {gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined && (
                     <p className="text-xs text-muted-foreground">
@@ -543,7 +592,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     onValueChange={(value) =>
                       setFormData((prev) => ({ ...prev, assistPlayerId: value === "__none" ? "" : value }))
                     }
-                    disabled={!formData.teamId}
+                    disabled={!formData.teamId || matchStatus === 'COMPLETED'}
                   >
                     <SelectTrigger id="assistPlayerId">
                       <SelectValue placeholder="No assist" />
@@ -570,11 +619,12 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     setFormData((prev) => ({ ...prev, description: e.target.value }))
                   }
                   placeholder="Additional details about the event..."
+                  disabled={matchStatus === 'COMPLETED'}
                 />
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit">{editEventId ? 'Update Event' : 'Add Event'}</Button>
+                <Button type="submit" disabled={matchStatus === 'COMPLETED'}>{editEventId ? 'Update Event' : 'Add Event'}</Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -629,6 +679,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                         size="sm"
                         variant="ghost"
                         onClick={() => handleStartEdit(event.id)}
+                        disabled={matchStatus === 'COMPLETED'}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -636,6 +687,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                         size="sm"
                         variant="ghost"
                         onClick={() => setDeleteEventId(event.id)}
+                        disabled={matchStatus === 'COMPLETED'}
                       >
                         <X className="h-4 w-4" />
                       </Button>

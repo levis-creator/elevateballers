@@ -7,6 +7,8 @@ import Header from '../../features/layout/components/Header.astro';
 import MobileMenu from '../../features/layout/components/MobileMenu';
 import Footer from '../../features/layout/components/Footer.astro';
 import { getPlayerById } from '../../features/cms/lib/queries';
+import { getPlayerMatches, getPlayerMatchEvents } from '../../features/player/lib/queries';
+import { calculatePlayerStatistics, calculatePlayerMatchStats } from '../../features/player/lib/playerStats';
 import Spacing from '../../shared/components/ui/Spacing.astro';
 import PageLoader from '../../components/PageLoader';
 
@@ -57,6 +59,91 @@ const formatPercent = (value: number): string => {
 };
 
 const stats = player.stats || {};
+
+// Fetch player matches
+let playerMatches: any[] = [];
+let playerStats = {
+  totalMatches: 0,
+  totalPoints: 0,
+  pointsPerGame: 0,
+  reboundsPerGame: 0,
+  assistsPerGame: 0,
+  stealsPerGame: 0,
+  blocksPerGame: 0,
+  fieldGoalPercentage: 0,
+  threePointPercentage: 0,
+  freeThrowPercentage: 0,
+};
+
+try {
+  // Get all matches where player participated
+  const allMatches = await getPlayerMatches(player.id);
+  
+  // Fetch events for each completed match
+  const matchesWithEvents = await Promise.all(
+    allMatches.map(async (match) => {
+      if (match.status === 'COMPLETED') {
+        try {
+          const events = await getPlayerMatchEvents(match.id, player.id);
+          return { ...match, events };
+        } catch (err) {
+          console.error(`Error fetching events for match ${match.id}:`, err);
+          return { ...match, events: [] };
+        }
+      }
+      return { ...match, events: [] };
+    })
+  );
+  
+  playerMatches = matchesWithEvents;
+  
+  // Calculate aggregate statistics
+  playerStats = calculatePlayerStatistics(matchesWithEvents, player.id);
+} catch (error) {
+  console.error('Error fetching player matches:', error);
+}
+
+// Group matches by league
+const getMatchesByLeague = (matches: any[]) => {
+  const grouped: Record<string, any[]> = {};
+  matches.forEach((match) => {
+    const leagueName = match.league?.name || 'Other';
+    if (!grouped[leagueName]) {
+      grouped[leagueName] = [];
+    }
+    grouped[leagueName].push(match);
+  });
+  return grouped;
+};
+
+const matchesByLeague = getMatchesByLeague(playerMatches);
+
+// Helper functions
+const formatDate = (date: Date): string => {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const getOpponent = (match: any, playerTeamId: string | null): string => {
+  if (!playerTeamId) return 'Unknown';
+  if (match.team1Id === playerTeamId) {
+    return match.team2?.name || match.team2Name || 'Unknown';
+  }
+  return match.team1?.name || match.team1Name || 'Unknown';
+};
+
+const getPlayerTeamId = (match: any): string | null => {
+  if (player.teamId && match.team1Id === player.teamId) {
+    return match.team1Id;
+  }
+  if (player.teamId && match.team2Id === player.teamId) {
+    return match.team2Id;
+  }
+  return null;
+};
 
 // SEO Meta Tags
 const pageTitle = `${playerName} - Players - Elevate Ballers`;
@@ -283,6 +370,230 @@ const pageUrl = `${Astro.url.origin}/players/${id}`;
                       <h2 class="section-title">Statistics</h2>
                       <p class="no-data-message">No statistics available for this player.</p>
                     </div>
+                  )}
+
+                  {playerStats.totalMatches > 0 && (
+                    <>
+                      <Spacing
+                        id="stm-spacing-player-career-stats"
+                        lg="40"
+                        md="40"
+                        sm="30"
+                        xs="30"
+                      />
+
+                      <!-- Career Statistics Section -->
+                      <div class="player-section">
+                        <h2 class="section-title">Career Statistics</h2>
+                        <div class="career-stats-grid">
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Games</div>
+                            <div class="career-stat-value">
+                              {playerStats.totalMatches}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Total Points</div>
+                            <div class="career-stat-value">
+                              {playerStats.totalPoints}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Points Per Game</div>
+                            <div class="career-stat-value">
+                              {playerStats.pointsPerGame.toFixed(1)}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Rebounds Per Game</div>
+                            <div class="career-stat-value">
+                              {playerStats.reboundsPerGame.toFixed(1)}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Assists Per Game</div>
+                            <div class="career-stat-value">
+                              {playerStats.assistsPerGame.toFixed(1)}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Steals Per Game</div>
+                            <div class="career-stat-value">
+                              {playerStats.stealsPerGame.toFixed(1)}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Blocks Per Game</div>
+                            <div class="career-stat-value">
+                              {playerStats.blocksPerGame.toFixed(1)}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Field Goal %</div>
+                            <div class="career-stat-value">
+                              {playerStats.fieldGoalPercentage > 0 ? `${playerStats.fieldGoalPercentage.toFixed(1)}%` : '-'}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">3-Point %</div>
+                            <div class="career-stat-value">
+                              {playerStats.threePointPercentage > 0 ? `${playerStats.threePointPercentage.toFixed(1)}%` : '-'}
+                            </div>
+                          </div>
+                          <div class="career-stat-card">
+                            <div class="career-stat-label">Free Throw %</div>
+                            <div class="career-stat-value">
+                              {playerStats.freeThrowPercentage > 0 ? `${playerStats.freeThrowPercentage.toFixed(1)}%` : '-'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {playerMatches.length > 0 && (
+                    <>
+                      <Spacing
+                        id="stm-spacing-player-matches"
+                        lg="40"
+                        md="40"
+                        sm="30"
+                        xs="30"
+                      />
+
+                      <!-- Matches Section -->
+                      <div class="player-section">
+                        <h2 class="section-title">Matches</h2>
+                        
+                        {Object.entries(matchesByLeague).map(([leagueName, matches]) => (
+                          <div class="league-matches-group">
+                            <h3 class="league-matches-title">
+                              {leagueName}
+                            </h3>
+                            <div class="league-matches-list">
+                              {matches.map((match) => {
+                                const playerTeamId = getPlayerTeamId(match);
+                                const opponent = getOpponent(match, playerTeamId);
+                                const matchStats = match.events && match.events.length > 0
+                                  ? calculatePlayerMatchStats(player.id, match.events)
+                                  : null;
+                                
+                                const matchDate = new Date(match.date);
+                                const isCompleted = match.status === 'COMPLETED';
+                                const isLive = match.status === 'LIVE';
+                                
+                                return (
+                                  <div class="match-card">
+                                    <div class="match-header">
+                                      <div class="match-date">
+                                        {formatDate(matchDate)}
+                                      </div>
+                                      <div>
+                                        {isCompleted ? (
+                                          <span class="match-status match-status-completed">
+                                            Completed
+                                          </span>
+                                        ) : isLive ? (
+                                          <span class="match-status match-status-live">
+                                            Live
+                                          </span>
+                                        ) : (
+                                          <span class="match-status match-status-upcoming">
+                                            Upcoming
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div class="match-teams">
+                                      <div class="match-team">
+                                        <span class="match-team-name">
+                                          {player.team?.name || 'Team'}
+                                        </span>
+                                        {isCompleted && matchStats && (
+                                          <span class="match-team-score match-team-score-player">
+                                            {matchStats.points}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span class="match-vs">vs</span>
+                                      <div class="match-team match-team-opponent">
+                                        <span class="match-team-name">
+                                          {opponent}
+                                        </span>
+                                        {isCompleted && playerTeamId && (
+                                          <span class="match-team-score match-team-score-opponent">
+                                            {playerTeamId === match.team1Id ? match.team2Score : match.team1Score}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {isCompleted && matchStats && (
+                                      <div class="match-stats">
+                                        <div class="match-stats-primary">
+                                          <div class="match-stat-item">
+                                            <span class="match-stat-label">PTS:</span>
+                                            <span class="match-stat-value">{matchStats.points}</span>
+                                          </div>
+                                          <div class="match-stat-item">
+                                            <span class="match-stat-label">REB:</span>
+                                            <span class="match-stat-value">{matchStats.rebounds}</span>
+                                          </div>
+                                          <div class="match-stat-item">
+                                            <span class="match-stat-label">AST:</span>
+                                            <span class="match-stat-value">{matchStats.assists}</span>
+                                          </div>
+                                          <div class="match-stat-item">
+                                            <span class="match-stat-label">STL:</span>
+                                            <span class="match-stat-value">{matchStats.steals}</span>
+                                          </div>
+                                          <div class="match-stat-item">
+                                            <span class="match-stat-label">BLK:</span>
+                                            <span class="match-stat-value">{matchStats.blocks}</span>
+                                          </div>
+                                          <div class="match-stat-item">
+                                            <span class="match-stat-label">TO:</span>
+                                            <span class="match-stat-value">{matchStats.turnovers}</span>
+                                          </div>
+                                          <div class="match-stat-item">
+                                            <span class="match-stat-label">PF:</span>
+                                            <span class="match-stat-value">{matchStats.fouls}</span>
+                                          </div>
+                                        </div>
+                                        <div class="match-stats-secondary">
+                                          <span>FG: {matchStats.fieldGoalsMade}/{matchStats.fieldGoalsAttempted}</span>
+                                          <span>3PT: {matchStats.threePointersMade}/{matchStats.threePointersAttempted}</span>
+                                          <span>FT: {matchStats.freeThrowsMade}/{matchStats.freeThrowsAttempted}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {playerMatches.length === 0 && (
+                    <>
+                      <Spacing
+                        id="stm-spacing-player-matches"
+                        lg="40"
+                        md="40"
+                        sm="30"
+                        xs="30"
+                      />
+                      <div class="player-section">
+                        <h2 class="section-title">Matches</h2>
+                        <div class="no-matches-message">
+                          <p>No matches found for this player.</p>
+                        </div>
+                      </div>
+                    </>
                   )}
 
                   <Spacing
@@ -580,6 +891,229 @@ const pageUrl = `${Astro.url.origin}/players/${id}`;
       border-radius: 8px;
     }
 
+    /* Career Statistics Styles */
+    .career-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .career-stat-card {
+      background: #fff;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .career-stat-card:hover {
+      border-color: #dd3333;
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(221, 51, 51, 0.15);
+    }
+
+    .career-stat-label {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      color: #666;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .career-stat-value {
+      font-family: 'Teko', sans-serif;
+      font-size: 36px;
+      line-height: 40px;
+      color: #dd3333;
+      font-weight: 700;
+    }
+
+    /* Matches Section Styles */
+    .league-matches-group {
+      margin-bottom: 3rem;
+    }
+
+    .league-matches-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 24px;
+      line-height: 28px;
+      color: #dd3333;
+      margin: 0 0 1rem 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e2e8f0;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .league-matches-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .match-card {
+      background: #fff;
+      border-left: 4px solid #cbd5e0;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .match-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .match-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .match-date {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .match-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Rubik', sans-serif;
+    }
+
+    .match-status-completed {
+      background-color: #f3f4f6;
+      color: #374151;
+    }
+
+    .match-status-live {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .match-status-upcoming {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .match-teams {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      gap: 1rem;
+    }
+
+    .match-team {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    .match-team-opponent {
+      justify-content: flex-end;
+    }
+
+    .match-team-name {
+      font-family: 'Rubik', sans-serif;
+      font-size: 18px;
+      line-height: 24px;
+      color: #1f2937;
+      font-weight: 600;
+    }
+
+    .match-team-score {
+      font-family: 'Teko', sans-serif;
+      font-size: 28px;
+      line-height: 32px;
+      font-weight: 700;
+    }
+
+    .match-team-score-player {
+      color: #dd3333;
+    }
+
+    .match-team-score-opponent {
+      color: #4b5563;
+    }
+
+    .match-vs {
+      font-family: 'Rubik', sans-serif;
+      font-size: 16px;
+      line-height: 24px;
+      color: #9ca3af;
+      font-weight: 600;
+      margin: 0 0.5rem;
+    }
+
+    .match-stats {
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .match-stats-primary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .match-stat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 14px;
+      font-family: 'Rubik', sans-serif;
+    }
+
+    .match-stat-label {
+      color: #666;
+      font-weight: 600;
+    }
+
+    .match-stat-value {
+      color: #1f2937;
+      font-weight: 700;
+    }
+
+    .match-stats-secondary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 14px;
+      color: #666;
+      font-family: 'Rubik', sans-serif;
+      margin-top: 0.5rem;
+    }
+
+    .no-matches-message {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .no-matches-message p {
+      font-family: 'Rubik', sans-serif;
+      font-size: 16px;
+      color: #666;
+      margin: 0;
+    }
+
     .sp-footer-sponsors {
       background: #f4f4f4;
       color: #363f48;
@@ -589,6 +1123,18 @@ const pageUrl = `${Astro.url.origin}/players/${id}`;
     }
 
     /* Responsive Styles */
+    @media (min-width: 768px) {
+      .career-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .career-stats-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+
     @media (max-width: 991px) {
       .player-header-content {
         flex-direction: column;
@@ -613,6 +1159,10 @@ const pageUrl = `${Astro.url.origin}/players/${id}`;
       .player-stats-grid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 1rem;
+      }
+
+      .career-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
 
@@ -640,6 +1190,39 @@ const pageUrl = `${Astro.url.origin}/players/${id}`;
       .stat-value {
         font-size: 28px;
         line-height: 32px;
+      }
+
+      .career-stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .career-stat-value {
+        font-size: 28px;
+        line-height: 32px;
+      }
+
+      .match-teams {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .match-team {
+        width: 100%;
+      }
+
+      .match-team-opponent {
+        justify-content: flex-start;
+      }
+
+      .match-vs {
+        margin: 0;
+        align-self: center;
+      }
+
+      .match-stats-primary {
+        flex-direction: column;
+        gap: 0.5rem;
       }
     }
   </style>

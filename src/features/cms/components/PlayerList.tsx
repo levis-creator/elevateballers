@@ -572,6 +572,12 @@ export default function PlayerList() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem className="cursor-pointer" asChild>
+                            <a href={`/admin/players/view/${player.id}`} data-astro-prefetch>
+                              {EyeIcon ? <EyeIcon className="w-4 h-4 mr-2" /> : null}
+                              View Player
+                            </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer" asChild>
                             <a href={`/admin/players/${player.id}`} data-astro-prefetch>
                               {EditIcon ? <EditIcon className="w-4 h-4 mr-2" /> : null}
                               Edit Player

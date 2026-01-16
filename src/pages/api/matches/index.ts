@@ -84,6 +84,12 @@ export const GET: APIRoute = async ({ request }) => {
       filter.league = leagueParam;
     }
     
+    // Team filter
+    const teamIdParam = url.searchParams.get('teamId');
+    if (teamIdParam) {
+      filter.teamId = teamIdParam;
+    }
+    
     // Date range filters
     const dateFromParam = url.searchParams.get('dateFrom');
     const dateToParam = url.searchParams.get('dateTo');
