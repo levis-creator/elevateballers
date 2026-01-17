@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, Calendar, Trophy, Loader2, Save } from 'lucide-react';
+import { AlertCircle, Calendar, Trophy, Loader2, Save, ArrowUp, ArrowDown, Info } from 'lucide-react';
 
 const MATCH_STATUSES: MatchStatus[] = ['UPCOMING', 'LIVE', 'COMPLETED'];
 const MATCH_STAGES: MatchStage[] = [
@@ -337,6 +337,44 @@ export default function BracketMatchDialog({
           <DialogTitle>{matchId ? 'Edit Match' : 'Create Match'}</DialogTitle>
           <DialogDescription>
             {matchId ? 'Update match details' : 'Create a new match for this bracket position'}
+            {bracketMatch && (
+              <div className="mt-2 space-y-1">
+                {bracketMatch.tournamentRoundText && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Trophy className="h-3 w-3" />
+                    <span>Round: {bracketMatch.tournamentRoundText}</span>
+                  </div>
+                )}
+                {bracketMatch.bracketType && (
+                  <div className="flex items-center gap-2 text-sm">
+                    {bracketMatch.bracketType === 'upper' && (
+                      <>
+                        <ArrowUp className="h-3 w-3 text-blue-600" />
+                        <span className="text-blue-600">Upper Bracket</span>
+                      </>
+                    )}
+                    {bracketMatch.bracketType === 'lower' && (
+                      <>
+                        <ArrowDown className="h-3 w-3 text-orange-600" />
+                        <span className="text-orange-600">Lower Bracket</span>
+                      </>
+                    )}
+                    {bracketMatch.bracketType === 'grand-final' && (
+                      <>
+                        <Trophy className="h-3 w-3 text-yellow-600" />
+                        <span className="text-yellow-600">Grand Final</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                {bracketMatch.nextMatchId && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Info className="h-3 w-3" />
+                    <span>Winner advances to next round</span>
+                  </div>
+                )}
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 

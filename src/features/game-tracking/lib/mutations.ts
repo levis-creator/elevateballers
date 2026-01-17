@@ -288,6 +288,10 @@ export async function endGame(matchId: string): Promise<boolean> {
 
       // Calculate and update the winner (handles draws by setting winnerId to null)
       await updateMatchWinner(matchId, tx);
+
+      // Automatically advance winner to next match
+      const { advanceWinnerToNextMatch } = await import('../../tournaments/lib/bracket-automation');
+      await advanceWinnerToNextMatch(matchId, tx);
     });
 
     return true;

@@ -76,7 +76,13 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
       const response = await fetch(`/api/matches?seasonId=${seasonId}`);
       if (!response.ok) throw new Error('Failed to fetch matches');
       const data = await response.json();
-      setMatches(data);
+      
+      // Remove duplicates based on match ID
+      const uniqueMatches = Array.from(
+        new Map(data.map((match: MatchWithTeamsAndLeagueAndSeason) => [match.id, match])).values()
+      );
+      
+      setMatches(uniqueMatches);
     } catch (err: any) {
       setError(err.message || 'Failed to load matches');
     } finally {
