@@ -51,6 +51,33 @@ function getRoundText(stage: MatchStage | null | undefined): string {
 }
 
 /**
+ * Get enhanced round text that includes bracket type and round number for double elimination
+ */
+function getEnhancedRoundText(
+  stage: MatchStage | null | undefined,
+  bracketType?: 'upper' | 'lower' | 'grand-final' | string | null,
+  bracketRound?: number | null
+): string {
+  const stageText = getRoundText(stage);
+  
+  // For grand final, return special label
+  if (bracketType === 'grand-final') {
+    return 'Grand Final';
+  }
+  
+  // For double elimination, include bracket type and round number for clarity
+  if (bracketType && (bracketType === 'upper' || bracketType === 'lower') && bracketRound !== undefined && bracketRound !== null) {
+    const bracketLabel = bracketType === 'lower' ? 'Lower' : 'Upper';
+    
+    // Format: "Upper Round 1 - Semi-Final" or "Lower Round 2 - Quarter-Final"
+    return `${bracketLabel} Round ${bracketRound} - ${stageText}`;
+  }
+  
+  // For single elimination or when bracket info is not available, just return stage text
+  return stageText;
+}
+
+/**
  * Get stage hierarchy for determining nextMatchId relationships
  * Lower number = earlier round, higher number = later round
  */
@@ -152,29 +179,42 @@ function convertMatchToBracket(
   const stage = match.stage;
   const currentHierarchy = getStageHierarchy(stage);
   
-  // Find the next match (match with higher hierarchy in same bracket path)
-  // For now, we'll find matches with the next stage up
-  const nextStageMap: Record<MatchStage, MatchStage | null> = {
-    QUARTER_FINALS: 'SEMI_FINALS',
-    SEMI_FINALS: 'CHAMPIONSHIP',
-    PLAYOFF: 'QUARTER_FINALS',
-    CHAMPIONSHIP: null,
-    REGULAR_SEASON: null,
-    PRESEASON: null,
-    EXHIBITION: null,
-    QUALIFIER: null,
-    OTHER: null,
-  };
-  
-  const nextStage = stage ? nextStageMap[stage] : null;
+  // Use stored nextWinnerMatchId from database if available (new brackets with explicit links)
+  // Fall back to computed links for backward compatibility with old brackets
   let nextMatchId: string | null = null;
+  let nextLooserMatchId: string | null = null;
   
-  if (nextStage) {
-    // Find a match in the next stage (simplified - in real scenario might need more logic)
-    const nextMatch = allMatches.find(m => m.stage === nextStage);
-    if (nextMatch) {
-      nextMatchId = nextMatch.id;
+  if (match.nextWinnerMatchId) {
+    // Use explicit link from database
+    nextMatchId = match.nextWinnerMatchId;
+  } else {
+    // Fallback: compute link using stage-based heuristics (for old brackets)
+    const nextStageMap: Record<MatchStage, MatchStage | null> = {
+      QUARTER_FINALS: 'SEMI_FINALS',
+      SEMI_FINALS: 'CHAMPIONSHIP',
+      PLAYOFF: 'QUARTER_FINALS',
+      CHAMPIONSHIP: null,
+      REGULAR_SEASON: null,
+      PRESEASON: null,
+      EXHIBITION: null,
+      QUALIFIER: null,
+      OTHER: null,
+    };
+    
+    const nextStage = stage ? nextStageMap[stage] : null;
+    
+    if (nextStage) {
+      // Find a match in the next stage (simplified - in real scenario might need more logic)
+      const nextMatch = allMatches.find(m => m.stage === nextStage);
+      if (nextMatch) {
+        nextMatchId = nextMatch.id;
+      }
     }
+  }
+  
+  // Use stored nextLoserMatchId for double elimination
+  if (match.nextLoserMatchId) {
+    nextLooserMatchId = match.nextLoserMatchId;
   }
   
   // Determine winner
@@ -207,14 +247,15 @@ function convertMatchToBracket(
   return {
     id: match.id,
     nextMatchId,
-    nextLooserMatchId: null, // Will be set by double elimination converter if needed
-    tournamentRoundText: getRoundText(stage),
+    nextLooserMatchId: nextLooserMatchId || null,
+    tournamentRoundText: getEnhancedRoundText(stage, match.bracketType, match.bracketRound),
     startTime: new Date(match.date).toISOString(),
     state: getBracketState(match.status),
     participants,
     originalMatchId: match.id,
     stage: stage || undefined,
     isEmpty: false,
+    bracketType: match.bracketType as 'upper' | 'lower' | 'grand-final' | undefined,
   };
 }
 
@@ -421,6 +462,9 @@ export function convertMatchesToBracket(
       if (processedMatches.has(match.id)) continue;
       
       const bracketMatch = convertMatchToBracket(match, matches);
+      // For single elimination, clear bracketType to avoid "Lower"/"Upper" prefixes
+      bracketMatch.bracketType = undefined;
+      bracketMatch.tournamentRoundText = getEnhancedRoundText(match.stage, undefined, match.bracketRound);
       bracketMatchMap.set(match.id, bracketMatch);
       processedMatches.add(match.id);
     }
@@ -434,6 +478,9 @@ export function convertMatchesToBracket(
   for (const match of allOtherMatches) {
     if (processedMatches.has(match.id)) continue;
     const bracketMatch = convertMatchToBracket(match, matches);
+    // For single elimination, clear bracketType to avoid "Lower"/"Upper" prefixes
+    bracketMatch.bracketType = undefined;
+    bracketMatch.tournamentRoundText = getEnhancedRoundText(match.stage, undefined, match.bracketRound);
     bracketMatchMap.set(match.id, bracketMatch);
     processedMatches.add(match.id);
   }
@@ -448,10 +495,13 @@ export function convertMatchesToBracket(
       teams: `${getTeam1Name(match)} vs ${getTeam2Name(match)}`,
     });
     const bracketMatch = convertMatchToBracket(match, matches);
+    // For single elimination, clear bracketType to avoid "Lower"/"Upper" prefixes
+    bracketMatch.bracketType = undefined;
+    bracketMatch.tournamentRoundText = getEnhancedRoundText(match.stage, undefined, match.bracketRound);
     bracketMatchMap.set(match.id, bracketMatch);
     processedMatches.add(match.id);
   }
-  
+
   // Generate ghost matches FIRST, before linking, so they're available for linking
   const { ghostMatches, ghostMap } = generateGhostMatchesForIncompleteBracket(matchesByStage);
   if (ghostMatches.length > 0) {
@@ -492,9 +542,11 @@ export function convertMatchesToBracket(
       const bracketMatch = bracketMatchMap.get(match.id);
       if (!bracketMatch) continue;
       
-      // Skip if already linked
+      // Skip if already linked (from stored nextWinnerMatchId in database)
+      // Only compute links for old brackets that don't have explicit links
       if (bracketMatch.nextMatchId) continue;
       
+      // Fallback: compute link using stage-based heuristics (for old brackets without explicit links)
       if (match.stage && match.stage in nextStageMap) {
         const nextStage = nextStageMap[match.stage as keyof typeof nextStageMap];
         if (nextStage) {
@@ -633,13 +685,23 @@ export function convertMatchesToBracket(
 
 /**
  * Detect if matches represent a double elimination bracket
- * Heuristic: if there are many PLAYOFF matches relative to other stages, likely double elimination
+ * First checks for explicit bracketType field, then falls back to heuristics
  */
 export function detectBracketType(
   matches: MatchWithTeamsAndLeagueAndSeason[]
 ): 'single' | 'double' {
   if (matches.length === 0) return 'single';
 
+  // Priority 1: Check for explicit bracketType field (most reliable)
+  // If any match has 'lower', 'upper', or 'grand-final', it's definitely double elimination
+  const hasDoubleElimBracketType = matches.some(m => 
+    m.bracketType === 'lower' || m.bracketType === 'upper' || m.bracketType === 'grand-final'
+  );
+  if (hasDoubleElimBracketType) {
+    return 'double';
+  }
+
+  // Priority 2: Use heuristics for old brackets without bracketType field
   const playoffMatches = matches.filter(m => m.stage === 'PLAYOFF').length;
   const quarterFinals = matches.filter(m => m.stage === 'QUARTER_FINALS').length;
   const semiFinals = matches.filter(m => m.stage === 'SEMI_FINALS').length;
@@ -672,58 +734,94 @@ export function detectBracketType(
  */
 export function convertMatchesToDoubleEliminationBracket(
   matches: MatchWithTeamsAndLeagueAndSeason[]
-): { upper: BracketMatch[]; lower: BracketMatch[] } {
+): { upper: BracketMatch[]; lower: BracketMatch[]; grandFinal?: BracketMatch[] } {
   if (matches.length === 0) {
     return { upper: [], lower: [] };
   }
 
-  // Separate matches into upper and lower brackets
-  // Upper bracket: QUARTER_FINALS, SEMI_FINALS, CHAMPIONSHIP (if only one)
-  // Lower bracket: PLAYOFF matches and potentially some CHAMPIONSHIP matches
-  
-  const upperBracketStages: MatchStage[] = ['QUARTER_FINALS', 'SEMI_FINALS'];
-  const lowerBracketStages: MatchStage[] = ['PLAYOFF'];
-  
+  // Separate matches into upper, lower, and grand final brackets using bracketType field
+  // Fall back to stage-based detection for old brackets without bracketType
   const upperMatches: MatchWithTeamsAndLeagueAndSeason[] = [];
   const lowerMatches: MatchWithTeamsAndLeagueAndSeason[] = [];
-  const championshipMatches: MatchWithTeamsAndLeagueAndSeason[] = [];
+  const grandFinalMatches: MatchWithTeamsAndLeagueAndSeason[] = [];
 
   matches.forEach(match => {
     if (!match.stage) return;
     
-    if (upperBracketStages.includes(match.stage)) {
-      upperMatches.push(match);
-    } else if (lowerBracketStages.includes(match.stage)) {
-      lowerMatches.push(match);
-    } else if (match.stage === 'CHAMPIONSHIP') {
-      championshipMatches.push(match);
+    // Use bracketType if available (new brackets)
+    if (match.bracketType) {
+      if (match.bracketType === 'upper') {
+        upperMatches.push(match);
+      } else if (match.bracketType === 'lower') {
+        lowerMatches.push(match);
+      } else if (match.bracketType === 'grand-final') {
+        grandFinalMatches.push(match);
+      }
+    } else {
+      // Fallback: use stage-based detection for old brackets
+      // For double elimination, PLAYOFF can be in upper bracket (first round) or lower bracket
+      // Use context: if PLAYOFF matches have nextLoserMatchId pointing to lower bracket, they're upper bracket
+      // Otherwise, assume they're lower bracket
+      const upperBracketStages: MatchStage[] = ['QUARTER_FINALS', 'SEMI_FINALS'];
+      
+      // Check if this is an upper bracket PLAYOFF match (has nextLoserMatchId pointing to lower bracket)
+      const isUpperBracketPlayoff = match.stage === 'PLAYOFF' && match.nextLoserMatchId;
+      
+      if (upperBracketStages.includes(match.stage) || isUpperBracketPlayoff) {
+        upperMatches.push(match);
+      } else if (match.stage === 'PLAYOFF') {
+        // Lower bracket playoff match
+        lowerMatches.push(match);
+      } else if (match.stage === 'CHAMPIONSHIP') {
+        // Could be grand final or upper bracket final - check if there are multiple championship matches
+        const championshipCount = matches.filter(m => m.stage === 'CHAMPIONSHIP').length;
+        if (championshipCount > 1) {
+          // Multiple championships likely means one is grand final
+          grandFinalMatches.push(match);
+        } else {
+          // Single championship - could be single elimination or grand final
+          // Assume it's grand final if we have both upper and lower brackets
+          if (upperMatches.length > 0 && lowerMatches.length > 0) {
+            grandFinalMatches.push(match);
+          } else {
+            upperMatches.push(match);
+          }
+        }
+      }
     }
   });
 
   // Convert upper bracket matches
+  // Use stored nextWinnerMatchId and nextLoserMatchId from convertMatchToBracket
   const upperBracket: BracketMatch[] = upperMatches.map(match => {
     const bracketMatch = convertMatchToBracket(match, matches);
-    bracketMatch.bracketType = 'upper';
+    // Ensure bracketType is set
+    if (!bracketMatch.bracketType) {
+      bracketMatch.bracketType = 'upper';
+    }
     
-    // Find next match in upper bracket
-    const nextStageMap: Record<MatchStage, MatchStage | null> = {
-      QUARTER_FINALS: 'SEMI_FINALS',
-      SEMI_FINALS: 'CHAMPIONSHIP',
-      PLAYOFF: 'QUARTER_FINALS',
-      CHAMPIONSHIP: null,
-      REGULAR_SEASON: null,
-      PRESEASON: null,
-      EXHIBITION: null,
-      QUALIFIER: null,
-      OTHER: null,
-    };
-    
-    if (match.stage && match.stage in nextStageMap) {
-      const nextStage = nextStageMap[match.stage as keyof typeof nextStageMap];
-      if (nextStage) {
-        const nextMatch = [...upperMatches, ...championshipMatches].find(m => m.stage === nextStage);
-        if (nextMatch) {
-          bracketMatch.nextMatchId = nextMatch.id;
+    // If nextMatchId wasn't set by convertMatchToBracket (old bracket), try to compute it
+    if (!bracketMatch.nextMatchId) {
+      const nextStageMap: Record<MatchStage, MatchStage | null> = {
+        QUARTER_FINALS: 'SEMI_FINALS',
+        SEMI_FINALS: 'CHAMPIONSHIP',
+        PLAYOFF: 'QUARTER_FINALS',
+        CHAMPIONSHIP: null,
+        REGULAR_SEASON: null,
+        PRESEASON: null,
+        EXHIBITION: null,
+        QUALIFIER: null,
+        OTHER: null,
+      };
+      
+      if (match.stage && match.stage in nextStageMap) {
+        const nextStage = nextStageMap[match.stage as keyof typeof nextStageMap];
+        if (nextStage) {
+          // Look for next match in upper bracket or grand final
+          const nextMatch = [...upperMatches, ...grandFinalMatches].find(m => m.stage === nextStage);
+          if (nextMatch) {
+            bracketMatch.nextMatchId = nextMatch.id;
+          }
         }
       }
     }
@@ -731,34 +829,91 @@ export function convertMatchesToDoubleEliminationBracket(
     return bracketMatch;
   });
 
-  // Add championship matches to upper bracket (grand final)
-  const upperChampionship: BracketMatch[] = championshipMatches.map(match => {
+  // Convert grand final matches
+  const grandFinal: BracketMatch[] = grandFinalMatches.map(match => {
     const bracketMatch = convertMatchToBracket(match, matches);
-    bracketMatch.bracketType = 'grand-final';
+    // Ensure bracketType is set
+    if (!bracketMatch.bracketType) {
+      bracketMatch.bracketType = 'grand-final';
+    }
     return bracketMatch;
   });
 
   // Convert lower bracket matches
+  // Use stored nextWinnerMatchId from convertMatchToBracket
   const lowerBracket: BracketMatch[] = lowerMatches.map(match => {
     const bracketMatch = convertMatchToBracket(match, matches);
-    bracketMatch.bracketType = 'lower';
+    // Ensure bracketType is set
+    if (!bracketMatch.bracketType) {
+      bracketMatch.bracketType = 'lower';
+    }
     
-    // Lower bracket progression (simplified - could be enhanced)
-    // Lower bracket winners advance to next lower bracket round or grand final
+    // If nextMatchId wasn't set by convertMatchToBracket (old bracket), try to compute it
+    if (!bracketMatch.nextMatchId) {
+      // Lower bracket progression: winners advance to next lower bracket round or grand final
+      // This is simplified - in practice, lower bracket structure is complex
+      const nextStageMap: Record<MatchStage, MatchStage | null> = {
+        PLAYOFF: 'QUARTER_FINALS',
+        QUARTER_FINALS: 'SEMI_FINALS',
+        SEMI_FINALS: 'CHAMPIONSHIP', // Lower bracket final goes to grand final
+        CHAMPIONSHIP: null,
+        REGULAR_SEASON: null,
+        PRESEASON: null,
+        EXHIBITION: null,
+        QUALIFIER: null,
+        OTHER: null,
+      };
+      
+      if (match.stage && match.stage in nextStageMap) {
+        const nextStage = nextStageMap[match.stage as keyof typeof nextStageMap];
+        if (nextStage === 'CHAMPIONSHIP') {
+          // Lower bracket final goes to grand final
+          const grandFinalMatch = grandFinalMatches[0];
+          if (grandFinalMatch) {
+            bracketMatch.nextMatchId = grandFinalMatch.id;
+          }
+        } else if (nextStage) {
+          // Look for next match in lower bracket
+          const nextMatch = lowerMatches.find(m => m.stage === nextStage);
+          if (nextMatch) {
+            bracketMatch.nextMatchId = nextMatch.id;
+          }
+        }
+      }
+    }
+    
     return bracketMatch;
   });
 
-  // Sort by date
-  upperBracket.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  lowerBracket.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  upperChampionship.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  // Sort by bracketRound and bracketPosition if available, otherwise by date
+  const sortMatches = (a: BracketMatch, b: BracketMatch) => {
+    const matchA = matches.find(m => m.id === a.originalMatchId);
+    const matchB = matches.find(m => m.id === b.originalMatchId);
+    
+    if (matchA?.bracketRound !== undefined && matchB?.bracketRound !== undefined) {
+      if (matchA.bracketRound !== matchB.bracketRound) {
+        return matchA.bracketRound - matchB.bracketRound;
+      }
+      // Same round, sort by position
+      if (matchA.bracketPosition !== undefined && matchB.bracketPosition !== undefined) {
+        return matchA.bracketPosition - matchB.bracketPosition;
+      }
+    }
+    // Fallback to date
+    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+  };
+
+  upperBracket.sort(sortMatches);
+  lowerBracket.sort(sortMatches);
+  grandFinal.sort(sortMatches);
 
   // Ensure we always return arrays (never undefined)
   return {
-    upper: Array.isArray(upperBracket) && Array.isArray(upperChampionship) 
-      ? [...upperBracket, ...upperChampionship] 
-      : [],
+    upper: Array.isArray(upperBracket) && Array.isArray(grandFinal)
+      ? [...upperBracket, ...grandFinal]
+      : upperBracket,
     lower: Array.isArray(lowerBracket) ? lowerBracket : [],
+    grandFinal: grandFinal.length > 0 ? grandFinal : undefined,
   };
 }
 

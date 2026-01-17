@@ -29,7 +29,8 @@ function getNextStage(currentStage: MatchStage | null): MatchStage | null {
 }
 
 /**
- * Find the next match(s) for a completed match
+ * Find the next match(s) for a completed match using explicit links
+ * Falls back to stage-based heuristics if explicit links are not available (backward compatibility)
  * Returns an array because multiple matches might feed into the same next match
  * Includes validation to prevent overwriting existing teams
  */
@@ -45,6 +46,9 @@ async function findNextMatches(
       leagueId: true,
       winnerId: true,
       status: true,
+      nextWinnerMatchId: true,
+      bracketPosition: true,
+      bracketType: true,
     },
   });
 
@@ -52,6 +56,66 @@ async function findNextMatches(
     return [];
   }
 
+  // Use explicit link if available (new brackets)
+  if (completedMatch.nextWinnerMatchId) {
+    const nextMatch = await prismaClient.match.findUnique({
+      where: { id: completedMatch.nextWinnerMatchId },
+      select: {
+        id: true,
+        team1Id: true,
+        team2Id: true,
+        status: true,
+        bracketPosition: true,
+      },
+    });
+
+    if (!nextMatch) {
+      console.warn(`Next match ${completedMatch.nextWinnerMatchId} not found for match ${completedMatchId}`);
+      return [];
+    }
+
+    // Check if winner is already in the match
+    if (nextMatch.team1Id === completedMatch.winnerId || nextMatch.team2Id === completedMatch.winnerId) {
+      console.log(`Winner ${completedMatch.winnerId} already in next match ${nextMatch.id}, skipping`);
+      return [];
+    }
+
+    // Determine position based on bracket structure
+    // If this match is first in pair (even bracketPosition), go to team1
+    // If this match is second in pair (odd bracketPosition), go to team2
+    let position: 'team1' | 'team2';
+    if (completedMatch.bracketPosition !== null) {
+      // Use bracket position to determine slot
+      // Even positions (0, 2, 4...) → team1, Odd positions (1, 3, 5...) → team2
+      position = completedMatch.bracketPosition % 2 === 0 ? 'team1' : 'team2';
+    } else {
+      // Fallback: use first available slot
+      position = nextMatch.team1Id === null ? 'team1' : 'team2';
+    }
+
+    // Check if the determined position is available
+    if (position === 'team1' && nextMatch.team1Id !== null) {
+      // Try the other position
+      if (nextMatch.team2Id === null) {
+        position = 'team2';
+      } else {
+        console.warn(`Both slots filled in next match ${nextMatch.id}, cannot advance winner`);
+        return [];
+      }
+    } else if (position === 'team2' && nextMatch.team2Id !== null) {
+      // Try the other position
+      if (nextMatch.team1Id === null) {
+        position = 'team1';
+      } else {
+        console.warn(`Both slots filled in next match ${nextMatch.id}, cannot advance winner`);
+        return [];
+      }
+    }
+
+    return [{ matchId: nextMatch.id, position }];
+  }
+
+  // Fallback to stage-based heuristics for old brackets without explicit links
   const nextStage = getNextStage(completedMatch.stage);
   if (!nextStage) {
     // This is the final match, no next match
@@ -98,7 +162,6 @@ async function findNextMatches(
 
   // Determine which position to fill in the next match
   // For simplicity, we'll fill the first available slot in the first match
-  // You can enhance this logic based on your bracket structure
   const nextMatch = availableMatches[0];
   const position: 'team1' | 'team2' = nextMatch.team1Id === null ? 'team1' : 'team2';
 
@@ -107,6 +170,7 @@ async function findNextMatches(
 
 /**
  * Advance the winner of a completed match to the next match in the bracket
+ * For double elimination, also advances the loser to the lower bracket
  * This should be called after a match is completed and has a winner
  */
 export async function advanceWinnerToNextMatch(
@@ -122,6 +186,8 @@ export async function advanceWinnerToNextMatch(
         stage: true,
         seasonId: true,
         leagueId: true,
+        bracketType: true,
+        nextLoserMatchId: true,
       },
     });
 
@@ -135,10 +201,15 @@ export async function advanceWinnerToNextMatch(
       return false;
     }
 
+    // For double elimination upper bracket matches, also advance the loser
+    if (completedMatch.bracketType === 'upper' && completedMatch.nextLoserMatchId) {
+      await advanceLoserToLowerBracket(completedMatchId, prismaClient);
+    }
+
     const nextMatches = await findNextMatches(completedMatchId, prismaClient);
 
     if (nextMatches.length === 0) {
-      // No next match to advance to (e.g., championship match)
+      // No next match to advance to (e.g., championship match or grand final)
       return false;
     }
 
@@ -159,6 +230,7 @@ export async function advanceWinnerToNextMatch(
             team1Id: true,
             team2Id: true,
             status: true,
+            bracketType: true,
           },
         });
 
@@ -204,8 +276,9 @@ export async function advanceWinnerToNextMatch(
           data: updateData,
         });
 
+        const bracketInfo = targetMatch.bracketType ? ` (${targetMatch.bracketType} bracket)` : '';
         console.log(
-          `Advanced winner ${completedMatch.winnerId} from match ${completedMatchId} to ${position} in match ${matchId}`
+          `Advanced winner ${completedMatch.winnerId} from match ${completedMatchId} to ${position} in match ${matchId}${bracketInfo}`
         );
       } catch (error: any) {
         // Handle unique constraint violations or other errors gracefully
@@ -227,6 +300,7 @@ export async function advanceWinnerToNextMatch(
 
 /**
  * Advance the loser of a completed match to the lower bracket (for double elimination)
+ * Uses explicit nextLoserMatchId link if available, falls back to heuristics for backward compatibility
  * This should be called after a match is completed in the upper bracket
  */
 export async function advanceLoserToLowerBracket(
@@ -244,10 +318,18 @@ export async function advanceLoserToLowerBracket(
         stage: true,
         seasonId: true,
         leagueId: true,
+        nextLoserMatchId: true,
+        bracketPosition: true,
+        bracketType: true,
       },
     });
 
     if (!completedMatch || completedMatch.status !== 'COMPLETED' || !completedMatch.winnerId) {
+      return false;
+    }
+
+    // Only advance losers from upper bracket matches
+    if (completedMatch.bracketType !== 'upper') {
       return false;
     }
 
@@ -260,13 +342,99 @@ export async function advanceLoserToLowerBracket(
       return false;
     }
 
-    // Find lower bracket matches in the same stage or next lower bracket stage
-    // For now, we'll find matches in PLAYOFF stage that don't have both teams
+    // Use explicit link if available (new brackets)
+    if (completedMatch.nextLoserMatchId) {
+      const lowerMatch = await prismaClient.match.findUnique({
+        where: { id: completedMatch.nextLoserMatchId },
+        select: {
+          id: true,
+          team1Id: true,
+          team2Id: true,
+          status: true,
+          bracketPosition: true,
+        },
+      });
+
+      if (!lowerMatch) {
+        console.warn(`Lower bracket match ${completedMatch.nextLoserMatchId} not found for match ${completedMatchId}`);
+        return false;
+      }
+
+      // Check if loser is already in the match
+      if (lowerMatch.team1Id === loserId || lowerMatch.team2Id === loserId) {
+        console.log(`Loser ${loserId} already in lower bracket match ${lowerMatch.id}, skipping`);
+        return false;
+      }
+
+      // Determine position based on bracket structure
+      let position: 'team1' | 'team2';
+      if (completedMatch.bracketPosition !== null && lowerMatch.bracketPosition !== null) {
+        // Use bracket positions to determine slot
+        // Even positions (0, 2, 4...) → team1, Odd positions (1, 3, 5...) → team2
+        position = completedMatch.bracketPosition % 2 === 0 ? 'team1' : 'team2';
+      } else {
+        // Fallback: use first available slot
+        position = lowerMatch.team1Id === null ? 'team1' : 'team2';
+      }
+
+      // Check if the determined position is available
+      if (position === 'team1' && lowerMatch.team1Id !== null) {
+        if (lowerMatch.team2Id === null) {
+          position = 'team2';
+        } else {
+          console.warn(`Both slots filled in lower bracket match ${lowerMatch.id}, cannot advance loser`);
+          return false;
+        }
+      } else if (position === 'team2' && lowerMatch.team2Id !== null) {
+        if (lowerMatch.team1Id === null) {
+          position = 'team1';
+        } else {
+          console.warn(`Both slots filled in lower bracket match ${lowerMatch.id}, cannot advance loser`);
+          return false;
+        }
+      }
+
+      // Get loser team details
+      const loserTeam = await prismaClient.team.findUnique({
+        where: { id: loserId },
+        select: { name: true, logo: true },
+      });
+
+      const updateData: { team1Id?: string; team2Id?: string; team1Name?: string; team2Name?: string; team1Logo?: string; team2Logo?: string } = {};
+      
+      if (position === 'team1') {
+        updateData.team1Id = loserId;
+        if (loserTeam) {
+          updateData.team1Name = loserTeam.name;
+          updateData.team1Logo = loserTeam.logo;
+        }
+      } else {
+        updateData.team2Id = loserId;
+        if (loserTeam) {
+          updateData.team2Name = loserTeam.name;
+          updateData.team2Logo = loserTeam.logo;
+        }
+      }
+
+      await prismaClient.match.update({
+        where: { id: lowerMatch.id },
+        data: updateData,
+      });
+
+      console.log(
+        `Advanced loser ${loserId} from match ${completedMatchId} to lower bracket match ${lowerMatch.id}`
+      );
+
+      return true;
+    }
+
+    // Fallback to stage-based heuristics for old brackets without explicit links
     const lowerBracketMatches = await prismaClient.match.findMany({
       where: {
         stage: 'PLAYOFF', // Lower bracket typically uses PLAYOFF stage
         seasonId: completedMatch.seasonId,
         leagueId: completedMatch.leagueId,
+        bracketType: 'lower', // Only lower bracket matches
         OR: [
           { team1Id: null },
           { team2Id: null },

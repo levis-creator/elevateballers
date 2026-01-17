@@ -35,10 +35,29 @@ export default function TournamentBracketView({ seasonId, leagueId }: Tournament
   const [generatorDialogOpen, setGeneratorDialogOpen] = useState(false);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [selectedBracketMatch, setSelectedBracketMatch] = useState<BracketMatch | null>(null);
+  const [seasonBracketType, setSeasonBracketType] = useState<'single' | 'double' | null>(null);
 
   useEffect(() => {
     fetchMatches();
+    fetchSeason();
   }, [seasonId]);
+
+  const fetchSeason = async () => {
+    if (!seasonId) return;
+    try {
+      const response = await fetch(`/api/seasons/${seasonId}`);
+      if (response.ok) {
+        const season = await response.json();
+        if (season.bracketType && (season.bracketType === 'single' || season.bracketType === 'double')) {
+          setSeasonBracketType(season.bracketType);
+        } else {
+          setSeasonBracketType(null);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch season:', err);
+    }
+  };
 
   useEffect(() => {
     if (matches.length > 0) {
@@ -47,17 +66,45 @@ export default function TournamentBracketView({ seasonId, leagueId }: Tournament
           matchCount: matches.length,
           matchesWithStages: matches.filter(m => m.stage).length,
           stages: [...new Set(matches.map(m => m.stage).filter(Boolean))],
+          matchesWithBracketType: matches.filter(m => m.bracketType).length,
+          bracketTypes: [...new Set(matches.map(m => m.bracketType).filter(Boolean))],
         });
 
-        // For now, disable double elimination detection to avoid library errors
-        // The library seems to have issues with the data structure we're providing
-        // TODO: Re-enable once we can ensure proper double elimination bracket structure
-        const useDoubleElimination = false; // Temporarily disabled
+        // Priority 1: Use season's bracketType if set (most reliable)
+        // Priority 2: Check if matches have bracketType field set (new brackets with explicit bracketType)
+        // Priority 3: Use heuristics for old brackets without bracketType field
+        let isDoubleElim = false;
         
-        if (useDoubleElimination) {
-          // Detect bracket type
-          const bracketType = detectBracketType(matches);
-          setIsDoubleElimination(bracketType === 'double');
+        if (seasonBracketType) {
+          // Use season's bracketType (most reliable source)
+          isDoubleElim = seasonBracketType === 'double';
+          console.log('Using season bracketType:', seasonBracketType);
+        } else {
+          // Fallback to match-based detection
+          const hasDoubleElimBracketType = matches.some(m => 
+            m.bracketType === 'lower' || m.bracketType === 'upper' || m.bracketType === 'grand-final'
+          );
+          
+          const heuristicBracketType = detectBracketType(matches);
+          isDoubleElim = hasDoubleElimBracketType || heuristicBracketType === 'double';
+          
+          console.log('Bracket type detection (fallback):', {
+            hasDoubleElimBracketType,
+            heuristicBracketType,
+            isDoubleElim,
+            bracketTypeBreakdown: {
+              upper: matches.filter(m => m.bracketType === 'upper').length,
+              lower: matches.filter(m => m.bracketType === 'lower').length,
+              grandFinal: matches.filter(m => m.bracketType === 'grand-final').length,
+            },
+          });
+        }
+        
+        setIsDoubleElimination(isDoubleElim);
+        
+        if (isDoubleElim) {
+          // Use season bracketType if available, otherwise use match-based detection
+          const bracketType = seasonBracketType || (hasDoubleElimBracketType ? 'double' : heuristicBracketType);
 
           if (bracketType === 'double') {
             // Convert to double elimination format
@@ -180,15 +227,25 @@ export default function TournamentBracketView({ seasonId, leagueId }: Tournament
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 flex-wrap">
                 <Trophy className="h-5 w-5" />
                 Tournament Bracket View
-                {isDoubleElimination && (
+                {seasonBracketType && (
+                  <span className={`ml-2 px-2 py-1 text-xs font-normal rounded ${
+                    seasonBracketType === 'double' 
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                      : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                  }`}>
+                    {seasonBracketType === 'double' ? 'Double' : 'Single'} Elimination
+                    <span className="ml-1 text-xs opacity-75">(from season)</span>
+                  </span>
+                )}
+                {!seasonBracketType && isDoubleElimination && (
                   <span className="ml-2 px-2 py-1 text-xs font-normal bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
                     Double Elimination
                   </span>
                 )}
-                {!isDoubleElimination && bracketMatches.length > 0 && (
+                {!seasonBracketType && !isDoubleElimination && bracketMatches.length > 0 && (
                   <span className="ml-2 px-2 py-1 text-xs font-normal bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded">
                     Single Elimination
                   </span>

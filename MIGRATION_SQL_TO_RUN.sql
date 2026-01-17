@@ -1,28 +1,23 @@
--- ============================================
--- WINNER MIGRATION SQL - COPY AND PASTE THIS
--- ============================================
--- Run this in Supabase SQL Editor:
--- 1. Go to: https://supabase.com/dashboard
--- 2. Select your project
--- 3. Click "SQL Editor" → "New query"
--- 4. Paste everything below
--- 5. Click "Run" (or Ctrl+Enter)
--- ============================================
+-- Migration: Add bracket_type to seasons table
+-- Run this SQL in your database if the migration hasn't been applied
 
--- AlterTable
--- Add winner_id column to matches table
-ALTER TABLE "matches" ADD COLUMN "winner_id" TEXT;
+-- Check if column already exists (optional - will error if exists, but that's okay)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'seasons' 
+        AND column_name = 'bracket_type'
+    ) THEN
+        -- AlterTable
+        ALTER TABLE "seasons" ADD COLUMN "bracket_type" TEXT;
 
--- CreateIndex
-CREATE INDEX "matches_winner_id_idx" ON "matches"("winner_id");
-
--- AddForeignKey
--- Add foreign key constraint for winner relation
-ALTER TABLE "matches" ADD CONSTRAINT "matches_winner_id_fkey" FOREIGN KEY ("winner_id") REFERENCES "teams"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- ============================================
--- VERIFICATION (optional - run after migration)
--- ============================================
--- SELECT column_name, data_type 
--- FROM information_schema.columns 
--- WHERE table_name = 'matches' AND column_name = 'winner_id';
+        -- CreateIndex
+        CREATE INDEX "seasons_bracket_type_idx" ON "seasons"("bracket_type");
+        
+        RAISE NOTICE 'Migration applied successfully';
+    ELSE
+        RAISE NOTICE 'Column bracket_type already exists';
+    END IF;
+END $$;

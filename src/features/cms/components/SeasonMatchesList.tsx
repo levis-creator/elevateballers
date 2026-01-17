@@ -185,9 +185,23 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
             <Trophy className="h-7 w-7" />
             Season Matches
           </h1>
-          <p className="text-muted-foreground">
-            {season ? `Matches for ${season.name}` : 'Manage matches for this season'}
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-muted-foreground">
+              {season ? `Matches for ${season.name}` : 'Manage matches for this season'}
+            </p>
+            {season?.bracketType && (
+              <Badge 
+                variant="outline" 
+                className={
+                  season.bracketType === 'double' 
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                    : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                }
+              >
+                {season.bracketType === 'double' ? 'Double' : 'Single'} Elimination
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <div className="flex gap-1 border rounded-md p-1">

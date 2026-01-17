@@ -288,12 +288,17 @@ export async function updateTeam(id: string, data: UpdateTeamInput): Promise<Tea
 }
 export async function createMatch(data: CreateMatchInput): Promise<Match> {
   // Validate that a team is not matched against itself
+  // Only check if both teams have actual IDs (not null/TBD)
   if (data.team1Id && data.team2Id && data.team1Id === data.team2Id) {
     throw new Error('A team cannot be matched against itself');
   }
   
-  // Also check by name if IDs are not provided
-  if (!data.team1Id && !data.team2Id && data.team1Name && data.team2Name && data.team1Name === data.team2Name) {
+  // Also check by name if IDs are not provided, but allow TBD matches (both teams null)
+  // TBD matches are valid for bracket generation where teams will be filled in later
+  if (!data.team1Id && !data.team2Id && data.team1Name && data.team2Name && 
+      data.team1Name === data.team2Name && 
+      data.team1Name !== 'TBD' && data.team2Name !== 'TBD' &&
+      data.team1Name !== 'BYE' && data.team2Name !== 'BYE') {
     throw new Error('A team cannot be matched against itself');
   }
 
@@ -310,30 +315,50 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
   }
 
   // Use league ID if provided, otherwise use fallback field
+  // Use relation connect syntax to ensure compatibility
   if (data.leagueId) {
-    matchData.leagueId = data.leagueId;
+    matchData.league = { connect: { id: data.leagueId } };
   } else {
     matchData.leagueName = data.league || '';
   }
 
   // Use season ID if provided
+  // Use relation connect syntax to ensure compatibility
   if (data.seasonId) {
-    matchData.seasonId = data.seasonId;
+    matchData.season = { connect: { id: data.seasonId } };
   }
 
   // Use team IDs if provided, otherwise use fallback fields
+  // Use relation connect syntax to ensure compatibility
   if (data.team1Id) {
-    matchData.team1Id = data.team1Id;
+    matchData.team1 = { connect: { id: data.team1Id } };
   } else {
     matchData.team1Name = data.team1Name || '';
     matchData.team1Logo = data.team1Logo || '';
   }
 
   if (data.team2Id) {
-    matchData.team2Id = data.team2Id;
+    matchData.team2 = { connect: { id: data.team2Id } };
   } else {
     matchData.team2Name = data.team2Name || '';
     matchData.team2Logo = data.team2Logo || '';
+  }
+
+  // Bracket relationship fields (optional)
+  if (data.nextWinnerMatchId !== undefined) {
+    matchData.nextWinnerMatchId = data.nextWinnerMatchId;
+  }
+  if (data.nextLoserMatchId !== undefined) {
+    matchData.nextLoserMatchId = data.nextLoserMatchId;
+  }
+  if (data.bracketPosition !== undefined) {
+    matchData.bracketPosition = data.bracketPosition;
+  }
+  if (data.bracketRound !== undefined) {
+    matchData.bracketRound = data.bracketRound;
+  }
+  if (data.bracketType !== undefined) {
+    matchData.bracketType = data.bracketType;
   }
 
   return await prisma.match.create({
@@ -1021,6 +1046,7 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
       leagueId: data.leagueId,
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
+      bracketType: data.bracketType || null,
     },
   });
 }

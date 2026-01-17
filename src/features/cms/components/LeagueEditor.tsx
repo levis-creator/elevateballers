@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, AlertCircle, Loader2, Save, X, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, CalendarRange, Eye } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2, Save, X, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, CalendarRange, Eye, Trophy, Info } from 'lucide-react';
 
 interface LeagueEditorProps {
   leagueId?: string;
@@ -70,6 +70,7 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
     startDate: '',
     endDate: '',
     active: true,
+    bracketType: '' as 'single' | 'double' | '',
   });
   const [seasonSaving, setSeasonSaving] = useState(false);
   const [seasonFormError, setSeasonFormError] = useState('');
@@ -167,6 +168,7 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
       startDate: '',
       endDate: '',
       active: true,
+      bracketType: '',
     });
     setSeasonFormError('');
     setShowSeasonEditor(true);
@@ -185,6 +187,7 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
         startDate: new Date(season.startDate).toISOString().slice(0, 10),
         endDate: new Date(season.endDate).toISOString().slice(0, 10),
         active: season.active,
+        bracketType: (season as any).bracketType || '',
       });
       setEditingSeasonId(id);
       setSeasonFormError('');
@@ -230,6 +233,7 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
         startDate: new Date(seasonFormData.startDate).toISOString(),
         endDate: new Date(seasonFormData.endDate).toISOString(),
         leagueId: leagueId!,
+        bracketType: seasonFormData.bracketType || undefined,
       };
 
       const response = await fetch(url, {
@@ -564,6 +568,7 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
                   <TableRow>
                     <TableHead>Season Name</TableHead>
                     <TableHead>Date Range</TableHead>
+                    <TableHead>Bracket Type</TableHead>
                     <TableHead>Matches</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -589,6 +594,22 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
                           <span className="text-muted-foreground">to</span>
                           <span>{formatDate(season.endDate)}</span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {(season as any).bracketType ? (
+                          <Badge 
+                            variant="outline" 
+                            className={
+                              (season as any).bracketType === 'double' 
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                                : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            }
+                          >
+                            {(season as any).bracketType === 'double' ? 'Double' : 'Single'} Elimination
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not set</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">{season._count.matches}</span>
@@ -735,21 +756,64 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="season-active">Status</Label>
+                <Select
+                  value={seasonFormData.active ? 'true' : 'false'}
+                  onValueChange={(value) => setSeasonFormData((prev) => ({ ...prev, active: value === 'true' }))}
+                  disabled={seasonSaving}
+                >
+                  <SelectTrigger id="season-active">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="season-bracket-type" className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4" />
+                  Tournament Bracket Type
+                </Label>
+                <Select
+                  value={seasonFormData.bracketType}
+                  onValueChange={(value) => setSeasonFormData((prev) => ({ ...prev, bracketType: value as 'single' | 'double' | '' }))}
+                  disabled={seasonSaving}
+                >
+                  <SelectTrigger id="season-bracket-type">
+                    <SelectValue placeholder="Select bracket type (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Not specified</SelectItem>
+                    <SelectItem value="single">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        Single Elimination
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="double">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Double Elimination
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="season-active">Status</Label>
-              <Select
-                value={seasonFormData.active ? 'true' : 'false'}
-                onValueChange={(value) => setSeasonFormData((prev) => ({ ...prev, active: value === 'true' }))}
-                disabled={seasonSaving}
-              >
-                <SelectTrigger id="season-active">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>
+                  Bracket type will be used as the default when generating tournament brackets for this season. 
+                  You can override this when generating brackets.
+                </p>
+              </div>
             </div>
 
             <DialogFooter>
