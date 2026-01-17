@@ -133,7 +133,7 @@ model Match {
   gameStates            GameState[]
   jumpBalls             JumpBall[]
   league                League?          @relation(fields: [leagueId], references: [id])
-  season                Season?          @relation(fields: [seasonId], references: [id])
+  season                Season?          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   team1                 Team?            @relation("Team1Matches", fields: [team1Id], references: [id])
   team2                 Team?            @relation("Team2Matches", fields: [team2Id], references: [id])
   gameRules             GameRules?       @relation(fields: [gameRulesId], references: [id])

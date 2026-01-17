@@ -199,7 +199,7 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
 
   const handleDeleteSeason = async (id: string) => {
     const confirmed = window.confirm(
-      'Are you sure you want to delete this season?\n\nThis action cannot be undone. Matches associated with this season will have their season reference removed.'
+      'Are you sure you want to delete this season?\n\nThis action cannot be undone. All matches associated with this season will be permanently deleted.'
     );
     if (!confirmed) return;
 
@@ -780,27 +780,17 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
                   Tournament Bracket Type
                 </Label>
                 <Select
-                  value={seasonFormData.bracketType}
-                  onValueChange={(value) => setSeasonFormData((prev) => ({ ...prev, bracketType: value as 'single' | 'double' | '' }))}
+                  value={seasonFormData.bracketType || 'none'}
+                  onValueChange={(value) => setSeasonFormData((prev) => ({ ...prev, bracketType: value === 'none' ? '' : value as 'single' | 'double' }))}
                   disabled={seasonSaving}
                 >
                   <SelectTrigger id="season-bracket-type">
                     <SelectValue placeholder="Select bracket type (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Not specified</SelectItem>
-                    <SelectItem value="single">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        Single Elimination
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="double">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                        Double Elimination
-                      </div>
-                    </SelectItem>
+                    <SelectItem value="none">Not specified</SelectItem>
+                    <SelectItem value="single">Single Elimination</SelectItem>
+                    <SelectItem value="double">Double Elimination</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

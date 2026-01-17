@@ -293,27 +293,17 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
                 Tournament Bracket Type
               </Label>
               <Select
-                value={formData.bracketType}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, bracketType: value as 'single' | 'double' | '' }))}
+                value={formData.bracketType || 'none'}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, bracketType: value === 'none' ? '' : value as 'single' | 'double' }))}
                 disabled={saving}
               >
                 <SelectTrigger id="bracketType" className="w-full">
                   <SelectValue placeholder="Select bracket type (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Not specified</SelectItem>
-                  <SelectItem value="single">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                      Single Elimination
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="double">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                      Double Elimination
-                    </div>
-                  </SelectItem>
+                  <SelectItem value="none">Not specified</SelectItem>
+                  <SelectItem value="single">Single Elimination</SelectItem>
+                  <SelectItem value="double">Double Elimination</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex items-start gap-2 text-sm text-muted-foreground">
