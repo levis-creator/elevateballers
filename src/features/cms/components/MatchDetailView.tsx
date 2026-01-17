@@ -1883,7 +1883,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-            </div>
+
       <style>{`
         .winner-highlight {
           position: relative;
@@ -1904,6 +1904,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           pointer-events: none;
         }
       `}</style>
+    </div>
   );
 
   function getTeamName(teamId: string): string {

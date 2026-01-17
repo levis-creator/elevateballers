@@ -126,7 +126,12 @@ export const GET: APIRoute = async ({ request }) => {
     // Get filtered matches
     const matches: MatchDTO[] = await getFilteredMatches(filter, sort, limit);
 
-    return new Response(JSON.stringify(matches), {
+    // Remove duplicates based on match ID (in case of any data issues)
+    const uniqueMatches = Array.from(
+      new Map(matches.map((match) => [match.id, match])).values()
+    );
+
+    return new Response(JSON.stringify(uniqueMatches), {
       headers: { 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',

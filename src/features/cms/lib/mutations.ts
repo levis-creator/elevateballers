@@ -287,6 +287,16 @@ export async function updateTeam(id: string, data: UpdateTeamInput): Promise<Tea
   }
 }
 export async function createMatch(data: CreateMatchInput): Promise<Match> {
+  // Validate that a team is not matched against itself
+  if (data.team1Id && data.team2Id && data.team1Id === data.team2Id) {
+    throw new Error('A team cannot be matched against itself');
+  }
+  
+  // Also check by name if IDs are not provided
+  if (!data.team1Id && !data.team2Id && data.team1Name && data.team2Name && data.team1Name === data.team2Name) {
+    throw new Error('A team cannot be matched against itself');
+  }
+
   const matchData: any = {
       date: new Date(data.date),
     team1Score: data.team1Score,
@@ -456,6 +466,10 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
       // Import here to avoid circular dependency
       const { updateMatchWinner } = await import('../../game-tracking/lib/score-calculation');
       await updateMatchWinner(id, prisma);
+      
+      // Automatically advance winner to next match
+      const { advanceWinnerToNextMatch } = await import('../../tournaments/lib/bracket-automation');
+      await advanceWinnerToNextMatch(id, prisma);
     }
 
     return updatedMatch;
