@@ -73,6 +73,7 @@ export default function BracketGeneratorDialog({
   useEffect(() => {
     if (isOpen) {
       fetchTeams();
+      fetchSeason();
       // Set default to tomorrow
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -84,7 +85,23 @@ export default function BracketGeneratorDialog({
       setTournamentDays(['']);
       setWarnings([]);
     }
-  }, [isOpen]);
+  }, [isOpen, seasonId]);
+
+  const fetchSeason = async () => {
+    if (!seasonId) return;
+    try {
+      const response = await fetch(`/api/seasons/${seasonId}`);
+      if (response.ok) {
+        const season = await response.json();
+        // Use season's bracketType if set, otherwise default to 'single'
+        if (season.bracketType && (season.bracketType === 'single' || season.bracketType === 'double')) {
+          setBracketType(season.bracketType);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch season:', err);
+    }
+  };
 
   const fetchTeams = async () => {
     try {
@@ -557,19 +574,11 @@ export default function BracketGeneratorDialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Bracket Generation</AlertDialogTitle>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                You are about to generate a <strong>{bracketType === 'single' ? 'single' : 'double'}</strong> elimination bracket with:
-              </p>
-              <ul className="list-disc list-inside space-y-1">
-                <li><strong>{selectedCount}</strong> teams</li>
-                <li><strong>{stats?.totalMatches || 0}</strong> total matches</li>
-                <li><strong>{tournamentDays.filter(d => d.trim() !== '').length}</strong> tournament day(s)</li>
-              </ul>
-              <p className="mt-2">
-                This will create all matches automatically. You can edit them later if needed.
-              </p>
-            </div>
+            <AlertDialogDescription>
+              You are about to generate a <strong>{bracketType === 'single' ? 'single' : 'double'}</strong> elimination bracket with{' '}
+              <strong>{selectedCount}</strong> teams, <strong>{stats?.totalMatches || 0}</strong> total matches, and{' '}
+              <strong>{tournamentDays.filter(d => d.trim() !== '').length}</strong> tournament day(s). This will create all matches automatically. You can edit them later if needed.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={generating}>Cancel</AlertDialogCancel>

@@ -28,6 +28,12 @@ export interface GeneratedMatch {
   matchNumber: number;
   roundNumber: number;
   bracketType: 'upper' | 'lower' | 'grand-final';
+  // Bracket relationship fields (temporary IDs during generation, will be replaced with database IDs)
+  nextWinnerMatchId?: string | null;
+  nextLoserMatchId?: string | null;
+  bracketPosition?: number;
+  // Internal: track original generation index for linking (not stored in DB)
+  _tempIndex?: number;
 }
 
 /**
@@ -104,6 +110,7 @@ function distributeMatchesAcrossDays(
 
 /**
  * Generate bracket structure for single elimination
+ * Now includes explicit match linking with nextWinnerMatchId and bracketPosition
  */
 export function generateSingleEliminationBracket(
   teamIds: string[],
@@ -145,6 +152,9 @@ export function generateSingleEliminationBracket(
                                       rounds === 3 ? 'QUARTER_FINALS' : 
                                       'PLAYOFF';
 
+  // Track actual created matches for proper linking (accounts for skipped BYE vs BYE matches)
+  let actualMatchCount = 0;
+
   for (let i = 0; i < firstRoundMatches; i++) {
     const team1Index = i * 2;
     const team2Index = team1Index + 1;
@@ -162,6 +172,14 @@ export function generateSingleEliminationBracket(
     const team1 = team1Id ? teamMap.get(team1Id) : null;
     const team2 = team2Id ? teamMap.get(team2Id) : null;
 
+    // Calculate which match in the next round this feeds into
+    // Use actualMatchCount instead of i to account for skipped matches
+    const currentMatchIndex = matches.length;
+    const nextRoundMatchIndex = firstRoundMatches + Math.floor(actualMatchCount / 2);
+    const nextWinnerMatchId = nextRoundMatchIndex < firstRoundMatches + (firstRoundMatches / 2) 
+      ? `temp-match-${nextRoundMatchIndex}` 
+      : null;
+
     matches.push({
       team1Id: team1Id || null,
       team1Name: team1?.name || (team1Id ? null : 'BYE'),
@@ -172,11 +190,18 @@ export function generateSingleEliminationBracket(
       matchNumber: matchNumber++,
       roundNumber: 1,
       bracketType: 'upper',
+      nextWinnerMatchId: nextWinnerMatchId || null,
+      bracketPosition: actualMatchCount, // Use actual match count for position
+      _tempIndex: currentMatchIndex, // Track original generation index
     });
+    
+    actualMatchCount++; // Increment only when a match is actually created
   }
 
   // Generate subsequent rounds
-  let currentRoundMatches = firstRoundMatches / 2;
+  // Use actual number of matches created (accounts for skipped BYE vs BYE matches)
+  const actualFirstRoundMatches = matches.length;
+  let currentRoundMatches = Math.ceil(actualFirstRoundMatches / 2); // Round up to handle odd numbers
   let roundNumber = 2;
 
   while (currentRoundMatches >= 1) {
@@ -191,7 +216,18 @@ export function generateSingleEliminationBracket(
       stage = 'PLAYOFF';
     }
 
+    const currentRoundStartIndex = matches.length;
+    const nextRoundStartIndex = currentRoundStartIndex + currentRoundMatches;
+    const hasNextRound = currentRoundMatches > 1;
+
     for (let i = 0; i < currentRoundMatches; i++) {
+      // Calculate which match in the next round this feeds into
+      const currentMatchIndex = matches.length;
+      const nextRoundMatchIndex = nextRoundStartIndex + Math.floor(i / 2);
+      const nextWinnerMatchId = hasNextRound 
+        ? `temp-match-${nextRoundMatchIndex}` 
+        : null; // Championship match has no next match
+
       matches.push({
         team1Id: null, // Will be filled by winner advancement
         team1Name: 'TBD',
@@ -202,6 +238,9 @@ export function generateSingleEliminationBracket(
         matchNumber: matchNumber++,
         roundNumber,
         bracketType: 'upper',
+        nextWinnerMatchId: nextWinnerMatchId || null,
+        bracketPosition: i, // Position within the round
+        _tempIndex: currentMatchIndex, // Track original generation index
       });
     }
 
@@ -215,12 +254,13 @@ export function generateSingleEliminationBracket(
 
 /**
  * Generate bracket structure for double elimination
+ * Properly implements double elimination with correct upper/lower bracket interleaving
  */
 export function generateDoubleEliminationBracket(
   teamIds: string[],
   teams: Team[],
   tournamentDays: Date[]
-): { upper: GeneratedMatch[]; lower: GeneratedMatch[] } {
+): { upper: GeneratedMatch[]; lower: GeneratedMatch[]; grandFinal: GeneratedMatch } {
   if (teamIds.length < 2) {
     throw new Error('At least 2 teams are required');
   }
@@ -249,12 +289,17 @@ export function generateDoubleEliminationBracket(
   const upperMatches: GeneratedMatch[] = [];
   const lowerMatches: GeneratedMatch[] = [];
 
-  // UPPER BRACKET - First Round
+  // LOWER BRACKET - First Round (All teams start in lower bracket)
   const firstRoundMatches = totalTeams / 2;
-  const firstRoundStage: MatchStage = rounds === 2 ? 'SEMI_FINALS' : 
-                                      rounds === 3 ? 'QUARTER_FINALS' : 
+  // Stage assignment based on number of matches (consistent with other rounds)
+  const firstRoundStage: MatchStage = firstRoundMatches === 1 ? 'SEMI_FINALS' :
+                                      firstRoundMatches === 2 ? 'SEMI_FINALS' :
+                                      firstRoundMatches === 4 ? 'QUARTER_FINALS' :
                                       'PLAYOFF';
 
+  // Track actual created matches for proper linking (accounts for skipped BYE vs BYE matches)
+  let actualMatchCount = 0;
+  
   for (let i = 0; i < firstRoundMatches; i++) {
     const team1Index = i * 2;
     const team2Index = team1Index + 1;
@@ -272,7 +317,19 @@ export function generateDoubleEliminationBracket(
     const team1 = team1Id ? teamMap.get(team1Id) : null;
     const team2 = team2Id ? teamMap.get(team2Id) : null;
 
-    upperMatches.push({
+    const currentLowerIndex = lowerMatches.length;
+    // Winners from lower bracket round 1 advance to upper bracket round 1
+    // Use actualMatchCount instead of i to account for skipped matches
+    const upperRound1StartIndex = 0;
+    const nextUpperMatchIndex = upperRound1StartIndex + Math.floor(actualMatchCount / 2);
+    const nextUpperMatchId = `temp-match-upper-${nextUpperMatchIndex}`;
+    
+    // Losers from lower bracket round 1 continue in lower bracket round 2
+    // Use actualMatchCount to ensure proper linking even when matches are skipped
+    const lowerRound2StartIndex = firstRoundMatches;
+    const nextLowerMatchId = `temp-match-lower-${lowerRound2StartIndex + Math.floor(actualMatchCount / 2)}`;
+
+    lowerMatches.push({
       team1Id: team1Id || null,
       team1Name: team1?.name || (team1Id ? null : 'BYE'),
       team2Id: team2Id || null,
@@ -281,18 +338,32 @@ export function generateDoubleEliminationBracket(
       date: new Date(),
       matchNumber: matchNumber++,
       roundNumber: 1,
-      bracketType: 'upper',
+      bracketType: 'lower',
+      nextWinnerMatchId: nextUpperMatchId, // Winner goes to upper bracket
+      nextLoserMatchId: nextLowerMatchId, // Loser continues in lower bracket round 2
+      bracketPosition: actualMatchCount, // Use actual match count for position
+      _tempIndex: currentLowerIndex,
     });
+    
+    actualMatchCount++; // Increment only when a match is actually created
   }
 
-  // UPPER BRACKET - Subsequent Rounds
-  let upperRoundMatches = firstRoundMatches / 2;
-  let upperRoundNumber = 2;
+  // UPPER BRACKET - Round 1: Winners from Lower Bracket Round 1
+  // Upper bracket now starts from round 1, receiving winners from lower bracket round 1
+  // Use actual number of matches created (accounts for skipped BYE vs BYE matches)
+  const actualFirstRoundMatches = lowerMatches.length;
+  let upperRoundMatches = Math.ceil(actualFirstRoundMatches / 2); // Round up to handle odd numbers
+  let upperRoundNumber = 1;
+  let upperRoundStartIndex = 0;
 
   while (upperRoundMatches >= 1) {
     let stage: MatchStage;
+    // Upper bracket final should NOT be CHAMPIONSHIP - it goes to grand final
+    // Stage assignment based on number of matches in this round
     if (upperRoundMatches === 1) {
-      stage = 'CHAMPIONSHIP';
+      // This is the upper bracket final - winner goes to grand final
+      // Use SEMI_FINALS for the final (since it's one match before grand final)
+      stage = 'SEMI_FINALS';
     } else if (upperRoundMatches === 2) {
       stage = 'SEMI_FINALS';
     } else if (upperRoundMatches === 4) {
@@ -301,7 +372,25 @@ export function generateDoubleEliminationBracket(
       stage = 'PLAYOFF';
     }
 
+    const nextUpperRoundStartIndex = upperRoundStartIndex + upperRoundMatches;
+    const hasNextUpperRound = upperRoundMatches > 1;
+
     for (let i = 0; i < upperRoundMatches; i++) {
+      const currentUpperIndex = upperMatches.length;
+      
+      // Winner advances to next upper round OR grand final
+      const nextUpperMatchId = hasNextUpperRound
+        ? `temp-match-upper-${nextUpperRoundStartIndex + Math.floor(i / 2)}`
+        : `temp-match-grand-final`; // Upper bracket winner goes to grand final
+      
+      // Loser drops to lower bracket
+      // Lower bracket round that receives losers from this upper round
+      // Upper round 1 losers go to lower round 2, upper round 2 losers go to lower round 3, etc.
+      const lowerRoundForLosers = upperRoundNumber + 1; // Losers from upper round N go to lower round N+1
+      const lowerRoundStartIndex = getLowerBracketRoundStartIndex(lowerRoundForLosers, actualFirstRoundMatches);
+      const lowerMatchIndex = lowerRoundStartIndex + Math.floor(i / 2);
+      const nextLoserMatchId = hasNextUpperRound ? `temp-match-lower-${lowerMatchIndex}` : null; // Upper bracket final loser doesn't drop
+
       upperMatches.push({
         team1Id: null,
         team1Name: 'TBD',
@@ -312,46 +401,51 @@ export function generateDoubleEliminationBracket(
         matchNumber: matchNumber++,
         roundNumber: upperRoundNumber,
         bracketType: 'upper',
+        nextWinnerMatchId: nextUpperMatchId,
+        nextLoserMatchId: nextLoserMatchId,
+        bracketPosition: i,
+        _tempIndex: currentUpperIndex,
       });
     }
 
     upperRoundMatches = upperRoundMatches / 2;
     upperRoundNumber++;
+    upperRoundStartIndex = nextUpperRoundStartIndex;
   }
 
-  // LOWER BRACKET - First Round (losers from upper bracket first round)
-  const lowerFirstRoundMatches = firstRoundMatches / 2;
-  
-  for (let i = 0; i < lowerFirstRoundMatches; i++) {
-    lowerMatches.push({
-      team1Id: null, // Loser from upper bracket match i*2
-      team1Name: 'TBD',
-      team2Id: null, // Loser from upper bracket match i*2+1
-      team2Name: 'TBD',
-      stage: 'PLAYOFF',
-      date: new Date(),
-      matchNumber: matchNumber++,
-      roundNumber: 1,
-      bracketType: 'lower',
-    });
-  }
-
-  // LOWER BRACKET - Subsequent Rounds
-  let lowerRoundMatches = lowerFirstRoundMatches / 2;
+  // LOWER BRACKET - Round 2 and Subsequent Rounds
+  // Lower bracket round 1 is already created above (starting matches)
+  // Round 2 receives: losers from lower round 1 + losers from upper round 1
+  // Round 2 has actualFirstRoundMatches / 2 matches (same as upper round 1)
+  let lowerRoundMatches = Math.ceil(actualFirstRoundMatches / 2); // Round 2 starts with this many matches
   let lowerRoundNumber = 2;
+  let lowerRoundStartIndex = actualFirstRoundMatches; // After round 1 matches
 
   while (lowerRoundMatches >= 1) {
     let stage: MatchStage;
+    // Stage assignment based on number of matches in this round
     if (lowerRoundMatches === 1) {
       // Final lower bracket match - winner goes to grand final
       stage = 'SEMI_FINALS';
     } else if (lowerRoundMatches === 2) {
+      stage = 'SEMI_FINALS';
+    } else if (lowerRoundMatches === 4) {
       stage = 'QUARTER_FINALS';
     } else {
       stage = 'PLAYOFF';
     }
 
+    const nextLowerRoundStartIndex = lowerRoundStartIndex + lowerRoundMatches;
+    const isLowerBracketFinal = lowerRoundMatches === 1;
+
     for (let i = 0; i < lowerRoundMatches; i++) {
+      const currentLowerIndex = lowerMatches.length;
+      
+      // Winner advances to next lower round OR grand final
+      const nextLowerMatchId = isLowerBracketFinal
+        ? `temp-match-grand-final` // Lower bracket winner goes to grand final
+        : `temp-match-lower-${nextLowerRoundStartIndex + Math.floor(i / 2)}`;
+
       lowerMatches.push({
         team1Id: null,
         team1Name: 'TBD',
@@ -362,25 +456,77 @@ export function generateDoubleEliminationBracket(
         matchNumber: matchNumber++,
         roundNumber: lowerRoundNumber,
         bracketType: 'lower',
+        nextWinnerMatchId: nextLowerMatchId,
+        bracketPosition: i,
+        _tempIndex: currentLowerIndex,
       });
     }
 
     lowerRoundMatches = lowerRoundMatches / 2;
     lowerRoundNumber++;
+    lowerRoundStartIndex = nextLowerRoundStartIndex;
   }
 
+  // GRAND FINAL
+  const lastDay = tournamentDays.length > 0 
+    ? new Date(tournamentDays[tournamentDays.length - 1])
+    : new Date();
+  lastDay.setHours(14, 0, 0, 0); // 2 PM for grand final
+
+  const grandFinal: GeneratedMatch = {
+    team1Id: null, // Upper bracket winner
+    team1Name: 'TBD',
+    team2Id: null, // Lower bracket winner
+    team2Name: 'TBD',
+    stage: 'CHAMPIONSHIP',
+    date: lastDay,
+    matchNumber: matchNumber++,
+    roundNumber: 1,
+    bracketType: 'grand-final',
+    nextWinnerMatchId: null, // Grand final has no next match
+    bracketPosition: 0,
+    _tempIndex: 0, // Grand final has fixed temp ID
+  };
+
   // Distribute matches across days
-  const allMatches = [...upperMatches, ...lowerMatches];
+  const allMatches = [...upperMatches, ...lowerMatches, grandFinal];
   const distributed = distributeMatchesAcrossDays(allMatches, tournamentDays);
   
-  // Split back into upper and lower
+  // Split back into upper, lower, and grand final
   const distributedUpper = distributed.filter(m => m.bracketType === 'upper');
   const distributedLower = distributed.filter(m => m.bracketType === 'lower');
+  const distributedGrandFinal = distributed.find(m => m.bracketType === 'grand-final') || grandFinal;
 
   return {
     upper: distributedUpper,
     lower: distributedLower,
+    grandFinal: distributedGrandFinal,
   };
+}
+
+/**
+ * Calculate the starting index for a lower bracket round
+ * Lower bracket structure (with all teams starting in lower bracket):
+ * - Round 1: firstRoundMatches matches (all starting matches)
+ * - Round 2: firstRoundMatches / 2 matches (losers from lower R1 + losers from upper R1)
+ * - Round 3: firstRoundMatches / 4 matches (winners from lower R2 + losers from upper R2)
+ * - Round 4: firstRoundMatches / 8 matches (winners from lower R3 + losers from upper R3)
+ * - etc.
+ */
+function getLowerBracketRoundStartIndex(lowerRoundNumber: number, firstRoundMatches: number): number {
+  if (lowerRoundNumber === 1) {
+    return 0;
+  }
+  
+  // Lower round 1: firstRoundMatches matches (starting at index 0)
+  // Lower round 2: firstRoundMatches / 2 matches (starting at index firstRoundMatches)
+  // Lower round 3: firstRoundMatches / 4 matches (starting at index firstRoundMatches + firstRoundMatches/2)
+  // Lower round N: firstRoundMatches / (2^(N-1)) matches
+  let startIndex = firstRoundMatches; // Start after round 1
+  for (let round = 2; round < lowerRoundNumber; round++) {
+    startIndex += firstRoundMatches / Math.pow(2, round - 1);
+  }
+  return startIndex;
 }
 
 /**
@@ -422,27 +568,8 @@ export async function previewBracketMatches(
   if (bracketType === 'single') {
     allMatches = generateSingleEliminationBracket(uniqueTeamIds, teams, tournamentDays);
   } else {
-    const { upper, lower } = generateDoubleEliminationBracket(uniqueTeamIds, teams, tournamentDays);
-    allMatches = [...upper, ...lower];
-    
-    // Add grand final on the last day
-    const lastDay = tournamentDays.length > 0 
-      ? new Date(tournamentDays[tournamentDays.length - 1])
-      : new Date();
-    lastDay.setHours(14, 0, 0, 0); // 2 PM for grand final
-    
-    const grandFinal: GeneratedMatch = {
-      team1Id: null,
-      team1Name: 'TBD',
-      team2Id: null,
-      team2Name: 'TBD',
-      stage: 'CHAMPIONSHIP',
-      date: lastDay,
-      matchNumber: allMatches.length + 1,
-      roundNumber: 1,
-      bracketType: 'grand-final',
-    };
-    allMatches.push(grandFinal);
+    const { upper, lower, grandFinal } = generateDoubleEliminationBracket(uniqueTeamIds, teams, tournamentDays);
+    allMatches = [...upper, ...lower, grandFinal];
   }
 
   // Validate matches
@@ -504,27 +631,8 @@ export async function createBracketMatches(
       if (bracketType === 'single') {
         allMatches = generateSingleEliminationBracket(uniqueTeamIds, teams, tournamentDays);
       } else {
-        const { upper, lower } = generateDoubleEliminationBracket(uniqueTeamIds, teams, tournamentDays);
-        allMatches = [...upper, ...lower];
-        
-        // Add grand final on the last day
-        const lastDay = tournamentDays.length > 0 
-          ? new Date(tournamentDays[tournamentDays.length - 1])
-          : new Date();
-        lastDay.setHours(14, 0, 0, 0); // 2 PM for grand final
-        
-        const grandFinal: GeneratedMatch = {
-          team1Id: null,
-          team1Name: 'TBD',
-          team2Id: null,
-          team2Name: 'TBD',
-          stage: 'CHAMPIONSHIP',
-          date: lastDay,
-          matchNumber: allMatches.length + 1,
-          roundNumber: 1,
-          bracketType: 'grand-final',
-        };
-        allMatches.push(grandFinal);
+        const { upper, lower, grandFinal } = generateDoubleEliminationBracket(uniqueTeamIds, teams, tournamentDays);
+        allMatches = [...upper, ...lower, grandFinal];
       }
     }
 
@@ -554,9 +662,15 @@ export async function createBracketMatches(
       })
     );
 
-    // Create matches in database with error handling
-    // Use transaction for atomicity if possible, but create matches individually
-    // to allow partial success (some matches created even if others fail)
+    // Two-pass approach for single elimination brackets:
+    // 1. Create all matches (get database IDs)
+    // 2. Update matches with relationship IDs (replace temporary IDs with database IDs)
+    
+    // Map temporary match IDs to database IDs
+    const tempIdToDbId = new Map<string, string>();
+    const createdMatches: Array<{ tempId: string | null; dbId: string; match: GeneratedMatch }> = [];
+
+    // Pass 1: Create all matches
     for (const match of allMatches) {
       try {
         // Validate that team is not matched against itself
@@ -575,6 +689,23 @@ export async function createBracketMatches(
           continue;
         }
 
+        // Generate temporary ID for this match (used for linking)
+        // For double elimination, use bracket-specific prefixes
+        let tempId: string;
+        if (match._tempIndex !== undefined) {
+          if (match.bracketType === 'upper') {
+            tempId = `temp-match-upper-${match._tempIndex}`;
+          } else if (match.bracketType === 'lower') {
+            tempId = `temp-match-lower-${match._tempIndex}`;
+          } else if (match.bracketType === 'grand-final') {
+            tempId = `temp-match-grand-final`;
+          } else {
+            tempId = `temp-match-${match._tempIndex}`;
+          }
+        } else {
+          tempId = `temp-match-${createdMatches.length}`;
+        }
+
         const createdMatch = await createMatch({
           team1Id: match.team1Id || undefined,
           team1Name: match.team1Name || undefined,
@@ -585,10 +716,17 @@ export async function createBracketMatches(
           date: match.date,
           status: 'UPCOMING',
           stage: match.stage,
+          bracketPosition: match.bracketPosition,
+          bracketRound: match.roundNumber,
+          bracketType: match.bracketType,
         });
 
         matchIds.push(createdMatch.id);
         created++;
+        
+        // Store mapping from temporary ID to database ID
+        tempIdToDbId.set(tempId, createdMatch.id);
+        createdMatches.push({ tempId, dbId: createdMatch.id, match });
         
         // Add to existing set to prevent duplicates within the same generation
         existingMatchSignatures.add(matchSignature);
@@ -597,6 +735,61 @@ export async function createBracketMatches(
         console.error(errorMsg, error);
         errors.push(errorMsg);
         // Continue creating other matches even if one fails
+      }
+    }
+
+    // Pass 2: Update matches with relationship IDs (for both single and double elimination)
+    if (createdMatches.length > 0) {
+      for (const { tempId, dbId, match } of createdMatches) {
+        try {
+          // Resolve nextWinnerMatchId from temporary ID to database ID
+          let nextWinnerMatchId: string | null = null;
+          if (match.nextWinnerMatchId) {
+            // Check if it's a temporary ID
+            if (match.nextWinnerMatchId.startsWith('temp-match-')) {
+              const resolvedId = tempIdToDbId.get(match.nextWinnerMatchId);
+              if (resolvedId) {
+                nextWinnerMatchId = resolvedId;
+              } else {
+                console.warn(`Could not resolve temporary match ID: ${match.nextWinnerMatchId}`);
+              }
+            } else {
+              // Already a database ID (from preview)
+              nextWinnerMatchId = match.nextWinnerMatchId;
+            }
+          }
+
+          // Resolve nextLoserMatchId from temporary ID to database ID (for double elimination)
+          let nextLoserMatchId: string | null = null;
+          if (match.nextLoserMatchId) {
+            if (match.nextLoserMatchId.startsWith('temp-match-')) {
+              const resolvedId = tempIdToDbId.get(match.nextLoserMatchId);
+              if (resolvedId) {
+                nextLoserMatchId = resolvedId;
+              } else {
+                console.warn(`Could not resolve temporary loser match ID: ${match.nextLoserMatchId}`);
+              }
+            } else {
+              nextLoserMatchId = match.nextLoserMatchId;
+            }
+          }
+
+          // Update match with relationship IDs
+          if (nextWinnerMatchId !== null || nextLoserMatchId !== null) {
+            await prisma.match.update({
+              where: { id: dbId },
+              data: {
+                nextWinnerMatchId: nextWinnerMatchId || undefined,
+                nextLoserMatchId: nextLoserMatchId || undefined,
+              },
+            });
+          }
+        } catch (error: any) {
+          const errorMsg = `Failed to update match relationships for match ${match.matchNumber}: ${error.message || 'Unknown error'}`;
+          console.error(errorMsg, error);
+          errors.push(errorMsg);
+          // Continue updating other matches even if one fails
+        }
       }
     }
 

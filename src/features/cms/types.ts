@@ -185,6 +185,12 @@ export type CreateMatchInput = {
   status?: MatchStatus;
   stage?: import('@prisma/client').MatchStage;
   duration?: number; // Match duration in minutes
+  // Bracket relationship fields
+  nextWinnerMatchId?: string | null;
+  nextLoserMatchId?: string | null;
+  bracketPosition?: number;
+  bracketRound?: number;
+  bracketType?: string; // 'upper', 'lower', or 'grand-final'
 };
 
 export type UpdateMatchInput = Partial<CreateMatchInput>;
@@ -207,6 +213,7 @@ export type CreateSeasonInput = {
   endDate: Date;
   leagueId: string; // Required - Season must belong to a League
   active?: boolean;
+  bracketType?: 'single' | 'double'; // Tournament bracket format
 };
 
 export type UpdateSeasonInput = Partial<CreateSeasonInput>;

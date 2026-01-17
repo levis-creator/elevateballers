@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, AlertCircle, Loader2, Save, X } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2, Save, X, Trophy, Info } from 'lucide-react';
 
 interface SeasonEditorProps {
   seasonId?: string;
@@ -34,6 +34,7 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
     endDate: '',
     leagueId: '',
     active: true,
+    bracketType: '' as 'single' | 'double' | '',
   });
 
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
         endDate: new Date(season.endDate).toISOString().slice(0, 10),
         leagueId: leagueId,
         active: season.active,
+        bracketType: (season as any).bracketType || '',
       });
     } catch (err: any) {
       setError(err.message || 'Failed to load season');
@@ -95,6 +97,7 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
         leagueId: formData.leagueId,
+        bracketType: formData.bracketType || undefined,
       };
 
       const response = await fetch(url, {
@@ -281,6 +284,44 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
                   required
                   disabled={saving}
                 />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bracketType" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Tournament Bracket Type
+              </Label>
+              <Select
+                value={formData.bracketType}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, bracketType: value as 'single' | 'double' | '' }))}
+                disabled={saving}
+              >
+                <SelectTrigger id="bracketType" className="w-full">
+                  <SelectValue placeholder="Select bracket type (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Not specified</SelectItem>
+                  <SelectItem value="single">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Single Elimination
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="double">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      Double Elimination
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>
+                  This will be used as the default bracket type when generating tournament brackets for this season. 
+                  You can override this when generating brackets.
+                </p>
               </div>
             </div>
           </CardContent>
