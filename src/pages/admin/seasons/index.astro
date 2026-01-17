@@ -6,7 +6,7 @@ const user = await checkAuth(Astro.request);
 if (!user) {
   return Astro.redirect('/admin/login', 302);
 }
----
 
-<Astro.response.redirect('/admin/leagues', 302) />
+return Astro.redirect('/admin/leagues', 302);
+---
 
