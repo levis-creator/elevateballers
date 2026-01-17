@@ -141,6 +141,7 @@ export type MatchWithTeamsAndLeagueAndSeason = Match & {
   team2: Team | null;
   league: League | null;
   season: Season | null;
+  winner: Team | null;
   leagueName: string | null; // Fallback field
 };
 

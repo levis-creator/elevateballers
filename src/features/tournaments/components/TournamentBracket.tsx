@@ -6,6 +6,8 @@ import {
   SVGViewer,
   createTheme,
 } from '@g-loot/react-tournament-brackets';
+import InteractiveMatch from './InteractiveMatch';
+import type { BracketMatch } from '../lib/bracket-converter';
 
 // Custom theme to match the site's aesthetics
 const customTheme = createTheme({
@@ -22,15 +24,42 @@ const customTheme = createTheme({
   svgBackground: '#ffffff',
 });
 
+export interface BracketPosition {
+  round: string;
+  position: number;
+}
+
 interface TournamentBracketProps {
-  matches: any[];
+  matches: BracketMatch[];
   isDoubleElimination?: boolean;
+  isEditable?: boolean;
+  onMatchClick?: (matchId: string | null, match: BracketMatch) => void;
+  seasonId?: string;
+  leagueId?: string;
 }
 
 const TournamentBracket: React.FC<TournamentBracketProps> = ({ 
   matches, 
-  isDoubleElimination = false 
+  isDoubleElimination = false,
+  isEditable = false,
+  onMatchClick,
+  seasonId,
+  leagueId,
 }) => {
+  // Create match component renderer
+  const renderMatch = (match: BracketMatch) => {
+    if (isEditable) {
+      return (
+        <InteractiveMatch
+          match={match}
+          onMatchClick={onMatchClick}
+          isEditable={isEditable}
+        />
+      );
+    }
+    return <Match match={match} />;
+  };
+
   if (isDoubleElimination) {
     return (
       <div className="sp-tournament-bracket sp-tournament-bracket-double">
@@ -42,7 +71,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({
               roundHeader: { backgroundColor: '#e21e22' },
             },
           }}
-          renderMatchComponent={Match}
+          renderMatchComponent={renderMatch}
           svgWrapper={({ children, ...props }) => (
             <SVGViewer width={1000} height={600} {...props}>
               {children}
@@ -63,7 +92,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({
             roundHeader: { backgroundColor: '#e21e22' },
           },
         }}
-        renderMatchComponent={Match}
+        renderMatchComponent={renderMatch}
         svgWrapper={({ children, ...props }) => (
           <SVGViewer width={1000} height={600} {...props}>
             {children}

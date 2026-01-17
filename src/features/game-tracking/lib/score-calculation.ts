@@ -99,6 +99,7 @@ export async function calculateScoresFromEvents(
 /**
  * Recalculate and update match scores from events
  * Can be used within a transaction by passing the transaction client
+ * Also updates winner if match is completed
  */
 export async function updateMatchScoresFromEvents(
   matchId: string,
@@ -106,6 +107,12 @@ export async function updateMatchScoresFromEvents(
 ): Promise<boolean> {
   try {
     const scores = await calculateScoresFromEvents(matchId, prismaClient);
+
+    // Get match status before updating
+    const match = await prismaClient.match.findUnique({
+      where: { id: matchId },
+      select: { status: true },
+    });
 
     await prismaClient.match.update({
       where: { id: matchId },
@@ -115,9 +122,74 @@ export async function updateMatchScoresFromEvents(
       },
     });
 
+    // Update winner if match is completed
+    if (match?.status === 'COMPLETED') {
+      await updateMatchWinner(matchId, prismaClient);
+    }
+
     return true;
   } catch (error) {
     console.error('Error updating match scores from events:', error);
     return false;
+  }
+}
+
+/**
+ * Determine and update the winner of a completed match
+ * Returns the winner team ID, or null if tie or match not completed
+ * Handles draws by setting winnerId to null
+ */
+export async function updateMatchWinner(
+  matchId: string,
+  prismaClient: PrismaClient | any
+): Promise<string | null> {
+  try {
+    const match = await prismaClient.match.findUnique({
+      where: { id: matchId },
+      select: {
+        status: true,
+        team1Score: true,
+        team2Score: true,
+        team1Id: true,
+        team2Id: true,
+      },
+    });
+
+    if (!match) {
+      return null;
+    }
+
+    // Only set winner if match is completed
+    if (match.status !== 'COMPLETED') {
+      // Clear winner if match is not completed
+      await prismaClient.match.update({
+        where: { id: matchId },
+        data: { winnerId: null },
+      });
+      return null;
+    }
+
+    // Determine winner based on scores
+    let winnerId: string | null = null;
+
+    if (match.team1Score !== null && match.team2Score !== null) {
+      if (match.team1Score > match.team2Score) {
+        winnerId = match.team1Id || null;
+      } else if (match.team2Score > match.team1Score) {
+        winnerId = match.team2Id || null;
+      }
+      // If scores are equal, winnerId remains null (draw/tie)
+    }
+
+    // Update match with winner (null for draws)
+    await prismaClient.match.update({
+      where: { id: matchId },
+      data: { winnerId },
+    });
+
+    return winnerId;
+  } catch (error) {
+    console.error('Error updating match winner:', error);
+    return null;
   }
 }

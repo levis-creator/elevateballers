@@ -116,6 +116,7 @@ model Match {
   team2Fouls       Int              @default(0) @map("team2_fouls")
   duration         Int?             @map("duration") // Match duration in minutes
   trackingMode     GameTrackingMode @default(BOTH) @map("tracking_mode")
+  winnerId         String?          @map("winner_id")
   events           MatchEvent[]
   matchPlayers     MatchPlayer[]
   periods          MatchPeriod[]
@@ -129,6 +130,7 @@ model Match {
   team2            Team?            @relation("Team2Matches", fields: [team2Id], references: [id])
   gameRules        GameRules?       @relation(fields: [gameRulesId], references: [id])
   possessionTeam   Team?            @relation("PossessionMatches", fields: [possessionTeamId], references: [id])
+  winner           Team?            @relation("WinnerMatches", fields: [winnerId], references: [id])
 
   @@index([date])
   @@index([status])
@@ -139,6 +141,7 @@ model Match {
   @@index([seasonId])
   @@index([gameRulesId])
   @@index([possessionTeamId])
+  @@index([winnerId])
   @@map("matches")
 }
 
@@ -156,6 +159,7 @@ model Team {
   team1Matches      Match[]                    @relation("Team1Matches")
   team2Matches      Match[]                    @relation("Team2Matches")
   possessionMatches Match[]                    @relation("PossessionMatches")
+  winnerMatches     Match[]                    @relation("WinnerMatches")
   timeouts          Timeout[]
   substitutions     Substitution[]
   jumpBallPossession JumpBall[]              @relation("JumpBallPossession")

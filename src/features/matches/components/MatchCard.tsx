@@ -5,7 +5,7 @@
 
 import type { Match } from '@prisma/client';
 import { formatMatchDate, formatMatchTime, getMatchStatusColor, getMatchStatusLabel } from '../lib/utils';
-import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../lib/team-helpers';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, isWinner } from '../lib/team-helpers';
 import { getLeagueName } from '../lib/league-helpers';
 
 interface MatchCardProps {
@@ -32,6 +32,10 @@ export default function MatchCard({
   const team1Logo = getTeam1Logo(match);
   const team2Name = getTeam2Name(match);
   const team2Logo = getTeam2Logo(match);
+  const team1Id = getTeam1Id(match);
+  const team2Id = getTeam2Id(match);
+  const team1IsWinner = isWinner(match, team1Id);
+  const team2IsWinner = isWinner(match, team2Id);
 
   if (compact) {
     return (
@@ -51,7 +55,7 @@ export default function MatchCard({
           </span>
         </div>
         <div className="match-teams-compact">
-          <div className="match-team-compact">
+          <div className={`match-team-compact ${team1IsWinner ? 'winner' : ''}`}>
             {team1Logo && (
               <img
                 src={team1Logo}
@@ -64,9 +68,10 @@ export default function MatchCard({
             )}
             <span className="team-name-compact">{team1Name}</span>
             {hasScore && <span className="team-score-compact">{match.team1Score}</span>}
+            {team1IsWinner && <span className="winner-icon-compact">🏆</span>}
           </div>
           <span className="vs-compact">vs</span>
-          <div className="match-team-compact">
+          <div className={`match-team-compact ${team2IsWinner ? 'winner' : ''}`}>
             {team2Logo && (
               <img
                 src={team2Logo}
@@ -79,6 +84,7 @@ export default function MatchCard({
             )}
             <span className="team-name-compact">{team2Name}</span>
             {hasScore && <span className="team-score-compact">{match.team2Score}</span>}
+            {team2IsWinner && <span className="winner-icon-compact">🏆</span>}
           </div>
         </div>
         {(showDate || showTime) && (
@@ -109,7 +115,7 @@ export default function MatchCard({
         </span>
       </div>
       <div className="match-card-teams">
-        <div className="match-team">
+        <div className={`match-team ${team1IsWinner ? 'winner' : ''}`}>
           {team1Logo && (
             <img
               src={team1Logo}
@@ -122,9 +128,10 @@ export default function MatchCard({
           )}
           <span className="team-name">{team1Name}</span>
           {hasScore && <span className="team-score">{match.team1Score}</span>}
+          {team1IsWinner && <span className="winner-icon">🏆</span>}
         </div>
         <span className="vs">vs</span>
-        <div className="match-team">
+        <div className={`match-team ${team2IsWinner ? 'winner' : ''}`}>
           {team2Logo && (
             <img
               src={team2Logo}
@@ -137,6 +144,7 @@ export default function MatchCard({
           )}
           <span className="team-name">{team2Name}</span>
           {hasScore && <span className="team-score">{match.team2Score}</span>}
+          {team2IsWinner && <span className="winner-icon">🏆</span>}
         </div>
       </div>
       {(showDate || showTime) && (
@@ -225,6 +233,15 @@ export default function MatchCard({
           color: #1e293b;
         }
 
+        .match-team.winner {
+          font-weight: 700;
+        }
+
+        .winner-icon {
+          font-size: 1rem;
+          margin-left: 0.5rem;
+        }
+
         .vs {
           text-align: center;
           color: #94a3b8;
@@ -311,6 +328,15 @@ export default function MatchCard({
           font-size: 1rem;
           font-weight: 700;
           color: #1e293b;
+        }
+
+        .match-team-compact.winner {
+          font-weight: 700;
+        }
+
+        .winner-icon-compact {
+          font-size: 0.875rem;
+          margin-left: 0.25rem;
         }
 
         .vs-compact {

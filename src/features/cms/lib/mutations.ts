@@ -378,6 +378,16 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
     updateData.leagueName = data.league;
   }
 
+  // Handle season: use season ID if provided
+  if (data.seasonId !== undefined) {
+    if (data.seasonId) {
+      updateData.seasonId = data.seasonId;
+    } else {
+      // Clearing season relationship
+      updateData.seasonId = null;
+    }
+  }
+
   // Handle team 1: prefer team ID, fallback to name/logo
   if (data.team1Id !== undefined) {
     if (data.team1Id) {
@@ -415,7 +425,13 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
   }
 
   try {
-    return await prisma.match.update({
+    // Get current match status before update
+    const currentMatch = await prisma.match.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    const updatedMatch = await prisma.match.update({
       where: { id },
       data: updateData,
       // @ts-expect-error - Prisma types will be correct after full sync
@@ -426,6 +442,23 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
         season: true,
       },
     });
+
+    // Update winner if:
+    // 1. Status was changed to COMPLETED, or
+    // 2. Match is already COMPLETED and scores were updated
+    const statusChangedToCompleted = 
+      data.status === 'COMPLETED' && currentMatch?.status !== 'COMPLETED';
+    const scoresUpdatedOnCompletedMatch = 
+      currentMatch?.status === 'COMPLETED' && 
+      (data.team1Score !== undefined || data.team2Score !== undefined);
+
+    if (statusChangedToCompleted || scoresUpdatedOnCompletedMatch) {
+      // Import here to avoid circular dependency
+      const { updateMatchWinner } = await import('../../game-tracking/lib/score-calculation');
+      await updateMatchWinner(id, prisma);
+    }
+
+    return updatedMatch;
   } catch (error) {
     console.error('Error updating match:', error);
     return null;

@@ -62,6 +62,14 @@ export async function getPlayerMatches(
           slug: true,
         },
       },
+      winner: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          logo: true,
+        },
+      },
     },
     orderBy: {
       date: 'desc',

@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../../matches/lib/team-helpers';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getWinnerName, isWinner, getTeam1Id, getTeam2Id } from '../../matches/lib/team-helpers';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 
 export default function MatchList() {
@@ -438,6 +438,7 @@ export default function MatchList() {
                   </div>
                 </TableHead>
                 <TableHead>Score</TableHead>
+                <TableHead>Winner</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -449,6 +450,12 @@ export default function MatchList() {
                 const team1Logo = getTeam1Logo(match);
                 const team2Name = getTeam2Name(match);
                 const team2Logo = getTeam2Logo(match);
+                const winnerName = getWinnerName(match);
+                const team1Id = getTeam1Id(match);
+                const team2Id = getTeam2Id(match);
+                const team1IsWinner = isWinner(match, team1Id);
+                const team2IsWinner = isWinner(match, team2Id);
+                const isTie = match.status === 'COMPLETED' && match.team1Score !== null && match.team2Score !== null && match.team1Score === match.team2Score;
                 
                 return (
                   <TableRow key={match.id}>
@@ -521,6 +528,22 @@ export default function MatchList() {
                         </span>
                       ) : (
                         <span className="text-muted-foreground">TBD</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {match.status === 'COMPLETED' ? (
+                        isTie ? (
+                          <Badge variant="outline">Tie</Badge>
+                        ) : winnerName ? (
+                          <div className="flex items-center gap-2">
+                            <span>🏆</span>
+                            <span>{winnerName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>

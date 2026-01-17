@@ -1,0 +1,21 @@
+╔══════════════════════════════════════════════════════════════╗
+║         APPLY WINNER MIGRATION - 3 SIMPLE STEPS              ║
+╚══════════════════════════════════════════════════════════════╝
+
+STEP 1: Open Supabase
+   → Go to: https://supabase.com/dashboard
+   → Click on your project
+
+STEP 2: Open SQL Editor
+   → Click "SQL Editor" in left menu
+   → Click "New query" button
+
+STEP 3: Copy & Paste & Run
+   → Open file: COPY_THIS_SQL.sql
+   → Copy all 3 lines
+   → Paste into SQL Editor
+   → Click "Run" button (or press Ctrl+Enter)
+
+✅ DONE! The migration will add winner tracking to your database.
+
+After running, tell me and I'll verify it worked!

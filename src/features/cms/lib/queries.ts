@@ -156,6 +156,7 @@ export async function getMatches(status?: string): Promise<MatchWithTeamsAndLeag
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: 'asc',
@@ -175,6 +176,7 @@ export async function getMatchById(id: string): Promise<MatchWithTeamsAndLeagueA
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
   }) as MatchWithTeamsAndLeagueAndSeason | null;
 }
@@ -945,6 +947,7 @@ export async function getTournamentMatches(leagueId?: string, seasonId?: string)
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: 'asc',
