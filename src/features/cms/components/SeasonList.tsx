@@ -78,7 +78,7 @@ export default function SeasonList() {
 
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm(
-      'Are you sure you want to delete this season?\n\nThis action cannot be undone. Leagues and matches associated with this season will have their season reference removed.'
+      'Are you sure you want to delete this season?\n\nThis action cannot be undone. All matches associated with this season will be permanently deleted.'
     );
     if (!confirmed) return;
 
