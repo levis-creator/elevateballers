@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '../../../lib/prisma';
+import { getEnvBoolean } from '../../../lib/env';
 import type {
   CreateGameRulesInput,
   UpdateGameRulesInput,
@@ -289,9 +290,11 @@ export async function endGame(matchId: string): Promise<boolean> {
       // Calculate and update the winner (handles draws by setting winnerId to null)
       await updateMatchWinner(matchId, tx);
 
-      // Automatically advance winner to next match
-      const { advanceWinnerToNextMatch } = await import('../../tournaments/lib/bracket-automation');
-      await advanceWinnerToNextMatch(matchId, tx);
+      // Automatically advance winner to next match (if enabled)
+      if (getEnvBoolean('ENABLE_AUTOMATCHING', true)) {
+        const { advanceWinnerToNextMatch } = await import('../../tournaments/lib/bracket-automation');
+        await advanceWinnerToNextMatch(matchId, tx);
+      }
     });
 
     return true;

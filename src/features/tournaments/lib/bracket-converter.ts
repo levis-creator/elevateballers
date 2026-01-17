@@ -401,6 +401,180 @@ function generateGhostMatchesForIncompleteBracket(
 }
 
 /**
+ * Build a complete bracket tree structure
+ * Ensures every match has proper parent-child relationships
+ * Organizes matches into rounds based on their distance from the root
+ */
+function buildCompleteBracketTree(
+  bracketMatches: BracketMatch[],
+  bracketMatchMap: Map<string, BracketMatch>
+): BracketMatch[] {
+  if (bracketMatches.length === 0) {
+    return [];
+  }
+
+  // Build reverse index: map from child match ID to parent matches
+  const childToParents = new Map<string, BracketMatch[]>();
+  const allMatchIds = new Set<string>();
+  
+  bracketMatches.forEach(match => {
+    allMatchIds.add(match.id);
+    if (match.nextMatchId) {
+      if (!childToParents.has(match.nextMatchId)) {
+        childToParents.set(match.nextMatchId, []);
+      }
+      childToParents.get(match.nextMatchId)!.push(match);
+    }
+  });
+
+  // Find root matches (matches that are not children of any other match)
+  const rootMatches = bracketMatches.filter(match => {
+    // A match is a root if no other match points to it as nextMatchId
+    return !Array.from(childToParents.values()).some(parents => 
+      parents.some(parent => parent.id === match.id)
+    );
+  });
+
+  // If we have a CHAMPIONSHIP match, use it as the root
+  // Otherwise, use matches with no nextMatchId as roots
+  let roots = bracketMatches.filter(m => m.stage === 'CHAMPIONSHIP');
+  if (roots.length === 0) {
+    roots = bracketMatches.filter(m => !m.nextMatchId);
+  }
+  if (roots.length === 0 && rootMatches.length > 0) {
+    roots = rootMatches;
+  }
+
+  // Build rounds by traversing from root to leaves
+  const rounds: BracketMatch[][] = [];
+  const processed = new Set<string>();
+  
+  // Start with root round
+  if (roots.length > 0) {
+    rounds.push(roots);
+    roots.forEach(r => processed.add(r.id));
+  }
+
+  // Build subsequent rounds by finding matches that feed into the current round
+  let currentRound = roots;
+  while (currentRound.length > 0) {
+    const nextRound: BracketMatch[] = [];
+    const nextRoundIds = new Set<string>();
+
+    // For each match in current round, find its parent matches
+    currentRound.forEach(match => {
+      const parents = childToParents.get(match.id) || [];
+      parents.forEach(parent => {
+        if (!processed.has(parent.id) && !nextRoundIds.has(parent.id)) {
+          nextRound.push(parent);
+          nextRoundIds.add(parent.id);
+          processed.add(parent.id);
+        }
+      });
+    });
+
+    // Also find matches that should be in this round based on stage hierarchy
+    // This handles cases where nextMatchId links might be missing
+    if (nextRound.length === 0) {
+      // Find matches that haven't been processed and should be in earlier rounds
+      const currentRoundStage = currentRound[0]?.stage;
+      if (currentRoundStage) {
+        const nextStageMap: Record<MatchStage, MatchStage | null> = {
+          CHAMPIONSHIP: 'SEMI_FINALS',
+          SEMI_FINALS: 'QUARTER_FINALS',
+          QUARTER_FINALS: 'PLAYOFF',
+          PLAYOFF: null,
+          REGULAR_SEASON: null,
+          PRESEASON: null,
+          EXHIBITION: null,
+          QUALIFIER: null,
+          OTHER: null,
+        };
+        
+        const expectedNextStage = nextStageMap[currentRoundStage];
+        if (expectedNextStage) {
+          const stageMatches = bracketMatches.filter(m => 
+            m.stage === expectedNextStage && !processed.has(m.id)
+          );
+          nextRound.push(...stageMatches);
+          stageMatches.forEach(m => processed.add(m.id));
+        }
+      }
+    }
+
+    if (nextRound.length > 0) {
+      // Sort matches in round by date (bracketPosition is not in BracketMatch type)
+      nextRound.sort((a, b) => {
+        return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+      });
+      
+      rounds.push(nextRound);
+      currentRound = nextRound;
+    } else {
+      break;
+    }
+  }
+
+  // Add any remaining unprocessed matches (orphaned matches)
+  const orphanedMatches = bracketMatches.filter(m => !processed.has(m.id));
+  if (orphanedMatches.length > 0) {
+    // Try to place them in appropriate rounds based on stage
+    orphanedMatches.forEach(match => {
+      const stageHierarchy = getStageHierarchy(match.stage);
+      let placed = false;
+      
+      for (let i = 0; i < rounds.length; i++) {
+        const roundStage = rounds[i][0]?.stage;
+        if (roundStage) {
+          const roundHierarchy = getStageHierarchy(roundStage);
+          if (stageHierarchy === roundHierarchy) {
+            rounds[i].push(match);
+            placed = true;
+            break;
+          }
+        }
+      }
+      
+      if (!placed) {
+        // Create a new round for this match
+        rounds.push([match]);
+      }
+    });
+  }
+
+  // Reverse rounds so earliest rounds come first
+  rounds.reverse();
+
+  // Flatten rounds back to array and ensure all matches are linked properly
+  const result: BracketMatch[] = [];
+  rounds.forEach((round, roundIndex) => {
+    round.forEach((match, matchIndex) => {
+      // Ensure nextMatchId is set correctly
+      if (roundIndex < rounds.length - 1) {
+        // This is not the last round, so link to next round
+        const nextRound = rounds[roundIndex + 1];
+        if (nextRound && nextRound.length > 0) {
+          // Link to the appropriate match in next round (pair matches: 2 -> 1)
+          const nextMatchIndex = Math.floor(matchIndex / 2);
+          if (nextMatchIndex < nextRound.length) {
+            match.nextMatchId = nextRound[nextMatchIndex].id;
+          } else if (nextRound.length > 0) {
+            // Fallback: link to last match in next round
+            match.nextMatchId = nextRound[nextRound.length - 1].id;
+          }
+        }
+      } else {
+        // This is the last round (CHAMPIONSHIP), no next match
+        match.nextMatchId = null;
+      }
+      result.push(match);
+    });
+  });
+
+  return result;
+}
+
+/**
  * Convert matches to bracket format, organized by stage
  */
 export function convertMatchesToBracket(
@@ -609,6 +783,10 @@ export function convertMatchesToBracket(
     }
   }
   
+  // Build a complete tree structure by organizing matches into rounds
+  // This ensures every match has proper parent-child relationships
+  bracketMatches = buildCompleteBracketTree(bracketMatches, bracketMatchMap);
+  
   // Sort by hierarchy (earliest rounds first, then CHAMPIONSHIP last)
   // This helps the bracket library understand the structure
   bracketMatches.sort((a, b) => {
@@ -792,128 +970,93 @@ export function convertMatchesToDoubleEliminationBracket(
   });
 
   // Convert upper bracket matches
-  // Use stored nextWinnerMatchId and nextLoserMatchId from convertMatchToBracket
-  const upperBracket: BracketMatch[] = upperMatches.map(match => {
+  const upperBracketMap = new Map<string, BracketMatch>();
+  upperMatches.forEach(match => {
     const bracketMatch = convertMatchToBracket(match, matches);
-    // Ensure bracketType is set
     if (!bracketMatch.bracketType) {
       bracketMatch.bracketType = 'upper';
     }
-    
-    // If nextMatchId wasn't set by convertMatchToBracket (old bracket), try to compute it
-    if (!bracketMatch.nextMatchId) {
-      const nextStageMap: Record<MatchStage, MatchStage | null> = {
-        QUARTER_FINALS: 'SEMI_FINALS',
-        SEMI_FINALS: 'CHAMPIONSHIP',
-        PLAYOFF: 'QUARTER_FINALS',
-        CHAMPIONSHIP: null,
-        REGULAR_SEASON: null,
-        PRESEASON: null,
-        EXHIBITION: null,
-        QUALIFIER: null,
-        OTHER: null,
-      };
-      
-      if (match.stage && match.stage in nextStageMap) {
-        const nextStage = nextStageMap[match.stage as keyof typeof nextStageMap];
-        if (nextStage) {
-          // Look for next match in upper bracket or grand final
-          const nextMatch = [...upperMatches, ...grandFinalMatches].find(m => m.stage === nextStage);
-          if (nextMatch) {
-            bracketMatch.nextMatchId = nextMatch.id;
-          }
-        }
-      }
-    }
-    
-    return bracketMatch;
-  });
-
-  // Convert grand final matches
-  const grandFinal: BracketMatch[] = grandFinalMatches.map(match => {
-    const bracketMatch = convertMatchToBracket(match, matches);
-    // Ensure bracketType is set
-    if (!bracketMatch.bracketType) {
-      bracketMatch.bracketType = 'grand-final';
-    }
-    return bracketMatch;
+    upperBracketMap.set(match.id, bracketMatch);
   });
 
   // Convert lower bracket matches
-  // Use stored nextWinnerMatchId from convertMatchToBracket
-  const lowerBracket: BracketMatch[] = lowerMatches.map(match => {
+  const lowerBracketMap = new Map<string, BracketMatch>();
+  lowerMatches.forEach(match => {
     const bracketMatch = convertMatchToBracket(match, matches);
-    // Ensure bracketType is set
     if (!bracketMatch.bracketType) {
       bracketMatch.bracketType = 'lower';
     }
-    
-    // If nextMatchId wasn't set by convertMatchToBracket (old bracket), try to compute it
-    if (!bracketMatch.nextMatchId) {
-      // Lower bracket progression: winners advance to next lower bracket round or grand final
-      // This is simplified - in practice, lower bracket structure is complex
-      const nextStageMap: Record<MatchStage, MatchStage | null> = {
-        PLAYOFF: 'QUARTER_FINALS',
-        QUARTER_FINALS: 'SEMI_FINALS',
-        SEMI_FINALS: 'CHAMPIONSHIP', // Lower bracket final goes to grand final
-        CHAMPIONSHIP: null,
-        REGULAR_SEASON: null,
-        PRESEASON: null,
-        EXHIBITION: null,
-        QUALIFIER: null,
-        OTHER: null,
-      };
-      
-      if (match.stage && match.stage in nextStageMap) {
-        const nextStage = nextStageMap[match.stage as keyof typeof nextStageMap];
-        if (nextStage === 'CHAMPIONSHIP') {
-          // Lower bracket final goes to grand final
-          const grandFinalMatch = grandFinalMatches[0];
-          if (grandFinalMatch) {
-            bracketMatch.nextMatchId = grandFinalMatch.id;
-          }
-        } else if (nextStage) {
-          // Look for next match in lower bracket
-          const nextMatch = lowerMatches.find(m => m.stage === nextStage);
-          if (nextMatch) {
-            bracketMatch.nextMatchId = nextMatch.id;
-          }
-        }
-      }
-    }
-    
-    return bracketMatch;
+    lowerBracketMap.set(match.id, bracketMatch);
   });
 
-  // Sort by bracketRound and bracketPosition if available, otherwise by date
-  const sortMatches = (a: BracketMatch, b: BracketMatch) => {
-    const matchA = matches.find(m => m.id === a.originalMatchId);
-    const matchB = matches.find(m => m.id === b.originalMatchId);
-    
-    if (matchA?.bracketRound !== undefined && matchB?.bracketRound !== undefined) {
-      if (matchA.bracketRound !== matchB.bracketRound) {
-        return matchA.bracketRound - matchB.bracketRound;
-      }
-      // Same round, sort by position
-      if (matchA.bracketPosition !== undefined && matchB.bracketPosition !== undefined) {
-        return matchA.bracketPosition - matchB.bracketPosition;
-      }
+  // Convert grand final matches
+  const grandFinalMap = new Map<string, BracketMatch>();
+  grandFinalMatches.forEach(match => {
+    const bracketMatch = convertMatchToBracket(match, matches);
+    if (!bracketMatch.bracketType) {
+      bracketMatch.bracketType = 'grand-final';
     }
-    // Fallback to date
-    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-  };
+    grandFinalMap.set(match.id, bracketMatch);
+  });
 
-  upperBracket.sort(sortMatches);
-  lowerBracket.sort(sortMatches);
-  grandFinal.sort(sortMatches);
+  // Build complete tree structures for upper and lower brackets
+  const upperBracketArray = Array.from(upperBracketMap.values());
+  const lowerBracketArray = Array.from(lowerBracketMap.values());
+  const grandFinalArray = Array.from(grandFinalMap.values());
 
-  // Ensure we always return arrays (never undefined)
+  // Build complete tree for upper bracket
+  const upperBracketTree = buildCompleteBracketTree(upperBracketArray, upperBracketMap);
+  
+  // Build complete tree for lower bracket
+  const lowerBracketTree = buildCompleteBracketTree(lowerBracketArray, lowerBracketMap);
+
+  // Link upper bracket final and lower bracket final to grand final
+  // Find the upper bracket final (match with no nextMatchId or highest stage)
+  const upperFinal = upperBracketTree
+    .filter(m => m.bracketType === 'upper')
+    .sort((a, b) => {
+      const aHierarchy = getStageHierarchy(a.stage);
+      const bHierarchy = getStageHierarchy(b.stage);
+      return bHierarchy - aHierarchy; // Highest hierarchy first
+    })[0];
+
+  // Find the lower bracket final (match with no nextMatchId or highest stage)
+  const lowerFinal = lowerBracketTree
+    .filter(m => m.bracketType === 'lower')
+    .sort((a, b) => {
+      const aHierarchy = getStageHierarchy(a.stage);
+      const bHierarchy = getStageHierarchy(b.stage);
+      return bHierarchy - aHierarchy; // Highest hierarchy first
+    })[0];
+
+  // Link both finals to grand final
+  if (grandFinalArray.length > 0 && grandFinalArray[0]) {
+    const grandFinalMatch = grandFinalArray[0];
+    
+    // Link upper bracket final to grand final
+    if (upperFinal && !upperFinal.nextMatchId) {
+      upperFinal.nextMatchId = grandFinalMatch.id;
+    }
+    
+    // Link lower bracket final to grand final
+    if (lowerFinal && !lowerFinal.nextMatchId) {
+      lowerFinal.nextMatchId = grandFinalMatch.id;
+    }
+    
+    // Grand final has no next match
+    grandFinalMatch.nextMatchId = null;
+  }
+
+  // Combine upper bracket with grand final for display
+  const upperWithGrandFinal = [...upperBracketTree];
+  if (grandFinalArray.length > 0) {
+    upperWithGrandFinal.push(...grandFinalArray);
+  }
+
   return {
-    upper: Array.isArray(upperBracket) && Array.isArray(grandFinal)
-      ? [...upperBracket, ...grandFinal]
-      : upperBracket,
-    lower: Array.isArray(lowerBracket) ? lowerBracket : [],
-    grandFinal: grandFinal.length > 0 ? grandFinal : undefined,
+    upper: upperWithGrandFinal,
+    lower: lowerBracketTree,
+    grandFinal: grandFinalArray.length > 0 ? grandFinalArray : undefined,
   };
 }
 

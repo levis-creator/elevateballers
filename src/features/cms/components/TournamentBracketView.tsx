@@ -36,11 +36,27 @@ export default function TournamentBracketView({ seasonId, leagueId }: Tournament
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [selectedBracketMatch, setSelectedBracketMatch] = useState<BracketMatch | null>(null);
   const [seasonBracketType, setSeasonBracketType] = useState<'single' | 'double' | null>(null);
+  const [automatchingEnabled, setAutomatchingEnabled] = useState(true);
 
   useEffect(() => {
     fetchMatches();
     fetchSeason();
+    fetchAutomatchingStatus();
   }, [seasonId]);
+
+  const fetchAutomatchingStatus = async () => {
+    try {
+      const response = await fetch('/api/automatching');
+      if (response.ok) {
+        const data = await response.json();
+        setAutomatchingEnabled(data.enabled ?? true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch automatching status:', err);
+      // Default to enabled on error
+      setAutomatchingEnabled(true);
+    }
+  };
 
   const fetchSeason = async () => {
     if (!seasonId) return;
@@ -75,17 +91,21 @@ export default function TournamentBracketView({ seasonId, leagueId }: Tournament
         // Priority 3: Use heuristics for old brackets without bracketType field
         let isDoubleElim = false;
         
+        // Declare variables outside if/else so they're available later
+        let hasDoubleElimBracketType = false;
+        let heuristicBracketType: 'single' | 'double' = 'single';
+        
         if (seasonBracketType) {
           // Use season's bracketType (most reliable source)
           isDoubleElim = seasonBracketType === 'double';
           console.log('Using season bracketType:', seasonBracketType);
         } else {
           // Fallback to match-based detection
-          const hasDoubleElimBracketType = matches.some(m => 
+          hasDoubleElimBracketType = matches.some(m => 
             m.bracketType === 'lower' || m.bracketType === 'upper' || m.bracketType === 'grand-final'
           );
           
-          const heuristicBracketType = detectBracketType(matches);
+          heuristicBracketType = detectBracketType(matches);
           isDoubleElim = hasDoubleElimBracketType || heuristicBracketType === 'double';
           
           console.log('Bracket type detection (fallback):', {
@@ -111,10 +131,19 @@ export default function TournamentBracketView({ seasonId, leagueId }: Tournament
             const converted = convertMatchesToDoubleEliminationBracket(matches);
             // Validate the converted structure
             if (converted && typeof converted === 'object' && 'upper' in converted && 'lower' in converted) {
-              // Ensure both are arrays
+              // Ensure both are arrays and include grand final in upper bracket
+              const upperWithGrandFinal = Array.isArray(converted.upper) ? converted.upper : [];
+              const lower = Array.isArray(converted.lower) ? converted.lower : [];
+              
+              // Add grand final to upper bracket if it exists
+              if (converted.grandFinal && Array.isArray(converted.grandFinal) && converted.grandFinal.length > 0) {
+                // Grand final should be at the end of upper bracket
+                upperWithGrandFinal.push(...converted.grandFinal);
+              }
+              
               const validated = {
-                upper: Array.isArray(converted.upper) ? converted.upper : [],
-                lower: Array.isArray(converted.lower) ? converted.lower : [],
+                upper: upperWithGrandFinal,
+                lower: lower,
               };
               
               // Only use double elimination if we have matches in at least one bracket
@@ -260,10 +289,12 @@ export default function TournamentBracketView({ seasonId, leagueId }: Tournament
                 )}
               </CardDescription>
             </div>
-            <Button onClick={() => setGeneratorDialogOpen(true)}>
-              <Trophy className="mr-2 h-4 w-4" />
-              Generate Bracket
-            </Button>
+            {automatchingEnabled && (
+              <Button onClick={() => setGeneratorDialogOpen(true)}>
+                <Trophy className="mr-2 h-4 w-4" />
+                Generate Bracket
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>

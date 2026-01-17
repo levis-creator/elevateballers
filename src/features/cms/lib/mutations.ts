@@ -1,5 +1,6 @@
 import { prisma } from '../../../lib/prisma';
 import { generateSlug } from './utils';
+import { getEnvBoolean } from '../../../lib/env';
 import type {
   CreateNewsArticleInput,
   UpdateNewsArticleInput,
@@ -492,9 +493,11 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
       const { updateMatchWinner } = await import('../../game-tracking/lib/score-calculation');
       await updateMatchWinner(id, prisma);
       
-      // Automatically advance winner to next match
-      const { advanceWinnerToNextMatch } = await import('../../tournaments/lib/bracket-automation');
-      await advanceWinnerToNextMatch(id, prisma);
+      // Automatically advance winner to next match (if enabled)
+      if (getEnvBoolean('ENABLE_AUTOMATCHING', true)) {
+        const { advanceWinnerToNextMatch } = await import('../../tournaments/lib/bracket-automation');
+        await advanceWinnerToNextMatch(id, prisma);
+      }
     }
 
     return updatedMatch;
