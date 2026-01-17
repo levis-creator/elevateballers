@@ -20,13 +20,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, AlertCircle, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, Calendar, Clock, Trophy, Users, Eye, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, Calendar, Clock, Trophy, Users, Eye, RefreshCw, Table2, Network } from 'lucide-react';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../../matches/lib/team-helpers';
 import { getLeagueName } from '../../matches/lib/league-helpers';
+import TournamentBracketView from './TournamentBracketView';
 
 interface SeasonMatchesListProps {
   seasonId: string;
 }
+
+type ViewMode = 'table' | 'bracket';
 
 export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) {
   const [matches, setMatches] = useState<MatchWithTeamsAndLeagueAndSeason[]>([]);
@@ -34,6 +37,14 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // Load from localStorage if available
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('season-matches-view-mode');
+      return (saved === 'bracket' || saved === 'table') ? saved : 'table';
+    }
+    return 'table';
+  });
 
   useEffect(() => {
     fetchSeason();
@@ -48,6 +59,13 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
       setSeason(data);
     } catch (err: any) {
       console.error('Error fetching season:', err);
+    }
+  };
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('season-matches-view-mode', mode);
     }
   };
 
@@ -166,6 +184,26 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
           </p>
         </div>
         <div className="flex gap-2">
+          <div className="flex gap-1 border rounded-md p-1">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleViewModeChange('table')}
+              className="gap-2"
+            >
+              <Table2 className="h-4 w-4" />
+              Table
+            </Button>
+            <Button
+              variant={viewMode === 'bracket' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleViewModeChange('bracket')}
+              className="gap-2"
+            >
+              <Network className="h-4 w-4" />
+              Bracket
+            </Button>
+          </div>
           <Button asChild>
             <a href={`/admin/matches/new?seasonId=${seasonId}`} data-astro-prefetch>
               <Plus className="mr-2 h-4 w-4" />
@@ -188,23 +226,28 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
         </Alert>
       )}
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search matches by team or league..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-            <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+      {/* View Mode Content */}
+      {viewMode === 'bracket' ? (
+        <TournamentBracketView seasonId={seasonId} leagueId={season?.leagueId} />
+      ) : (
+        <>
+          {/* Search */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Search matches by team or league..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Matches Table */}
+          {/* Matches Table */}
       {filteredMatches.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="p-12 text-center">
@@ -364,6 +407,8 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
             </Table>
           </CardContent>
         </Card>
+      )}
+        </>
       )}
     </div>
   );

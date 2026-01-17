@@ -13,7 +13,7 @@ import {
   getMatchStatusLabel,
   getRelativeTimeDescription,
 } from '../lib/utils';
-import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../lib/team-helpers';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, getWinnerName, isWinner } from '../lib/team-helpers';
 import { getLeagueName } from '../lib/league-helpers';
 import { useGameTrackingStore } from '../../game-tracking/stores/useGameTrackingStore';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,11 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
   const team1Logo = getTeam1Logo(match);
   const team2Name = getTeam2Name(match);
   const team2Logo = getTeam2Logo(match);
+  const team1Id = getTeam1Id(match);
+  const team2Id = getTeam2Id(match);
+  const team1IsWinner = isWinner(match, team1Id);
+  const team2IsWinner = isWinner(match, team2Id);
+  const isTie = match.status === 'COMPLETED' && match.team1Score !== null && match.team2Score !== null && match.team1Score === match.team2Score;
 
   const handleStartGame = async () => {
     setIsLoading(true);
@@ -112,7 +117,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
       </div>
 
       <div className="match-detail-teams">
-        <div className="match-team-detail">
+        <div className={`match-team-detail ${team1IsWinner ? 'winner' : ''}`}>
           {team1Logo && (
             <img
               src={team1Logo}
@@ -127,6 +132,11 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           {hasScore && (
             <div className="team-score-large">{match.team1Score}</div>
           )}
+          {team1IsWinner && (
+            <div className="winner-badge">
+              <span>🏆 Winner</span>
+            </div>
+          )}
         </div>
 
         <div className="match-vs">
@@ -134,9 +144,12 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           {hasScore && (
             <span className="score-separator">-</span>
           )}
+          {isTie && (
+            <span className="tie-indicator">Tie</span>
+          )}
         </div>
 
-        <div className="match-team-detail">
+        <div className={`match-team-detail ${team2IsWinner ? 'winner' : ''}`}>
           {team2Logo && (
             <img
               src={team2Logo}
@@ -150,6 +163,11 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           <h3 className="team-name-large">{team2Name}</h3>
           {hasScore && (
             <div className="team-score-large">{match.team2Score}</div>
+          )}
+          {team2IsWinner && (
+            <div className="winner-badge">
+              <span>🏆 Winner</span>
+            </div>
           )}
         </div>
       </div>
@@ -296,6 +314,50 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           align-items: center;
           gap: 1rem;
           flex: 1;
+          position: relative;
+        }
+
+        .match-team-detail.winner::before {
+          content: '';
+          position: absolute;
+          top: -8px;
+          left: -8px;
+          right: -8px;
+          bottom: -8px;
+          border: 3px solid #fbbf24;
+          border-radius: 16px;
+          z-index: -1;
+          animation: winner-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes winner-glow {
+          0%, 100% {
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+          }
+          50% {
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+          }
+        }
+
+        .winner-badge {
+          margin-top: 0.5rem;
+          padding: 0.5rem 1rem;
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+          color: white;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+        }
+
+        .tie-indicator {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          margin-top: 0.25rem;
         }
 
         .team-logo-large {

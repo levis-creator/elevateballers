@@ -33,6 +33,7 @@ export async function getUpcomingMatches(limit?: number): Promise<MatchWithTeams
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: 'asc',
@@ -57,6 +58,7 @@ export async function getCompletedMatches(limit?: number): Promise<MatchWithTeam
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: 'desc',
@@ -81,6 +83,7 @@ export async function getLiveMatches(): Promise<MatchWithTeamsAndLeagueAndSeason
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: 'asc',
@@ -115,6 +118,7 @@ export async function getNextMatch(): Promise<MatchWithTeamsAndLeagueAndSeason |
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: 'asc',
@@ -241,6 +245,7 @@ export async function getFilteredMatches(
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy,
     take: limit,
@@ -285,6 +290,7 @@ export async function getMatchesByLeague(leagueSlugOrName: string): Promise<Matc
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: 'desc',
@@ -319,6 +325,7 @@ export async function getMatchesByStage(
       team2: true,
       league: true,
       season: true,
+      winner: true,
     },
     orderBy: {
       date: options?.sort === 'date-desc' ? 'desc' : 'asc',

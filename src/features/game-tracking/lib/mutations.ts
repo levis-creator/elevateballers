@@ -233,6 +233,7 @@ export async function startGame(matchId: string, gameRulesId?: string): Promise<
 
 /**
  * End game (set match status to COMPLETED)
+ * Automatically calculates and tracks the winner (or sets to null for draws)
  */
 export async function endGame(matchId: string): Promise<boolean> {
   try {
@@ -268,13 +269,25 @@ export async function endGame(matchId: string): Promise<boolean> {
       }
     }
 
-    // Update match status to COMPLETED and stop the clock
-    await prisma.match.update({
-      where: { id: matchId },
-      data: {
-        status: 'COMPLETED',
-        clockRunning: false,
-      },
+    // Use transaction to ensure all updates happen atomically
+    await prisma.$transaction(async (tx) => {
+      // Import here to avoid circular dependency
+      const { updateMatchScoresFromEvents, updateMatchWinner } = await import('./score-calculation');
+
+      // First, ensure scores are up to date from events
+      await updateMatchScoresFromEvents(matchId, tx);
+
+      // Update match status to COMPLETED and stop the clock
+      await tx.match.update({
+        where: { id: matchId },
+        data: {
+          status: 'COMPLETED',
+          clockRunning: false,
+        },
+      });
+
+      // Calculate and update the winner (handles draws by setting winnerId to null)
+      await updateMatchWinner(matchId, tx);
     });
 
     return true;

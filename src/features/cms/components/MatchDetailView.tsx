@@ -40,7 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../matches/lib/team-helpers';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, getWinnerName, isWinner } from '../../matches/lib/team-helpers';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 import AddNewPlayerModal from './AddNewPlayerModal';
 import GameTrackingPanel from '../../game-tracking/components/GameTrackingPanel';
@@ -1177,6 +1177,10 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const leagueName = getLeagueName(match);
   const team1Id = getTeam1Id(match);
   const team2Id = getTeam2Id(match);
+  const team1IsWinner = isWinner(match, team1Id);
+  const team2IsWinner = isWinner(match, team2Id);
+  const winnerName = getWinnerName(match);
+  const isTie = match.status === 'COMPLETED' && match.team1Score !== null && match.team2Score !== null && match.team1Score === match.team2Score;
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -1271,7 +1275,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
             <CardContent className="pt-6">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 {/* Team 1 */}
-                <div className="flex-1 text-center">
+                <div className={`flex-1 text-center ${team1IsWinner ? 'winner-highlight' : ''}`}>
             {team1Logo && (
                     <img
                       src={team1Logo}
@@ -1283,6 +1287,13 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                   {match.team1Score !== null && match.team1Score !== undefined && (
                     <div className="text-5xl font-bold">{match.team1Score}</div>
             )}
+                  {team1IsWinner && (
+                    <div className="mt-2">
+                      <Badge className="bg-yellow-500 text-white">
+                        🏆 Winner
+                      </Badge>
+                    </div>
+                  )}
           </div>
           
                 {/* Match Info Center */}
@@ -1290,6 +1301,9 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                   <Badge variant={getStatusVariant(match.status)} className="mb-4">
                     {match.status}
                   </Badge>
+                  {isTie && (
+                    <Badge variant="outline" className="mb-4 ml-2">Tie</Badge>
+                  )}
                   {match.date && (
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
@@ -1324,7 +1338,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           </div>
           
                 {/* Team 2 */}
-                <div className="flex-1 text-center">
+                <div className={`flex-1 text-center ${team2IsWinner ? 'winner-highlight' : ''}`}>
             {team2Logo && (
                     <img
                       src={team2Logo}
@@ -1336,10 +1350,32 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                   {match.team2Score !== null && match.team2Score !== undefined && (
                     <div className="text-5xl font-bold">{match.team2Score}</div>
             )}
+                  {team2IsWinner && (
+                    <div className="mt-2">
+                      <Badge className="bg-yellow-500 text-white">
+                        🏆 Winner
+                      </Badge>
+                    </div>
+                  )}
           </div>
         </div>
             </CardContent>
           </Card>
+
+      {/* Winner Summary (for completed matches) */}
+      {match.status === 'COMPLETED' && (winnerName || isTie) && (
+        <Alert>
+          {icons.Trophy ? <icons.Trophy className="h-4 w-4" /> : <span className="h-4 w-4" />}
+          <AlertDescription>
+            <strong>Match Result:</strong>{' '}
+            {isTie ? (
+              <span>Match ended in a tie ({match.team1Score} - {match.team2Score})</span>
+            ) : (
+              <span><strong>{winnerName}</strong> won the match</span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Alert for non-live matches */}
       {match.status !== 'LIVE' && (
@@ -1848,6 +1884,26 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         </AlertDialogContent>
       </AlertDialog>
             </div>
+      <style>{`
+        .winner-highlight {
+          position: relative;
+          padding: 1rem;
+          border-radius: 8px;
+          background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+        }
+
+        .winner-highlight::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          border: 2px solid #fbbf24;
+          border-radius: 8px;
+          pointer-events: none;
+        }
+      `}</style>
   );
 
   function getTeamName(teamId: string): string {

@@ -8,6 +8,7 @@ import type { Match, Team } from '@prisma/client';
 type MatchWithTeams = Match & {
   team1: Team | null;
   team2: Team | null;
+  winner: Team | null;
 };
 
 /**
@@ -76,3 +77,41 @@ export function getTeam2Id(match: MatchWithTeams | Match | null | undefined): st
   return match.team2Id || null;
 }
 
+/**
+ * Get winner name from match
+ */
+export function getWinnerName(match: MatchWithTeams | Match | null | undefined): string | null {
+  if (!match) return null;
+  if ('winner' in match && match.winner) {
+    return match.winner.name;
+  }
+  // Fallback: determine winner from scores if winner relation not loaded
+  if (match.status === 'COMPLETED' && match.team1Score !== null && match.team2Score !== null) {
+    if (match.team1Score > match.team2Score) {
+      return getTeam1Name(match);
+    } else if (match.team2Score > match.team1Score) {
+      return getTeam2Name(match);
+    }
+  }
+  return null;
+}
+
+/**
+ * Get winner ID from match
+ */
+export function getWinnerId(match: MatchWithTeams | Match | null | undefined): string | null {
+  if (!match) return null;
+  if ('winner' in match && match.winner) {
+    return match.winner.id;
+  }
+  return match.winnerId || null;
+}
+
+/**
+ * Check if a team is the winner
+ */
+export function isWinner(match: MatchWithTeams | Match | null | undefined, teamId: string | null): boolean {
+  if (!match || !teamId) return false;
+  const winnerId = getWinnerId(match);
+  return winnerId === teamId;
+}
