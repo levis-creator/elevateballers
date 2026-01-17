@@ -438,7 +438,33 @@ export function convertMatchesToBracket(
     processedMatches.add(match.id);
   }
   
-  // Second pass: link matches to their next rounds
+  // IMPORTANT: Include ALL matches, even if they don't fit the stage hierarchy
+  // This ensures matches are displayed even if the bracket structure is incomplete
+  for (const match of matches) {
+    if (processedMatches.has(match.id)) continue;
+    console.warn('Match not processed in stage order, adding directly:', {
+      id: match.id,
+      stage: match.stage,
+      teams: `${getTeam1Name(match)} vs ${getTeam2Name(match)}`,
+    });
+    const bracketMatch = convertMatchToBracket(match, matches);
+    bracketMatchMap.set(match.id, bracketMatch);
+    processedMatches.add(match.id);
+  }
+  
+  // Generate ghost matches FIRST, before linking, so they're available for linking
+  const { ghostMatches, ghostMap } = generateGhostMatchesForIncompleteBracket(matchesByStage);
+  if (ghostMatches.length > 0) {
+    console.log(`✨ Generated ${ghostMatches.length} ghost matches to complete bracket structure:`, 
+      ghostMatches.map(g => ({ id: g.id, stage: g.stage, round: g.tournamentRoundText, nextMatchId: g.nextMatchId?.substring(0, 12) || null }))
+    );
+    // Add ghost matches to the map immediately so they can be linked to
+    for (const ghostMatch of ghostMatches) {
+      bracketMatchMap.set(ghostMatch.id, ghostMatch);
+    }
+  }
+  
+  // Second pass: link matches to their next rounds (real matches OR ghost matches)
   // For bracket structure: QUARTER_FINALS -> SEMI_FINALS -> CHAMPIONSHIP
   // Pair matches: 2 QUARTER_FINALS -> 1 SEMI_FINALS, 2 SEMI_FINALS -> 1 CHAMPIONSHIP
   const nextStageMap: Record<MatchStage, MatchStage | null> = {
@@ -466,104 +492,69 @@ export function convertMatchesToBracket(
       const bracketMatch = bracketMatchMap.get(match.id);
       if (!bracketMatch) continue;
       
+      // Skip if already linked
+      if (bracketMatch.nextMatchId) continue;
+      
       if (match.stage && match.stage in nextStageMap) {
         const nextStage = nextStageMap[match.stage as keyof typeof nextStageMap];
         if (nextStage) {
+          // First try to find real matches in the next stage
           const nextMatches = matchesByStage.get(nextStage) || [];
           if (nextMatches.length > 0) {
             // Link to the appropriate match in the next stage
-            // For QUARTER_FINALS: match 0,1 -> SEMI_FINALS 0; match 2,3 -> SEMI_FINALS 1; etc.
-            // For SEMI_FINALS: match 0,1 -> CHAMPIONSHIP 0
             const nextMatchIndex = Math.floor(i / 2); // Pair up matches (2 per next match)
             if (nextMatchIndex < nextMatches.length) {
               bracketMatch.nextMatchId = nextMatches[nextMatchIndex].id;
-              console.log(`✓ Linking ${match.stage} match ${i} (${match.id.substring(0, 8)}...) to ${nextStage} match ${nextMatchIndex} (${nextMatches[nextMatchIndex].id.substring(0, 8)}...)`);
+              console.log(`✓ Linked ${match.stage} match ${i} to ${nextStage} match ${nextMatchIndex}`);
             } else if (nextMatches.length > 0) {
               // Fallback: link to last match of next stage if index is out of bounds
               bracketMatch.nextMatchId = nextMatches[nextMatches.length - 1].id;
-              console.log(`✓ Linking ${match.stage} match ${i} (${match.id.substring(0, 8)}...) to last ${nextStage} match`);
+              console.log(`✓ Linked ${match.stage} match ${i} to last ${nextStage} match`);
             }
           } else {
-            // No next stage matches exist - this creates an incomplete bracket
-            console.warn(`⚠ No ${nextStage} matches found to link ${match.stage} match ${match.id.substring(0, 8)}... to`);
+            // No real matches in next stage, try ghost matches
+            if (match.stage === 'QUARTER_FINALS') {
+              const semiFinalIndex = Math.floor(i / 2);
+              const semiFinalGhost = ghostMap.get(`SEMI_FINALS-${semiFinalIndex}`);
+              if (semiFinalGhost) {
+                bracketMatch.nextMatchId = semiFinalGhost.id;
+                console.log(`🔗 Linked Quarter-Final ${i} to ghost Semi-Final ${semiFinalIndex}`);
+              }
+            } else if (match.stage === 'SEMI_FINALS') {
+              const championshipGhost = ghostMap.get('CHAMPIONSHIP-0');
+              if (championshipGhost) {
+                bracketMatch.nextMatchId = championshipGhost.id;
+                console.log(`🔗 Linked Semi-Final ${i} to ghost Championship`);
+              }
+            } else if (match.stage === 'PLAYOFF') {
+              const quarterFinalIndex = Math.floor(i / 2);
+              const quarterFinalGhost = ghostMap.get(`QUARTER_FINALS-${quarterFinalIndex}`);
+              if (quarterFinalGhost) {
+                bracketMatch.nextMatchId = quarterFinalGhost.id;
+                console.log(`🔗 Linked Playoff ${i} to ghost Quarter-Final ${quarterFinalIndex}`);
+              }
+            }
           }
         }
       }
     }
   }
   
-  // Add all bracket matches to the result array
-  for (const bracketMatch of bracketMatchMap.values()) {
-    bracketMatches.push(bracketMatch);
-  }
-  
-  // IMPORTANT: Include ALL matches, even if they don't fit the stage hierarchy
-  // This ensures matches are displayed even if the bracket structure is incomplete
-  for (const match of matches) {
-    if (processedMatches.has(match.id)) continue;
-    console.warn('Match not processed in stage order, adding directly:', {
-      id: match.id,
-      stage: match.stage,
-      teams: `${getTeam1Name(match)} vs ${getTeam2Name(match)}`,
-    });
-    const bracketMatch = convertMatchToBracket(match, matches);
-    bracketMatchMap.set(match.id, bracketMatch);
-    processedMatches.add(match.id);
-  }
-  
-  // Generate ghost matches to complete bracket structure
-  const { ghostMatches, ghostMap } = generateGhostMatchesForIncompleteBracket(matchesByStage);
-  if (ghostMatches.length > 0) {
-    // Add ghost matches to the map and result array
-    for (const ghostMatch of ghostMatches) {
-      bracketMatchMap.set(ghostMatch.id, ghostMatch);
-      bracketMatches.push(ghostMatch);
-    }
-    
-    // Re-link existing matches to ghost matches
-    for (const stage of reverseStageOrder) {
-      const stageMatches = matchesByStage.get(stage);
-      if (!stageMatches || stageMatches.length === 0) continue;
-      
-      const sortedMatches = [...stageMatches].sort((a, b) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
-      
-      for (let i = 0; i < sortedMatches.length; i++) {
-        const match = sortedMatches[i];
-        const bracketMatch = bracketMatchMap.get(match.id);
-        if (!bracketMatch || bracketMatch.nextMatchId) continue; // Already linked
-        
-        // Find the appropriate ghost match to link to
-        if (match.stage === 'QUARTER_FINALS') {
-          const semiFinalIndex = Math.floor(i / 2);
-          const semiFinalGhost = ghostMap.get(`SEMI_FINALS-${semiFinalIndex}`);
-          if (semiFinalGhost) {
-            bracketMatch.nextMatchId = semiFinalGhost.id;
-            console.log(`🔗 Linked Quarter-Final ${i} to ghost Semi-Final ${semiFinalIndex}`);
-          }
-        } else if (match.stage === 'SEMI_FINALS') {
-          const championshipGhost = ghostMap.get('CHAMPIONSHIP-0');
-          if (championshipGhost) {
-            bracketMatch.nextMatchId = championshipGhost.id;
-            console.log(`🔗 Linked Semi-Final ${i} to ghost Championship`);
-          }
-        } else if (match.stage === 'PLAYOFF') {
-          const quarterFinalIndex = Math.floor(i / 2);
-          const quarterFinalGhost = ghostMap.get(`QUARTER_FINALS-${quarterFinalIndex}`);
-          if (quarterFinalGhost) {
-            bracketMatch.nextMatchId = quarterFinalGhost.id;
-            console.log(`🔗 Linked Playoff ${i} to ghost Quarter-Final ${quarterFinalIndex}`);
-          }
-        }
-      }
-    }
-  }
-  
-  // Re-add all matches from the map to ensure they're included
+  // Add all bracket matches (real + ghost) to the result array
   bracketMatches = [];
   for (const bracketMatch of bracketMatchMap.values()) {
     bracketMatches.push(bracketMatch);
+  }
+  
+  // Ensure ghost matches are included (double-check)
+  if (ghostMatches.length > 0) {
+    const existingGhostIds = new Set(bracketMatches.map(m => m.id));
+    for (const ghostMatch of ghostMatches) {
+      if (!existingGhostIds.has(ghostMatch.id)) {
+        console.warn(`⚠️ Ghost match ${ghostMatch.id} was not in bracketMatchMap, adding directly`);
+        bracketMatches.push(ghostMatch);
+      }
+    }
   }
   
   // Sort by hierarchy (earliest rounds first, then CHAMPIONSHIP last)
@@ -575,6 +566,28 @@ export function convertMatchesToBracket(
       return aHierarchy - bHierarchy; // Lower hierarchy (earlier rounds) first
     }
     return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+  });
+  
+  // Debug: Log final bracket structure
+  console.log('📊 Final bracket structure:', {
+    totalMatches: bracketMatches.length,
+    realMatches: bracketMatches.filter(m => !m.isEmpty).length,
+    ghostMatches: bracketMatches.filter(m => m.isEmpty).length,
+    byStage: {
+      QUARTER_FINALS: bracketMatches.filter(m => m.stage === 'QUARTER_FINALS').length,
+      SEMI_FINALS: bracketMatches.filter(m => m.stage === 'SEMI_FINALS').length,
+      CHAMPIONSHIP: bracketMatches.filter(m => m.stage === 'CHAMPIONSHIP').length,
+      PLAYOFF: bracketMatches.filter(m => m.stage === 'PLAYOFF').length,
+    },
+    linkedMatches: bracketMatches.filter(m => m.nextMatchId !== null).length,
+    unlinkedMatches: bracketMatches.filter(m => m.nextMatchId === null).length,
+    sampleLinks: bracketMatches.slice(0, 5).map(m => ({
+      id: m.id.substring(0, 8),
+      round: m.tournamentRoundText,
+      stage: m.stage,
+      nextMatchId: m.nextMatchId?.substring(0, 8) || null,
+      isGhost: m.isEmpty,
+    })),
   });
   
   // If we have matches but they're not properly linked (incomplete bracket),

@@ -1,29 +1,17 @@
 import React, { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import {
-  SingleEliminationBracket,
-  DoubleEliminationBracket,
-  Match,
-  SVGViewer,
-  createTheme,
-} from '@g-loot/react-tournament-brackets';
+import { Bracket, Seed, SeedItem, SeedTeam } from 'react-brackets';
 import InteractiveMatch from './InteractiveMatch';
 import type { BracketMatch } from '../lib/bracket-converter';
+import { convertToReactBracketsFormat, type RoundProps, type Seed as ReactBracketsSeed } from '../lib/react-brackets-converter';
 
-// Custom theme to match the site's aesthetics
-const customTheme = createTheme({
-  textColor: { main: '#363f48', onSecondary: '#ffffff', secondary: '#777777' },
-  matchBackground: { won: '#ffffff', lost: '#f8f9fa' },
-  score: {
-    background: { won: '#e21e22', lost: '#64748b' },
-    text: { won: '#ffffff', lost: '#ffffff' },
-  },
-  border: { color: '#e2e8f0', highlightedColor: '#e21e22' },
-  roundHeader: { backgroundColor: '#e21e22', fontColor: '#ffffff' },
-  connectorColor: '#cbd5e1',
-  connectorColorHighlighted: '#e21e22',
-  svgBackground: '#ffffff',
-});
+// Type for render seed props
+interface RenderSeedProps {
+  seed: ReactBracketsSeed;
+  breakpoint: number;
+  roundIndex: number;
+  seedIndex: number;
+}
 
 export interface BracketPosition {
   round: string;
@@ -97,50 +85,138 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({
   seasonId,
   leagueId,
 }) => {
-  // Create match component renderer
-  const renderMatch = (match: BracketMatch) => {
-    if (isEditable) {
+  // Custom seed renderer for editable brackets
+  const renderSeedComponent = (props: RenderSeedProps) => {
+    const { seed, breakpoint } = props;
+    const seedData = seed as any; // Type assertion for custom properties
+    
+    if (isEditable && onMatchClick) {
       return (
-        <InteractiveMatch
-          match={match}
-          onMatchClick={onMatchClick}
-          isEditable={isEditable}
-        />
+        <Seed
+          mobileBreakpoint={breakpoint}
+          style={{
+            cursor: 'pointer',
+            ...(seedData?.isEmpty && {
+              opacity: 0.6,
+              border: '2px dashed #cbd5e1',
+              borderRadius: '4px',
+            }),
+          }}
+          onClick={() => {
+            if (onMatchClick) {
+              const matchId = seedData?.originalMatchId || seedData?.id || null;
+              // Convert seed back to BracketMatch format for onMatchClick
+              const bracketMatch: BracketMatch = {
+                id: seedData?.id || '',
+                nextMatchId: null,
+                tournamentRoundText: '',
+                startTime: new Date(seed.date || Date.now()).toISOString(),
+                state: 'NO_SHOW',
+                participants: [
+                  seed.teams[0] ? {
+                    id: `team1-${seed.id}`,
+                    resultText: seedData?.score?.[0] || null,
+                    isWinner: false,
+                    status: null,
+                    name: seed.teams[0].name || 'TBD',
+                  } : {
+                    id: `team1-${seed.id}`,
+                    resultText: null,
+                    isWinner: false,
+                    status: null,
+                    name: 'TBD',
+                  },
+                  seed.teams[1] ? {
+                    id: `team2-${seed.id}`,
+                    resultText: seedData?.score?.[1] || null,
+                    isWinner: false,
+                    status: null,
+                    name: seed.teams[1].name || 'TBD',
+                  } : {
+                    id: `team2-${seed.id}`,
+                    resultText: null,
+                    isWinner: false,
+                    status: null,
+                    name: 'TBD',
+                  },
+                ],
+                originalMatchId: seedData?.originalMatchId,
+                stage: seedData?.stage,
+                isEmpty: seedData?.isEmpty,
+              };
+              onMatchClick(matchId, bracketMatch);
+            }
+          }}
+        >
+          <SeedItem>
+            <div className="flex flex-col gap-1">
+              <SeedTeam className={seedData?.isEmpty ? 'text-muted-foreground italic' : ''}>
+                {seed.teams[0]?.name || 'TBD'}
+                {seedData?.score?.[0] !== undefined && (
+                  <span className="ml-2 font-semibold">{seedData.score[0]}</span>
+                )}
+              </SeedTeam>
+              <SeedTeam className={seedData?.isEmpty ? 'text-muted-foreground italic' : ''}>
+                {seed.teams[1]?.name || 'TBD'}
+                {seedData?.score?.[1] !== undefined && (
+                  <span className="ml-2 font-semibold">{seedData.score[1]}</span>
+                )}
+              </SeedTeam>
+            </div>
+            {seedData?.isEmpty && isEditable && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-xs text-muted-foreground">Click to add match</span>
+              </div>
+            )}
+          </SeedItem>
+        </Seed>
       );
     }
-    return <Match match={match} />;
+
+    // Default renderer
+    return (
+      <Seed mobileBreakpoint={breakpoint}>
+        <SeedItem>
+          <div className="flex flex-col gap-1">
+            <SeedTeam>
+              {seed.teams[0]?.name || 'TBD'}
+              {seedData?.score?.[0] !== undefined && (
+                <span className="ml-2 font-semibold">{seedData.score[0]}</span>
+              )}
+            </SeedTeam>
+            <SeedTeam>
+              {seed.teams[1]?.name || 'TBD'}
+              {seedData?.score?.[1] !== undefined && (
+                <span className="ml-2 font-semibold">{seedData.score[1]}</span>
+              )}
+            </SeedTeam>
+          </div>
+        </SeedItem>
+      </Seed>
+    );
   };
 
+  // Note: react-brackets doesn't natively support double elimination
+  // For now, we'll show upper bracket only, or you can display them side by side
   if (isDoubleElimination) {
-    // Double elimination expects { upper: [], lower: [] } format
+    // Double elimination - show upper bracket for now
     let doubleElimMatches: { upper: BracketMatch[]; lower: BracketMatch[] };
     
     if (Array.isArray(matches)) {
-      // Fallback if array passed - treat as upper bracket
       doubleElimMatches = { upper: matches, lower: [] };
     } else if (matches && typeof matches === 'object' && 'upper' in matches && 'lower' in matches) {
-      // Ensure both upper and lower are arrays
       doubleElimMatches = {
         upper: Array.isArray(matches.upper) ? matches.upper : [],
         lower: Array.isArray(matches.lower) ? matches.lower : [],
       };
     } else {
-      // Invalid format - default to empty
       doubleElimMatches = { upper: [], lower: [] };
     }
 
-    // Validate that arrays are actually arrays and not null/undefined
-    if (!Array.isArray(doubleElimMatches.upper)) {
-      console.error('Invalid upper bracket format:', doubleElimMatches.upper);
-      doubleElimMatches.upper = [];
-    }
-    if (!Array.isArray(doubleElimMatches.lower)) {
-      console.error('Invalid lower bracket format:', doubleElimMatches.lower);
-      doubleElimMatches.lower = [];
-    }
-
-    // Don't render if both brackets are empty
-    if (doubleElimMatches.upper.length === 0 && doubleElimMatches.lower.length === 0) {
+    // For now, render upper bracket only
+    const upperRounds = convertToReactBracketsFormat(doubleElimMatches.upper);
+    
+    if (upperRounds.length === 0) {
       return (
         <div className="sp-tournament-bracket sp-tournament-bracket-double">
           <div className="flex items-center justify-center p-8 text-muted-foreground">
@@ -150,75 +226,28 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({
       );
     }
 
-    // Validate match objects have required properties
-    const validateMatches = (matchArray: BracketMatch[]): BracketMatch[] => {
-      return matchArray.filter(match => {
-        if (!match || typeof match !== 'object') {
-          console.warn('Invalid match object:', match);
-          return false;
-        }
-        // Ensure required properties exist
-        if (!match.id || !match.participants || !Array.isArray(match.participants)) {
-          console.warn('Match missing required properties:', match);
-          return false;
-        }
-        // Ensure participants array has at least 2 elements (or is empty for TBD)
-        if (match.participants.length > 0 && match.participants.length < 2) {
-          console.warn('Match has invalid participants array:', match);
-          return false;
-        }
-        return true;
-      });
-    };
-
-    const validatedUpper = validateMatches(doubleElimMatches.upper);
-    const validatedLower = validateMatches(doubleElimMatches.lower);
-
-    // If validation removed all matches, don't render
-    if (validatedUpper.length === 0 && validatedLower.length === 0) {
-      return (
-        <div className="sp-tournament-bracket sp-tournament-bracket-double">
-          <div className="flex items-center justify-center p-8 text-muted-foreground">
-            No valid matches to display
-          </div>
-        </div>
-      );
-    }
-
-    // Wrap in error boundary using try-catch in render
-    try {
-      return (
-        <div className="sp-tournament-bracket sp-tournament-bracket-double">
-          <DoubleEliminationBracket
-            matches={{ upper: validatedUpper, lower: validatedLower }}
-            theme={customTheme}
-            options={{
-              style: {
-                roundHeader: { backgroundColor: '#e21e22' },
-              },
-            }}
-            renderMatchComponent={renderMatch}
-            svgWrapper={({ children, ...props }) => (
-              <SVGViewer width={1000} height={600} {...props}>
-                {children}
-              </SVGViewer>
-            )}
+    return (
+      <div className="sp-tournament-bracket sp-tournament-bracket-double">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-2">Upper Bracket</h3>
+          <Bracket
+            rounds={upperRounds}
+            renderSeedComponent={renderSeedComponent}
+            mobileBreakpoint={768}
           />
         </div>
-      );
-    } catch (error) {
-      console.error('Error rendering DoubleEliminationBracket:', error);
-      return (
-        <div className="sp-tournament-bracket sp-tournament-bracket-double">
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <div className="text-destructive mb-2">Error rendering bracket</div>
-            <div className="text-sm text-muted-foreground">
-              Upper: {validatedUpper.length} matches, Lower: {validatedLower.length} matches
-            </div>
+        {doubleElimMatches.lower.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-2">Lower Bracket</h3>
+            <Bracket
+              rounds={convertToReactBracketsFormat(doubleElimMatches.lower)}
+              renderSeedComponent={renderSeedComponent}
+              mobileBreakpoint={768}
+            />
           </div>
-        </div>
-      );
-    }
+        )}
+      </div>
+    );
   }
 
   // Single elimination expects array format
@@ -256,11 +285,15 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({
     inputMatches: singleElimMatches.length,
     validatedMatches: validatedMatches.length,
     invalidMatches: singleElimMatches.length - validatedMatches.length,
+    ghostMatches: validatedMatches.filter(m => m.isEmpty).length,
+    realMatches: validatedMatches.filter(m => !m.isEmpty).length,
+    linkedMatches: validatedMatches.filter(m => m.nextMatchId !== null).length,
     matchDetails: validatedMatches.map(m => ({
-      id: m.id,
+      id: m.id.substring(0, 12),
       round: m.tournamentRoundText,
       stage: m.stage,
-      nextMatchId: m.nextMatchId,
+      nextMatchId: m.nextMatchId?.substring(0, 12) || null,
+      isGhost: m.isEmpty,
       participants: m.participants.map(p => p.name),
     })),
   });
@@ -325,23 +358,26 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({
     );
   }
 
+  // Convert to react-brackets format
+  const rounds = convertToReactBracketsFormat(validatedMatches);
+
+  if (rounds.length === 0) {
+    return (
+      <div className="sp-tournament-bracket sp-tournament-bracket-single">
+        <div className="flex items-center justify-center p-8 text-muted-foreground">
+          No matches to display
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BracketErrorBoundary matches={validatedMatches}>
       <div className="sp-tournament-bracket sp-tournament-bracket-single">
-        <SingleEliminationBracket
-          matches={validatedMatches}
-          theme={customTheme}
-          options={{
-            style: {
-              roundHeader: { backgroundColor: '#e21e22' },
-            },
-          }}
-          renderMatchComponent={renderMatch}
-          svgWrapper={({ children, ...props }) => (
-            <SVGViewer width={1000} height={600} {...props}>
-              {children}
-            </SVGViewer>
-          )}
+        <Bracket
+          rounds={rounds}
+          renderSeedComponent={renderSeedComponent}
+          mobileBreakpoint={768}
         />
       </div>
     </BracketErrorBoundary>
