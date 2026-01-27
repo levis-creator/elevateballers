@@ -16,15 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { formatClockTime, parseClockTime, getPeriodLabel, isOvertimePeriod } from '../lib/utils';
-import { Play, Pause, Settings, RotateCcw, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
+import { Play, Pause, Settings, RotateCcw, Plus, Minus } from 'lucide-react';
 import type { GameStateData } from '../types';
 import { useGameTrackingStore } from '../stores/useGameTrackingStore';
 import type { Match } from '@prisma/client';
@@ -44,7 +37,7 @@ export default function GameClock({
   onStartGame,
   isLoading = false,
 }: GameClockProps) {
-  const { localClockSeconds, setLocalClockSeconds, updateGameState } = useGameTrackingStore();
+  const { localClockSeconds, setLocalClockSeconds, updateGameState, isToggling } = useGameTrackingStore();
   
   // Check if match is live
   const isMatchLive = match?.status === 'LIVE';
@@ -58,7 +51,6 @@ export default function GameClock({
   
   // State management for dialogs and inputs
   const [showSettings, setShowSettings] = useState(false);
-  const [periodInput, setPeriodInput] = useState(1);
   const [durationInput, setDurationInput] = useState('');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -225,21 +217,8 @@ export default function GameClock({
   // Initialize settings dialog with current values
   const openSettings = () => {
     if (!gameState || !match) return;
-    setPeriodInput(gameState.period);
     setDurationInput(formatClockTime(localClockSeconds ?? (minutesPerPeriod * 60)));
     setShowSettings(true);
-  };
-
-  // Handle quarter change
-  const handlePeriodChange = async (newPeriod: number) => {
-    if (!gameState || !match || gameState.clockRunning || !isMatchLive) return;
-
-    setPeriodInput(newPeriod);
-
-    // Update backend
-    await updateGameState(match.id, {
-      currentPeriod: newPeriod,
-    });
   };
 
   // Handle duration change
@@ -371,7 +350,7 @@ export default function GameClock({
           <div className="flex items-center justify-center gap-2">
             <Button
               onClick={onToggleClock}
-              disabled={isLoading || !isMatchLive}
+              disabled={isLoading || isToggling || !isMatchLive}
               variant={gameState.clockRunning ? 'destructive' : 'default'}
               size="default"
               className="flex-1"
@@ -501,55 +480,10 @@ export default function GameClock({
           <DialogHeader>
             <DialogTitle>Timer Settings</DialogTitle>
             <DialogDescription>
-              Adjust quarter and duration. Changes only apply when timer is paused.
+              Adjust duration. Changes only apply when timer is paused.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Quarter Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="period">Quarter</Label>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => {
-                    if (periodInput > 1) {
-                      handlePeriodChange(periodInput - 1);
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                  disabled={periodInput <= 1 || gameState.clockRunning || !isMatchLive}
-                >
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-                <Select
-                  value={periodInput.toString()}
-                  onValueChange={(value) => handlePeriodChange(parseInt(value))}
-                  disabled={gameState.clockRunning || !isMatchLive}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: numberOfPeriods + 5 }, (_, i) => i + 1).map((period) => (
-                      <SelectItem key={period} value={period.toString()}>
-                        {getPeriodLabel(period, numberOfPeriods, halftimePeriod)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={() => {
-                    handlePeriodChange(periodInput + 1);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  disabled={gameState.clockRunning || !isMatchLive}
-                >
-                  <ChevronUp className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
             {/* Duration Setting */}
             <div className="space-y-2">
               <Label htmlFor="duration">Duration (MM:SS)</Label>

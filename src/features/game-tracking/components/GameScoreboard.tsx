@@ -3,14 +3,25 @@
  * Displays scores, fouls, timeouts, and quarter information
  */
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   getPeriodLabel, 
   getBonusStatus, 
   getFoulsUntilBonus,
-  calculateScoreDifference
+  calculateScoreDifference,
+  isOvertimePeriod
 } from '../lib/utils';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { GameStateData } from '../types';
 import type { Match } from '@prisma/client';
 
@@ -24,6 +35,7 @@ interface GameScoreboardProps {
   team1Id?: string | null;
   team2Id?: string | null;
   foulsForBonus?: number;
+  onPeriodChange?: (period: number) => void;
 }
 
 export default function GameScoreboard({
@@ -36,6 +48,7 @@ export default function GameScoreboard({
   team1Id,
   team2Id,
   foulsForBonus = 5,
+  onPeriodChange,
 }: GameScoreboardProps) {
   if (!gameState || !match) {
     return (
@@ -47,8 +60,20 @@ export default function GameScoreboard({
     );
   }
 
+  // Extract gameRules from match with fallback defaults
+  const gameRules = match?.gameRules;
+  const numberOfPeriods = gameRules?.numberOfPeriods ?? 4;
+  const halftimePeriod = gameRules?.halftimePeriod ?? 2;
+  const isMatchLive = match?.status === 'LIVE';
+
   const team1Bonus = getBonusStatus(gameState.team1Fouls, foulsForBonus);
   const team2Bonus = getBonusStatus(gameState.team2Fouls, foulsForBonus);
+
+  // Handle period change
+  const handlePeriodChange = async (newPeriod: number) => {
+    if (!gameState || !match || gameState.clockRunning || !isMatchLive || !onPeriodChange) return;
+    onPeriodChange(newPeriod);
+  };
   
   // Calculate score difference
   const scoreDiff = calculateScoreDifference(gameState.team1Score, gameState.team2Score);
@@ -76,9 +101,6 @@ export default function GameScoreboard({
     <Card>
       <CardHeader>
         <CardTitle className="text-center space-y-2">
-          <Badge variant="outline" className="text-lg">
-            {getPeriodLabel(gameState.period)}
-          </Badge>
           {/* Score Difference / Lead Indicator */}
           {scoreDiff.leader !== 'tie' && scoreDiff.diff > 0 && (
             <div className={`text-sm font-medium ${
@@ -99,6 +121,59 @@ export default function GameScoreboard({
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Quarter Selector - Centered above score */}
+        {onPeriodChange && (
+          <div className="flex items-center justify-center mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Quarter:</span>
+              <Button
+                onClick={() => {
+                  if (gameState.period > 1) {
+                    handlePeriodChange(gameState.period - 1);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                disabled={gameState.period <= 1 || gameState.clockRunning || !isMatchLive}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+              <Select
+                value={gameState.period.toString()}
+                onValueChange={(value) => handlePeriodChange(parseInt(value))}
+                disabled={gameState.clockRunning || !isMatchLive}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: numberOfPeriods + 5 }, (_, i) => i + 1).map((period) => (
+                    <SelectItem key={period} value={period.toString()}>
+                      {getPeriodLabel(period, numberOfPeriods, halftimePeriod)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={() => {
+                  handlePeriodChange(gameState.period + 1);
+                }}
+                variant="outline"
+                size="sm"
+                disabled={gameState.clockRunning || !isMatchLive}
+              >
+                <ChevronUp className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        {!onPeriodChange && (
+          <div className="flex items-center justify-center mb-4">
+            <Badge variant="outline" className="text-lg">
+              {getPeriodLabel(gameState.period, numberOfPeriods, halftimePeriod)}
+            </Badge>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           {/* Team 1 */}
           <div className={`text-center relative ${team1HasPossession ? 'ring-2 ring-primary rounded-lg p-2 -m-2' : ''}`}>

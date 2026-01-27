@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { formatClockTime } from '../lib/utils';
 import { getPeriodLabel } from '../lib/utils';
 import { Undo2, AlertCircle } from 'lucide-react';
@@ -48,6 +49,7 @@ export default function PlayByPlayLog({ matchId, onRefresh }: PlayByPlayLogProps
   const [periods, setPeriods] = useState<MatchPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [undoingEventId, setUndoingEventId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPlayByPlay();
@@ -74,6 +76,33 @@ export default function PlayByPlayLog({ matchId, onRefresh }: PlayByPlayLogProps
   const handleRefresh = () => {
     fetchPlayByPlay();
     onRefresh?.();
+  };
+
+  const handleUndoEvent = async (eventId: string) => {
+    if (undoingEventId) return; // Prevent multiple simultaneous undo operations
+    
+    setUndoingEventId(eventId);
+    try {
+      const response = await fetch(`/api/matches/${matchId}/events/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isUndone: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to undo event' }));
+        throw new Error(errorData.error || 'Failed to undo event');
+      }
+
+      // Refresh the play-by-play list after successful undo
+      await fetchPlayByPlay();
+      onRefresh?.();
+    } catch (err: any) {
+      console.error('Error undoing event:', err);
+      setError(err.message || 'Failed to undo event');
+    } finally {
+      setUndoingEventId(null);
+    }
   };
 
   if (loading) {
@@ -137,7 +166,14 @@ export default function PlayByPlayLog({ matchId, onRefresh }: PlayByPlayLogProps
                     <span className="text-sm font-mono text-muted-foreground">
                       {getPeriodLabel(event.period)} {event.secondsRemaining ? formatClockTime(event.secondsRemaining) : `${event.minute}'`}
                     </span>
-                    <span className="font-medium">{EVENT_TYPE_LABELS[event.eventType] || event.eventType}</span>
+                    <span className={`font-medium ${event.isUndone ? 'line-through text-muted-foreground' : ''}`}>
+                      {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+                    </span>
+                    {event.isUndone && (
+                      <Badge variant="secondary" className="text-xs">
+                        Undone
+                      </Badge>
+                    )}
                   </div>
                   {event.player && (
                     <div className="text-sm text-muted-foreground mt-1">
@@ -154,6 +190,18 @@ export default function PlayByPlayLog({ matchId, onRefresh }: PlayByPlayLogProps
                     <div className="text-sm text-muted-foreground mt-1">{event.description}</div>
                   )}
                 </div>
+                {!event.isUndone && (
+                  <Button
+                    onClick={() => handleUndoEvent(event.id)}
+                    disabled={undoingEventId === event.id || loading}
+                    variant="ghost"
+                    size="sm"
+                    className="ml-2"
+                    title="Undo this event"
+                  >
+                    <Undo2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>

@@ -28,6 +28,7 @@ interface SubstitutionPanelProps {
   match: Match | null;
   gameState: GameStateData | null;
   onSubstitutionRecorded?: () => void;
+  refreshTrigger?: number;
 }
 
 export default function SubstitutionPanel({
@@ -35,6 +36,7 @@ export default function SubstitutionPanel({
   match,
   gameState,
   onSubstitutionRecorded,
+  refreshTrigger,
 }: SubstitutionPanelProps) {
   const { localClockSeconds } = useGameTrackingStore();
   const [teamId, setTeamId] = useState<string>('');
@@ -84,6 +86,14 @@ export default function SubstitutionPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
+
+  // Refresh match players when refreshTrigger changes (e.g., after starters are marked)
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      fetchMatchPlayers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
 
   // Set initial team when teams from players are available, or fall back to match team1Id
   useEffect(() => {
