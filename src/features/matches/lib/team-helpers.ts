@@ -94,9 +94,7 @@ export function getWinnerName(match: MatchWithTeams | Match | null | undefined):
     }
   }
   return null;
-}
-
-/**
+}/**
  * Get winner ID from match
  */
 export function getWinnerId(match: MatchWithTeams | Match | null | undefined): string | null {
@@ -105,9 +103,7 @@ export function getWinnerId(match: MatchWithTeams | Match | null | undefined): s
     return match.winner.id;
   }
   return match.winnerId || null;
-}
-
-/**
+}/**
  * Check if a team is the winner
  */
 export function isWinner(match: MatchWithTeams | Match | null | undefined, teamId: string | null): boolean {

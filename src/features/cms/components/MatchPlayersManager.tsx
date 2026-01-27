@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, X, Users, Shirt, AlertCircle } from 'lucide-react';
+import { Plus, X, Users, Shirt, AlertCircle, CheckSquare, Square } from 'lucide-react';
 
 interface MatchPlayersManagerProps {
   matchId: string;
@@ -44,6 +44,8 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [deletePlayerId, setDeletePlayerId] = useState<string | null>(null);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [formData, setFormData] = useState({
     playerId: '',
     teamId: '',
@@ -183,6 +185,90 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
   const getTeamName = (teamId: string) => {
     const team = teams.find((t) => t.id === teamId);
     return team?.name || 'Unknown Team';
+  };
+
+  const togglePlayerSelection = (playerId: string) => {
+    setSelectedPlayerIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(playerId)) {
+        newSet.delete(playerId);
+      } else {
+        newSet.add(playerId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllPlayersForTeam = (teamId: string) => {
+    const teamPlayers = getPlayersByTeam(teamId);
+    const teamPlayerIds = new Set(teamPlayers.map((mp) => mp.id));
+    const allSelected = teamPlayers.every((mp) => selectedPlayerIds.has(mp.id));
+
+    setSelectedPlayerIds((prev) => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        // Deselect all players from this team
+        teamPlayerIds.forEach((id) => newSet.delete(id));
+      } else {
+        // Select all players from this team
+        teamPlayerIds.forEach((id) => newSet.add(id));
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkStarterUpdate = async (teamId: string, started: boolean) => {
+    const teamPlayers = getPlayersByTeam(teamId);
+    const playersToUpdate = teamPlayers.filter((mp) => selectedPlayerIds.has(mp.id));
+
+    if (playersToUpdate.length === 0) {
+      setError('Please select at least one player');
+      return;
+    }
+
+    setBulkUpdating(true);
+    setError('');
+
+    try {
+      // Update all selected players in parallel
+      // Each promise checks response.ok and throws on HTTP errors
+      const updatePromises = playersToUpdate.map(async (mp) => {
+        const response = await fetch(`/api/matches/${matchId}/players/${mp.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ started }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to update player' }));
+          throw new Error(errorData.error || `HTTP ${response.status}: Failed to update player`);
+        }
+
+        return response;
+      });
+
+      const results = await Promise.allSettled(updatePromises);
+      const failures = results.filter((r) => r.status === 'rejected');
+
+      if (failures.length > 0) {
+        const errorMessages = failures
+          .map((r) => r.status === 'rejected' && r.reason?.message)
+          .filter(Boolean)
+          .join('; ');
+        throw new Error(`Failed to update ${failures.length} player(s)${errorMessages ? `: ${errorMessages}` : ''}`);
+      }
+
+      // Clear selection and refresh
+      setSelectedPlayerIds(new Set());
+      await fetchMatchPlayers();
+      if (onPlayerAdded) {
+        onPlayerAdded();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update players');
+    } finally {
+      setBulkUpdating(false);
+    }
   };
 
   if (loading) {
@@ -358,16 +444,66 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
         {team1Id && (
           <Card>
             <CardHeader>
-              <CardTitle>{getTeamName(team1Id)}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>{getTeamName(team1Id)}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toggleAllPlayersForTeam(team1Id)}
+                    disabled={bulkUpdating || getPlayersByTeam(team1Id).length === 0}
+                  >
+                    {getPlayersByTeam(team1Id).every((mp) => selectedPlayerIds.has(mp.id)) &&
+                    getPlayersByTeam(team1Id).length > 0 ? (
+                      <CheckSquare className="h-4 w-4 mr-1" />
+                    ) : (
+                      <Square className="h-4 w-4 mr-1" />
+                    )}
+                    {getPlayersByTeam(team1Id).every((mp) => selectedPlayerIds.has(mp.id)) &&
+                    getPlayersByTeam(team1Id).length > 0
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
+              {/* Bulk Action Buttons */}
+              {selectedPlayerIds.size > 0 &&
+                getPlayersByTeam(team1Id).some((mp) => selectedPlayerIds.has(mp.id)) && (
+                  <div className="flex gap-2 mb-4 pb-4 border-b">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => handleBulkStarterUpdate(team1Id, true)}
+                      disabled={bulkUpdating}
+                    >
+                      Mark as Starter ({getPlayersByTeam(team1Id).filter((mp) => selectedPlayerIds.has(mp.id)).length})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkStarterUpdate(team1Id, false)}
+                      disabled={bulkUpdating}
+                    >
+                      Mark as Sub ({getPlayersByTeam(team1Id).filter((mp) => selectedPlayerIds.has(mp.id)).length})
+                    </Button>
+                  </div>
+                )}
               <div className="space-y-2">
                 {getPlayersByTeam(team1Id).map((mp) => (
                   <div
                     key={mp.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                      selectedPlayerIds.has(mp.id) ? 'bg-primary/5 border-primary/20' : ''
+                    }`}
                   >
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap flex-1">
+                      <Checkbox
+                        checked={selectedPlayerIds.has(mp.id)}
+                        onCheckedChange={() => togglePlayerSelection(mp.id)}
+                        disabled={bulkUpdating}
+                      />
                       <strong>
                         {mp.player.firstName} {mp.player.lastName}
                       </strong>
@@ -415,16 +551,66 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
         {team2Id && (
           <Card>
             <CardHeader>
-              <CardTitle>{getTeamName(team2Id)}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>{getTeamName(team2Id)}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toggleAllPlayersForTeam(team2Id)}
+                    disabled={bulkUpdating || getPlayersByTeam(team2Id).length === 0}
+                  >
+                    {getPlayersByTeam(team2Id).every((mp) => selectedPlayerIds.has(mp.id)) &&
+                    getPlayersByTeam(team2Id).length > 0 ? (
+                      <CheckSquare className="h-4 w-4 mr-1" />
+                    ) : (
+                      <Square className="h-4 w-4 mr-1" />
+                    )}
+                    {getPlayersByTeam(team2Id).every((mp) => selectedPlayerIds.has(mp.id)) &&
+                    getPlayersByTeam(team2Id).length > 0
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
+              {/* Bulk Action Buttons */}
+              {selectedPlayerIds.size > 0 &&
+                getPlayersByTeam(team2Id).some((mp) => selectedPlayerIds.has(mp.id)) && (
+                  <div className="flex gap-2 mb-4 pb-4 border-b">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => handleBulkStarterUpdate(team2Id, true)}
+                      disabled={bulkUpdating}
+                    >
+                      Mark as Starter ({getPlayersByTeam(team2Id).filter((mp) => selectedPlayerIds.has(mp.id)).length})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleBulkStarterUpdate(team2Id, false)}
+                      disabled={bulkUpdating}
+                    >
+                      Mark as Sub ({getPlayersByTeam(team2Id).filter((mp) => selectedPlayerIds.has(mp.id)).length})
+                    </Button>
+                  </div>
+                )}
               <div className="space-y-2">
                 {getPlayersByTeam(team2Id).map((mp) => (
                   <div
                     key={mp.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                      selectedPlayerIds.has(mp.id) ? 'bg-primary/5 border-primary/20' : ''
+                    }`}
                   >
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap flex-1">
+                      <Checkbox
+                        checked={selectedPlayerIds.has(mp.id)}
+                        onCheckedChange={() => togglePlayerSelection(mp.id)}
+                        disabled={bulkUpdating}
+                      />
                       <strong>
                         {mp.player.firstName} {mp.player.lastName}
                       </strong>

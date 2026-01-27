@@ -33,8 +33,11 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
     startGame,
     endGame,
     toggleClock,
+    updateGameState,
+    localClockSeconds,
   } = useGameTrackingStore();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [timerWarning, setTimerWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (matchId) {
@@ -65,12 +68,30 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
   };
 
   const handleToggleClock = async () => {
+    // Check if timer is set before allowing start
+    if (!gameState?.clockRunning) {
+      // Timer is paused, check if it's set before allowing start
+      if (localClockSeconds === null || localClockSeconds === 0) {
+        setTimerWarning('Please set the timer duration before starting. Use the Settings button or click on the timer to set the time.');
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => setTimerWarning(null), 5000);
+        return;
+      }
+    }
+    // Clear any existing warning when successfully toggling
+    setTimerWarning(null);
     await toggleClock(matchId);
   };
 
   const handleEventRecorded = async () => {
     await fetchGameState(matchId);
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handlePeriodChange = async (newPeriod: number) => {
+    await updateGameState(matchId, {
+      currentPeriod: newPeriod,
+    });
   };
 
   const team1Name = match ? getTeam1Name(match) : undefined;
@@ -107,6 +128,14 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   return (
     <div className="space-y-4">
+      {/* Timer Warning Alert */}
+      {timerWarning && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{timerWarning}</AlertDescription>
+        </Alert>
+      )}
+
       {/* End Game Button - Prominently displayed for live games */}
       {match?.status === 'LIVE' && (
         <Card className="border-red-500 border-2">
@@ -142,6 +171,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             team2Logo={team2Logo}
             team1Id={match?.team1Id || null}
             team2Id={match?.team2Id || null}
+            onPeriodChange={handlePeriodChange}
           />
         </div>
 
@@ -173,6 +203,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             match={match}
             gameState={gameState}
             onSubstitutionRecorded={handleEventRecorded}
+            refreshTrigger={refreshTrigger}
           />
         </div>
         <div className="flex-1">
