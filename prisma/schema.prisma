@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
 }
 
 model User {
@@ -165,6 +165,7 @@ model Match {
 model Team {
   id                 String                     @id @default(cuid())
   name               String                     @unique
+  nickname           String?
   logo               String?
   description        String?
   approved           Boolean                    @default(false)
@@ -226,7 +227,8 @@ model Media {
   url       String
   type      MediaType
   thumbnail String?
-  tags      String[]
+  // MySQL does not support native string[] types. Use Json instead.
+  tags      Json?
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 

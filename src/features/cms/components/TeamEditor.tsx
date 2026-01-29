@@ -21,6 +21,7 @@ export default function TeamEditor({ teamId }: TeamEditorProps) {
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    nickname: '',
     logo: '',
     description: '',
   });
@@ -40,6 +41,7 @@ export default function TeamEditor({ teamId }: TeamEditorProps) {
 
       setFormData({
         name: team.name,
+        nickname: team.nickname || '',
         logo: team.logo || '',
         description: team.description || '',
       });
@@ -62,6 +64,7 @@ export default function TeamEditor({ teamId }: TeamEditorProps) {
 
       const payload = {
         name: formData.name.trim(),
+        nickname: formData.nickname.trim() || undefined,
         logo: formData.logo.trim() || undefined,
         description: formData.description.trim() || undefined,
       };
@@ -159,6 +162,21 @@ export default function TeamEditor({ teamId }: TeamEditorProps) {
                 disabled={saving}
                 placeholder="Enter team name"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nickname">Nickname</Label>
+              <Input
+                id="nickname"
+                type="text"
+                value={formData.nickname}
+                onChange={(e) => setFormData((prev) => ({ ...prev, nickname: e.target.value }))}
+                disabled={saving}
+                placeholder="Enter team nickname (optional)"
+              />
+              <p className="text-sm text-muted-foreground">
+                Short name or abbreviation for the team
+              </p>
             </div>
 
             <ImageUpload

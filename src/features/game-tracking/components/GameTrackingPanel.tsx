@@ -90,7 +90,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   const handlePeriodChange = async (newPeriod: number) => {
     await updateGameState(matchId, {
-      currentPeriod: newPeriod,
+      period: newPeriod,
     });
   };
 

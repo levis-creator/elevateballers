@@ -82,8 +82,15 @@ export function createToken(user: { id: string; email: string; role: string }): 
  */
 export function verifyToken(token: string): { userId: string; email: string; role: string } | null {
   try {
+    if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+      console.error('JWT_SECRET is not properly configured!');
+      return null;
+    }
     return jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role: string };
-  } catch {
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Token verification failed:', error instanceof Error ? error.message : error);
+    }
     return null;
   }
 }
@@ -93,7 +100,12 @@ export function verifyToken(token: string): { userId: string; email: string; rol
  */
 export async function getCurrentUser(request: Request): Promise<User | null> {
   const cookieHeader = request.headers.get('cookie');
-  if (!cookieHeader) return null;
+  if (!cookieHeader) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('No cookie header found in request');
+    }
+    return null;
+  }
 
   const cookies = Object.fromEntries(
     cookieHeader.split('; ').map((c) => {
@@ -103,12 +115,27 @@ export async function getCurrentUser(request: Request): Promise<User | null> {
   );
 
   const token = cookies['auth-token'];
-  if (!token) return null;
+  if (!token) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('No auth-token cookie found');
+    }
+    return null;
+  }
 
   const payload = verifyToken(token);
-  if (!payload) return null;
+  if (!payload) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Token verification failed - invalid or expired token');
+    }
+    return null;
+  }
 
-  return await findUserById(payload.userId);
+  try {
+    return await findUserById(payload.userId);
+  } catch (error) {
+    console.error('Error finding user by ID:', error);
+    return null;
+  }
 }
 
 /**

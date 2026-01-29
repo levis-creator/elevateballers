@@ -236,6 +236,7 @@ export type UpdatePlayerInput = Partial<CreatePlayerInput>;
 
 export type CreateTeamInput = {
   name: string;
+  nickname?: string;
   slug?: string; // Optional - will be auto-generated from name if not provided
   logo?: string;
   description?: string;

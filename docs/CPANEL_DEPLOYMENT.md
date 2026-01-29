@@ -168,8 +168,8 @@ You need to upload the following files to your cPanel domain directory:
 In your cPanel File Manager or via SSH, create a `.env` file in the root directory:
 
 ```bash
-# Database connection string
-DATABASE_URL="postgresql://user:password@host:5432/database?schema=public"
+# Database connection string (MySQL/MariaDB format)
+DATABASE_URL="mysql://user:password@host:3306/database"
 
 # JWT secret (generate a strong random string)
 JWT_SECRET="your-super-secret-jwt-key-change-this"
@@ -180,6 +180,11 @@ NODE_ENV="production"
 # Deployment target (optional - defaults to cpanel if not set)
 DEPLOY_TARGET="cpanel"
 ```
+
+**Important:** This project uses **MySQL/MariaDB**, not PostgreSQL. The connection string format is:
+- Format: `mysql://user:password@host:port/database`
+- Example: `mysql://root:password123@localhost:3306/elevateballers`
+- Port: Usually `3306` for MySQL/MariaDB
 
 **Generate JWT_SECRET:**
 ```bash
@@ -246,18 +251,36 @@ You can also set environment variables in the Node.js Selector (recommended as i
 
 If you uploaded files without `node_modules`:
 
+**⚠️ Important:** This project has peer dependency conflicts (React 19 vs React 18). You **must** use `--legacy-peer-deps` flag when installing.
+
 **Via Node.js Selector:**
 1. In Node.js Selector, click on your application
-2. Click **Run NPM Install**
-3. Wait for installation to complete
+2. **Note:** Node.js Selector's "Run NPM Install" may not support flags
+3. If installation fails, use SSH method below instead
 
-**Via SSH:**
+**Via SSH (Recommended):**
 ```bash
-cd /path/to/your/domain
-npm install --production
+cd /home/elevateb/test.dev
+npm install --production --legacy-peer-deps
 ```
 
-**Note:** Use `--production` flag to skip dev dependencies and reduce installation time.
+**Alternative (if you need dev dependencies for seeding/admin scripts):**
+```bash
+cd /home/elevateb/test.dev
+npm install --legacy-peer-deps
+```
+
+**Note:** If you need to run seeders (`npm run db:seed` or `npm run create-admin`), you'll need dev dependencies installed because `tsx` is a dev dependency. Use the alternative command above.
+
+**Why `--legacy-peer-deps`?**
+- The project uses React 19.2.3, but `@g-loot/react-tournament-brackets` requires React 18.1.0
+- This is a peer dependency warning, not a breaking error
+- The `--legacy-peer-deps` flag tells npm to ignore peer dependency conflicts
+- Your application will work fine - React 19 is backward compatible
+
+**Note:** 
+- Use `--production` flag to skip dev dependencies and reduce installation time
+- Always use `--legacy-peer-deps` for this project to avoid installation errors
 
 ## Step 7: Run Database Migrations
 
@@ -400,7 +423,74 @@ If using a subdomain or custom domain:
 - ✅ Verify database server is running and accessible
 - ✅ Check firewall settings on database server
 
-### Issue: 500 Internal Server Error
+### Issue: 500 Internal Server Error on `/admin/login`
+
+**Symptoms:**
+- HTTP 500 error when accessing `/admin/login`
+- "This page isn't working" error page
+- Server logs show Prisma or database connection errors
+
+**Most Common Causes:**
+1. **`DATABASE_URL` not set** in cPanel environment variables
+2. **`DATABASE_URL` using PostgreSQL format** instead of MySQL format
+3. **Prisma Client not generated** on the server
+4. **Database connection failing** (wrong credentials, host, or port)
+
+**Solutions:**
+
+**Step 1: Verify DATABASE_URL is set**
+```bash
+# Via SSH, check if DATABASE_URL is set
+echo $DATABASE_URL
+
+# Or check in Node.js Selector → Environment Variables
+```
+
+**Step 2: Verify DATABASE_URL format (MySQL, not PostgreSQL)**
+```bash
+# ✅ CORRECT (MySQL format):
+DATABASE_URL="mysql://user:password@host:3306/database"
+
+# ❌ WRONG (PostgreSQL format - will cause errors):
+DATABASE_URL="postgresql://user:password@host:5432/database?schema=public"
+```
+
+**Step 3: Set DATABASE_URL in cPanel**
+1. Go to **Node.js Selector** → Your Application
+2. Click **Environment Variables**
+3. Add/Update `DATABASE_URL`:
+   - **Name**: `DATABASE_URL`
+   - **Value**: `mysql://your_user:your_password@your_host:3306/your_database`
+   - Example: `mysql://root:password123@localhost:3306/elevateballers`
+4. Click **Save**
+
+**Step 4: Generate Prisma Client**
+```bash
+# Via SSH
+cd /home/elevateb/test.dev  # or your domain directory
+npx prisma generate
+```
+
+**Step 5: Check Server Logs**
+- In Node.js Selector → Your Application → **View Logs**
+- Look for errors mentioning:
+  - `DATABASE_URL environment variable is not set`
+  - `Invalid DATABASE_URL format`
+  - `ECONNREFUSED` or connection errors
+  - `Prisma Client` errors
+
+**Step 6: Test Database Connection**
+```bash
+# Via SSH, test the connection string
+export DATABASE_URL="mysql://user:password@host:3306/database"
+node -e "const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.\$connect().then(() => console.log('Connected!')).catch(e => console.error('Error:', e))"
+```
+
+**Step 7: Restart Application**
+- In Node.js Selector → Click **Restart Application**
+- Check logs again after restart
+
+### Issue: 500 Internal Server Error (General)
 
 **Symptoms:**
 - All pages return 500 error
@@ -455,6 +545,20 @@ If using a subdomain or custom domain:
 - ✅ Check `DATABASE_URL` is set correctly
 - ✅ Ensure Prisma schema is valid
 - ✅ Run migrations: `npx prisma migrate deploy`
+
+### Issue: npm install fails with peer dependency errors
+
+**Symptoms:**
+- `ERESOLVE could not resolve` errors
+- `Conflicting peer dependency: react@18.3.1` errors
+- Installation fails in cPanel
+
+**Solutions:**
+- ✅ Use `--legacy-peer-deps` flag: `npm install --production --legacy-peer-deps`
+- ✅ This is safe - React 19 is backward compatible with React 18 components
+- ✅ The conflict is from `@g-loot/react-tournament-brackets` requiring React 18
+- ✅ Your application uses React 19, which works fine with React 18 peer dependencies
+- ✅ If using Node.js Selector's "Run NPM Install", use SSH instead to add the flag
 
 ## Maintenance
 

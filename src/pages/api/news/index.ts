@@ -60,6 +60,18 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
+    // Handle invalid date errors specifically
+    if (error instanceof Error && 
+        (error.message.includes('Invalid time value') || 
+         error.message.includes('RangeError'))) {
+      console.error('⚠️  Invalid dates detected in database. Run: npm run fix:dates');
+      // Return empty array instead of error to prevent site crash
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    
     console.error('Error fetching news articles:', error);
     return new Response(JSON.stringify({ error: 'Failed to fetch articles' }), {
       status: 500,
