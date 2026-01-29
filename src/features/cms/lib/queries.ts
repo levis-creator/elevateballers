@@ -17,23 +17,58 @@ export async function getNewsArticles(category?: string): Promise<NewsArticleWit
     }
   }
 
-  const articles = await prisma.newsArticle.findMany({
-    where,
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  try {
+    const articles = await prisma.newsArticle.findMany({
+      where,
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: {
-      publishedAt: 'desc',
-    },
-  });
+      orderBy: {
+        publishedAt: 'desc',
+      },
+    });
 
-  return articles as NewsArticleWithAuthor[];
+    // Filter out articles with invalid dates and validate dates
+    const validArticles = articles.filter(article => {
+      try {
+        // Validate publishedAt if it exists
+        if (article.publishedAt) {
+          const date = new Date(article.publishedAt);
+          if (isNaN(date.getTime())) {
+            console.warn(`Invalid publishedAt date for article ${article.id}: ${article.publishedAt}`);
+            return false;
+          }
+        }
+        // Validate createdAt and updatedAt
+        const createdAt = new Date(article.createdAt);
+        const updatedAt = new Date(article.updatedAt);
+        if (isNaN(createdAt.getTime()) || isNaN(updatedAt.getTime())) {
+          console.warn(`Invalid date for article ${article.id}`);
+          return false;
+        }
+        return true;
+      } catch (error) {
+        console.warn(`Error validating dates for article ${article.id}:`, error);
+        return false;
+      }
+    });
+
+    return validArticles as NewsArticleWithAuthor[];
+  } catch (error) {
+    console.error('Error fetching news articles:', error);
+    // If it's a date parsing error, try to fix the database and return empty array
+    if (error instanceof Error && error.message.includes('Invalid time value')) {
+      console.error('⚠️  Invalid dates detected in database. Run: npm run fix:dates');
+      return [];
+    }
+    throw error;
+  }
 }
 
 /**
@@ -42,23 +77,47 @@ export async function getNewsArticles(category?: string): Promise<NewsArticleWit
 export async function getAllNewsArticles(includeUnpublished = false): Promise<NewsArticleWithAuthor[]> {
   const where = includeUnpublished ? {} : { published: true };
 
-  const articles = await prisma.newsArticle.findMany({
-    where,
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  try {
+    const articles = await prisma.newsArticle.findMany({
+      where,
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-  return articles as NewsArticleWithAuthor[];
+    // Filter out articles with invalid dates
+    const validArticles = articles.filter(article => {
+      try {
+        if (article.publishedAt) {
+          const date = new Date(article.publishedAt);
+          if (isNaN(date.getTime())) return false;
+        }
+        const createdAt = new Date(article.createdAt);
+        const updatedAt = new Date(article.updatedAt);
+        return !isNaN(createdAt.getTime()) && !isNaN(updatedAt.getTime());
+      } catch {
+        return false;
+      }
+    });
+
+    return validArticles as NewsArticleWithAuthor[];
+  } catch (error) {
+    console.error('Error fetching all news articles:', error);
+    if (error instanceof Error && error.message.includes('Invalid time value')) {
+      console.error('⚠️  Invalid dates detected. Run: npm run fix:dates');
+      return [];
+    }
+    throw error;
+  }
 }
 
 /**
@@ -108,27 +167,51 @@ export async function getNewsArticleBySlug(slug: string): Promise<NewsArticleWit
  * Limited to 5 most recent featured articles
  */
 export async function getFeaturedNewsArticles(): Promise<NewsArticleWithAuthor[]> {
-  const articles = await prisma.newsArticle.findMany({
-    where: {
-      published: true, // Security: Only published articles
-      feature: true,   // Only featured articles
-    },
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  try {
+    const articles = await prisma.newsArticle.findMany({
+      where: {
+        published: true, // Security: Only published articles
+        feature: true,   // Only featured articles
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: {
-      publishedAt: 'desc',
-    },
-    take: 5, // Limit to 5 featured articles
-  });
+      orderBy: {
+        publishedAt: 'desc',
+      },
+      take: 5, // Limit to 5 featured articles
+    });
 
-  return articles as NewsArticleWithAuthor[];
+    // Filter out articles with invalid dates
+    const validArticles = articles.filter(article => {
+      try {
+        if (article.publishedAt) {
+          const date = new Date(article.publishedAt);
+          if (isNaN(date.getTime())) return false;
+        }
+        const createdAt = new Date(article.createdAt);
+        const updatedAt = new Date(article.updatedAt);
+        return !isNaN(createdAt.getTime()) && !isNaN(updatedAt.getTime());
+      } catch {
+        return false;
+      }
+    });
+
+    return validArticles as NewsArticleWithAuthor[];
+  } catch (error) {
+    console.error('Error fetching featured news articles:', error);
+    if (error instanceof Error && error.message.includes('Invalid time value')) {
+      console.error('⚠️  Invalid dates detected. Run: npm run fix:dates');
+      return [];
+    }
+    throw error;
+  }
 }
 
 /**

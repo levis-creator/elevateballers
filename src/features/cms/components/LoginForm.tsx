@@ -46,19 +46,26 @@ export default function LoginForm() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: Include cookies in request
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('Login failed:', data);
         setError(data.error || 'Login failed');
         return;
       }
 
-      // Redirect to admin dashboard
-      window.location.href = '/admin';
+      console.log('Login successful, redirecting...');
+      
+      // Small delay to ensure cookie is set before redirect
+      setTimeout(() => {
+        window.location.href = '/admin';
+      }, 100);
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

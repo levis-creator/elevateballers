@@ -52,10 +52,44 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       role: user.role,
     });
 
+    // Detect if we're in production and using HTTPS
+    // For cPanel: Only set secure flag if we're CERTAIN it's HTTPS
+    // This prevents cookie issues when site is accessed via HTTP
+    const isProduction = import.meta.env.PROD || 
+                        import.meta.env.MODE === 'production' || 
+                        process.env.NODE_ENV === 'production';
+    
+    // Check if request is over HTTPS (be conservative - only set secure if definitely HTTPS)
+    // cPanel may proxy requests, so check multiple headers
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const forwardedSsl = request.headers.get('x-forwarded-ssl');
+    const urlProtocol = new URL(request.url).protocol;
+    
+    // Only set secure flag if we have clear evidence of HTTPS
+    const isSecure = forwardedProto === 'https' ||
+                     forwardedSsl === 'on' ||
+                     urlProtocol === 'https:';
+
+    console.log('Login successful (cPanel):', {
+      userId: user.id,
+      email: user.email,
+      isProduction,
+      isSecure,
+      url: request.url,
+      forwardedProto,
+      forwardedSsl,
+      urlProtocol,
+      headers: {
+        'x-forwarded-proto': forwardedProto,
+        'x-forwarded-ssl': forwardedSsl,
+        'host': request.headers.get('host'),
+      },
+    });
+
     cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: import.meta.env.PROD,
-      sameSite: 'strict',
+      secure: isSecure, // Only set secure flag if actually using HTTPS
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
@@ -76,10 +110,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   } catch (error) {
     console.error('Login error:', error);
-    return new Response(JSON.stringify({ error: 'Login failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Login error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
     });
+    return new Response(
+      JSON.stringify({ 
+        error: 'Login failed',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      }), 
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 };
 

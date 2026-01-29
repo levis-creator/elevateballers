@@ -96,6 +96,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const team = await createTeam({
       name: data.name,
+      nickname: data.nickname,
       logo: data.logo,
       description: data.description,
       approved: true, // Admin-created teams are approved by default

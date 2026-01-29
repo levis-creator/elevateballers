@@ -1,11 +1,6 @@
 {
   "buildCommand": "npm run build:vercel",
   "framework": "astro",
-  "functions": {
-    "src/pages/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",

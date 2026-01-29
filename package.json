@@ -10,10 +10,11 @@
     "dev:ngrok": "node scripts/ngrok-tunnel.js",
     "dev:tunnel": "npm run dev & npm run dev:ngrok",
     "build": "prisma generate && astro build",
-    "build:cpanel": "cross-env DEPLOY_TARGET=cpanel prisma generate && cross-env DEPLOY_TARGET=cpanel astro build",
+    "build:cpanel": "node scripts/build-cpanel.js",
     "build:vercel": "cross-env DEPLOY_TARGET=vercel prisma generate && cross-env DEPLOY_TARGET=vercel astro build",
     "postinstall": "prisma generate",
     "start": "node server.js",
+    "preview:cpanel": "npm run build:cpanel && npm run start",
     "preview": "echo The @astrojs/vercel adapter does not support 'astro preview'. Use 'npm run preview:vercel' instead (requires Vercel CLI) or 'npm run dev' for development.",
     "preview:vercel": "vercel dev",
     "preview:prod": "vercel env pull .env.production && vercel dev",
@@ -25,8 +26,13 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "create-admin": "tsx scripts/create-admin.ts",
-    "db:migrate-to-production": "tsx scripts/migrate-db-to-production.ts"
+    "db:seed": "node prisma/seed.js",
+    "create-admin": "node scripts/create-admin.js",
+    "db:migrate-to-production": "tsx scripts/migrate-db-to-production.ts",
+    "fix:dates": "node scripts/fix-invalid-dates.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.1",
@@ -35,6 +41,7 @@
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "@hookform/resolvers": "^5.2.2",
+    "@prisma/adapter-mariadb": "^7.2.0",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -63,6 +70,7 @@
     "embla-carousel-react": "^8.6.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.562.0",
+    "mysql2": "^3.15.3",
     "papaparse": "^5.5.3",
     "pg": "^8.16.3",
     "postcss": "^8.5.6",
@@ -90,6 +98,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.16.0",
     "@types/quill": "^2.0.14",
+    "cross-env": "^7.0.3",
     "esbuild": "^0.27.2",
     "tsx": "^4.21.0"
   }

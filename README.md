@@ -382,7 +382,7 @@ Each feature has its own README:
 
 ### Project History
 
-See `REFACTORING_SUMMARY.md` for details about the refactoring from a monolithic structure to the current feature-based architecture.
+See `docs/REFACTORING_SUMMARY.md` for details about the refactoring from a monolithic structure to the current feature-based architecture.
 
 ## 🤝 Contributing
 

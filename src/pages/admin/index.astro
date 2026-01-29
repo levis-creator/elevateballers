@@ -1,14 +1,21 @@
 ---
 export const prerender = false;
-export const ssr = false;
+export const ssr = true; // Enable SSR for proper server-side auth checks
 
 import AdminLayout from '../../features/cms/components/AdminLayout.astro';
 import Dashboard from '../../features/cms/components/Dashboard';
 import { checkAuth } from '../../features/cms/lib/auth-astro';
 
 // Check authentication
-const user = await checkAuth(Astro.request);
-if (!user) {
+try {
+  const user = await checkAuth(Astro.request);
+  if (!user) {
+    console.log('No authenticated user, redirecting to login');
+    return Astro.redirect('/admin/login', 302);
+  }
+  console.log('Authenticated user:', user.email);
+} catch (error) {
+  console.error('Auth check error in admin index:', error);
   return Astro.redirect('/admin/login', 302);
 }
 ---

@@ -99,10 +99,17 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
   updateGameState: async (matchId, updates) => {
     set({ isLoading: true, error: null });
     try {
+      // Map period to currentPeriod for API compatibility
+      const apiUpdates: any = { ...updates };
+      if ('period' in apiUpdates) {
+        apiUpdates.currentPeriod = apiUpdates.period;
+        delete apiUpdates.period;
+      }
+      
       const response = await fetch(`/api/games/${matchId}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(apiUpdates),
       });
       if (!response.ok) {
         throw new Error('Failed to update game state');

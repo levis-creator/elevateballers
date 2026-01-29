@@ -7,13 +7,17 @@ import { checkAuth } from '../../features/cms/lib/auth-astro';
 import '../../styles/admin.css';
 
 // If already logged in, redirect to dashboard
+// Wrap in try-catch to handle any Prisma/database errors gracefully
 try {
   const user = await checkAuth(Astro.request);
   if (user) {
     return Astro.redirect('/admin', 302);
   }
 } catch (error) {
-  // Continue to login page if auth check fails
+  // Log error but continue to login page
+  // This allows users to login even if there's a database connection issue
+  console.error('Auth check error in login page (non-fatal):', error);
+  // Continue to show login page - don't fail the entire page load
 }
 ---
 

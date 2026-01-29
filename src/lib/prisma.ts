@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { config } from 'dotenv';
 
 // Load environment variables
@@ -12,40 +11,56 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Lazy initialization of connection pool and adapter
+// Lazy initialization of adapter
 // This prevents errors during module load in serverless environments
-let pool: Pool | null = null;
-let adapter: PrismaPg | null = null;
+let adapter: PrismaMariaDb | null = null;
 
-function getConnectionPool(): Pool {
-  if (!pool) {
+function getAdapter(): PrismaMariaDb {
+  if (!adapter) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error(
         'DATABASE_URL environment variable is not set. ' +
-        'Please configure it in your Vercel project settings under Environment Variables. ' +
-        'Go to: Project Settings → Environment Variables → Add DATABASE_URL'
+        'Please configure it in your project settings under Environment Variables.'
       );
     }
 
-    // Optimize pool settings for serverless environments
-    // In serverless, we want fewer connections per function instance
-    pool = new Pool({
-      connectionString,
-      max: process.env.NODE_ENV === 'production' ? 1 : 10, // Single connection per function in production
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 15000, // Increased timeout for connection establishment (15 seconds)
-      statement_timeout: 30000, // Statement timeout: 30 seconds (prevents queries from running indefinitely)
-      // Enable connection pooling for serverless (important for Vercel)
-      allowExitOnIdle: true,
-    });
-  }
-  return pool;
-}
+    // Parse MySQL connection string (format: mysql://user:password@host:port/database)
+    // The mariadb package doesn't parse MySQL connection strings, so we need to parse it ourselves
+    let poolConfig: {
+      host: string;
+      port: number;
+      user: string;
+      password: string;
+      database: string;
+      connectionLimit?: number;
+      idleTimeout?: number;
+      connectTimeout?: number;
+    };
 
-function getAdapter(): PrismaPg {
-  if (!adapter) {
-    adapter = new PrismaPg(getConnectionPool());
+    try {
+      const url = new URL(connectionString);
+      
+      poolConfig = {
+        host: url.hostname,
+        port: parseInt(url.port) || 3306,
+        user: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+        database: url.pathname.slice(1), // Remove leading '/'
+        connectionLimit: process.env.NODE_ENV === 'production' ? 1 : 10,
+        idleTimeout: 30000,
+        connectTimeout: 15000,
+      };
+    } catch (error) {
+      throw new Error(
+        `Invalid DATABASE_URL format: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+        'Expected format: mysql://user:password@host:port/database'
+      );
+    }
+
+    // PrismaMariaDb accepts a PoolConfig object
+    // The adapter will handle pool creation internally
+    adapter = new PrismaMariaDb(poolConfig);
   }
   return adapter;
 }
