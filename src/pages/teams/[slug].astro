@@ -7,6 +7,7 @@ import Header from "../../features/layout/components/Header.astro";
 import MobileMenu from "../../features/layout/components/MobileMenu";
 import Footer from "../../features/layout/components/Footer.astro";
 import { getTeamBySlug, getStaffByTeam } from "../../features/cms/lib/queries";
+import { resolveAssetUrl, getDisplayImageUrl } from "../../lib/asset-url";
 import { getFilteredMatches } from "../../features/matches/lib/queries";
 import { calculateTeamStatistics } from "../../features/team/lib/teamStats";
 import Spacing from "../../shared/components/ui/Spacing.astro";
@@ -200,12 +201,11 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                   <div class="team-header">
                     <div class="team-header-content">
                       {
-                        team.logo ? (
+                        resolveAssetUrl(team.logo) ? (
                           <div class="team-logo-large">
                             <img
-                              src={team.logo}
+                              src={getDisplayImageUrl(team.logo, Astro.url.origin)!}
                               alt={`${team.name} logo`}
-                              loading="lazy"
                             />
                           </div>
                         ) : (
@@ -218,13 +218,6 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                       }
                       <div class="team-header-info">
                         <h1 class="team-title">{team.name}</h1>
-                        {
-                          team.description && (
-                            <p class="team-description-full">
-                              {team.description}
-                            </p>
-                          )
-                        }
                       </div>
                     </div>
                   </div>
