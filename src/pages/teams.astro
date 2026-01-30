@@ -6,25 +6,52 @@ import TopBar from '../features/layout/components/TopBar.astro';
 import Header from '../features/layout/components/Header.astro';
 import MobileMenu from '../features/layout/components/MobileMenu';
 import Footer from '../features/layout/components/Footer.astro';
-import { getTeams } from '../features/cms/lib/queries';
+import { getTeamsPaginated } from '../features/cms/lib/queries';
+import { resolveAssetUrl, getDisplayImageUrl } from '../lib/asset-url';
 import Spacing from '../shared/components/ui/Spacing.astro';
 import PageLoader from '../components/PageLoader';
 import ContentLoader from '../components/ContentLoader';
 
-// Fetch all teams from database
-let teams = [];
+const PER_PAGE = 12;
+const pageParam = Astro.url.searchParams.get('page');
+const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
+const searchQuery = Astro.url.searchParams.get('search') ?? '';
+
+let teams: Awaited<ReturnType<typeof getTeamsPaginated>>['teams'] = [];
+let totalCount = 0;
+let totalPages = 1;
+let currentPageRes = 1;
 let hasError = false;
 try {
-  teams = await getTeams();
+  const result = await getTeamsPaginated(currentPage, PER_PAGE, false, searchQuery || undefined);
+  teams = result.teams;
+  totalCount = result.totalCount;
+  totalPages = result.totalPages;
+  currentPageRes = result.currentPage;
 } catch (error) {
   console.error('Error fetching teams:', error);
   hasError = true;
 }
 
-// SEO Meta Tags
-const pageTitle = 'Teams - Elevate Ballers';
+function teamsPageUrl(page: number, search: string): string {
+  const base = `${Astro.url.origin}/teams`;
+  if (page <= 1 && !search) return `${base}/`;
+  const params = new URLSearchParams();
+  if (page > 1) params.set('page', String(page));
+  if (search) params.set('search', search);
+  return params.toString() ? `${base}?${params.toString()}` : `${base}/`;
+}
+
+// SEO Meta Tags (use clamped page from result)
+const pageTitle = currentPageRes === 1 && !searchQuery
+  ? 'Teams - Elevate Ballers'
+  : searchQuery
+    ? `Teams - "${searchQuery}" - Elevate Ballers`
+    : `Teams - Page ${currentPageRes} - Elevate Ballers`;
 const pageDescription = 'View all teams in the Elevate Ballers league';
-const pageUrl = `${Astro.url.origin}/teams/`;
+const pageUrl = teamsPageUrl(currentPageRes, searchQuery);
+const startItem = totalCount === 0 ? 0 : (currentPageRes - 1) * PER_PAGE + 1;
+const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
 ---
 
 <Layout>
@@ -116,23 +143,45 @@ const pageUrl = `${Astro.url.origin}/teams/`;
                     TEAMS
                   </h2>
 
+                  <form class="teams-search-form" method="get" action="/teams">
+                    <label for="teams-search-input" class="teams-search-label">Search teams</label>
+                    <div class="teams-search-row">
+                      <input
+                        id="teams-search-input"
+                        type="search"
+                        name="search"
+                        value={searchQuery}
+                        placeholder="Search by name..."
+                        class="teams-search-input"
+                        aria-label="Search teams by name"
+                      />
+                      <button type="submit" class="teams-search-button">Search</button>
+                      {searchQuery && (
+                        <a href="/teams" class="teams-search-clear">Clear</a>
+                      )}
+                    </div>
+                  </form>
+
                   {hasError ? (
                     <ContentLoader client:load message="Failed to load teams. Please try again later." />
                   ) : teams.length === 0 ? (
                     <div class="no-teams-message">
-                      <p>No teams available at this time.</p>
+                      {searchQuery ? (
+                        <p>No teams found for "{searchQuery}". <a href="/teams">Clear search</a></p>
+                      ) : (
+                        <p>No teams available at this time.</p>
+                      )}
                     </div>
                   ) : (
                     <div class="teams-grid">
                       {teams.map((team) => (
                         <div class="team-card">
                           <a href={`/teams/${team.slug}`} class="team-card-link">
-                            {team.logo ? (
+                            {resolveAssetUrl(team.logo) ? (
                               <div class="team-logo">
                                 <img 
-                                  src={team.logo} 
+                                  src={getDisplayImageUrl(team.logo, Astro.url.origin)!} 
                                   alt={`${team.name} logo`}
-                                  loading="lazy"
                                 />
                               </div>
                             ) : (
@@ -142,9 +191,6 @@ const pageUrl = `${Astro.url.origin}/teams/`;
                             )}
                             <div class="team-info">
                               <h3 class="team-name">{team.name}</h3>
-                              {team.description && (
-                                <p class="team-description">{team.description.substring(0, 150)}{team.description.length > 150 ? '...' : ''}</p>
-                              )}
                               <div class="team-stats">
                                 <span class="team-player-count">
                                   <i class="fa fa-users" aria-hidden="true"></i>
@@ -155,6 +201,43 @@ const pageUrl = `${Astro.url.origin}/teams/`;
                           </a>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {!hasError && totalCount > 0 && (
+                    <div class="teams-pagination-wrapper">
+                      <p class="teams-pagination-summary">
+                        Showing {startItem}-{endItem} of {totalCount} teams
+                      </p>
+                      {totalPages > 1 && (
+                        <nav class="teams-pagination" aria-label="Teams pagination">
+                          <ul class="teams-pagination-list">
+                            <li>
+                              {currentPageRes > 1 ? (
+                                <a class="teams-pagination-link" href={teamsPageUrl(currentPageRes - 1, searchQuery)} aria-label="Previous page">Previous</a>
+                              ) : (
+                                <span class="teams-pagination-link teams-pagination-link--disabled" aria-disabled="true">Previous</span>
+                              )}
+                            </li>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                              <li>
+                                {p === currentPageRes ? (
+                                  <span class="teams-pagination-link teams-pagination-link--current" aria-current="page">{p}</span>
+                                ) : (
+                                  <a class="teams-pagination-link" href={teamsPageUrl(p, searchQuery)}>{p}</a>
+                                )}
+                              </li>
+                            ))}
+                            <li>
+                              {currentPageRes < totalPages ? (
+                                <a class="teams-pagination-link" href={teamsPageUrl(currentPageRes + 1, searchQuery)} aria-label="Next page">Next</a>
+                              ) : (
+                                <span class="teams-pagination-link teams-pagination-link--disabled" aria-disabled="true">Next</span>
+                              )}
+                            </li>
+                          </ul>
+                        </nav>
+                      )}
                     </div>
                   )}
 
@@ -376,6 +459,141 @@ const pageUrl = `${Astro.url.origin}/teams/`;
 
     .team-player-count i {
       color: #dd3333;
+    }
+
+    .teams-pagination-wrapper {
+      margin-top: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .teams-pagination-summary {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+
+    .teams-pagination-list {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .teams-pagination-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.25rem;
+      height: 2.25rem;
+      padding: 0 0.5rem;
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #dd3333;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .teams-pagination-link:hover:not(.teams-pagination-link--disabled):not(.teams-pagination-link--current) {
+      background: #f8f9fa;
+      border-color: #dd3333;
+    }
+
+    .teams-pagination-link--current {
+      background: #dd3333;
+      border-color: #dd3333;
+      color: #fff;
+      cursor: default;
+    }
+
+    .teams-pagination-link--disabled {
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .teams-search-form {
+      margin-bottom: 2rem;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .teams-search-label {
+      display: block;
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .teams-search-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .teams-search-input {
+      flex: 1;
+      min-width: 180px;
+      height: 2.5rem;
+      padding: 0 0.75rem;
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      color: #374151;
+    }
+
+    .teams-search-input:focus {
+      outline: none;
+      border-color: #dd3333;
+      box-shadow: 0 0 0 2px rgba(221, 51, 51, 0.2);
+    }
+
+    .teams-search-input::placeholder {
+      color: #9ca3af;
+    }
+
+    .teams-search-button {
+      height: 2.5rem;
+      padding: 0 1rem;
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #fff;
+      background: #dd3333;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .teams-search-button:hover {
+      background: #b82828;
+    }
+
+    .teams-search-clear {
+      font-family: 'Rubik', sans-serif;
+      font-size: 14px;
+      color: #dd3333;
+      text-decoration: none;
+    }
+
+    .teams-search-clear:hover {
+      text-decoration: underline;
     }
 
     /* Responsive Styles */

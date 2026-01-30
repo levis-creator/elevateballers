@@ -291,6 +291,73 @@ export async function getTeams(includeUnapproved: boolean = false): Promise<Team
   }) as TeamWithPlayerCount[];
 }
 
+const TEAMS_PAGINATION_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  logo: true,
+  description: true,
+  approved: true,
+  createdAt: true,
+  updatedAt: true,
+  _count: {
+    select: {
+      players: true,
+    },
+  },
+} as const;
+
+export type TeamsPaginatedResult = {
+  teams: TeamWithPlayerCount[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  perPage: number;
+};
+
+/**
+ * Get teams with pagination (public: approved only).
+ * Optional search filters by team name or slug (case-insensitive partial match).
+ */
+export async function getTeamsPaginated(
+  page: number = 1,
+  perPage: number = 12,
+  includeUnapproved: boolean = false,
+  search?: string | null
+): Promise<TeamsPaginatedResult> {
+  const baseWhere = includeUnapproved ? {} : { approved: true };
+  const searchTerm = typeof search === 'string' ? search.trim() : '';
+  const where =
+    searchTerm.length > 0
+      ? {
+          ...baseWhere,
+          OR: [
+            { name: { contains: searchTerm } },
+            { slug: { contains: searchTerm } },
+          ],
+        }
+      : baseWhere;
+  const [totalCount, teams] = await Promise.all([
+    prisma.team.count({ where }),
+    prisma.team.findMany({
+      where,
+      select: TEAMS_PAGINATION_SELECT,
+      orderBy: { name: 'asc' },
+      skip: (Math.max(1, page) - 1) * perPage,
+      take: perPage,
+    }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+  const currentPage = Math.max(1, Math.min(page, totalPages));
+  return {
+    teams: teams as TeamWithPlayerCount[],
+    totalCount,
+    totalPages,
+    currentPage,
+    perPage,
+  };
+}
+
 /**
  * Get a single team by ID
  */

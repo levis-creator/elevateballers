@@ -4,6 +4,7 @@
  */
 
 import type { Match, Team } from '@prisma/client';
+import { getDisplayImageUrl } from '../../../lib/asset-url';
 
 type MatchWithTeams = Match & {
   team1: Team | null;
@@ -24,13 +25,17 @@ export function getTeam1Name(match: MatchWithTeams | Match | null | undefined): 
 
 /**
  * Get team 1 logo from match (prefers relation, falls back to team1Logo)
+ * Returns a root-relative or absolute URL suitable for use in img src.
  */
 export function getTeam1Logo(match: MatchWithTeams | Match | null | undefined): string | null {
   if (!match) return null;
+  let raw: string | null = null;
   if ('team1' in match && match.team1?.logo) {
-    return match.team1.logo;
+    raw = match.team1.logo;
+  } else {
+    raw = match.team1Logo || null;
   }
-  return match.team1Logo || null;
+  return getDisplayImageUrl(raw);
 }
 
 /**
@@ -46,13 +51,17 @@ export function getTeam2Name(match: MatchWithTeams | Match | null | undefined): 
 
 /**
  * Get team 2 logo from match (prefers relation, falls back to team2Logo)
+ * Returns a root-relative or absolute URL suitable for use in img src.
  */
 export function getTeam2Logo(match: MatchWithTeams | Match | null | undefined): string | null {
   if (!match) return null;
+  let raw: string | null = null;
   if ('team2' in match && match.team2?.logo) {
-    return match.team2.logo;
+    raw = match.team2.logo;
+  } else {
+    raw = match.team2Logo || null;
   }
-  return match.team2Logo || null;
+  return getDisplayImageUrl(raw);
 }
 
 /**
