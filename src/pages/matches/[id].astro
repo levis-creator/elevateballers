@@ -5,9 +5,9 @@ import Header from "../../features/layout/components/Header.astro";
 import MobileMenu from "../../features/layout/components/MobileMenu";
 import Footer from "../../features/layout/components/Footer.astro";
 import Spacing from "../../shared/components/ui/Spacing.astro";
-import { getMatchById } from "../../features/cms/lib/queries";
+import { getMatchWithFullDetails } from "../../features/cms/lib/queries";
 import MatchDetail from "../../features/matches/components/MatchDetail";
-import type { Match } from "@prisma/client";
+import type { MatchWithFullDetails } from "../../features/cms/types";
 import PageLoader from "../../components/PageLoader";
 import ContentLoader from "../../components/ContentLoader";
 
@@ -24,15 +24,15 @@ if (!id) {
 }
 
 // Fetch match from database
-let match: Match | null = null;
+let match: MatchWithFullDetails | null = null;
 let hasError = false;
 try {
-  match = await getMatchById(id);
+  match = await getMatchWithFullDetails(id);
   if (!match) {
     return Astro.redirect("/matches");
   }
 } catch (error) {
-  console.error('Error fetching match:', error);
+  console.error("Error fetching match:", error);
   hasError = true;
 }
 ---
@@ -47,7 +47,8 @@ try {
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
         style="padding-top: 0; padding-bottom: 0px;"
-      ></div>
+      >
+      </div>
       <div class="container">
         <section class="wpb-content-wrapper">
           <div class="vc_row wpb_row vc_row-fluid">
@@ -62,19 +63,33 @@ try {
                     xs="40"
                   />
 
-                  {hasError ? (
-                    <ContentLoader client:load message="Failed to load match details. Please try again later." />
-                  ) : match ? (
-                    <div style="max-width: 800px; margin: 0 auto;">
-                      <MatchDetail client:load match={match} />
-                    </div>
-                  ) : null}
+                  {
+                    hasError ? (
+                      <ContentLoader
+                        client:load
+                        message="Failed to load match details. Please try again later."
+                      />
+                    ) : match ? (
+                      <div style="max-width: 800px; margin: 0 auto;">
+                        <MatchDetail client:load match={match} />
+                      </div>
+                    ) : null
+                  }
 
                   <div style="text-align: center; margin-top: 2rem;">
-                    <a href="/upcoming-fixtures" class="btn btn-primary" data-astro-prefetch>
+                    <a
+                      href="/upcoming-fixtures"
+                      class="btn btn-primary"
+                      data-astro-prefetch
+                    >
                       View All Fixtures
                     </a>
-                    <a href="/matches/results" class="btn btn-secondary" data-astro-prefetch style="margin-left: 1rem;">
+                    <a
+                      href="/matches/results"
+                      class="btn btn-secondary"
+                      data-astro-prefetch
+                      style="margin-left: 1rem;"
+                    >
                       View Results
                     </a>
                   </div>
@@ -138,4 +153,3 @@ try {
     background-color: #475569;
   }
 </style>
-

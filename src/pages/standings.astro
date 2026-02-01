@@ -5,9 +5,25 @@ import Header from "../features/layout/components/Header.astro";
 import MobileMenu from "../features/layout/components/MobileMenu";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
-import { standings } from "../features/standings/data/standingsData";
-import { StandingsTable } from "../features/standings/components/StandingsTable";
+import { standings as fallbackStandings } from "../features/standings/data/standingsData";
+import { StandingsPage } from "../features/standings/components/StandingsPage";
 import PageLoader from "../components/PageLoader";
+
+// Fetch standings from API
+let standings = fallbackStandings;
+try {
+  const baseUrl =
+    import.meta.env.SITE || `http://localhost:${import.meta.env.PORT || 4321}`;
+  const response = await fetch(`${baseUrl}/api/standings`);
+  if (response.ok) {
+    const data = await response.json();
+    if (data && data.length > 0) {
+      standings = data;
+    }
+  }
+} catch (error) {
+  console.error("Failed to fetch standings, using fallback data:", error);
+}
 ---
 
 <Layout>
@@ -44,7 +60,7 @@ import PageLoader from "../components/PageLoader";
                   </h2>
 
                   <div class="sp-template sp-template-league-table">
-                    <StandingsTable standings={standings} client:load />
+                    <StandingsPage initialStandings={standings} client:load />
                   </div>
 
                   <Spacing

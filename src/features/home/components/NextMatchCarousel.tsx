@@ -96,7 +96,7 @@ export default function NextMatchCarousel() {
                   <img
                     decoding="async"
                     src={match.team1Logo}
-                    alt={match.team1Name}
+                    alt={match.team1Name ?? ''}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
@@ -107,7 +107,7 @@ export default function NextMatchCarousel() {
                   <img
                     decoding="async"
                     src={match.team2Logo}
-                    alt={match.team2Name}
+                    alt={match.team2Name ?? ''}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
