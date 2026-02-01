@@ -1,3 +1,4 @@
+
 #!/usr/bin/env node
 /**
  * Build script for cPanel deployment

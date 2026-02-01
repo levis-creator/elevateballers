@@ -17,6 +17,7 @@ import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, get
 import { getLeagueName } from '../lib/league-helpers';
 import { useGameTrackingStore } from '../../game-tracking/stores/useGameTrackingStore';
 import { Button } from '@/components/ui/button';
+import MatchImagesPublic from './MatchImagesPublic';
 
 interface MatchDetailProps {
   match: Match;
@@ -233,6 +234,9 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           </div>
         )}
       </div>
+
+      {/* Match Photos - public gallery with download */}
+      <MatchImagesPublic matchId={match.id} />
 
       <style>{`
         .match-detail {

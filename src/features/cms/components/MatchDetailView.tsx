@@ -44,6 +44,7 @@ import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, get
 import { getLeagueName } from '../../matches/lib/league-helpers';
 import AddNewPlayerModal from './AddNewPlayerModal';
 import GameTrackingPanel from '../../game-tracking/components/GameTrackingPanel';
+import MatchImagesDisplay from './MatchImagesDisplay';
 import { formatClockTime } from '../../game-tracking/lib/utils';
 import { getPeriodLabel } from '../../game-tracking/lib/utils';
 import { useGameTrackingStore } from '../../game-tracking/stores/useGameTrackingStore';
@@ -642,6 +643,9 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAddNewPlayerModal, setShowAddNewPlayerModal] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<string>('');
+  // Track which players should be marked as starters when adding
+  const [playersToAdd, setPlayersToAdd] = useState<Map<string, { started: boolean }>>(new Map());
   const [formData, setFormData] = useState({
     playerId: '',
     teamId: '',
@@ -654,6 +658,9 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
     AlertCircle?: ComponentType<any>;
     Loader2?: ComponentType<any>;
     Plus?: ComponentType<any>;
+    CheckSquare?: ComponentType<any>;
+    Square?: ComponentType<any>;
+    Shirt?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -663,6 +670,9 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
         AlertCircle: mod.AlertCircle,
         Loader2: mod.Loader2,
         Plus: mod.Plus,
+        CheckSquare: mod.CheckSquare,
+        Square: mod.Square,
+        Shirt: mod.Shirt,
       });
     });
   }, []);
@@ -672,12 +682,12 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
   }, [team1Id, team2Id]);
 
   useEffect(() => {
-    if (formData.teamId) {
-      fetchPlayersForTeam(formData.teamId);
+    if (selectedTeam) {
+      fetchPlayersForTeam(selectedTeam);
     } else {
       setAvailablePlayers([]);
     }
-  }, [formData.teamId, existingMatchPlayers]);
+  }, [selectedTeam, existingMatchPlayers]);
 
   const fetchMatchTeams = async () => {
     try {
@@ -698,7 +708,7 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
       
       if (validTeams.length > 0) {
         const defaultTeam = team1Id || team2Id || validTeams[0].id;
-        setFormData((prev) => ({ ...prev, teamId: defaultTeam }));
+        setSelectedTeam(defaultTeam);
       }
     } catch (err) {
       console.error('Failed to fetch match teams:', err);
@@ -756,17 +766,98 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
     }
   };
 
+  const togglePlayerToAdd = (playerId: string) => {
+    setPlayersToAdd((prev) => {
+      const newMap = new Map(prev);
+      if (newMap.has(playerId)) {
+        newMap.delete(playerId);
+      } else {
+        newMap.set(playerId, { started: false });
+      }
+      return newMap;
+    });
+  };
+
+  const toggleStarterStatus = (playerId: string) => {
+    setPlayersToAdd((prev) => {
+      const newMap = new Map(prev);
+      const current = newMap.get(playerId);
+      if (current) {
+        newMap.set(playerId, { started: !current.started });
+      }
+      return newMap;
+    });
+  };
+
+  const handleBatchAddPlayers = async () => {
+    if (playersToAdd.size === 0) {
+      setError('Please select at least one player');
+      return;
+    }
+
+    if (!selectedTeam) {
+      setError('Please select a team');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Add all selected players in parallel
+      const addPromises = Array.from(playersToAdd.entries()).map(async ([playerId, data]) => {
+        const response = await fetch(`/api/matches/${matchId}/players`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId,
+            teamId: selectedTeam,
+            started: data.started,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to add player ${playerId}`);
+        }
+
+        return response.json();
+      });
+
+      const results = await Promise.allSettled(addPromises);
+      const failures = results.filter((r) => r.status === 'rejected');
+
+      if (failures.length > 0) {
+        const errorMessages = failures
+          .map((r) => r.status === 'rejected' && r.reason?.message)
+          .filter(Boolean)
+          .join('; ');
+        throw new Error(`Failed to add ${failures.length} player(s)${errorMessages ? `: ${errorMessages}` : ''}`);
+      }
+
+      // Clear selections and refresh
+      setPlayersToAdd(new Map());
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Failed to add players');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) {
+        setPlayersToAdd(new Map());
+        setSelectedTeam('');
         onClose();
       }
     }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Player to Match</DialogTitle>
+          <DialogTitle>Add Players to Match</DialogTitle>
           <DialogDescription>
-            Select a team and player to add to this match.
+            Select a team and choose players to add to this match. You can select multiple players and mark starters.
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -775,23 +866,32 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="modal-teamId">
-              Team <span className="text-destructive">*</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="modal-team-select">
+                Team <span className="text-destructive">*</span>
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddNewPlayerModal(true)}
+                disabled={!selectedTeam}
+              >
+                {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
+                Add New Player
+              </Button>
+            </div>
             <Select
-              value={formData.teamId}
+              value={selectedTeam}
               onValueChange={(value) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  teamId: value,
-                  playerId: '',
-                }));
+                setSelectedTeam(value);
+                setPlayersToAdd(new Map());
               }}
               required
             >
-              <SelectTrigger id="modal-teamId">
+              <SelectTrigger id="modal-team-select">
                 <SelectValue placeholder="Select a team" />
               </SelectTrigger>
               <SelectContent>
@@ -804,124 +904,124 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="modal-playerId">
-                Player <span className="text-destructive">*</span>
-              </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddNewPlayerModal(true)}
-                disabled={!formData.teamId}
-              >
-                {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
-                Add New Player
-              </Button>
-            </div>
-            <Select
-              value={formData.playerId}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, playerId: value }))
-              }
-              required
-              disabled={!formData.teamId}
-            >
-              <SelectTrigger id="modal-playerId">
-                <SelectValue placeholder="Select a player" />
-              </SelectTrigger>
-              <SelectContent>
-                {availablePlayers.map((player) => (
-                  <SelectItem key={player.id} value={player.id}>
-                    {player.firstName} {player.lastName}
-                    {player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {selectedTeam && (
+            <>
+              <div className="flex items-center justify-between pt-2 pb-2 border-b">
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const allSelected = availablePlayers.every((p) => playersToAdd.has(p.id));
+                      if (allSelected) {
+                        setPlayersToAdd(new Map());
+                      } else {
+                        const newMap = new Map();
+                        availablePlayers.forEach((p) => {
+                          newMap.set(p.id, { started: false });
+                        });
+                        setPlayersToAdd(newMap);
+                      }
+                    }}
+                    disabled={loading || availablePlayers.length === 0}
+                  >
+                    {availablePlayers.every((p) => playersToAdd.has(p.id)) &&
+                    availablePlayers.length > 0 ? (
+                      icons.CheckSquare ? <icons.CheckSquare className="h-4 w-4 mr-1" /> : <span className="h-4 w-4 mr-1" />
+                    ) : (
+                      icons.Square ? <icons.Square className="h-4 w-4 mr-1" /> : <span className="h-4 w-4 mr-1" />
+                    )}
+                    {availablePlayers.every((p) => playersToAdd.has(p.id)) &&
+                    availablePlayers.length > 0
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </Button>
+                  {playersToAdd.size > 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      {playersToAdd.size} player{playersToAdd.size !== 1 ? 's' : ''} selected
+                    </span>
+                  )}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="modal-position">Position</Label>
-              <Select
-                value={formData.position || undefined}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, position: value }))
-                }
-              >
-                <SelectTrigger id="modal-position">
-                  <SelectValue placeholder="Select position (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PG">Point Guard (PG)</SelectItem>
-                  <SelectItem value="SG">Shooting Guard (SG)</SelectItem>
-                  <SelectItem value="SF">Small Forward (SF)</SelectItem>
-                  <SelectItem value="PF">Power Forward (PF)</SelectItem>
-                  <SelectItem value="C">Center (C)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-4">
+                {availablePlayers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No available players to add. All players from this team are already in the match.
+                  </p>
+                ) : (
+                  availablePlayers.map((player) => {
+                    const isSelected = playersToAdd.has(player.id);
+                    const isStarter = playersToAdd.get(player.id)?.started || false;
+                    return (
+                      <div
+                        key={player.id}
+                        className={`flex items-center justify-between p-3 border rounded-lg ${
+                          isSelected ? 'bg-primary/5 border-primary/20' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => togglePlayerToAdd(player.id)}
+                            disabled={loading}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <strong>
+                                {player.firstName} {player.lastName}
+                              </strong>
+                              {player.jerseyNumber && (
+                                <Badge variant="secondary" className="gap-1">
+                                  {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
+                                  {player.jerseyNumber}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={isStarter}
+                              onCheckedChange={() => toggleStarterStatus(player.id)}
+                              disabled={loading}
+                            />
+                            <Label className="cursor-pointer text-sm">
+                              Starter
+                            </Label>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="modal-jerseyNumber">Jersey #</Label>
-              <Input
-                id="modal-jerseyNumber"
-                type="number"
-                value={formData.jerseyNumber}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, jerseyNumber: e.target.value }))
-                }
-                min="0"
-                max="99"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="modal-minutesPlayed">Minutes</Label>
-              <Input
-                id="modal-minutesPlayed"
-                type="number"
-                value={formData.minutesPlayed}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, minutesPlayed: e.target.value }))
-                }
-                min="0"
-                max="120"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="modal-started"
-              checked={formData.started}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, started: checked === true }))
-              }
-            />
-            <Label htmlFor="modal-started" className="cursor-pointer">
-              Started
-            </Label>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  {icons.Loader2 ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 h-4 w-4" />}
-                  Adding...
-                </>
-              ) : (
-                'Add Player'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBatchAddPlayers}
+                  disabled={loading || playersToAdd.size === 0}
+                >
+                  {loading ? (
+                    <>
+                      {icons.Loader2 ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 h-4 w-4" />}
+                      Adding Players...
+                    </>
+                  ) : (
+                    <>
+                      {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
+                      Add {playersToAdd.size > 0 ? `${playersToAdd.size} ` : ''}Player{playersToAdd.size !== 1 ? 's' : ''}
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </div>
       </DialogContent>
       
       {/* Add New Player Modal */}
@@ -933,10 +1033,14 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
         onSuccess={async (newPlayer) => {
           setShowAddNewPlayerModal(false);
           // Refresh players list for the selected team
-          if (formData.teamId) {
-            await fetchPlayersForTeam(formData.teamId);
+          if (selectedTeam) {
+            await fetchPlayersForTeam(selectedTeam);
             // Auto-select the newly created player
-            setFormData((prev) => ({ ...prev, playerId: newPlayer.id }));
+            setPlayersToAdd((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(newPlayer.id, { started: false });
+              return newMap;
+            });
           }
         }}
       />
@@ -1831,6 +1935,9 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           )}
         </>
       )}
+
+      {/* Match Images */}
+      <MatchImagesDisplay matchId={matchId} />
 
       {/* Add Player Modal */}
       {match && (

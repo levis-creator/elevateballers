@@ -16,6 +16,7 @@ model User {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   comments     Comment[]
   newsArticles NewsArticle[]
+  uploadedMedia Media[]      @relation("MediaUploader")
 
   @@map("users")
 }
@@ -221,19 +222,65 @@ model Player {
   @@map("players")
 }
 
+model Folder {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  path        String   @unique
+  isPrivate   Boolean  @default(false) @map("is_private")
+  description String?
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  media       Media[]
+
+  @@index([isPrivate])
+  @@map("folders")
+}
+
 model Media {
-  id        String    @id @default(cuid())
-  title     String
-  url       String
-  type      MediaType
-  thumbnail String?
+  id               String     @id @default(cuid())
+  title            String
+  url              String
+  filePath         String?    @map("file_path")
+  folderId         String?    @map("folder_id")
+  size             Int?       // File size in bytes after compression
+  originalSize     Int?       @map("original_size") // File size before compression
+  compressionRatio Float?     @map("compression_ratio") // Percentage reduction
+  mimeType         String?    @map("mime_type")
+  type             MediaType
+  thumbnail        String?
+  isPrivate        Boolean    @default(false) @map("is_private")
+  featured         Boolean    @default(false)
+  uploadedBy       String?    @map("uploaded_by")
   // MySQL does not support native string[] types. Use Json instead.
-  tags      Json?
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  tags             Json?
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  folder           Folder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploader         User?      @relation("MediaUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  fileUsages       FileUsage[]
 
   @@index([type])
+  @@index([folderId])
+  @@index([isPrivate])
+  @@index([featured])
+  @@index([filePath])
   @@map("media")
+}
+
+model FileUsage {
+  id         String      @id @default(cuid())
+  mediaId   String      @map("media_id")
+  entityType FileUsageEntityType @map("entity_type")
+  entityId  String      @map("entity_id")
+  fieldName String      @map("field_name")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  media     Media       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId])
+  @@index([entityType])
+  @@index([entityId])
+  @@map("file_usages")
 }
 
 model PageContent {
@@ -421,6 +468,15 @@ enum MediaType {
   IMAGE
   VIDEO
   AUDIO
+}
+
+enum FileUsageEntityType {
+  PLAYER
+  TEAM
+  NEWS_ARTICLE
+  STAFF
+  LEAGUE
+  MEDIA
 }
 
 enum StaffRole {

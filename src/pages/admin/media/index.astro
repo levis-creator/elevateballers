@@ -3,10 +3,10 @@ export const prerender = false;
 export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import MediaGallery from '../../../features/cms/components/MediaGallery';
+import MediaGalleryWrapper from '../../../features/cms/components/MediaGalleryWrapper';
 ---
 
 <AdminLayout title="Media Management - Admin">
-  <MediaGallery client:load />
+  <MediaGalleryWrapper client:load />
 </AdminLayout>
 

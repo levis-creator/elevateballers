@@ -13,6 +13,8 @@ import { prisma } from '../../lib/prisma';
 import NewsSidebar from '../../features/news/components/NewsSidebar.astro';
 import NewsBreadcrumbs from '../../features/news/components/NewsBreadcrumbs.astro';
 import PageLoader from '../../components/PageLoader';
+import { Image } from 'astro:assets';
+import { getDisplayImageUrl } from '../../lib/asset-url';
 
 const { slug } = Astro.params;
 if (!slug) {
@@ -208,14 +210,12 @@ const modifiedTime = modifiedDate;
                 <!-- Post Thumbnail -->
             {article.image && (
                   <div class="post-thumbnail">
-                    <img 
-                      fetchpriority="high" 
-                      width="1170" 
-                      height="650" 
-                      src={article.image} 
+                    <Image 
+                      src={getDisplayImageUrl(article.image, Astro.url.origin) || article.image} 
+                      width={1170} 
+                      height={650} 
                       class="img-responsive wp-post-image" 
-                      alt={article.title} 
-                      decoding="async"
+                      alt={article.title}
                     />
               </div>
             )}

@@ -229,16 +229,6 @@ html {
   animation: countUp 0.8s ease-out;
 }
 
-/* Image Lazy Loading Enhancement */
-img[loading="lazy"] {
-  opacity: 0;
-  transition: opacity var(--transition-base, 250ms);
-}
-
-img[loading="lazy"].loaded {
-  opacity: 1;
-}
-
 /* Section Divider */
 .section-divider {
   height: 1px;

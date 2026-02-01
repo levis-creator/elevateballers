@@ -13,6 +13,7 @@ import { calculateTeamStatistics } from "../../features/team/lib/teamStats";
 import Spacing from "../../shared/components/ui/Spacing.astro";
 import PageLoader from "../../components/PageLoader";
 import { TeamDetailsTable } from "../../features/team/components/TeamDetailsTable";
+import { Image } from "astro:assets";
 
 const { slug } = Astro.params;
 if (!slug) {
@@ -203,9 +204,11 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                       {
                         resolveAssetUrl(team.logo) ? (
                           <div class="team-logo-large">
-                            <img
+                            <Image
                               src={getDisplayImageUrl(team.logo, Astro.url.origin)!}
                               alt={`${team.name} logo`}
+                              width={150}
+                              height={150}
                             />
                           </div>
                         ) : (
@@ -463,10 +466,11 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                               <div class="staff-card">
                                 {staff.image ? (
                                   <div class="staff-image">
-                                    <img
-                                      src={staff.image}
+                                    <Image
+                                      src={getDisplayImageUrl(staff.image, Astro.url.origin) || staff.image}
                                       alt={`${staff.firstName} ${staff.lastName}`}
-                                      loading="lazy"
+                                      width={280}
+                                      height={200}
                                     />
                                   </div>
                                 ) : (

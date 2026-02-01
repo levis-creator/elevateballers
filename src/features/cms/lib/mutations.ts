@@ -31,12 +31,15 @@ import type {
   UpdateMatchPlayerInput,
   CreateMatchEventInput,
   UpdateMatchEventInput,
+  CreateFolderInput,
+  UpdateFolderInput,
   Match,
   Player,
   Team,
   Staff,
   TeamStaff,
   Media,
+  MediaWithFolderAndUploader,
   PageContent,
   SiteSetting,
   Comment,
@@ -44,6 +47,7 @@ import type {
   Season,
   MatchPlayer,
   MatchEvent,
+  Folder,
 } from '../types';
 
 /**
@@ -141,6 +145,17 @@ export async function createNewsArticle(
     },
   });
 
+  // Track file usage if image is provided
+  if (article.image) {
+    try {
+      const { trackFileUsageByUrl } = await import('../../../lib/file-usage');
+      await trackFileUsageByUrl(article.image, 'NEWS_ARTICLE', article.id, 'image');
+    } catch (error) {
+      // Non-critical - continue even if tracking fails
+      console.warn('Failed to track file usage for news article image:', error);
+    }
+  }
+
   return article as NewsArticleWithAuthor;
 }
 
@@ -184,6 +199,12 @@ export async function updateNewsArticle(
     await manageFeaturedLimit(id);
   }
 
+  // Get existing article to check for image changes
+  const existing = await prisma.newsArticle.findUnique({
+    where: { id },
+    select: { image: true },
+  });
+
   const article = await prisma.newsArticle.update({
     where: { id },
     data: updateData,
@@ -197,6 +218,19 @@ export async function updateNewsArticle(
       },
     },
   });
+
+  // Track file usage if image changed
+  if (data.image !== undefined && data.image !== existing?.image) {
+    try {
+      const { updateFileUsageOnChange } = await import('../../../lib/file-usage');
+      const oldUrl = existing?.image || '';
+      const newUrl = data.image || '';
+      await updateFileUsageOnChange(oldUrl, newUrl, 'NEWS_ARTICLE', id, 'image');
+    } catch (error) {
+      // Non-critical - continue even if tracking fails
+      console.warn('Failed to track file usage for news article image update:', error);
+    }
+  }
 
   return article as NewsArticleWithAuthor;
 }
@@ -254,13 +288,26 @@ export async function createTeam(data: CreateTeamInput): Promise<Team> {
   // Generate slug from name if not provided
   const slug = data.slug || await generateUniqueSlug(data.name);
 
-  return await prisma.team.create({
+  const team = await prisma.team.create({
     data: {
       ...data,
       slug,
       approved: data.approved ?? true, // Default to true for admin-created teams
     },
   });
+
+  // Track file usage if logo is provided
+  if (team.logo) {
+    try {
+      const { trackFileUsageByUrl } = await import('../../../lib/file-usage');
+      await trackFileUsageByUrl(team.logo, 'TEAM', team.id, 'logo');
+    } catch (error) {
+      // Non-critical - continue even if tracking fails
+      console.warn('Failed to track file usage for team logo:', error);
+    }
+  }
+
+  return team;
 }
 
 /**
@@ -268,6 +315,12 @@ export async function createTeam(data: CreateTeamInput): Promise<Team> {
  */
 export async function updateTeam(id: string, data: UpdateTeamInput): Promise<Team | null> {
   try {
+    // Get existing team to check for logo changes
+    const existing = await prisma.team.findUnique({
+      where: { id },
+      select: { logo: true },
+    });
+
     const updateData: any = { ...data };
 
     // If name is being updated and slug is not provided, regenerate slug
@@ -278,10 +331,25 @@ export async function updateTeam(id: string, data: UpdateTeamInput): Promise<Tea
       updateData.slug = await generateUniqueSlug(data.slug, id);
     }
 
-    return await prisma.team.update({
+    const team = await prisma.team.update({
       where: { id },
       data: updateData,
     });
+
+    // Track file usage if logo changed
+    if (data.logo !== undefined && data.logo !== existing?.logo) {
+      try {
+        const { updateFileUsageOnChange } = await import('../../../lib/file-usage');
+        const oldUrl = existing?.logo || '';
+        const newUrl = data.logo || '';
+        await updateFileUsageOnChange(oldUrl, newUrl, 'TEAM', id, 'logo');
+      } catch (error) {
+        // Non-critical - continue even if tracking fails
+        console.warn('Failed to track file usage for team logo update:', error);
+      }
+    }
+
+    return team;
   } catch (error) {
     console.error('Error updating team:', error);
     return null;
@@ -526,12 +594,25 @@ export async function deleteMatch(id: string): Promise<boolean> {
  * Create a new player
  */
 export async function createPlayer(data: CreatePlayerInput): Promise<Player> {
-  return await prisma.player.create({
+  const player = await prisma.player.create({
     data: {
       ...data,
       approved: data.approved ?? true, // Default to true for admin-created players
     },
   });
+
+  // Track file usage if image is provided
+  if (player.image) {
+    try {
+      const { trackFileUsageByUrl } = await import('../../../lib/file-usage');
+      await trackFileUsageByUrl(player.image, 'PLAYER', player.id, 'image');
+    } catch (error) {
+      // Non-critical - continue even if tracking fails
+      console.warn('Failed to track file usage for player image:', error);
+    }
+  }
+
+  return player;
 }
 
 /**
@@ -539,10 +620,31 @@ export async function createPlayer(data: CreatePlayerInput): Promise<Player> {
  */
 export async function updatePlayer(id: string, data: UpdatePlayerInput): Promise<Player | null> {
   try {
-    return await prisma.player.update({
+    // Get existing player to check for image changes
+    const existing = await prisma.player.findUnique({
+      where: { id },
+      select: { image: true },
+    });
+
+    const player = await prisma.player.update({
       where: { id },
       data,
     });
+
+    // Track file usage if image changed
+    if (data.image !== undefined && data.image !== existing?.image) {
+      try {
+        const { updateFileUsageOnChange } = await import('../../../lib/file-usage');
+        const oldUrl = existing?.image || '';
+        const newUrl = data.image || '';
+        await updateFileUsageOnChange(oldUrl, newUrl, 'PLAYER', id, 'image');
+      } catch (error) {
+        // Non-critical - continue even if tracking fails
+        console.warn('Failed to track file usage for player image update:', error);
+      }
+    }
+
+    return player;
   } catch (error) {
     console.error('Error updating player:', error);
     return null;
@@ -582,24 +684,146 @@ export async function deleteTeam(id: string): Promise<boolean> {
 /**
  * Create a new media item
  */
-export async function createMedia(data: CreateMediaInput): Promise<Media> {
+export async function createMedia(data: CreateMediaInput): Promise<MediaWithFolderAndUploader> {
   return await prisma.media.create({
     data: {
       ...data,
       tags: data.tags || [],
     },
-  });
+    include: {
+      folder: {
+        select: {
+          id: true,
+          name: true,
+          isPrivate: true,
+        },
+      },
+      uploader: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  }) as MediaWithFolderAndUploader;
 }
 
 /**
  * Update an existing media item
  */
-export async function updateMedia(id: string, data: UpdateMediaInput): Promise<Media | null> {
+export async function updateMedia(id: string, data: UpdateMediaInput): Promise<MediaWithFolderAndUploader | null> {
   try {
-    return await prisma.media.update({
-      where: { id },
-      data,
-    });
+    // If updating featured field, use raw SQL as workaround for Prisma Client sync issue
+    if ('featured' in data && typeof data.featured === 'boolean') {
+      await prisma.$executeRawUnsafe(
+        `UPDATE media SET featured = ? WHERE id = ?`,
+        data.featured ? 1 : 0, // MySQL uses 1/0 for boolean
+        id
+      );
+      // Remove featured from data to avoid Prisma error
+      const { featured, ...restData } = data;
+      if (Object.keys(restData).length > 0) {
+        await prisma.media.update({
+          where: { id },
+          data: restData,
+        });
+      }
+    } else {
+      // Normal update for other fields
+      await prisma.media.update({
+        where: { id },
+        data,
+      });
+    }
+
+    // Fetch updated media using raw SQL to ensure we get the featured field
+    const updatedMediaRaw = await prisma.$queryRawUnsafe<Array<{
+      id: string;
+      title: string;
+      url: string;
+      file_path: string | null;
+      folder_id: string | null;
+      size: number | null;
+      original_size: number | null;
+      compression_ratio: number | null;
+      mime_type: string | null;
+      type: string;
+      thumbnail: string | null;
+      is_private: number;
+      featured: number;
+      uploaded_by: string | null;
+      created_at: Date;
+      updated_at: Date;
+      folder_name: string | null;
+      folder_is_private: number | null;
+      uploader_name: string | null;
+      uploader_email: string | null;
+      tags: any;
+    }>>(
+      `SELECT 
+        m.id,
+        m.title,
+        m.url,
+        m.file_path,
+        m.folder_id,
+        m.size,
+        m.original_size,
+        m.compression_ratio,
+        m.mime_type,
+        m.type,
+        m.thumbnail,
+        m.is_private,
+        m.featured,
+        m.uploaded_by,
+        m.created_at,
+        m.updated_at,
+        m.tags,
+        f.name as folder_name,
+        f.is_private as folder_is_private,
+        u.name as uploader_name,
+        u.email as uploader_email
+       FROM media m
+       LEFT JOIN folders f ON m.folder_id = f.id
+       LEFT JOIN users u ON m.uploaded_by = u.id
+       WHERE m.id = ?`,
+      id
+    );
+
+    if (updatedMediaRaw.length === 0) {
+      return null;
+    }
+
+    const row = updatedMediaRaw[0];
+    return {
+      id: row.id,
+      title: row.title,
+      url: row.url,
+      filePath: row.file_path,
+      folderId: row.folder_id,
+      size: row.size,
+      originalSize: row.original_size,
+      compressionRatio: row.compression_ratio,
+      mimeType: row.mime_type,
+      type: row.type as any,
+      thumbnail: row.thumbnail,
+      isPrivate: Boolean(row.is_private),
+      featured: Boolean(row.featured),
+      uploadedBy: row.uploaded_by,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      tags: row.tags,
+      folder: row.folder_id ? {
+        id: row.folder_id,
+        name: row.folder_name || '',
+        isPrivate: Boolean(row.folder_is_private),
+      } : null,
+      uploader: row.uploaded_by ? {
+        id: row.uploaded_by,
+        name: row.uploader_name || '',
+        email: row.uploader_email || '',
+      } : null,
+    } as MediaWithFolderAndUploader;
   } catch (error) {
     console.error('Error updating media:', error);
     return null;
@@ -608,12 +832,123 @@ export async function updateMedia(id: string, data: UpdateMediaInput): Promise<M
 
 /**
  * Delete a media item
+ * Also deletes the file from disk and cleans up file usage records
+ * FileUsage records are automatically deleted by database cascade (onDelete: Cascade)
  */
 export async function deleteMedia(id: string): Promise<boolean> {
   try {
+    // Get media record first to retrieve file path and check usage
+    const media = await prisma.media.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        filePath: true,
+        url: true,
+        title: true,
+      },
+    });
+
+    if (!media) {
+      console.warn(`Media with id ${id} not found`);
+      return false;
+    }
+
+    // Check if file is in use (optional warning)
+    try {
+      const { checkFileInUse } = await import('../../../lib/file-usage');
+      const inUse = await checkFileInUse(id);
+      if (inUse) {
+        console.warn(`Media "${media.title}" (${id}) is still in use but will be deleted`);
+      }
+    } catch (usageError) {
+      // Non-critical - continue with deletion
+      console.warn('Could not check file usage:', usageError);
+    }
+
+    // Delete file from disk if filePath exists AND no other media records reference it
+    // Also delete any duplicate records that reference the same filePath
+    if (media.filePath) {
+      try {
+        // Check if any other media records reference the same filePath
+        const otherMediaWithSameFile = await prisma.media.findMany({
+          where: {
+            filePath: media.filePath,
+            id: { not: id }, // Exclude the current record being deleted
+          },
+          select: {
+            id: true,
+            title: true,
+          },
+        });
+
+        // Only delete the physical file if no other records reference it
+        if (otherMediaWithSameFile.length === 0) {
+          const { deleteFile } = await import('../../../lib/file-storage');
+          const deleted = await deleteFile(media.filePath);
+          if (!deleted) {
+            console.warn(`File ${media.filePath} may not have existed or was already deleted`);
+          } else {
+            console.log(`Deleted file ${media.filePath} (no other media records reference it)`);
+          }
+        } else {
+          console.log(
+            `Skipping file deletion for ${media.filePath} - ${otherMediaWithSameFile.length} other media record(s) still reference it:`,
+            otherMediaWithSameFile.map((m) => `${m.title} (${m.id})`).join(', ')
+          );
+        }
+      } catch (fileError: any) {
+        // Log error but continue with database deletion
+        console.error('Error checking/deleting file from disk:', fileError);
+        // Don't fail the entire operation if file deletion fails
+        // (file might already be deleted or not exist)
+      }
+    } else {
+      // If no filePath, this might be an external URL (Supabase or other)
+      // Log for reference but don't fail
+      console.log(`Media ${id} has no filePath, skipping file deletion (may be external URL)`);
+    }
+
+    // Delete media record from database
+    // FileUsage records will be automatically deleted due to onDelete: Cascade
     await prisma.media.delete({
       where: { id },
     });
+
+    // After deleting, check if the file still exists and if there are any orphaned records
+    // If the file was deleted and there are other records with the same filePath, delete them too
+    if (media.filePath) {
+      try {
+        const { fileExists } = await import('../../../lib/file-storage');
+        const fileStillExists = await fileExists(media.filePath);
+        
+        if (!fileStillExists) {
+          // File doesn't exist - find and delete any other records with this filePath
+          const orphanedRecords = await prisma.media.findMany({
+            where: {
+              filePath: media.filePath,
+            },
+            select: {
+              id: true,
+              title: true,
+            },
+          });
+
+          if (orphanedRecords.length > 0) {
+            const orphanedIds = orphanedRecords.map((r) => r.id);
+            await prisma.media.deleteMany({
+              where: { id: { in: orphanedIds } },
+            });
+            console.log(
+              `[CLEANUP] Deleted ${orphanedRecords.length} orphaned record(s) with missing file: ${media.filePath}`
+            );
+          }
+        }
+      } catch (cleanupError) {
+        // Non-critical - just log
+        console.warn('Error cleaning up orphaned records after deletion:', cleanupError);
+      }
+    }
+
     return true;
   } catch (error) {
     console.error('Error deleting media:', error);
@@ -840,9 +1175,22 @@ export async function rejectComment(id: string): Promise<Comment | null> {
  * Create a new staff member
  */
 export async function createStaff(data: CreateStaffInput): Promise<Staff> {
-  return await prisma.staff.create({
+  const staff = await prisma.staff.create({
     data,
   });
+
+  // Track file usage if image is provided
+  if (staff.image) {
+    try {
+      const { trackFileUsageByUrl } = await import('../../../lib/file-usage');
+      await trackFileUsageByUrl(staff.image, 'STAFF', staff.id, 'image');
+    } catch (error) {
+      // Non-critical - continue even if tracking fails
+      console.warn('Failed to track file usage for staff image:', error);
+    }
+  }
+
+  return staff;
 }
 
 /**
@@ -850,10 +1198,31 @@ export async function createStaff(data: CreateStaffInput): Promise<Staff> {
  */
 export async function updateStaff(id: string, data: UpdateStaffInput): Promise<Staff | null> {
   try {
-    return await prisma.staff.update({
+    // Get existing staff to check for image changes
+    const existing = await prisma.staff.findUnique({
+      where: { id },
+      select: { image: true },
+    });
+
+    const staff = await prisma.staff.update({
       where: { id },
       data,
     });
+
+    // Track file usage if image changed
+    if (data.image !== undefined && data.image !== existing?.image) {
+      try {
+        const { updateFileUsageOnChange } = await import('../../../lib/file-usage');
+        const oldUrl = existing?.image || '';
+        const newUrl = data.image || '';
+        await updateFileUsageOnChange(oldUrl, newUrl, 'STAFF', id, 'image');
+      } catch (error) {
+        // Non-critical - continue even if tracking fails
+        console.warn('Failed to track file usage for staff image update:', error);
+      }
+    }
+
+    return staff;
   } catch (error) {
     console.error('Error updating staff:', error);
     return null;
@@ -949,12 +1318,25 @@ export async function createLeague(data: CreateLeagueInput): Promise<League> {
     counter++;
   }
 
-  return await prisma.league.create({
+  const league = await prisma.league.create({
     data: {
       ...data,
       slug: uniqueSlug,
     },
   });
+
+  // Track file usage if logo is provided
+  if (league.logo) {
+    try {
+      const { trackFileUsageByUrl } = await import('../../../lib/file-usage');
+      await trackFileUsageByUrl(league.logo, 'LEAGUE', league.id, 'logo');
+    } catch (error) {
+      // Non-critical - continue even if tracking fails
+      console.warn('Failed to track file usage for league logo:', error);
+    }
+  }
+
+  return league;
 }
 
 /**
@@ -987,10 +1369,31 @@ export async function updateLeague(id: string, data: UpdateLeagueInput): Promise
       }
     }
 
-    return await prisma.league.update({
+    // Get existing league to check for logo changes
+    const existing = await prisma.league.findUnique({
+      where: { id },
+      select: { logo: true },
+    });
+
+    const league = await prisma.league.update({
       where: { id },
       data,
     });
+
+    // Track file usage if logo changed
+    if (data.logo !== undefined && data.logo !== existing?.logo) {
+      try {
+        const { updateFileUsageOnChange } = await import('../../../lib/file-usage');
+        const oldUrl = existing?.logo || '';
+        const newUrl = data.logo || '';
+        await updateFileUsageOnChange(oldUrl, newUrl, 'LEAGUE', id, 'logo');
+      } catch (error) {
+        // Non-critical - continue even if tracking fails
+        console.warn('Failed to track file usage for league logo update:', error);
+      }
+    }
+
+    return league;
   } catch (error) {
     console.error('Error updating league:', error);
     return null;
@@ -1463,6 +1866,95 @@ export async function deleteMatchEvent(id: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error deleting match event:', error);
+    return false;
+  }
+}
+
+/**
+ * Create a new folder
+ */
+export async function createFolder(data: CreateFolderInput, createdBy?: string): Promise<Folder> {
+  const { name, description, isPrivate = false } = data;
+  
+  // Sanitize folder name
+  const sanitizedName = name
+    .replace(/\.\./g, '')
+    .replace(/[^a-zA-Z0-9\-_/]/g, '')
+    .replace(/\/+/g, '/')
+    .replace(/^\/|\/$/g, '');
+  
+  // Generate path
+  const path = `${isPrivate ? 'private' : 'public'}/${sanitizedName}`;
+  
+  return await prisma.folder.create({
+    data: {
+      name: sanitizedName,
+      path,
+      description,
+      isPrivate,
+      createdBy: createdBy || null,
+    },
+  });
+}
+
+/**
+ * Update an existing folder
+ */
+export async function updateFolder(id: string, data: UpdateFolderInput): Promise<Folder | null> {
+  try {
+    const existing = await prisma.folder.findUnique({ where: { id } });
+    if (!existing) {
+      return null;
+    }
+
+    const updateData: any = {};
+    
+    if (data.name !== undefined) {
+      // Sanitize folder name
+      const sanitizedName = data.name
+        .replace(/\.\./g, '')
+        .replace(/[^a-zA-Z0-9\-_/]/g, '')
+        .replace(/\/+/g, '/')
+        .replace(/^\/|\/$/g, '');
+      updateData.name = sanitizedName;
+    }
+    
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    
+    if (data.isPrivate !== undefined) {
+      updateData.isPrivate = data.isPrivate;
+      // Update path to reflect privacy change
+      const folderName = updateData.name || existing.name;
+      updateData.path = `${data.isPrivate ? 'private' : 'public'}/${folderName}`;
+    } else if (updateData.name) {
+      // If name changed but privacy didn't, update path with existing privacy
+      updateData.path = `${existing.isPrivate ? 'private' : 'public'}/${updateData.name}`;
+    }
+
+    return await prisma.folder.update({
+      where: { id },
+      data: updateData,
+    });
+  } catch (error) {
+    console.error('Error updating folder:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a folder
+ * Note: This will set folderId to null on all media in this folder (onDelete: SetNull)
+ */
+export async function deleteFolder(id: string): Promise<boolean> {
+  try {
+    await prisma.folder.delete({
+      where: { id },
+    });
+    return true;
+  } catch (error) {
+    console.error('Error deleting folder:', error);
     return false;
   }
 }
