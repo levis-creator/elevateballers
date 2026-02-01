@@ -17,10 +17,13 @@ import type {
   Comment,
   League,
   Season,
+  Folder,
+  FileUsage,
   UserRole,
   NewsCategory,
   MatchStatus,
   MediaType,
+  FileUsageEntityType,
   StaffRole,
   MatchPlayer,
   MatchEvent,
@@ -42,10 +45,13 @@ export type {
   Comment,
   League,
   Season,
+  Folder,
+  FileUsage,
   UserRole,
   NewsCategory,
   MatchStatus,
   MediaType,
+  FileUsageEntityType,
   StaffRole,
   MatchPlayer,
   MatchEvent,
@@ -271,9 +277,19 @@ export type CreateMediaInput = {
   type: MediaType;
   thumbnail?: string;
   tags?: string[];
+  folderId?: string;
+  featured?: boolean;
 };
 
 export type UpdateMediaInput = Partial<CreateMediaInput>;
+
+export type CreateFolderInput = {
+  name: string;
+  description?: string;
+  isPrivate?: boolean;
+};
+
+export type UpdateFolderInput = Partial<CreateFolderInput>;
 
 // Category mapping for frontend (matches existing NewsFilter type)
 export const categoryMap: Record<string, NewsCategory> = {
@@ -355,3 +371,33 @@ export type CreateMatchEventInput = {
 };
 
 export type UpdateMatchEventInput = Partial<Omit<CreateMatchEventInput, 'matchId' | 'eventType'>>;
+
+// Extended Media types with relations
+export type MediaWithFolder = Media & {
+  folder: Pick<Folder, 'id' | 'name' | 'isPrivate'> | null;
+};
+
+export type MediaWithFolderAndUploader = Media & {
+  folder: Pick<Folder, 'id' | 'name' | 'isPrivate'> | null;
+  uploader: Pick<User, 'id' | 'name' | 'email'> | null;
+};
+
+export type MediaWithFolderAndUsage = Media & {
+  folder: Pick<Folder, 'id' | 'name' | 'isPrivate'> | null;
+  uploader: Pick<User, 'id' | 'name' | 'email'> | null;
+  fileUsages: FileUsage[];
+};
+
+// Extended Folder types with relations
+export type FolderWithMediaCount = Folder & {
+  _count: {
+    media: number;
+  };
+};
+
+export type FolderWithMedia = Folder & {
+  media: Media[];
+  _count: {
+    media: number;
+  };
+};

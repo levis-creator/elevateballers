@@ -6,6 +6,7 @@ import { getLeagueName, getLeagueId } from '../../matches/lib/league-helpers';
 import { getSeasonId } from '../../matches/lib/season-helpers';
 import MatchPlayersManager from './MatchPlayersManager';
 import MatchEventsManager from './MatchEventsManager';
+import MatchImagesManager from './MatchImagesManager';
 import TeamSelect from './TeamSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -833,6 +834,9 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
               team1Id={formData.team1Id || null}
               team2Id={formData.team2Id || null}
             />
+
+            <Separator className="my-6" />
+            <MatchImagesManager matchId={matchId} />
           </div>
         </>
       )}

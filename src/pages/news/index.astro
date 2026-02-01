@@ -12,6 +12,8 @@ import NewsSidebar from '../../features/news/components/NewsSidebar.astro';
 import NewsBreadcrumbs from '../../features/news/components/NewsBreadcrumbs.astro';
 import PageLoader from '../../components/PageLoader';
 import ContentLoader from '../../components/ContentLoader';
+import { Image } from 'astro:assets';
+import { getDisplayImageUrl } from '../../lib/asset-url';
 
 // Get query parameters
 const { category, archive, s: searchQuery } = Astro.url.searchParams;
@@ -186,13 +188,12 @@ const pageUrl = `${Astro.url.origin}/news/`;
                           <a href={`/news/${article.slug}`} title={article.title} class="stm-image-link">
                             <div class="image">
                               <div class="stm-plus"></div>
-                              <img 
-                                width="1170" 
-                                height="650" 
-                                src={article.image} 
+                              <Image 
+                                width={1170} 
+                                height={650} 
+                                src={getDisplayImageUrl(article.image, Astro.url.origin) || article.image} 
                                 class="img-responsive wp-post-image" 
-                                alt={article.title} 
-                                decoding="async"
+                                alt={article.title}
                               />
                             </div>
                           </a>

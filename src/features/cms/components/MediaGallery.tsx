@@ -1,46 +1,125 @@
-import { useState, useEffect, type ComponentType } from 'react';
-import type { Media, MediaType } from '../types';
+import { useState, useEffect, useCallback, useRef, type ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast';
+import FolderBrowser from './FolderBrowser';
+import MediaPreviewPanel from './MediaPreviewPanel';
+import MoveMediaDialog from './MoveMediaDialog';
+import RenameMediaDialog from './RenameMediaDialog';
+import MediaToolbar from './MediaToolbar';
+import AdvancedFilters from './AdvancedFilters';
+import UploadQueue from './UploadQueue';
+import SelectionToolbar from './SelectionToolbar';
+import MediaGrid from './MediaGrid';
+import MediaList from './MediaList';
+import { useMediaGalleryStore } from '../stores/mediaGalleryStore';
+import { useMediaGallery } from '../hooks/useMediaGallery';
+import { useMediaOperations } from '../hooks/useMediaOperations';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import type { MediaWithFolderAndUploader } from '../types';
 
 export default function MediaGallery() {
-  const [mediaItems, setMediaItems] = useState<Media[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const { addToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { searchInputRef } = useKeyboardShortcuts();
+
+  // Zustand store state
+  const {
+    loading,
+    error,
+    viewMode,
+    selectedItems,
+    lastSelectedIndex,
+    isDragging,
+    previewMedia,
+    advancedFiltersOpen,
+    moveDialogOpen,
+    renameDialogOpen,
+    renameMediaId,
+    renameMediaTitle,
+    bulkRenameDialogOpen,
+    bulkTagDialogOpen,
+    selectedFolderId,
+    sortField,
+    sortDirection,
+    filterType,
+    setLoading,
+    setError,
+    setSelectedItems,
+    setLastSelectedIndex,
+    setPreviewMedia,
+    setMoveDialogOpen,
+    setRenameDialogOpen,
+    setRenameMediaId,
+    setRenameMediaTitle,
+    setBulkRenameDialogOpen,
+    setBulkTagDialogOpen,
+    setSortField,
+    setSortDirection,
+    setIsDragging,
+    setSelectedFolderId,
+    mediaItems,
+  } = useMediaGalleryStore();
+
+  // Custom hooks
+  const { fetchMedia, filteredMedia } = useMediaGallery();
+  const {
+    handleDelete,
+    handleBulkDelete,
+    handleBulkMove,
+    handleRename,
+    handleDuplicate,
+    handleBulkDuplicate,
+    handleBulkRename,
+    handleBulkTag,
+    handleFilesUpload,
+    handleCopyUrl,
+    handleCopyFilePath,
+    handleDownload,
+    handleExportZip,
+    handleToggleFeatured,
+    handleBulkToggleFeatured,
+    handleBulkDownload,
+  } = useMediaOperations();
+
+  const {
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleDrop: handleDropBase,
+    handleDragStart,
+    handleDragEnd,
+    handleFolderDragOver,
+    handleFolderDrop: handleFolderDropBase,
+  } = useDragAndDrop();
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      await handleDropBase(e, fetchMedia, handleFilesUpload);
+    },
+    [handleDropBase, fetchMedia, handleFilesUpload]
+  );
+
+  const handleFolderDrop = useCallback(
+    async (e: React.DragEvent, folderId: string) => {
+      await handleFolderDropBase(e, folderId, handleBulkMove);
+    },
+    [handleFolderDropBase, handleBulkMove]
+  );
+
+  // Icons loading
   const [icons, setIcons] = useState<{
     Plus?: ComponentType<any>;
-    Search?: ComponentType<any>;
-    List?: ComponentType<any>;
-    Grid?: ComponentType<any>;
-    Edit?: ComponentType<any>;
-    Trash2?: ComponentType<any>;
+    Upload?: ComponentType<any>;
     Images?: ComponentType<any>;
-    Image?: ComponentType<any>;
-    Video?: ComponentType<any>;
-    Music?: ComponentType<any>;
     AlertCircle?: ComponentType<any>;
-    ExternalLink?: ComponentType<any>;
     RefreshCw?: ComponentType<any>;
   }>({});
 
@@ -48,97 +127,233 @@ export default function MediaGallery() {
     import('lucide-react').then((mod) => {
       setIcons({
         Plus: mod.Plus,
-        Search: mod.Search,
-        List: mod.List,
-        Grid: mod.Grid,
-        Edit: mod.Edit,
-        Trash2: mod.Trash2,
+        Upload: mod.Upload,
         Images: mod.Images,
-        Image: mod.Image,
-        Video: mod.Video,
-        Music: mod.Music,
         AlertCircle: mod.AlertCircle,
-        ExternalLink: mod.ExternalLink,
         RefreshCw: mod.RefreshCw,
       });
     });
   }, []);
 
+  // Fetch media on mount and when dependencies change
   useEffect(() => {
     fetchMedia();
-  }, [filterType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterType, selectedFolderId]); // Only depend on filterType and selectedFolderId, not fetchMedia itself
 
-  const fetchMedia = async () => {
-    try {
-      setLoading(true);
-      const type = filterType === 'all' ? undefined : filterType.toUpperCase();
-      const response = await fetch(`/api/media${type ? `?type=${type}` : ''}`);
-      if (!response.ok) throw new Error('Failed to fetch media');
-      const data = await response.json();
-      setMediaItems(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load media');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this media item?\n\nThis action cannot be undone.'
-    );
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(`/api/media/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete media');
-      
-      setError('');
-      fetchMedia();
-    } catch (err: any) {
-      setError('Error deleting media: ' + err.message);
-      setTimeout(() => setError(''), 5000);
-    }
-  };
-
-  const getMediaTypeColor = (type: MediaType) => {
-    const colors: Record<MediaType, string> = {
-      IMAGE: 'bg-primary',
-      VIDEO: 'bg-red-500',
-      AUDIO: 'bg-green-500',
-    };
-    return colors[type] || 'bg-slate-500';
-  };
-
-  const getMediaIcon = (type: MediaType) => {
-    if (type === 'IMAGE') return icons.Image;
-    if (type === 'VIDEO') return icons.Video;
-    if (type === 'AUDIO') return icons.Music;
-    return null;
-  };
-
-  const filteredMedia = mediaItems.filter((item) =>
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.tags && item.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+  // Handle item selection
+  const handleItemClick = useCallback(
+    (e: React.MouseEvent, itemId: string, index: number) => {
+      if (e.shiftKey && lastSelectedIndex !== null) {
+        // Range selection
+        const start = Math.min(lastSelectedIndex, index);
+        const end = Math.max(lastSelectedIndex, index);
+        const newSelection = new Set(selectedItems);
+        filteredMedia.slice(start, end + 1).forEach((item) => {
+          if (item.id) newSelection.add(item.id);
+        });
+        setSelectedItems(newSelection);
+      } else if (e.ctrlKey || e.metaKey) {
+        // Multi-select
+        const newSelection = new Set(selectedItems);
+        if (newSelection.has(itemId)) {
+          newSelection.delete(itemId);
+        } else {
+          newSelection.add(itemId);
+        }
+        setSelectedItems(newSelection);
+        setLastSelectedIndex(index);
+      } else {
+        // Single select or open preview
+        if (e.target instanceof HTMLElement && (e.target.closest('a') || e.target.closest('button'))) {
+          return; // Don't select if clicking on a link or button
+        }
+        setSelectedItems(new Set([itemId]));
+        setLastSelectedIndex(index);
+        const foundMedia = mediaItems.find((m) => m.id === itemId);
+        setPreviewMedia(foundMedia ? (foundMedia as MediaWithFolderAndUploader) : null);
+      }
+    },
+    [selectedItems, lastSelectedIndex, filteredMedia, mediaItems, setSelectedItems, setLastSelectedIndex, setPreviewMedia]
   );
 
+  // Select all
+  const handleSelectAll = useCallback(() => {
+    if (selectedItems.size === filteredMedia.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredMedia.map((item) => item.id!).filter(Boolean)));
+    }
+  }, [selectedItems.size, filteredMedia, setSelectedItems]);
+
+  // Toggle select
+  const handleToggleSelect = useCallback(
+    (id: string) => {
+      const newSelection = new Set(selectedItems);
+      if (newSelection.has(id)) {
+        newSelection.delete(id);
+      } else {
+        newSelection.add(id);
+      }
+      setSelectedItems(newSelection);
+    },
+    [selectedItems, setSelectedItems]
+  );
+
+  // Handle file selection
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const files = Array.from(e.target.files || []).filter((file) => {
+        if (!file.type.startsWith('image/')) {
+          addToast({
+            description: `File ${file.name} is not an image. Only images are supported.`,
+            variant: 'error',
+          });
+          return false;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          addToast({
+            description: `File ${file.name} is too large. Maximum size is 10MB.`,
+            variant: 'error',
+          });
+          return false;
+        }
+        return true;
+      });
+      if (files.length > 0) {
+        await handleFilesUpload(files, fetchMedia);
+      }
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [handleFilesUpload, fetchMedia, addToast]
+  );
+
+
+  // Handle sort
+  const handleSort = useCallback(
+    (field: 'title' | 'type' | 'size' | 'createdAt' | 'featured') => {
+      if (sortField === field) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortField(field);
+        setSortDirection('asc');
+      }
+    },
+    [sortField, sortDirection, setSortField, setSortDirection]
+  );
+
+  // Handle move click
+  const handleMoveClick = useCallback(
+    (mediaId?: string) => {
+      if (mediaId) {
+        setSelectedItems(new Set([mediaId]));
+      }
+      setMoveDialogOpen(true);
+    },
+    [setSelectedItems, setMoveDialogOpen]
+  );
+
+  // Handle rename click
+  const handleRenameClick = useCallback(
+    (mediaId: string) => {
+      const media = mediaItems.find((m) => m.id === mediaId);
+      if (media) {
+        setRenameMediaId(mediaId);
+        setRenameMediaTitle(media.title);
+        setRenameDialogOpen(true);
+      }
+    },
+    [mediaItems, setRenameMediaId, setRenameMediaTitle, setRenameDialogOpen]
+  );
+
+  // Handle preview
+  const handlePreview = useCallback(
+    (id: string) => {
+      const media = mediaItems.find((m) => m.id === id);
+      if (media) setPreviewMedia(media as MediaWithFolderAndUploader);
+    },
+    [mediaItems, setPreviewMedia]
+  );
+
+  // Keyboard shortcuts (Ctrl+A, Ctrl+C, etc.)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl/Cmd + A: Select all
+      if (ctrlOrCmd && e.key === 'a') {
+        e.preventDefault();
+        handleSelectAll();
+      }
+      // Ctrl/Cmd + C: Copy selected
+      else if (ctrlOrCmd && e.key === 'c') {
+        e.preventDefault();
+        useMediaGalleryStore.getState().setClipboardItems(new Set(selectedItems));
+        useMediaGalleryStore.getState().setClipboardMode('copy');
+      }
+      // Ctrl/Cmd + X: Cut selected
+      else if (ctrlOrCmd && e.key === 'x') {
+        e.preventDefault();
+        useMediaGalleryStore.getState().setClipboardItems(new Set(selectedItems));
+        useMediaGalleryStore.getState().setClipboardMode('cut');
+      }
+      // Ctrl/Cmd + V: Paste (move/copy)
+      else if (ctrlOrCmd && e.key === 'v') {
+        const state = useMediaGalleryStore.getState();
+        if (state.clipboardItems.size > 0) {
+          e.preventDefault();
+          if (state.clipboardMode === 'cut') {
+            handleBulkMove(Array.from(state.clipboardItems), selectedFolderId);
+            state.setClipboardItems(new Set());
+            state.setClipboardMode(null);
+          } else if (state.clipboardMode === 'copy') {
+            handleBulkDuplicate(Array.from(state.clipboardItems));
+          }
+        }
+      }
+      // Delete: Delete selected
+      else if (e.key === 'Delete' && selectedItems.size > 0) {
+        e.preventDefault();
+        handleBulkDelete();
+      }
+      // F2: Rename selected (first item)
+      else if (e.key === 'F2' && selectedItems.size === 1) {
+        e.preventDefault();
+        const firstId = Array.from(selectedItems)[0];
+        handleRenameClick(firstId);
+      }
+      // Ctrl/Cmd + D: Duplicate selected
+      else if (ctrlOrCmd && e.key === 'd' && selectedItems.size > 0) {
+        e.preventDefault();
+        handleBulkDuplicate(Array.from(selectedItems));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItems, selectedFolderId, handleSelectAll, handleBulkMove, handleBulkDuplicate, handleBulkDelete, handleRenameClick]);
+
   const PlusIcon = icons.Plus;
-  const SearchIcon = icons.Search;
-  const ListIcon = icons.List;
-  const GridIcon = icons.Grid;
-  const EditIcon = icons.Edit;
-  const Trash2Icon = icons.Trash2;
+  const UploadIcon = icons.Upload;
   const ImagesIcon = icons.Images;
-  const ImageIcon = icons.Image;
-  const VideoIcon = icons.Video;
-  const MusicIcon = icons.Music;
-  const ExternalLinkIcon = icons.ExternalLink;
   const AlertCircleIcon = icons.AlertCircle;
   const RefreshCwIcon = icons.RefreshCw;
 
+  // Loading state
   if (loading) {
     return (
       <div className="space-y-4">
@@ -149,6 +364,7 @@ export default function MediaGallery() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Card className="border-destructive">
@@ -170,304 +386,310 @@ export default function MediaGallery() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div
+      className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 relative"
+      role="main"
+      aria-label="Media Gallery"
+    >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-6 border-b">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-6 border-b" role="banner">
         <div>
           <h1 className="text-3xl font-heading font-semibold mb-2 text-foreground">Media Gallery</h1>
           <p className="text-muted-foreground">Manage images, videos, and audio files</p>
         </div>
-        <Button asChild>
-          <a href="/admin/media/new" data-astro-prefetch>
-            {PlusIcon ? <PlusIcon size={18} className="mr-2" /> : null}
-            Add Media
-          </a>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }}
+          >
+            {UploadIcon ? <UploadIcon size={18} className="mr-2" /> : null}
+            Upload Files
+          </Button>
+          <Button asChild>
+            <a href={`/admin/media/new${selectedFolderId ? `?folderId=${selectedFolderId}` : ''}`} data-astro-prefetch>
+              {PlusIcon ? <PlusIcon size={18} className="mr-2" /> : null}
+              Add Media
+            </a>
+          </Button>
+        </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-        <div className="relative flex-1">
-          <label htmlFor="media-search" className="sr-only">Search media</label>
-          {SearchIcon ? (
-            <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          ) : null}
-          <Input
-            id="media-search"
-            type="text"
-            placeholder="Search media..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-            aria-label="Search media by title or tags"
+      {/* Selection toolbar */}
+      <SelectionToolbar 
+        filteredMediaCount={filteredMedia.length} 
+        filteredMedia={filteredMedia}
+        onSelectAll={handleSelectAll} 
+      />
+
+      {/* Upload Queue */}
+      <UploadQueue onRefresh={fetchMedia} />
+
+      {/* Main Content with Folder Browser */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* Folder Browser Sidebar */}
+        <div className="lg:col-span-1">
+          <FolderBrowser
+            selectedFolderId={selectedFolderId}
+            onFolderSelect={setSelectedFolderId}
+            showCreateButton={true}
+            onFolderDragOver={handleFolderDragOver}
+            onFolderDrop={handleFolderDrop}
+            dragOverFolderId={useMediaGalleryStore.getState().dragOverFolderId}
           />
         </div>
-        <div className="flex gap-2 bg-background p-1 rounded-lg border">
-          <Button
-            variant={filterType === 'all' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('all')}
-            aria-label="Show all media"
-            aria-pressed={filterType === 'all'}
-          >
-            All
-          </Button>
-          <Button
-            variant={filterType === 'image' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('image')}
-            aria-label="Filter images"
-            aria-pressed={filterType === 'image'}
-          >
-            {ImageIcon ? <ImageIcon size={16} className="mr-2" /> : null}
-            Images
-          </Button>
-          <Button
-            variant={filterType === 'video' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('video')}
-            aria-label="Filter videos"
-            aria-pressed={filterType === 'video'}
-          >
-            {VideoIcon ? <VideoIcon size={16} className="mr-2" /> : null}
-            Videos
-          </Button>
-          <Button
-            variant={filterType === 'audio' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('audio')}
-            aria-label="Filter audio"
-            aria-pressed={filterType === 'audio'}
-          >
-            {MusicIcon ? <MusicIcon size={16} className="mr-2" /> : null}
-            Audio
-          </Button>
-        </div>
-        <div className="flex gap-2 bg-background p-1 rounded-lg border">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-            title="Grid View"
-            aria-label="Switch to grid view"
-            aria-pressed={viewMode === 'grid'}
-          >
-            {GridIcon ? <GridIcon size={16} /> : null}
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => setViewMode('list')}
-            title="List View"
-            aria-label="Switch to list view"
-            aria-pressed={viewMode === 'list'}
-          >
-            {ListIcon ? <ListIcon size={16} /> : null}
-          </Button>
+
+        {/* Media Gallery Content */}
+        <div
+          className={cn(
+            'lg:col-span-3 space-y-4 md:space-y-6 relative transition-all',
+            isDragging && 'ring-2 ring-primary ring-offset-2 rounded-lg p-2 md:p-4 bg-primary/5'
+          )}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          role="region"
+          aria-label="Media gallery content"
+        >
+          {/* Drag overlay */}
+          {isDragging && (
+            <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 flex items-center justify-center pointer-events-none animate-in fade-in-0 duration-200">
+              <div className="text-center animate-in zoom-in-95 duration-200">
+                {UploadIcon ? (
+                  <UploadIcon size={48} className="mx-auto mb-2 text-primary animate-bounce" />
+                ) : null}
+                <p className="text-lg font-semibold text-primary">Drop files here to upload</p>
+              </div>
+            </div>
+          )}
+
+          {/* Toolbar */}
+          <MediaToolbar searchInputRef={searchInputRef} />
+
+          {/* Advanced Filters Panel */}
+          {advancedFiltersOpen && <AdvancedFilters />}
+
+          {/* Empty State */}
+          {filteredMedia.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="p-12 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="text-muted-foreground">{ImagesIcon ? <ImagesIcon size={64} /> : null}</div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">
+                      {useMediaGalleryStore.getState().searchTerm || useMediaGalleryStore.getState().filterType !== 'all'
+                        ? 'No media found'
+                        : 'No media yet'}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {useMediaGalleryStore.getState().searchTerm ||
+                      useMediaGalleryStore.getState().filterType !== 'all'
+                        ? 'Try adjusting your search or filters'
+                        : 'Add your first media item to get started'}
+                    </p>
+                  </div>
+                  {!useMediaGalleryStore.getState().searchTerm &&
+                    useMediaGalleryStore.getState().filterType === 'all' && (
+                      <Button asChild>
+                        <a
+                          href={`/admin/media/new${selectedFolderId ? `?folderId=${selectedFolderId}` : ''}`}
+                          data-astro-prefetch
+                        >
+                          {PlusIcon ? <PlusIcon size={18} className="mr-2" /> : null}
+                          Add Media
+                        </a>
+                      </Button>
+                    )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : viewMode === 'grid' ? (
+            /* Grid View */
+            <MediaGrid
+              items={filteredMedia}
+              onItemClick={handleItemClick}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+              onMove={handleMoveClick}
+              onRename={handleRenameClick}
+              onPreview={handlePreview}
+              onDownload={handleDownload}
+              onCopyUrl={handleCopyUrl}
+              onCopyPath={handleCopyFilePath}
+            />
+          ) : (
+            /* List View */
+            <MediaList
+              items={filteredMedia}
+              onItemClick={handleItemClick}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onSelectAll={handleSelectAll}
+              onToggleSelect={handleToggleSelect}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+              onMove={handleMoveClick}
+              onRename={handleRenameClick}
+              onPreview={handlePreview}
+              onDownload={handleDownload}
+              onCopyUrl={handleCopyUrl}
+              onCopyPath={handleCopyFilePath}
+              onSort={handleSort}
+              onToggleFeatured={handleToggleFeatured}
+            />
+          )}
         </div>
       </div>
 
-      {/* Empty State */}
-      {filteredMedia.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="p-12 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="text-muted-foreground">
-                {ImagesIcon ? <ImagesIcon size={64} /> : null}
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2">
-                  {searchTerm || filterType !== 'all' ? 'No media found' : 'No media yet'}
-                </h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || filterType !== 'all'
-                    ? 'Try adjusting your search or filters'
-                    : 'Add your first media item to get started'}
-                </p>
-              </div>
-              {!searchTerm && filterType === 'all' && (
-                <Button asChild>
-                  <a href="/admin/media/new" data-astro-prefetch>
-                    {PlusIcon ? <PlusIcon size={18} className="mr-2" /> : null}
-                    Add Media
-                  </a>
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : viewMode === 'grid' ? (
-        /* Grid View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredMedia.map((item) => {
-            const MediaIcon = getMediaIcon(item.type);
-            return (
-              <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative w-full h-48 bg-muted overflow-hidden">
-                  {item.type === 'IMAGE' ? (
-                    <img
-                      src={item.url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className={cn('w-full h-full flex items-center justify-center', getMediaTypeColor(item.type), 'bg-opacity-20')}>
-                      {MediaIcon ? <MediaIcon size={48} className="text-primary" /> : null}
-                    </div>
-                  )}
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'absolute top-2 right-2 text-white border-0 flex items-center gap-1.5 uppercase text-xs font-semibold',
-                      getMediaTypeColor(item.type)
-                    )}
-                  >
-                    {MediaIcon ? <MediaIcon size={14} /> : null}
-                    {item.type}
-                  </Badge>
-                  {item.thumbnail && item.type !== 'IMAGE' && (
-                    <img
-                      src={item.thumbnail}
-                      alt={item.title}
-                      className="absolute inset-0 w-full h-full object-cover opacity-30"
-                    />
-                  )}
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold mb-2 text-foreground line-clamp-2">{item.title}</h3>
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {item.tags.slice(0, 3).map((tag: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {item.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{item.tags.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex justify-end gap-2 pt-3 border-t">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                      <a href={item.url} target="_blank" rel="noopener noreferrer" title="View">
-                        {ExternalLinkIcon ? <ExternalLinkIcon size={16} /> : null}
-                      </a>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                      <a href={`/admin/media/${item.id}`} data-astro-prefetch title="Edit">
-                        {EditIcon ? <EditIcon size={16} /> : null}
-                      </a>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(item.id!)}
-                      title="Delete"
-                    >
-                      {Trash2Icon ? <Trash2Icon size={16} /> : null}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        /* List View */
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Preview</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Tags</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMedia.map((item) => {
-                const MediaIcon = getMediaIcon(item.type);
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
-                        {item.type === 'IMAGE' ? (
-                          <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className={cn('w-full h-full flex items-center justify-center', getMediaTypeColor(item.type), 'bg-opacity-20')}>
-                            {MediaIcon ? <MediaIcon size={24} className="text-primary" /> : null}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <strong className="font-semibold text-foreground">{item.title}</strong>
-                        <small className="text-xs text-muted-foreground font-mono">{item.url}</small>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-white border-0 flex items-center gap-1.5 uppercase text-xs font-semibold w-fit',
-                          getMediaTypeColor(item.type)
-                        )}
-                      >
-                        {MediaIcon ? <MediaIcon size={14} /> : null}
-                        {item.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {item.tags && item.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {item.tags.slice(0, 3).map((tag: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
-                          <a href={item.url} target="_blank" rel="noopener noreferrer" title="View media">
-                            {ExternalLinkIcon ? <ExternalLinkIcon size={16} /> : null}
-                          </a>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
-                          <a href={`/admin/media/${item.id}`} data-astro-prefetch title="Edit media">
-                            {EditIcon ? <EditIcon size={16} /> : null}
-                          </a>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(item.id!)}
-                          title="Delete media"
-                        >
-                          {Trash2Icon ? <Trash2Icon size={16} /> : null}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+      {/* Preview Panel */}
+      {previewMedia && (
+        <MediaPreviewPanel
+          media={previewMedia}
+          onClose={() => setPreviewMedia(null)}
+          onEdit={(id) => {
+            window.location.href = `/admin/media/${id}`;
+          }}
+          onDelete={(id) => {
+            handleDelete(id);
+            setPreviewMedia(null);
+          }}
+        />
       )}
+
+      {/* Move Dialog */}
+      <MoveMediaDialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+        mediaIds={Array.from(selectedItems)}
+        onMove={handleBulkMove}
+      />
+
+      {/* Rename Dialog */}
+      {renameMediaId && (
+        <RenameMediaDialog
+          open={renameDialogOpen}
+          onOpenChange={setRenameDialogOpen}
+          mediaId={renameMediaId}
+          currentTitle={renameMediaTitle}
+          onRename={handleRename}
+        />
+      )}
+
+      {/* Bulk Rename Dialog */}
+      <Dialog open={bulkRenameDialogOpen} onOpenChange={setBulkRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Bulk Rename {selectedItems.size} Item{selectedItems.size !== 1 ? 's' : ''}
+            </DialogTitle>
+            <DialogDescription>
+              Use patterns: {'{index}'} for item number, {'{name}'} for original name, {'{original}'} for original name
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rename-pattern">Rename Pattern</Label>
+              <Input
+                id="rename-pattern"
+                placeholder="e.g., Image {index} or {name} - Copy"
+                defaultValue="{name}"
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                  if (e.key === 'Enter') {
+                    const input = e.target as HTMLInputElement;
+                    handleBulkRename(input.value);
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Examples: &quot;Photo {'{index}'}&quot;, &quot;{'{name}'} - Copy&quot;, &quot;Image {'{index}'} -{' '}
+                {'{original}'}&quot;
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkRenameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const input = document.getElementById('rename-pattern') as HTMLInputElement;
+                if (input?.value) {
+                  handleBulkRename(input.value);
+                }
+              }}
+            >
+              Rename All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Tag Dialog */}
+      <Dialog open={bulkTagDialogOpen} onOpenChange={setBulkTagDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Bulk Tag {selectedItems.size} Item{selectedItems.size !== 1 ? 's' : ''}
+            </DialogTitle>
+            <DialogDescription>Enter tags separated by commas. This will replace existing tags.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-tags">Tags</Label>
+              <Textarea
+                id="bulk-tags"
+                placeholder="e.g., sports, basketball, team"
+                rows={3}
+                onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    const textarea = e.target as HTMLTextAreaElement;
+                    const tags = textarea.value
+                      .split(',')
+                      .map((t) => t.trim())
+                      .filter(Boolean);
+                    handleBulkTag(tags);
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Separate tags with commas. Press Ctrl+Enter to apply.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkTagDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const textarea = document.getElementById('bulk-tags') as HTMLTextAreaElement;
+                if (textarea?.value) {
+                  const tags = textarea.value
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter(Boolean);
+                  handleBulkTag(tags);
+                }
+              }}
+            >
+              Apply Tags
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -94,7 +94,6 @@ export default function Sponsors() {
             {sponsors.map((sponsor) => (
               <div key={sponsor.id} className="stm-single-image-carousel">
                 <img
-                  loading="lazy"
                   decoding="async"
                   src={sponsor.image}
                   width={sponsor.width}

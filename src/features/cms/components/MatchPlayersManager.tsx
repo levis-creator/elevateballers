@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, X, Users, Shirt, AlertCircle, CheckSquare, Square } from 'lucide-react';
+import { Plus, X, Users, Shirt, AlertCircle, CheckSquare, Square, Loader2 } from 'lucide-react';
 
 interface MatchPlayersManagerProps {
   matchId: string;
@@ -46,6 +46,9 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
   const [deletePlayerId, setDeletePlayerId] = useState<string | null>(null);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [addingPlayers, setAddingPlayers] = useState(false);
+  // Track which players should be marked as starters when adding
+  const [playersToAdd, setPlayersToAdd] = useState<Map<string, { started: boolean }>>(new Map());
   const [formData, setFormData] = useState({
     playerId: '',
     teamId: '',
@@ -62,10 +65,10 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
   }, [matchId]);
 
   useEffect(() => {
-    if (formData.teamId) {
-      fetchPlayersForTeam(formData.teamId);
+    if (selectedTeam) {
+      fetchPlayersForTeam(selectedTeam);
     }
-  }, [formData.teamId]);
+  }, [selectedTeam]);
 
   const fetchMatchPlayers = useCallback(async () => {
     try {
@@ -111,17 +114,27 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
     }
   };
 
-  const fetchPlayersForTeam = async (teamId: string) => {
+  const fetchPlayersForTeam = useCallback(async (teamId: string) => {
     try {
       const response = await fetch(`/api/players?teamId=${teamId}`);
       if (response.ok) {
         const data = await response.json();
-        setAvailablePlayers(data);
+        // Filter out players that are already added to the match
+        const existingPlayerIds = new Set(players.map((mp) => mp.playerId));
+        const filteredPlayers = data.filter((player: Player) => !existingPlayerIds.has(player.id));
+        setAvailablePlayers(filteredPlayers);
       }
     } catch (err) {
       console.error('Failed to fetch players:', err);
     }
-  };
+  }, [players]);
+
+  // Update available players when match players change or team is selected
+  useEffect(() => {
+    if (selectedTeam) {
+      fetchPlayersForTeam(selectedTeam);
+    }
+  }, [selectedTeam, fetchPlayersForTeam]);
 
   const handleAddPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +171,89 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
       }
     } catch (err: any) {
       setError(err.message || 'Failed to add player');
+    }
+  };
+
+  const togglePlayerToAdd = (playerId: string) => {
+    setPlayersToAdd((prev) => {
+      const newMap = new Map(prev);
+      if (newMap.has(playerId)) {
+        newMap.delete(playerId);
+      } else {
+        newMap.set(playerId, { started: false });
+      }
+      return newMap;
+    });
+  };
+
+  const toggleStarterStatus = (playerId: string) => {
+    setPlayersToAdd((prev) => {
+      const newMap = new Map(prev);
+      const current = newMap.get(playerId);
+      if (current) {
+        newMap.set(playerId, { started: !current.started });
+      }
+      return newMap;
+    });
+  };
+
+  const handleBatchAddPlayers = async () => {
+    if (playersToAdd.size === 0) {
+      setError('Please select at least one player');
+      return;
+    }
+
+    if (!selectedTeam) {
+      setError('Please select a team');
+      return;
+    }
+
+    setAddingPlayers(true);
+    setError('');
+
+    try {
+      // Add all selected players in parallel
+      const addPromises = Array.from(playersToAdd.entries()).map(async ([playerId, data]) => {
+        const response = await fetch(`/api/matches/${matchId}/players`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId,
+            teamId: selectedTeam,
+            started: data.started,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to add player ${playerId}`);
+        }
+
+        return response.json();
+      });
+
+      const results = await Promise.allSettled(addPromises);
+      const failures = results.filter((r) => r.status === 'rejected');
+
+      if (failures.length > 0) {
+        const errorMessages = failures
+          .map((r) => r.status === 'rejected' && r.reason?.message)
+          .filter(Boolean)
+          .join('; ');
+        throw new Error(`Failed to add ${failures.length} player(s)${errorMessages ? `: ${errorMessages}` : ''}`);
+      }
+
+      // Clear selections and refresh
+      setPlayersToAdd(new Map());
+      setShowAddForm(false);
+      await fetchMatchPlayers();
+      if (onPlayerAdded) {
+        onPlayerAdded();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to add players');
+    } finally {
+      setAddingPlayers(false);
     }
   };
 
@@ -215,6 +311,33 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
       }
       return newSet;
     });
+  };
+
+  const handleToggleStarter = async (matchPlayerId: string, currentStarted: boolean) => {
+    setBulkUpdating(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/matches/${matchId}/players/${matchPlayerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ started: !currentStarted }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update player' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to update player`);
+      }
+
+      await fetchMatchPlayers();
+      if (onPlayerAdded) {
+        onPlayerAdded();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update player');
+    } finally {
+      setBulkUpdating(false);
+    }
   };
 
   const handleBulkStarterUpdate = async (teamId: string, started: boolean) => {
@@ -306,136 +429,162 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
       {showAddForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add Player to Match</CardTitle>
+            <CardTitle>Add Players to Match</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAddPlayer} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="teamId">
-                    Team <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.teamId}
-                    onValueChange={(value) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        teamId: value,
-                        playerId: '',
-                      }));
-                      setSelectedTeam(value);
-                    }}
-                    required
-                  >
-                    <SelectTrigger id="teamId">
-                      <SelectValue placeholder="Select a team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="playerId">
-                    Player <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.playerId}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, playerId: value }))
-                    }
-                    required
-                    disabled={!formData.teamId}
-                  >
-                    <SelectTrigger id="playerId">
-                      <SelectValue placeholder="Select a player" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availablePlayers.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.firstName} {player.lastName}
-                          {player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="position">Position</Label>
-                  <Input
-                    id="position"
-                    type="text"
-                    value={formData.position}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, position: e.target.value }))
-                    }
-                    placeholder="e.g., Forward"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="jerseyNumber">Jersey #</Label>
-                  <Input
-                    id="jerseyNumber"
-                    type="number"
-                    value={formData.jerseyNumber}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, jerseyNumber: e.target.value }))
-                    }
-                    min="0"
-                    max="99"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="minutesPlayed">Minutes</Label>
-                  <Input
-                    id="minutesPlayed"
-                    type="number"
-                    value={formData.minutesPlayed}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, minutesPlayed: e.target.value }))
-                    }
-                    min="0"
-                    max="120"
-                  />
-                </div>
-
-                <div className="space-y-2 flex items-end">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="started"
-                      checked={formData.started}
-                      onCheckedChange={(checked) =>
-                        setFormData((prev) => ({ ...prev, started: checked === true }))
-                      }
-                    />
-                    <Label htmlFor="started" className="cursor-pointer">
-                      Started
-                    </Label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit">Add Player</Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowAddForm(false)}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-team-select">
+                  Team <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={selectedTeam}
+                  onValueChange={(value) => {
+                    setSelectedTeam(value);
+                    setPlayersToAdd(new Map());
+                  }}
+                  required
                 >
-                  Cancel
-                </Button>
+                  <SelectTrigger id="add-team-select">
+                    <SelectValue placeholder="Select a team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </form>
+
+              {selectedTeam && (
+                <>
+                  <div className="flex items-center justify-between pt-2 pb-2 border-b">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const allSelected = availablePlayers.every((p) => playersToAdd.has(p.id));
+                          if (allSelected) {
+                            setPlayersToAdd(new Map());
+                          } else {
+                            const newMap = new Map();
+                            availablePlayers.forEach((p) => {
+                              newMap.set(p.id, { started: false });
+                            });
+                            setPlayersToAdd(newMap);
+                          }
+                        }}
+                        disabled={addingPlayers || availablePlayers.length === 0}
+                      >
+                        {availablePlayers.every((p) => playersToAdd.has(p.id)) &&
+                        availablePlayers.length > 0 ? (
+                          <CheckSquare className="h-4 w-4 mr-1" />
+                        ) : (
+                          <Square className="h-4 w-4 mr-1" />
+                        )}
+                        {availablePlayers.every((p) => playersToAdd.has(p.id)) &&
+                        availablePlayers.length > 0
+                          ? 'Deselect All'
+                          : 'Select All'}
+                      </Button>
+                      {playersToAdd.size > 0 && (
+                        <span className="text-sm text-muted-foreground">
+                          {playersToAdd.size} player{playersToAdd.size !== 1 ? 's' : ''} selected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-4">
+                    {availablePlayers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No available players to add. All players from this team are already in the match.
+                      </p>
+                    ) : (
+                      availablePlayers.map((player) => {
+                        const isSelected = playersToAdd.has(player.id);
+                        const isStarter = playersToAdd.get(player.id)?.started || false;
+                        return (
+                          <div
+                            key={player.id}
+                            className={`flex items-center justify-between p-3 border rounded-lg ${
+                              isSelected ? 'bg-primary/5 border-primary/20' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => togglePlayerToAdd(player.id)}
+                                disabled={addingPlayers}
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <strong>
+                                    {player.firstName} {player.lastName}
+                                  </strong>
+                                  {player.jerseyNumber && (
+                                    <Badge variant="secondary" className="gap-1">
+                                      <Shirt className="h-3 w-3" />
+                                      {player.jerseyNumber}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={isStarter}
+                                  onCheckedChange={() => toggleStarterStatus(player.id)}
+                                  disabled={addingPlayers}
+                                />
+                                <Label className="cursor-pointer text-sm">
+                                  Starter
+                                </Label>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={handleBatchAddPlayers}
+                      disabled={addingPlayers || playersToAdd.size === 0}
+                    >
+                      {addingPlayers ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Adding Players...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add {playersToAdd.size > 0 ? `${playersToAdd.size} ` : ''}Player{playersToAdd.size !== 1 ? 's' : ''}
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setPlayersToAdd(new Map());
+                        setSelectedTeam('');
+                      }}
+                      disabled={addingPlayers}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -504,6 +653,16 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
                         onCheckedChange={() => togglePlayerSelection(mp.id)}
                         disabled={bulkUpdating}
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={mp.started}
+                          onCheckedChange={() => handleToggleStarter(mp.id, mp.started)}
+                          disabled={bulkUpdating}
+                        />
+                        <Label className="cursor-pointer text-sm font-normal">
+                          Starter
+                        </Label>
+                      </div>
                       <strong>
                         {mp.player.firstName} {mp.player.lastName}
                       </strong>
@@ -513,7 +672,6 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
                           {mp.jerseyNumber}
                         </Badge>
                       )}
-                      {mp.started && <Badge variant="default">Started</Badge>}
                       {mp.isActive && (
                         <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
                           Active
@@ -611,6 +769,16 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
                         onCheckedChange={() => togglePlayerSelection(mp.id)}
                         disabled={bulkUpdating}
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={mp.started}
+                          onCheckedChange={() => handleToggleStarter(mp.id, mp.started)}
+                          disabled={bulkUpdating}
+                        />
+                        <Label className="cursor-pointer text-sm font-normal">
+                          Starter
+                        </Label>
+                      </div>
                       <strong>
                         {mp.player.firstName} {mp.player.lastName}
                       </strong>
@@ -620,7 +788,6 @@ export default function MatchPlayersManager({ matchId, team1Id, team2Id, onPlaye
                           {mp.jerseyNumber}
                         </Badge>
                       )}
-                      {mp.started && <Badge variant="default">Started</Badge>}
                       {mp.isActive && (
                         <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
                           Active

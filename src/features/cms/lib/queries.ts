@@ -1,5 +1,5 @@
 import { prisma } from '../../../lib/prisma';
-import type { NewsCategory, NewsArticleWithAuthor, Match, Player, Team, TeamWithPlayers, TeamWithPlayerCount, Staff, StaffWithTeams, TeamStaff, TeamStaffWithStaff, MatchStatus, MatchStage, Media, MediaType, PageContent, SiteSetting, CommentWithAuthor, StaffRole, League, LeagueWithMatchCount, Season, SeasonWithCounts, MatchWithTeamsAndLeagueAndSeason, MatchPlayerWithDetails, MatchEventWithDetails, MatchWithFullDetails } from '../types';
+import type { NewsCategory, NewsArticleWithAuthor, Match, Player, Team, TeamWithPlayers, TeamWithPlayerCount, Staff, StaffWithTeams, TeamStaff, TeamStaffWithStaff, MatchStatus, MatchStage, Media, MediaType, MediaWithFolder, MediaWithFolderAndUploader, PageContent, SiteSetting, CommentWithAuthor, StaffRole, League, LeagueWithMatchCount, Season, SeasonWithCounts, MatchWithTeamsAndLeagueAndSeason, MatchPlayerWithDetails, MatchEventWithDetails, MatchWithFullDetails, Folder, FolderWithMediaCount } from '../types';
 import { categoryMap, reverseCategoryMap } from '../types';
 
 /**
@@ -470,37 +470,362 @@ export async function getPlayerById(id: string): Promise<Player | null> {
 
 /**
  * Get media items with optional type filter
+ * Uses raw SQL to ensure featured field is included (workaround for Prisma Client sync issues)
  */
-export async function getMedia(type?: string): Promise<Media[]> {
-  const where: any = {};
-
-  if (type) {
-    const typeMap: Record<string, MediaType> = {
-      'image': 'IMAGE',
-      'video': 'VIDEO',
-      'audio': 'AUDIO',
-    };
-
-    if (typeMap[type.toLowerCase()]) {
-      where.type = typeMap[type.toLowerCase()];
+export async function getMedia(type?: string): Promise<MediaWithFolderAndUploader[]> {
+  const typeCondition = type ? `WHERE m.type = ?` : '';
+  const typeMap: Record<string, string> = {
+    'image': 'IMAGE',
+    'video': 'VIDEO',
+    'audio': 'AUDIO',
+  };
+  const typeParam = type && typeMap[type.toLowerCase()] ? [typeMap[type.toLowerCase()]] : [];
+  
+  try {
+    const rawMedia = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT 
+        m.id, m.title, m.url, m.type, m.thumbnail, m.tags, m.size, m.file_path as filePath,
+        m.folder_id as folderId, m.uploaded_by as uploaderId, m.created_at as createdAt, m.updated_at as updatedAt,
+        COALESCE(m.featured, 0) as featured,
+        f.id as folder_id, f.name as folder_name, f.is_private as folder_isPrivate,
+        u.id as uploader_id, u.name as uploader_name, u.email as uploader_email
+      FROM media m
+      LEFT JOIN folders f ON m.folder_id = f.id
+      LEFT JOIN users u ON m.uploaded_by = u.id
+      ${typeCondition}
+      ORDER BY m.created_at DESC`,
+      ...typeParam
+    );
+    
+    // Transform raw SQL results to match expected format
+    return rawMedia.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      url: row.url,
+      type: row.type,
+      thumbnail: row.thumbnail,
+      tags: row.tags,
+      size: row.size ? Number(row.size) : null,
+      filePath: row.filePath,
+      folderId: row.folderId,
+      uploaderId: row.uploaderId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      featured: Boolean(row.featured),
+      folder: row.folder_id ? {
+        id: row.folder_id,
+        name: row.folder_name,
+        isPrivate: Boolean(row.folder_isPrivate),
+      } : null,
+      uploader: row.uploader_id ? {
+        id: row.uploader_id,
+        name: row.uploader_name,
+        email: row.uploader_email,
+      } : null,
+    })) as MediaWithFolderAndUploader[];
+  } catch (error: any) {
+    // Fallback if folders table doesn't exist - query without folder join
+    if (error.code === 'P2010' || error.message?.includes("doesn't exist")) {
+      const rawMedia = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT 
+          m.id, m.title, m.url, m.type, m.thumbnail, m.tags, m.size, m.file_path as filePath,
+          m.folder_id as folderId, m.uploaded_by as uploaderId, m.created_at as createdAt, m.updated_at as updatedAt,
+          COALESCE(m.featured, 0) as featured,
+          u.id as uploader_id, u.name as uploader_name, u.email as uploader_email
+        FROM media m
+        LEFT JOIN users u ON m.uploaded_by = u.id
+        ${typeCondition}
+        ORDER BY m.created_at DESC`,
+        ...typeParam
+      );
+      
+      return rawMedia.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        url: row.url,
+        type: row.type,
+        thumbnail: row.thumbnail,
+        tags: row.tags,
+        size: row.size ? Number(row.size) : null,
+        filePath: row.filePath,
+        folderId: row.folderId,
+        uploaderId: row.uploaderId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        featured: Boolean(row.featured),
+        folder: null,
+        uploader: row.uploader_id ? {
+          id: row.uploader_id,
+          name: row.uploader_name,
+          email: row.uploader_email,
+        } : null,
+      })) as MediaWithFolderAndUploader[];
     }
+    throw error;
   }
+}
 
-  return await prisma.media.findMany({
-    where,
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+/**
+ * Get featured media items (public access)
+ * IMPORTANT: Only returns media where featured=true
+ * Filters out media in private folders for public access
+ * Includes media without folders (folderId is null)
+ * Uses raw SQL to ensure featured field is included (workaround for Prisma Client sync issues)
+ * @param limit - Optional limit on number of results (default: no limit)
+ */
+export async function getFeaturedMedia(limit?: number): Promise<MediaWithFolderAndUploader[]> {
+  // Use raw SQL to ensure featured field is included
+  const limitClause = limit ? `LIMIT ${limit}` : '';
+  
+  try {
+    const rawMedia = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT 
+        m.id, m.title, m.url, m.type, m.thumbnail, m.tags, m.size, m.file_path as filePath,
+        m.folder_id as folderId, m.uploaded_by as uploaderId, m.created_at as createdAt, m.updated_at as updatedAt,
+        COALESCE(m.featured, 0) as featured,
+        f.id as folder_id, f.name as folder_name, f.is_private as folder_isPrivate,
+        u.id as uploader_id, u.name as uploader_name, u.email as uploader_email
+      FROM media m
+      LEFT JOIN folders f ON m.folder_id = f.id
+      LEFT JOIN users u ON m.uploaded_by = u.id
+      WHERE COALESCE(m.featured, 0) = 1
+      ORDER BY m.created_at DESC
+      ${limitClause}`
+    );
+    
+    // Transform raw SQL results to match expected format
+    const allFeatured = rawMedia.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      url: row.url,
+      type: row.type,
+      thumbnail: row.thumbnail,
+      tags: row.tags,
+      size: row.size ? Number(row.size) : null,
+      filePath: row.filePath,
+      folderId: row.folderId,
+      uploaderId: row.uploaderId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      featured: Boolean(row.featured),
+      folder: row.folder_id ? {
+        id: row.folder_id,
+        name: row.folder_name,
+        isPrivate: Boolean(row.folder_isPrivate),
+      } : null,
+      uploader: row.uploader_id ? {
+        id: row.uploader_id,
+        name: row.uploader_name,
+        email: row.uploader_email,
+      } : null,
+    })) as MediaWithFolderAndUploader[];
+
+    // Filter out media in private folders (keep media without folders)
+    const publicFeatured = allFeatured.filter((item) => {
+      // Include if no folder OR folder is not private
+      return !item.folder || !item.folder.isPrivate;
+    });
+
+    return publicFeatured;
+  } catch (error: any) {
+    // Fallback if folders table doesn't exist - query without folder join
+    if (error.code === 'P2010' || error.message?.includes("doesn't exist")) {
+      const rawMedia = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT 
+          m.id, m.title, m.url, m.type, m.thumbnail, m.tags, m.size, m.file_path as filePath,
+          m.folder_id as folderId, m.uploaded_by as uploaderId, m.created_at as createdAt, m.updated_at as updatedAt,
+          COALESCE(m.featured, 0) as featured,
+          u.id as uploader_id, u.name as uploader_name, u.email as uploader_email
+        FROM media m
+        LEFT JOIN users u ON m.uploaded_by = u.id
+        WHERE COALESCE(m.featured, 0) = 1
+        ORDER BY m.created_at DESC
+        ${limitClause}`
+      );
+      
+      const allFeatured = rawMedia.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        url: row.url,
+        type: row.type,
+        thumbnail: row.thumbnail,
+        tags: row.tags,
+        size: row.size ? Number(row.size) : null,
+        filePath: row.filePath,
+        folderId: row.folderId,
+        uploaderId: row.uploaderId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        featured: Boolean(row.featured),
+        folder: null,
+        uploader: row.uploader_id ? {
+          id: row.uploader_id,
+          name: row.uploader_name,
+          email: row.uploader_email,
+        } : null,
+      })) as MediaWithFolderAndUploader[];
+
+      // No folder filtering needed if folders table doesn't exist
+      return allFeatured;
+    }
+    throw error;
+  }
 }
 
 /**
  * Get a single media item by ID
+ * Uses raw SQL to ensure featured field is included (workaround for Prisma Client sync issues)
  */
-export async function getMediaById(id: string): Promise<Media | null> {
-  return await prisma.media.findUnique({
+export async function getMediaById(id: string): Promise<MediaWithFolderAndUploader | null> {
+  try {
+    const rawMedia = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT 
+        m.id, m.title, m.url, m.type, m.thumbnail, m.tags, m.size, m.file_path as filePath,
+        m.folder_id as folderId, m.uploaded_by as uploaderId, m.created_at as createdAt, m.updated_at as updatedAt,
+        COALESCE(m.featured, 0) as featured,
+        f.id as folder_id, f.name as folder_name, f.is_private as folder_isPrivate,
+        u.id as uploader_id, u.name as uploader_name, u.email as uploader_email
+      FROM media m
+      LEFT JOIN folders f ON m.folder_id = f.id
+      LEFT JOIN users u ON m.uploaded_by = u.id
+      WHERE m.id = ?
+      LIMIT 1`,
+      id
+    );
+    
+    if (rawMedia.length === 0) {
+      return null;
+    }
+    
+    const row = rawMedia[0];
+    return {
+      id: row.id,
+      title: row.title,
+      url: row.url,
+      type: row.type,
+      thumbnail: row.thumbnail,
+      tags: row.tags,
+      size: row.size ? Number(row.size) : null,
+      filePath: row.filePath,
+      folderId: row.folderId,
+      uploaderId: row.uploaderId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      featured: Boolean(row.featured),
+      folder: row.folder_id ? {
+        id: row.folder_id,
+        name: row.folder_name,
+        isPrivate: Boolean(row.folder_isPrivate),
+      } : null,
+      uploader: row.uploader_id ? {
+        id: row.uploader_id,
+        name: row.uploader_name,
+        email: row.uploader_email,
+      } : null,
+    } as MediaWithFolderAndUploader;
+  } catch (error: any) {
+    // Fallback if folders table doesn't exist - query without folder join
+    if (error.code === 'P2010' || error.message?.includes("doesn't exist")) {
+      const rawMedia = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT 
+          m.id, m.title, m.url, m.type, m.thumbnail, m.tags, m.size, m.file_path as filePath,
+          m.folder_id as folderId, m.uploaded_by as uploaderId, m.created_at as createdAt, m.updated_at as updatedAt,
+          COALESCE(m.featured, 0) as featured,
+          u.id as uploader_id, u.name as uploader_name, u.email as uploader_email
+        FROM media m
+        LEFT JOIN users u ON m.uploaded_by = u.id
+        WHERE m.id = ?
+        LIMIT 1`,
+        id
+      );
+      
+      if (rawMedia.length === 0) {
+        return null;
+      }
+      
+      const row = rawMedia[0];
+      return {
+        id: row.id,
+        title: row.title,
+        url: row.url,
+        type: row.type,
+        thumbnail: row.thumbnail,
+        tags: row.tags,
+        size: row.size ? Number(row.size) : null,
+        filePath: row.filePath,
+        folderId: row.folderId,
+        uploaderId: row.uploaderId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        featured: Boolean(row.featured),
+        folder: null,
+        uploader: row.uploader_id ? {
+          id: row.uploader_id,
+          name: row.uploader_name,
+          email: row.uploader_email,
+        } : null,
+      } as MediaWithFolderAndUploader;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get all folders
+ * @param includePrivate - If true, includes private folders (admin only)
+ */
+export async function getFolders(includePrivate = false): Promise<FolderWithMediaCount[]> {
+  const where: any = {};
+  
+  if (!includePrivate) {
+    where.isPrivate = false;
+  }
+
+  return await prisma.folder.findMany({
+    where,
+    include: {
+      _count: {
+        select: {
+          media: true,
+        },
+      },
+    },
+    orderBy: {
+      name: 'asc',
+    },
+  }) as FolderWithMediaCount[];
+}
+
+/**
+ * Get a single folder by ID
+ */
+export async function getFolderById(id: string): Promise<FolderWithMediaCount | null> {
+  return await prisma.folder.findUnique({
     where: { id },
-  });
+    include: {
+      _count: {
+        select: {
+          media: true,
+        },
+      },
+    },
+  }) as FolderWithMediaCount | null;
+}
+
+/**
+ * Get a single folder by name
+ */
+export async function getFolderByName(name: string): Promise<FolderWithMediaCount | null> {
+  return await prisma.folder.findUnique({
+    where: { name },
+    include: {
+      _count: {
+        select: {
+          media: true,
+        },
+      },
+    },
+  }) as FolderWithMediaCount | null;
 }
 
 /**

@@ -1,0 +1,183 @@
+/* Unsplash-style Gallery Container */
+.unsplashGalleryContainer {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.unsplashGalleryHeader {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.unsplashGallerySubtitle {
+  color: #666;
+  font-size: 18px;
+  margin-top: 10px;
+  font-weight: 300;
+}
+
+/* Unsplash Gallery Grid */
+.unsplashGallery {
+  width: 100%;
+}
+
+.unsplashMasonry {
+  display: flex;
+  margin-left: -8px; /* Tight gutter */
+  width: auto;
+}
+
+.unsplashMasonry > div {
+  padding-left: 8px; /* Tight gutter */
+  background-clip: padding-box;
+}
+
+.unsplashMasonry > div > div {
+  margin-bottom: 8px; /* Tight spacing */
+}
+
+/* Unsplash Image Card */
+.unsplashImageCard {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #f5f5f5;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.unsplashImageCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.unsplashImageLink {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.unsplashImageWrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.unsplashImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.unsplashImageCard:hover .unsplashImage {
+  transform: scale(1.05);
+}
+
+/* Overlay on hover */
+.unsplashImageOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+}
+
+.unsplashImageCard:hover .unsplashImageOverlay {
+  opacity: 1;
+}
+
+.unsplashImageTitle {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Loading State */
+.unsplashGalleryLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #333;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.unsplashGalleryLoading p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .unsplashMasonry {
+    margin-left: -6px;
+  }
+  
+  .unsplashMasonry > div {
+    padding-left: 6px;
+  }
+  
+  .unsplashMasonry > div > div {
+    margin-bottom: 6px;
+  }
+}
+
+@media (max-width: 700px) {
+  .unsplashGalleryContainer {
+    padding: 20px 10px;
+  }
+  
+  .unsplashGalleryHeader {
+    margin-bottom: 24px;
+  }
+  
+  .unsplashMasonry {
+    margin-left: -4px;
+  }
+  
+  .unsplashMasonry > div {
+    padding-left: 4px;
+  }
+  
+  .unsplashMasonry > div > div {
+    margin-bottom: 4px;
+  }
+  
+  .unsplashImageOverlay {
+    padding: 12px;
+  }
+  
+  .unsplashImageTitle {
+    font-size: 12px;
+  }
+}

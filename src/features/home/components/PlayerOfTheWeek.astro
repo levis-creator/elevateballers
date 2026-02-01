@@ -1,8 +1,14 @@
 ---
 import type { PlayerOfTheWeek } from '../types';
 import { playerOfTheWeek } from '../data/homeData';
+import { Image } from 'astro:assets';
+import { resolveAssetUrl } from '../../../lib/asset-url';
 
 const player: PlayerOfTheWeek = playerOfTheWeek;
+
+// Resolve image URLs to absolute paths for Astro Image component
+const playerImageUrl = resolveAssetUrl(player.image) || player.image;
+const signatureImageUrl = player.signature ? resolveAssetUrl(player.signature) || player.signature : null;
 
 const descriptionHtml = player.description
   .split('\n\n')
@@ -17,15 +23,15 @@ const descriptionHtml = player.description
   <div class="clearfix"></div>
   <div class="stm-data-wrapp">
     <div class="stm-photo-wrapp">
-      <img decoding="async" src={player.image} alt={player.imageAlt || player.name} />
+      <Image src={playerImageUrl} alt={player.imageAlt || player.name} width={300} height={300} />
     </div>
     <div class="stm-excerption-wrapp">
       <span class="stm-excerption" set:html={descriptionHtml}>
         <div class="stm-name-sign-wrapp">
           <span class="stm-coach-name heading-font">{player.name}</span>
-          {player.signature && (
+          {signatureImageUrl && (
             <div class="stm-img-wrapp">
-              <img decoding="async" src={player.signature} alt={`${player.name} signature`} />
+              <Image src={signatureImageUrl} alt={`${player.name} signature`} width={200} height={50} />
             </div>
           )}
         </div>

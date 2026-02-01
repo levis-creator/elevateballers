@@ -11,6 +11,8 @@ import { getPlayerMatches, getPlayerMatchEvents } from '../../features/player/li
 import { calculatePlayerStatistics, calculatePlayerMatchStats } from '../../features/player/lib/playerStats';
 import Spacing from '../../shared/components/ui/Spacing.astro';
 import PageLoader from '../../components/PageLoader';
+import { Image } from 'astro:assets';
+import { getDisplayImageUrl } from '../../lib/asset-url';
 
 const { id } = Astro.params;
 if (!id) {
@@ -242,10 +244,11 @@ const pageUrl = `${Astro.url.origin}/players/${id}`;
                     <div class="player-header-content">
                       {player.image ? (
                         <div class="player-image-large">
-                          <img 
+                          <Image 
                             src={player.image} 
                             alt={playerName}
-                            loading="lazy"
+                            width={200}
+                            height={200}
                           />
                         </div>
                       ) : (
