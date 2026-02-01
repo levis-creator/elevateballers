@@ -4,24 +4,24 @@ import { formatMatchDate } from '../../matches/lib/utils';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 
 /**
- * NextMatchCarousel component - Upcoming matches carousel
+ * RecentResultsCarousel component - Completed matches carousel
  * Uses jQuery Owl Carousel
  */
-export default function NextMatchCarousel() {
+export default function RecentResultsCarousel() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch upcoming matches
-    fetch('/api/matches?status=upcoming')
+    // Fetch completed matches
+    fetch('/api/matches?status=completed')
       .then((res) => res.json())
       .then((data) => {
         setMatches(data.slice(0, 5)); // Limit to 5 matches
         setLoading(false);
       })
       .catch((err) => {
-        console.error('Error fetching matches:', err);
+        console.error('Error fetching results:', err);
         setLoading(false);
       });
   }, []);
@@ -68,51 +68,52 @@ export default function NextMatchCarousel() {
 
   if (loading) {
     return (
-      <div className="stm-next-match-carousel-wrap style_3">
-        <h2 className="stm-carousel-title">UPCOMING MATCHES</h2>
-        <div className="loading-matches">Loading matches...</div>
+      <div className="stm-next-match-carousel-wrap style_3 results-style">
+        <h2 className="stm-carousel-title">RECENT RESULTS</h2>
+        <div className="loading-matches">Loading results...</div>
       </div>
     );
   }
 
   if (matches.length === 0) {
-    return (
-      <div className="stm-next-match-carousel-wrap style_3">
-        <h2 className="stm-carousel-title">UPCOMING MATCHES</h2>
-        <div className="no-matches">No upcoming matches scheduled.</div>
-      </div>
-    );
+    return null; // Don't show if no results
   }
 
   return (
-    <div className="stm-next-match-carousel-wrap style_3">
-      <h2 className="stm-carousel-title">UPCOMING MATCHES</h2>
+    <div className="stm-next-match-carousel-wrap style_3 results-style">
+      <h2 className="stm-carousel-title" style={{ backgroundColor: '#10b981' }}>RECENT RESULTS</h2>
       <div className="stm-next-match-carousel2">
         <div ref={carouselRef} className="stm-next-match-carousel__item">
           {matches.map((match) => (
             <div key={match.id} className="stm-next-match-carousel__item">
-              <div className="event-results">
-                {match.team1Logo && (
-                  <img
-                    decoding="async"
-                    src={match.team1Logo}
-                    alt={match.team1Name ?? ''}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                )}
-                <span className="post-score heading-font">vs</span>
-                {match.team2Logo && (
-                  <img
-                    decoding="async"
-                    src={match.team2Logo}
-                    alt={match.team2Name ?? ''}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                )}
+              <div className="event-results results-score">
+                 <div className="team-logo-wrap">
+                    {match.team1Logo && (
+                      <img
+                        decoding="async"
+                        src={match.team1Logo}
+                        alt={match.team1Name ?? ''}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                 </div>
+                 <div className="final-score heading-font">
+                    {match.team1Score} - {match.team2Score}
+                 </div>
+                 <div className="team-logo-wrap">
+                    {match.team2Logo && (
+                      <img
+                        decoding="async"
+                        src={match.team2Logo}
+                        alt={match.team2Name ?? ''}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                 </div>
               </div>
               <div className="event-data">
                 <div className="teams-titles">
@@ -127,7 +128,29 @@ export default function NextMatchCarousel() {
           ))}
         </div>
       </div>
+      <style>{`
+        .results-style .stm-carousel-title {
+          background-color: #10b981 !important;
+        }
+        .results-score {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 20px;
+        }
+        .final-score {
+          font-size: 28px;
+          font-weight: 900;
+          color: #fff;
+          background: rgba(0,0,0,0.3);
+          padding: 5px 15px;
+          border-radius: 4px;
+        }
+        .team-logo-wrap img {
+          max-width: 60px;
+          height: auto;
+        }
+      `}</style>
     </div>
   );
 }
-

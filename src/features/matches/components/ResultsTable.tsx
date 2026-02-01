@@ -1,24 +1,26 @@
 import React, { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '../../../shared/components/DataTable/DataTable';
-import { formatMatchDate, formatMatchTime } from '../../matches/lib/utils';
+import { formatMatchDate } from '../../matches/lib/utils';
 
-interface Fixture {
+interface Result {
   id: string;
   date: Date | string;
   team1Name: string;
   team2Name: string;
+  team1Score: number | string;
+  team2Score: number | string;
   league: string;
-  venue?: string;
+  winnerName?: string;
   status: string;
 }
 
-interface FixturesTableProps {
-  matches: Fixture[];
+interface ResultsTableProps {
+  matches: Result[];
 }
 
-export const FixturesTable: React.FC<FixturesTableProps> = ({ matches }) => {
-  const columns = useMemo<ColumnDef<Fixture>[]>(
+export const ResultsTable: React.FC<ResultsTableProps> = ({ matches }) => {
+  const columns = useMemo<ColumnDef<Result>[]>(
     () => [
       {
         header: 'Date',
@@ -31,17 +33,6 @@ export const FixturesTable: React.FC<FixturesTableProps> = ({ matches }) => {
         meta: { className: 'data-date' },
       },
       {
-        header: 'Time',
-        accessorKey: 'time',
-        accessorFn: (row) => row.date,
-        cell: (info) => (
-          <a href={`/matches/${info.row.original.id}`} className="data-link">
-            {formatMatchTime(info.getValue<Date | string>())}
-          </a>
-        ),
-        meta: { className: 'data-time' },
-      },
-      {
         header: 'Home',
         accessorKey: 'team1Name',
         cell: (info) => (
@@ -50,6 +41,18 @@ export const FixturesTable: React.FC<FixturesTableProps> = ({ matches }) => {
           </a>
         ),
         meta: { className: 'data-home' },
+      },
+      {
+        header: 'Result',
+        id: 'score',
+        cell: (info) => (
+          <a href={`/matches/${info.row.original.id}`} className="data-link">
+            <div className="bg-slate-100 px-3 py-1 rounded font-black text-lg inline-block">
+              {info.row.original.team1Score} - {info.row.original.team2Score}
+            </div>
+          </a>
+        ),
+        meta: { className: 'data-score text-center' },
       },
       {
         header: 'Away',
@@ -62,13 +65,23 @@ export const FixturesTable: React.FC<FixturesTableProps> = ({ matches }) => {
         meta: { className: 'data-away' },
       },
       {
+        header: 'League',
+        accessorKey: 'league',
+        cell: (info) => (
+          <a href={`/matches/${info.row.original.id}`} className="data-link">
+            {info.getValue<string>()}
+          </a>
+        ),
+        meta: { className: 'data-league' },
+      },
+      {
         header: 'Status',
         accessorKey: 'status',
         cell: (info) => {
           const status = info.getValue<string>();
           let color = '#64748b';
           if (status === 'LIVE') color = '#ef4444';
-          if (status === 'UPCOMING') color = '#3b82f6';
+          if (status === 'COMPLETED') color = '#10b981';
           
           return (
             <span 
@@ -82,24 +95,15 @@ export const FixturesTable: React.FC<FixturesTableProps> = ({ matches }) => {
         meta: { className: 'data-status text-center' },
       },
       {
-        header: 'Venue',
-        accessorKey: 'venue',
-        cell: (info) => (
-          <a href={`/matches/${info.row.original.id}`} className="data-link">
-            {info.getValue<string>() || '-'}
-          </a>
-        ),
-        meta: { className: 'data-venue' },
-      },
-      {
-        header: 'League',
-        accessorKey: 'league',
-        cell: (info) => (
-          <a href={`/matches/${info.row.original.id}`} className="data-link">
-            {info.getValue<string>()}
-          </a>
-        ),
-        meta: { className: 'data-league' },
+        header: 'Winner',
+        accessorKey: 'winnerName',
+        cell: (info) => info.getValue() ? (
+          <div className="flex items-center justify-center gap-1 text-yellow-600">
+            <span>🏆</span>
+            <span className="text-sm font-medium">{info.getValue<string>()}</span>
+          </div>
+        ) : '-',
+        meta: { className: 'data-winner text-center' },
       },
       {
         header: 'Details',

@@ -79,6 +79,151 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
+const BASKETBALL_POSITIONS = [
+  { value: 'PG', label: 'PG - Point Guard' },
+  { value: 'SG', label: 'SG - Shooting Guard' },
+  { value: 'SF', label: 'SF - Small Forward' },
+  { value: 'PF', label: 'PF - Power Forward' },
+  { value: 'C', label: 'C - Center' },
+];
+
+// Edit Match Player Modal Component
+interface EditMatchPlayerModalProps {
+  matchId: string;
+  matchPlayerId: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function EditMatchPlayerModal({ matchId, matchPlayerId, isOpen, onClose, onSuccess }: EditMatchPlayerModalProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    started: false,
+    position: '',
+    jerseyNumber: '',
+  });
+  const [playerInfo, setPlayerInfo] = useState<any>(null);
+
+  useEffect(() => {
+    if (isOpen && matchPlayerId) {
+      fetchMatchPlayerDetails();
+    }
+  }, [isOpen, matchPlayerId]);
+
+  const fetchMatchPlayerDetails = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/matches/${matchId}/players/${matchPlayerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPlayerInfo(data.player);
+        setFormData({
+          started: data.started,
+          position: data.position || '',
+          jerseyNumber: data.jerseyNumber ? String(data.jerseyNumber) : '',
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch match player details:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/matches/${matchId}/players/${matchPlayerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          started: formData.started,
+          position: formData.position,
+          jerseyNumber: formData.jerseyNumber ? parseInt(formData.jerseyNumber) : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update player');
+      }
+
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update player');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Player - {playerInfo ? `${playerInfo.firstName} ${playerInfo.lastName}` : 'Loading...'}</DialogTitle>
+          <DialogDescription>Update match-specific details for this player.</DialogDescription>
+        </DialogHeader>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-jersey">Jersey Number</Label>
+              <Input
+                id="edit-jersey"
+                type="number"
+                value={formData.jerseyNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, jerseyNumber: e.target.value }))}
+                placeholder="#"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-position">Position</Label>
+              <Select
+                value={formData.position}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, position: value }))}
+              >
+                <SelectTrigger id="edit-position">
+                  <SelectValue placeholder="Select position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BASKETBALL_POSITIONS.map((pos) => (
+                    <SelectItem key={pos.value} value={pos.value}>
+                      {pos.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="edit-started"
+              checked={formData.started}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, started: !!checked }))}
+            />
+            <Label htmlFor="edit-started" className="cursor-pointer">Started Match</Label>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Add/Edit Match Event Modal Component
 interface AddMatchEventModalProps {
   matchId: string;
@@ -806,6 +951,7 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
     try {
       // Add all selected players in parallel
       const addPromises = Array.from(playersToAdd.entries()).map(async ([playerId, data]) => {
+        const playerProfile = availablePlayers.find(p => p.id === playerId);
         const response = await fetch(`/api/matches/${matchId}/players`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -813,6 +959,8 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
             playerId,
             teamId: selectedTeam,
             started: data.started,
+            position: playerProfile?.position,
+            jerseyNumber: playerProfile?.jerseyNumber,
           }),
         });
 
@@ -1057,11 +1205,16 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [error, setError] = useState('');
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [showEditPlayerModal, setShowEditPlayerModal] = useState(false);
+  const [editingMatchPlayerId, setEditingMatchPlayerId] = useState<string | null>(null);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   const [isEndingGame, setIsEndingGame] = useState(false);
   const [isStartingGame, setIsStartingGame] = useState(false);
   const { endGame, startGame } = useGameTrackingStore();
+  const [page1, setPage1] = useState(1);
+  const [page2, setPage2] = useState(1);
+  const playersPerPage = 10;
   const [icons, setIcons] = useState<{
     Calendar?: ComponentType<any>;
     Clock?: ComponentType<any>;
@@ -1209,6 +1362,25 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const getEventsByTeam = (teamId: string) => {
     if (!match?.events) return [];
     return match.events.filter((e) => e.teamId === teamId);
+  };
+
+  const handleEditPlayer = (matchPlayerId: string) => {
+    setEditingMatchPlayerId(matchPlayerId);
+    setShowEditPlayerModal(true);
+  };
+
+  const handleDeletePlayer = async (matchPlayerId: string) => {
+    try {
+      const response = await fetch(`/api/matches/${matchId}/players/${matchPlayerId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('Failed to remove player');
+      fetchMatchDetails();
+    } catch (error: any) {
+      console.error('Error deleting match player:', error);
+      setError(error.message || 'Failed to remove player');
+    }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -1530,34 +1702,86 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                         {team1Name}
                       </h3>
                       <div className="space-y-2">
-                  {getPlayersByTeam(team1Id).map((mp) => (
-                          <div
-                            key={mp.id}
-                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <strong>{mp.player.firstName} {mp.player.lastName}</strong>
-                            {mp.jerseyNumber && (
-                                <Badge variant="secondary" className="gap-1">
-                                  {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
-                                  {mp.jerseyNumber}
-                                </Badge>
+                        {(() => {
+                          const team1Players = getPlayersByTeam(team1Id);
+                          const totalPages = Math.ceil(team1Players.length / playersPerPage);
+                          const paginatedPlayers = team1Players.slice((page1 - 1) * playersPerPage, page1 * playersPerPage);
+                          
+                          return (
+                            <>
+                              {paginatedPlayers.map((mp) => (
+                                <div
+                                  key={mp.id}
+                                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <strong>{mp.player.firstName} {mp.player.lastName}</strong>
+                                    {mp.jerseyNumber && (
+                                      <Badge variant="secondary" className="gap-1">
+                                        {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
+                                        {mp.jerseyNumber}
+                                      </Badge>
+                                    )}
+                                    {mp.started && <Badge variant="default">Started</Badge>}
+                                    {mp.position && (
+                                      <span className="text-sm text-muted-foreground">
+                                        {mp.position}
+                                      </span>
+                                    )}
+                                    {mp.minutesPlayed !== null && (
+                                      <span className="text-sm text-muted-foreground">
+                                        {mp.minutesPlayed}'
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8"
+                                      onClick={() => handleEditPlayer(mp.id)}
+                                    >
+                                      {icons.Pencil ? <icons.Pencil className="h-4 w-4 text-muted-foreground" /> : <span className="h-4 w-4" />}
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8 text-destructive"
+                                      onClick={() => handleDeletePlayer(mp.id)}
+                                    >
+                                      {icons.Trash2 ? <icons.Trash2 className="h-4 w-4" /> : <span className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-dashed">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage1(Math.max(1, page1 - 1))}
+                                    disabled={page1 === 1}
+                                  >
+                                    Previous
+                                  </Button>
+                                  <span className="text-sm text-muted-foreground">
+                                    {page1} / {totalPages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage1(Math.min(totalPages, page1 + 1))}
+                                    disabled={page1 === totalPages}
+                                  >
+                                    Next
+                                  </Button>
+                                </div>
                               )}
-                              {mp.started && <Badge variant="default">Started</Badge>}
-                            {mp.position && (
-                                <span className="text-sm text-muted-foreground">
-                                {mp.position}
-                              </span>
-                            )}
-                            {mp.minutesPlayed !== null && (
-                                <span className="text-sm text-muted-foreground">
-                                {mp.minutesPlayed}'
-                              </span>
-                            )}
+                            </>
+                          );
+                        })()}
                       </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 
@@ -1567,34 +1791,86 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                         {team2Name}
                       </h3>
                       <div className="space-y-2">
-                  {getPlayersByTeam(team2Id).map((mp) => (
-                          <div
-                            key={mp.id}
-                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <strong>{mp.player.firstName} {mp.player.lastName}</strong>
-                            {mp.jerseyNumber && (
-                                <Badge variant="secondary" className="gap-1">
-                                  {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
-                                  {mp.jerseyNumber}
-                                </Badge>
+                        {(() => {
+                          const team2Players = getPlayersByTeam(team2Id);
+                          const totalPages = Math.ceil(team2Players.length / playersPerPage);
+                          const paginatedPlayers = team2Players.slice((page2 - 1) * playersPerPage, page2 * playersPerPage);
+                          
+                          return (
+                            <>
+                              {paginatedPlayers.map((mp) => (
+                                <div
+                                  key={mp.id}
+                                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <strong>{mp.player.firstName} {mp.player.lastName}</strong>
+                                    {mp.jerseyNumber && (
+                                      <Badge variant="secondary" className="gap-1">
+                                        {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
+                                        {mp.jerseyNumber}
+                                      </Badge>
+                                    )}
+                                    {mp.started && <Badge variant="default">Started</Badge>}
+                                    {mp.position && (
+                                      <span className="text-sm text-muted-foreground">
+                                        {mp.position}
+                                      </span>
+                                    )}
+                                    {mp.minutesPlayed !== null && (
+                                      <span className="text-sm text-muted-foreground">
+                                        {mp.minutesPlayed}'
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8"
+                                      onClick={() => handleEditPlayer(mp.id)}
+                                    >
+                                      {icons.Pencil ? <icons.Pencil className="h-4 w-4 text-muted-foreground" /> : <span className="h-4 w-4" />}
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8 text-destructive"
+                                      onClick={() => handleDeletePlayer(mp.id)}
+                                    >
+                                      {icons.Trash2 ? <icons.Trash2 className="h-4 w-4" /> : <span className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-dashed">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage2(Math.max(1, page2 - 1))}
+                                    disabled={page2 === 1}
+                                  >
+                                    Previous
+                                  </Button>
+                                  <span className="text-sm text-muted-foreground">
+                                    {page2} / {totalPages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage2(Math.min(totalPages, page2 + 1))}
+                                    disabled={page2 === totalPages}
+                                  >
+                                    Next
+                                  </Button>
+                                </div>
                               )}
-                              {mp.started && <Badge variant="default">Started</Badge>}
-                            {mp.position && (
-                                <span className="text-sm text-muted-foreground">
-                                {mp.position}
-                              </span>
-                            )}
-                            {mp.minutesPlayed !== null && (
-                                <span className="text-sm text-muted-foreground">
-                                {mp.minutesPlayed}'
-                              </span>
-                            )}
+                            </>
+                          );
+                        })()}
                       </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </div>
@@ -1951,6 +2227,24 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           onSuccess={() => {
             setShowAddPlayerModal(false);
             refreshMatchPlayers();
+            fetchMatchDetails();
+          }}
+        />
+      )}
+
+      {/* Edit Match Player Modal */}
+      {match && (
+        <EditMatchPlayerModal
+          matchId={matchId}
+          matchPlayerId={editingMatchPlayerId}
+          isOpen={showEditPlayerModal}
+          onClose={() => {
+            setShowEditPlayerModal(false);
+            setEditingMatchPlayerId(null);
+          }}
+          onSuccess={() => {
+            setShowEditPlayerModal(false);
+            setEditingMatchPlayerId(null);
             fetchMatchDetails();
           }}
         />

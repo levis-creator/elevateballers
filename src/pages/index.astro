@@ -11,6 +11,7 @@ import PostSlider from "../features/home/components/PostSlider";
 import NewsTicker from "../features/home/components/NewsTicker";
 import NextMatchCarousel from "../features/home/components/NextMatchCarousel";
 import LatestNews from "../features/home/components/LatestNews";
+import RecentResultsCarousel from "../features/home/components/RecentResultsCarousel";
 import Sponsors from "../features/home/components/Sponsors";
 import StatsLeadersCarousel from "../features/home/components/StatsLeadersCarousel";
 import MediaGallery from "../features/media/components/MediaGallery";
@@ -64,7 +65,14 @@ import PageLoader from "../components/PageLoader";
           aria-label="Upcoming matches"
         >
           <div class="container">
-            <NextMatchCarousel client:load />
+            <div class="row">
+              <div class="col-md-6 col-sm-12">
+                <NextMatchCarousel client:load />
+              </div>
+              <div class="col-md-6 col-sm-12">
+                <RecentResultsCarousel client:load />
+              </div>
+            </div>
           </div>
         </section>
       </FeatureGate>

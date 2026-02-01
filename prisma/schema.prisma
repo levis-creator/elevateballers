@@ -25,7 +25,7 @@ model NewsArticle {
   id          String       @id @default(cuid())
   title       String
   slug        String       @unique
-  content     String
+  content     String       @db.LongText
   excerpt     String?
   category    NewsCategory
   image       String?

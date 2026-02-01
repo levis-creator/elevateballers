@@ -307,11 +307,11 @@ export default function AddNewPlayerModal({
                   <SelectValue placeholder="Select position" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PG">Point Guard (PG)</SelectItem>
-                  <SelectItem value="SG">Shooting Guard (SG)</SelectItem>
-                  <SelectItem value="SF">Small Forward (SF)</SelectItem>
-                  <SelectItem value="PF">Power Forward (PF)</SelectItem>
-                  <SelectItem value="C">Center (C)</SelectItem>
+                  <SelectItem value="PG">PG - Point Guard</SelectItem>
+                  <SelectItem value="SG">SG - Shooting Guard</SelectItem>
+                  <SelectItem value="SF">SF - Small Forward</SelectItem>
+                  <SelectItem value="PF">PF - Power Forward</SelectItem>
+                  <SelectItem value="C">C - Center</SelectItem>
                 </SelectContent>
               </Select>
             </div>

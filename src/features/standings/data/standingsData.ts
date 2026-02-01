@@ -5,6 +5,8 @@
 export interface TeamStanding {
   rank: number;
   team: string;
+  teamId?: string;
+  logo?: string;
   played: number;
   won: number;
   drawn: number;

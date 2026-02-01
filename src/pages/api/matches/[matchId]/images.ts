@@ -7,7 +7,7 @@ export const prerender = false;
  * GET /api/matches/[matchId]/images
  * Fetch all images for a specific match
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     // Public read access - match images are visible to all visitors
     const matchId = params.matchId;
@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ params }) => {
 
     // Find all images in the matches folder that are tagged with this match ID
     const matchTag = `match:${matchId}`;
-    
+
     // Get all images in matches folder first, then filter by tag in JavaScript
     const allImages = await prisma.media.findMany({
       where: {
@@ -68,11 +68,11 @@ export const GET: APIRoute = async ({ params }) => {
 
     const total = filteredImages.length;
     const totalPages = Math.ceil(total / limit);
-    
+
     // Apply pagination
     const paginatedImages = filteredImages.slice(skip, skip + limit).map(({ tags, ...rest }) => rest);
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       images: paginatedImages,
       total,
       page,
@@ -84,10 +84,10 @@ export const GET: APIRoute = async ({ params }) => {
   } catch (error: any) {
     console.error('Error fetching match images:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden') 
-          ? 'Unauthorized' 
-          : error.message || 'Failed to fetch match images' 
+      JSON.stringify({
+        error: error.message === 'Unauthorized' || error.message.includes('Forbidden')
+          ? 'Unauthorized'
+          : error.message || 'Failed to fetch match images'
       }),
       {
         status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
