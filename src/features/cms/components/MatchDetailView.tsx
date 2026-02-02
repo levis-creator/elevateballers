@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, getWinnerName, isWinner } from '../../matches/lib/team-helpers';
+import TeamLogo from '../../matches/components/TeamLogo';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 import AddNewPlayerModal from './AddNewPlayerModal';
 import GameTrackingPanel from '../../game-tracking/components/GameTrackingPanel';
@@ -1356,7 +1357,31 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
 
   const getPlayersByTeam = (teamId: string) => {
     if (!match?.matchPlayers) return [];
-    return match.matchPlayers.filter((mp) => mp.teamId === teamId);
+    const teamPlayers = match.matchPlayers.filter((mp) => mp.teamId === teamId);
+    
+    // Sort logic: active first, then starters, then others
+    return [...teamPlayers].sort((a, b) => {
+      const aActive = isPlayerOnFloor(a);
+      const bActive = isPlayerOnFloor(b);
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+      if (a.started && !b.started) return -1;
+      if (!a.started && b.started) return 1;
+      return 0;
+    });
+  };
+
+  const isPlayerOnFloor = (mp: MatchPlayerWithDetails) => {
+    if (!match?.matchPlayers) return false;
+    const teamPlayers = match.matchPlayers.filter(p => p.teamId === mp.teamId);
+    const hasExplicitlyActive = teamPlayers.some(p => p.isActive);
+    
+    if (hasExplicitlyActive) {
+      return mp.isActive;
+    }
+    
+    // Fallback: if LIVE and no one is active, show starters as active
+    return match.status === 'LIVE' && mp.started;
   };
 
   const getEventsByTeam = (teamId: string) => {
@@ -1552,13 +1577,12 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 {/* Team 1 */}
                 <div className={`flex-1 text-center ${team1IsWinner ? 'winner-highlight' : ''}`}>
-            {team1Logo && (
-                    <img
-                      src={team1Logo}
-                      alt={team1Name}
-                      className="w-24 h-24 mx-auto mb-4 object-contain"
-                    />
-                  )}
+                  <TeamLogo 
+                    logo={team1Logo} 
+                    name={team1Name} 
+                    size="custom" 
+                    className="w-24 h-24 mx-auto mb-4 object-contain" 
+                  />
                   <h2 className="text-2xl font-heading font-semibold mb-2">{team1Name}</h2>
                   {match.team1Score !== null && match.team1Score !== undefined && (
                     <div className="text-5xl font-bold">{match.team1Score}</div>
@@ -1615,13 +1639,12 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           
                 {/* Team 2 */}
                 <div className={`flex-1 text-center ${team2IsWinner ? 'winner-highlight' : ''}`}>
-            {team2Logo && (
-                    <img
-                      src={team2Logo}
-                      alt={team2Name}
-                      className="w-24 h-24 mx-auto mb-4 object-contain"
-                    />
-                  )}
+                  <TeamLogo 
+                    logo={team2Logo} 
+                    name={team2Name} 
+                    size="custom" 
+                    className="w-24 h-24 mx-auto mb-4 object-contain" 
+                  />
                   <h2 className="text-2xl font-heading font-semibold mb-2">{team2Name}</h2>
                   {match.team2Score !== null && match.team2Score !== undefined && (
                     <div className="text-5xl font-bold">{match.team2Score}</div>
@@ -1667,7 +1690,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
 
       {/* Game Tracking Panel */}
       {match.status === 'LIVE' || match.status === 'UPCOMING' ? (
-        <GameTrackingPanel matchId={matchId} match={match} />
+        <GameTrackingPanel matchId={matchId} match={match} onRefresh={fetchMatchDetails} />
       ) : null}
 
       {/* Match Players */}
@@ -1722,7 +1745,9 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                                         {mp.jerseyNumber}
                                       </Badge>
                                     )}
-                                    {mp.started && <Badge variant="default">Started</Badge>}
+                                    {mp.started && <Badge variant="default" className="bg-blue-600 text-white border-none">Starter</Badge>}
+                                    {isPlayerOnFloor(mp) && <Badge variant="default" className="bg-green-600 text-white border-none animate-pulse">On Floor</Badge>}
+                                    {mp.subOut && <Badge variant="destructive" className="animate-pulse">Out</Badge>}
                                     {mp.position && (
                                       <span className="text-sm text-muted-foreground">
                                         {mp.position}
@@ -1811,7 +1836,9 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                                         {mp.jerseyNumber}
                                       </Badge>
                                     )}
-                                    {mp.started && <Badge variant="default">Started</Badge>}
+                                    {mp.started && <Badge variant="default" className="bg-blue-600 text-white border-none">Starter</Badge>}
+                                    {isPlayerOnFloor(mp) && <Badge variant="default" className="bg-green-600 text-white border-none animate-pulse">On Floor</Badge>}
+                                    {mp.subOut && <Badge variant="destructive" className="animate-pulse">Out</Badge>}
                                     {mp.position && (
                                       <span className="text-sm text-muted-foreground">
                                         {mp.position}

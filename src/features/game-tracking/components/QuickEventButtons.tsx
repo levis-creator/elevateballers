@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Zap, CheckCircle } from 'lucide-react';
-import type { GameStateData } from '../types';
+import type { GameStateData, MatchWithGameState } from '../types';
 import type { Match, Player } from '@prisma/client';
 import type { MatchPlayerWithDetails } from '../../cms/types';
 import { getTeam1Id, getTeam2Id, getTeam1Name, getTeam2Name } from '../../matches/lib/team-helpers';
@@ -24,7 +24,7 @@ import { useGameTrackingStore } from '../stores/useGameTrackingStore';
 
 interface QuickEventButtonsProps {
   matchId: string;
-  match: Match | null;
+  match: MatchWithGameState | null;
   gameState: GameStateData | null;
   onEventRecorded?: () => void;
   refreshTrigger?: number;
@@ -68,7 +68,7 @@ export default function QuickEventButtons({
   onEventRecorded,
   refreshTrigger,
 }: QuickEventButtonsProps) {
-  const { localClockSeconds } = useGameTrackingStore();
+  const { localClockSeconds, updateGameState } = useGameTrackingStore();
   const [teamId, setTeamId] = useState<string>('');
   const [playerId, setPlayerId] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -80,6 +80,7 @@ export default function QuickEventButtons({
   const team2Id = match ? getTeam2Id(match) : null;
   const team1Name = match ? getTeam1Name(match) : 'Team 1';
   const team2Name = match ? getTeam2Name(match) : 'Team 2';
+  const isLive = match?.status === 'LIVE';
 
   const availableTeams = [
     team1Id && { id: team1Id, name: team1Name },
@@ -133,6 +134,13 @@ export default function QuickEventButtons({
     setPlayerId('');
   }, [teamId]);
 
+  // Auto-select the first player if none is selected
+  useEffect(() => {
+    if (teamPlayers.length > 0 && !playerId) {
+      setPlayerId(teamPlayers[0].playerId);
+    }
+  }, [teamPlayers, playerId]);
+
   // Refresh match players when refreshTrigger changes (e.g., after substitutions)
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
@@ -150,6 +158,44 @@ export default function QuickEventButtons({
     }
   }, [success]);
 
+  const handleSetPossession = async (targetTeamId: string) => {
+    if (!matchId || !targetTeamId) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      await updateGameState(matchId, { possessionTeamId: targetTeamId });
+      
+      const teamName = targetTeamId === team1Id ? team1Name : team2Name;
+      const currentPeriod = gameState?.period ?? 1;
+      const minutesPerPeriod = match?.gameRules?.minutesPerPeriod ?? 10;
+      const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
+      const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
+      const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
+
+      // Log possession change event
+      await fetch(`/api/matches/${matchId}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'OTHER',
+          teamId: targetTeamId,
+          description: `Possession: ${teamName}`,
+          minute: calculatedMinute,
+          period: currentPeriod,
+          secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+        }),
+      });
+
+      setSuccess(`Possession switched to ${teamName}`);
+      onEventRecorded?.();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update possession');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleQuickEvent = async (eventType: QuickEventType) => {
     if (!teamId || !playerId) {
       setError('Please select team and player first');
@@ -160,6 +206,16 @@ export default function QuickEventButtons({
     setLoading(true);
 
     try {
+      // Calculate current game minute based on period and clock
+      const minutesPerPeriod = match?.gameRules?.minutesPerPeriod ?? 10;
+      const currentPeriod = gameState?.period ?? 1;
+      const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
+      const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
+      
+      // Cumulative minute: (periods completed * minutes per period) + (minutes elapsed in current period)
+      // We use Math.floor(elapsedSecondsInPeriod / 60) + 1 to get current minute (1-indexed)
+      const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
+
       const response = await fetch(`/api/matches/${matchId}/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,8 +223,8 @@ export default function QuickEventButtons({
           eventType,
           teamId,
           playerId,
-          minute: 0, // Minute is required but not critical for quick events
-          period: gameState?.period ?? 1,
+          minute: calculatedMinute,
+          period: currentPeriod,
           secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
         }),
       });
@@ -218,7 +274,7 @@ export default function QuickEventButtons({
             <Label htmlFor="quick-event-team">
               Team <span className="text-destructive">*</span>
             </Label>
-            <Select value={teamId} onValueChange={setTeamId} required>
+            <Select value={teamId} onValueChange={setTeamId} required disabled={!isLive}>
               <SelectTrigger id="quick-event-team">
                 <SelectValue placeholder="Select team" />
               </SelectTrigger>
@@ -240,7 +296,7 @@ export default function QuickEventButtons({
               value={playerId}
               onValueChange={setPlayerId}
               required
-              disabled={!teamId || teamPlayers.length === 0}
+              disabled={!teamId || teamPlayers.length === 0 || !isLive}
             >
               <SelectTrigger id="quick-event-player">
                 <SelectValue placeholder="Select player" />
@@ -271,6 +327,34 @@ export default function QuickEventButtons({
         )}
 
         <div className="space-y-3">
+          <div className="pb-2 border-b">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              Current Possession
+            </Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <Button
+                type="button"
+                variant={gameState?.possessionTeamId === team1Id ? "default" : "outline"}
+                size="sm"
+                onClick={() => team1Id && handleSetPossession(team1Id)}
+                className={gameState?.possessionTeamId === team1Id ? "bg-primary text-primary-foreground" : ""}
+                disabled={loading || !team1Id || !isLive}
+              >
+                {team1Name}
+              </Button>
+              <Button
+                type="button"
+                variant={gameState?.possessionTeamId === team2Id ? "default" : "outline"}
+                size="sm"
+                onClick={() => team2Id && handleSetPossession(team2Id)}
+                className={gameState?.possessionTeamId === team2Id ? "bg-primary text-primary-foreground" : ""}
+                disabled={loading || !team2Id || !isLive}
+              >
+                {team2Name}
+              </Button>
+            </div>
+          </div>
+
           <div>
             <Label className="text-sm font-semibold">Shots</Label>
             <div className="grid grid-cols-3 gap-2 mt-2">
@@ -279,7 +363,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('TWO_POINT_MADE')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.TWO_POINT_MADE}
               </Button>
@@ -288,7 +372,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('TWO_POINT_MISSED')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.TWO_POINT_MISSED}
               </Button>
@@ -297,7 +381,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('THREE_POINT_MADE')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.THREE_POINT_MADE}
               </Button>
@@ -306,7 +390,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('THREE_POINT_MISSED')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.THREE_POINT_MISSED}
               </Button>
@@ -315,7 +399,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('FREE_THROW_MADE')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.FREE_THROW_MADE}
               </Button>
@@ -324,7 +408,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('FREE_THROW_MISSED')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.FREE_THROW_MISSED}
               </Button>
@@ -339,7 +423,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('FOUL_PERSONAL')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.FOUL_PERSONAL}
               </Button>
@@ -348,7 +432,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('REBOUND_DEFENSIVE')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.REBOUND_DEFENSIVE}
               </Button>
@@ -357,7 +441,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('REBOUND_OFFENSIVE')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.REBOUND_OFFENSIVE}
               </Button>
@@ -366,7 +450,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('STEAL')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.STEAL}
               </Button>
@@ -375,7 +459,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('BLOCK')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.BLOCK}
               </Button>
@@ -384,7 +468,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('TURNOVER')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.TURNOVER}
               </Button>
@@ -399,7 +483,7 @@ export default function QuickEventButtons({
                 variant="outline"
                 size="sm"
                 onClick={() => handleQuickEvent('ASSIST')}
-                disabled={loading || !teamId || !playerId}
+                disabled={loading || !teamId || !playerId || !isLive}
               >
                 {EVENT_LABELS.ASSIST}
               </Button>

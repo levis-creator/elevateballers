@@ -330,12 +330,12 @@ export async function getTeamsPaginated(
   const where =
     searchTerm.length > 0
       ? {
-          ...baseWhere,
-          OR: [
-            { name: { contains: searchTerm } },
-            { slug: { contains: searchTerm } },
-          ],
-        }
+        ...baseWhere,
+        OR: [
+          { name: { contains: searchTerm } },
+          { slug: { contains: searchTerm } },
+        ],
+      }
       : baseWhere;
   const [totalCount, teams] = await Promise.all([
     prisma.team.count({ where }),
@@ -480,7 +480,7 @@ export async function getMedia(type?: string): Promise<MediaWithFolderAndUploade
     'audio': 'AUDIO',
   };
   const typeParam = type && typeMap[type.toLowerCase()] ? [typeMap[type.toLowerCase()]] : [];
-  
+
   try {
     const rawMedia = await prisma.$queryRawUnsafe<any[]>(
       `SELECT 
@@ -496,7 +496,7 @@ export async function getMedia(type?: string): Promise<MediaWithFolderAndUploade
       ORDER BY m.created_at DESC`,
       ...typeParam
     );
-    
+
     // Transform raw SQL results to match expected format
     return rawMedia.map((row: any) => ({
       id: row.id,
@@ -538,7 +538,7 @@ export async function getMedia(type?: string): Promise<MediaWithFolderAndUploade
         ORDER BY m.created_at DESC`,
         ...typeParam
       );
-      
+
       return rawMedia.map((row: any) => ({
         id: row.id,
         title: row.title,
@@ -576,7 +576,7 @@ export async function getMedia(type?: string): Promise<MediaWithFolderAndUploade
 export async function getFeaturedMedia(limit?: number): Promise<MediaWithFolderAndUploader[]> {
   // Use raw SQL to ensure featured field is included
   const limitClause = limit ? `LIMIT ${limit}` : '';
-  
+
   try {
     const rawMedia = await prisma.$queryRawUnsafe<any[]>(
       `SELECT 
@@ -592,7 +592,7 @@ export async function getFeaturedMedia(limit?: number): Promise<MediaWithFolderA
       ORDER BY m.created_at DESC
       ${limitClause}`
     );
-    
+
     // Transform raw SQL results to match expected format
     const allFeatured = rawMedia.map((row: any) => ({
       id: row.id,
@@ -642,7 +642,7 @@ export async function getFeaturedMedia(limit?: number): Promise<MediaWithFolderA
         ORDER BY m.created_at DESC
         ${limitClause}`
       );
-      
+
       const allFeatured = rawMedia.map((row: any) => ({
         id: row.id,
         title: row.title,
@@ -692,11 +692,11 @@ export async function getMediaById(id: string): Promise<MediaWithFolderAndUpload
       LIMIT 1`,
       id
     );
-    
+
     if (rawMedia.length === 0) {
       return null;
     }
-    
+
     const row = rawMedia[0];
     return {
       id: row.id,
@@ -738,11 +738,11 @@ export async function getMediaById(id: string): Promise<MediaWithFolderAndUpload
         LIMIT 1`,
         id
       );
-      
+
       if (rawMedia.length === 0) {
         return null;
       }
-      
+
       const row = rawMedia[0];
       return {
         id: row.id,
@@ -776,7 +776,7 @@ export async function getMediaById(id: string): Promise<MediaWithFolderAndUpload
  */
 export async function getFolders(includePrivate = false): Promise<FolderWithMediaCount[]> {
   const where: any = {};
-  
+
   if (!includePrivate) {
     where.isPrivate = false;
   }
@@ -1390,11 +1390,26 @@ export async function getMatchWithFullDetails(matchId: string): Promise<MatchWit
       // Continue without events
     }
 
+    let substitutions: any[] = [];
+    try {
+      substitutions = await prisma.substitution.findMany({
+        where: { matchId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          playerIn: true,
+          playerOut: true
+        }
+      });
+    } catch (err) {
+      console.warn('Failed to fetch substitutions:', err);
+    }
+
     // Combine all data
     return {
       ...match,
       matchPlayers: matchPlayers || [],
       events: events || [],
+      substitutions: substitutions || [],
     } as MatchWithFullDetails;
   } catch (error: any) {
     console.error('Error in getMatchWithFullDetails:', error);

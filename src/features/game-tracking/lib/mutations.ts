@@ -214,6 +214,15 @@ export async function startGame(matchId: string, gameRulesId?: string): Promise<
       },
     });
 
+    // Set all starters as active
+    await prisma.matchPlayer.updateMany({
+      where: {
+        matchId,
+        started: true,
+      },
+      data: { isActive: true },
+    });
+
     // Create first quarter
     await createMatchPeriod({
       matchId,
@@ -370,12 +379,12 @@ export async function createTimeout(data: CreateTimeoutInput): Promise<Timeout |
       if (otherTimeouts === null || otherTimeouts === 0) {
         updateData[otherTimeoutField] = defaultTimeouts;
       }
-      
+
       await prisma.match.update({
         where: { id: data.matchId },
         data: updateData,
       });
-      
+
       // Update currentTimeouts to the initialized value
       currentTimeouts = defaultTimeouts;
     }
@@ -390,7 +399,7 @@ export async function createTimeout(data: CreateTimeoutInput): Promise<Timeout |
 
     // Calculate minute from secondsRemaining (approximate)
     const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
-    const minute = data.secondsRemaining 
+    const minute = data.secondsRemaining
       ? Math.ceil((periodLengthSeconds - data.secondsRemaining) / 60)
       : Math.ceil(periodLengthSeconds / 2 / 60); // Default to middle of period
 
@@ -454,29 +463,92 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
 
     // Calculate minute from secondsRemaining (approximate)
     const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
-    const minute = data.secondsRemaining 
+    const minute = data.secondsRemaining
       ? Math.ceil((periodLengthSeconds - data.secondsRemaining) / 60)
       : Math.ceil(periodLengthSeconds / 2 / 60); // Default to middle of period
 
     // Update player active status and create substitution + events in transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Update player active status
-      await tx.matchPlayer.updateMany({
-        where: {
-          matchId: data.matchId,
-          playerId: data.playerInId,
-          teamId: data.teamId,
-        },
-        data: { isActive: true },
-      });
-      
-      await tx.matchPlayer.updateMany({
+      // Get playerOut details (we already have playerIn partial, but fetch full name here)
+      const [pIn, pOut] = await Promise.all([
+        tx.player.findUnique({ where: { id: data.playerInId }, select: { firstName: true, lastName: true, jerseyNumber: true } }),
+        tx.player.findUnique({ where: { id: data.playerOutId }, select: { firstName: true, lastName: true } })
+      ]);
+
+      // Update playerOut: set inactive AND close their playing time session
+      const playerOutMatchPlayer = await tx.matchPlayer.findFirst({
         where: {
           matchId: data.matchId,
           playerId: data.playerOutId,
           teamId: data.teamId,
+        }
+      });
+
+      if (playerOutMatchPlayer) {
+        // Find open playing time entry
+        const openEntry = await tx.playerPlayingTime.findFirst({
+          where: {
+            matchPlayerId: playerOutMatchPlayer.id,
+            exitTime: null, // Still playing
+            period: data.period
+          },
+          orderBy: { entryTime: 'desc' }
+        });
+
+        const now = new Date();
+
+        if (openEntry) {
+          // Close it
+          const secondsPlayed = Math.floor((now.getTime() - openEntry.entryTime.getTime()) / 1000);
+          await tx.playerPlayingTime.update({
+            where: { id: openEntry.id },
+            data: {
+              exitTime: now,
+              secondsPlayed
+            }
+          });
+        }
+
+        // Mark inactive and set subOut flag
+        await tx.matchPlayer.update({
+          where: { id: playerOutMatchPlayer.id },
+          data: {
+            isActive: false,
+            subOut: true
+          }
+        });
+      }
+
+      // Update or create playerIn: set active AND start new playing time session
+      const playerInMatchPlayer = await tx.matchPlayer.upsert({
+        where: {
+          matchId_playerId_teamId: {
+            matchId: data.matchId,
+            playerId: data.playerInId,
+            teamId: data.teamId,
+          }
         },
-        data: { isActive: false },
+        update: {
+          isActive: true,
+          subOut: false
+        },
+        create: {
+          matchId: data.matchId,
+          playerId: data.playerInId,
+          teamId: data.teamId,
+          isActive: true,
+          subOut: false,
+          jerseyNumber: pIn?.jerseyNumber,
+        },
+      });
+
+      // Open new playing time session for player In
+      await tx.playerPlayingTime.create({
+        data: {
+          matchPlayerId: playerInMatchPlayer.id,
+          period: data.period,
+          entryTime: new Date()
+        }
       });
 
       // Create substitution record
@@ -491,6 +563,9 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
         },
       });
 
+      const inName = pIn ? `${pIn.firstName} ${pIn.lastName}`.trim() : 'Unknown Player';
+      const outName = pOut ? `${pOut.firstName} ${pOut.lastName}`.trim() : 'Unknown Player';
+
       // Create SUBSTITUTION_OUT event
       await tx.matchEvent.create({
         data: {
@@ -502,6 +577,7 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
           sequenceNumber,
           teamId: data.teamId,
           playerId: data.playerOutId,
+          description: `Substituted out for ${inName}`,
         },
       });
 
@@ -516,6 +592,7 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
           sequenceNumber: sequenceNumber + 1,
           teamId: data.teamId,
           playerId: data.playerInId,
+          description: `Substituted in for ${outName}`,
         },
       });
 
@@ -707,13 +784,13 @@ export async function createJumpBall(data: CreateJumpBallInput): Promise<JumpBal
 
     // Calculate minute from secondsRemaining (approximate)
     const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
-    const minute = data.secondsRemaining 
+    const minute = data.secondsRemaining
       ? Math.ceil((periodLengthSeconds - data.secondsRemaining) / 60)
       : Math.ceil(periodLengthSeconds / 2 / 60); // Default to middle of period
 
     // Create jump ball record and match event in transaction
-    const [jumpBall] = await prisma.$transaction([
-      prisma.jumpBall.create({
+    const jumpBall = await prisma.$transaction(async (tx) => {
+      const jb = await tx.jumpBall.create({
         data: {
           matchId: data.matchId,
           period: data.period,
@@ -722,8 +799,9 @@ export async function createJumpBall(data: CreateJumpBallInput): Promise<JumpBal
           possessionTeamId: data.possessionTeamId,
           secondsRemaining: data.secondsRemaining,
         },
-      }),
-      prisma.matchEvent.create({
+      });
+
+      await tx.matchEvent.create({
         data: {
           matchId: data.matchId,
           eventType: 'JUMP_BALL',
@@ -733,15 +811,18 @@ export async function createJumpBall(data: CreateJumpBallInput): Promise<JumpBal
           sequenceNumber,
           description: 'Jump ball',
         },
-      }),
+      });
+
       // Update possession if specified
-      data.possessionTeamId
-        ? prisma.match.update({
-            where: { id: data.matchId },
-            data: { possessionTeamId: data.possessionTeamId },
-          })
-        : Promise.resolve(),
-    ]);
+      if (data.possessionTeamId) {
+        await tx.match.update({
+          where: { id: data.matchId },
+          data: { possessionTeamId: data.possessionTeamId },
+        });
+      }
+
+      return jb;
+    });
 
     return jumpBall;
   } catch (error) {

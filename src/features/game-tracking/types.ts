@@ -20,13 +20,18 @@ import type {
 
 // Re-export Prisma types
 export type {
+  Match,
   GameRules,
   GameState,
   MatchPeriod,
   Timeout,
   Substitution,
+  MatchEvent,
+  Team,
+  Player,
   GameTrackingMode,
   TimeoutType,
+  JumpBall,
 };
 
 // Extended types with relations

@@ -17,14 +17,16 @@ import QuickEventButtons from './QuickEventButtons';
 import { useGameTrackingStore } from '../stores/useGameTrackingStore';
 import { Play, AlertCircle } from 'lucide-react';
 import type { Match } from '@prisma/client';
+import type { MatchWithGameState } from '../types';
 import { getTeam1Name, getTeam2Name, getTeam1Logo, getTeam2Logo } from '../../matches/lib/team-helpers';
 
 interface GameTrackingPanelProps {
   matchId: string;
-  match: Match | null;
+  match: MatchWithGameState | null;
+  onRefresh?: () => void;
 }
 
-export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelProps) {
+export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTrackingPanelProps) {
   const {
     gameState,
     isLoading,
@@ -55,6 +57,8 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   const handleStartGame = async () => {
     await startGame(matchId);
+    setRefreshTrigger((prev) => prev + 1);
+    if (onRefresh) onRefresh();
   };
 
   const handleEndGame = async () => {
@@ -86,12 +90,44 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
   const handleEventRecorded = async () => {
     await fetchGameState(matchId);
     setRefreshTrigger((prev) => prev + 1);
+    if (onRefresh) onRefresh();
   };
 
   const handlePeriodChange = async (newPeriod: number) => {
     await updateGameState(matchId, {
       period: newPeriod,
     });
+  };
+
+  const handlePossessionChange = async (targetTeamId: string) => {
+    await updateGameState(matchId, {
+      possessionTeamId: targetTeamId,
+    });
+
+    // Record possession change as an event so it appears in play-by-play
+    if (match) {
+      const teamName = targetTeamId === match.team1Id ? getTeam1Name(match) : getTeam2Name(match);
+      const currentPeriod = gameState?.period ?? 1;
+      const minutesPerPeriod = match.gameRules?.minutesPerPeriod ?? 10;
+      const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
+      const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
+      const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
+
+      await fetch(`/api/matches/${matchId}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'OTHER',
+          teamId: targetTeamId,
+          description: `Possession: ${teamName}`,
+          minute: calculatedMinute,
+          period: currentPeriod,
+          secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+        }),
+      });
+    }
+
+    handleEventRecorded();
   };
 
   const team1Name = match ? getTeam1Name(match) : undefined;
@@ -172,6 +208,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             team1Id={match?.team1Id || null}
             team2Id={match?.team2Id || null}
             onPeriodChange={handlePeriodChange}
+            onPossessionChange={handlePossessionChange}
           />
         </div>
 
@@ -218,7 +255,11 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
       </div>
 
       {/* Play-by-Play Log */}
-      <PlayByPlayLog matchId={matchId} onRefresh={() => fetchGameState(matchId)} />
+      <PlayByPlayLog 
+        matchId={matchId} 
+        onRefresh={() => fetchGameState(matchId)} 
+        refreshTrigger={refreshTrigger}
+      />
     </div>
   );
 }

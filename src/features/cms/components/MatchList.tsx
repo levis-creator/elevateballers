@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getWinnerName, isWinner, getTeam1Id, getTeam2Id } from '../../matches/lib/team-helpers';
+import TeamLogo from '../../matches/components/TeamLogo';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 
 export default function MatchList() {
@@ -469,30 +470,22 @@ export default function MatchList() {
                     <TableCell>
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
-                          {team1Logo && (
-                            <img
-                              src={team1Logo}
-                              alt={team1Name}
-                              className="w-6 h-6 object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          )}
+                          <TeamLogo 
+                            logo={team1Logo} 
+                            name={team1Name} 
+                            size="xs" 
+                            className="w-6 h-6 object-contain" 
+                          />
                           <span className="font-semibold text-sm">{team1Name}</span>
                         </div>
                         <span className="text-xs text-muted-foreground px-2">vs</span>
                         <div className="flex items-center gap-2">
-                          {team2Logo && (
-                            <img
-                              src={team2Logo}
-                              alt={team2Name}
-                              className="w-6 h-6 object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          )}
+                          <TeamLogo 
+                            logo={team2Logo} 
+                            name={team2Name} 
+                            size="xs" 
+                            className="w-6 h-6 object-contain" 
+                          />
                           <span className="font-semibold text-sm">{team2Name}</span>
                         </div>
                       </div>
@@ -614,16 +607,12 @@ export default function MatchList() {
                   </div>
                   <div className="space-y-4 mb-4">
                     <div className="flex items-center gap-3">
-                      {team1Logo && (
-                        <img
-                          src={team1Logo}
-                          alt={team1Name}
-                          className="w-10 h-10 object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      )}
+                      <TeamLogo 
+                        logo={team1Logo} 
+                        name={team1Name} 
+                        size="md" 
+                        className="w-10 h-10 object-contain" 
+                      />
                       <span className="flex-1 font-semibold">{team1Name}</span>
                       {hasScore && (
                         <span className="text-xl font-bold">{match.team1Score}</span>
@@ -631,16 +620,12 @@ export default function MatchList() {
                     </div>
                     <div className="text-center text-sm text-muted-foreground font-medium">vs</div>
                     <div className="flex items-center gap-3">
-                      {team2Logo && (
-                        <img
-                          src={team2Logo}
-                          alt={team2Name}
-                          className="w-10 h-10 object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      )}
+                      <TeamLogo 
+                        logo={team2Logo} 
+                        name={team2Name} 
+                        size="md" 
+                        className="w-10 h-10 object-contain" 
+                      />
                       <span className="flex-1 font-semibold">{team2Name}</span>
                       {hasScore && (
                         <span className="text-xl font-bold">{match.team2Score}</span>

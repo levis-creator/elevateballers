@@ -120,3 +120,15 @@ export function isWinner(match: MatchWithTeams | Match | null | undefined, teamI
   const winnerId = getWinnerId(match);
   return winnerId === teamId;
 }
+
+/**
+ * Get team initials from a name
+ */
+export function getTeamInitials(name: string): string {
+  if (!name) return '??';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return name.substring(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}

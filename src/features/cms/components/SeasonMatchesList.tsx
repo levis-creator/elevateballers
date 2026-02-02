@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ArrowLeft, AlertCircle, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, Calendar, Clock, Trophy, Users, Eye, RefreshCw, Table2, Network } from 'lucide-react';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../../matches/lib/team-helpers';
+import TeamLogo from '../../matches/components/TeamLogo';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 import TournamentBracketView from './TournamentBracketView';
 
@@ -336,16 +337,12 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
                       <TableCell>
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-2">
-                            {team1Logo && (
-                              <img
-                                src={team1Logo}
-                                alt={team1Name || 'Team 1'}
-                                className="w-6 h-6 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            )}
+                            <TeamLogo 
+                              logo={team1Logo} 
+                              name={team1Name || 'Team 1'} 
+                              size="xs" 
+                              className="w-6 h-6 object-contain" 
+                            />
                             <span className="font-medium">{team1Name || 'Team 1'}</span>
                             {match.team1Score !== null && (
                               <span className="font-bold ml-auto">{match.team1Score}</span>
@@ -355,16 +352,12 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
                             vs
                           </div>
                           <div className="flex items-center gap-2">
-                            {team2Logo && (
-                              <img
-                                src={team2Logo}
-                                alt={team2Name || 'Team 2'}
-                                className="w-6 h-6 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            )}
+                            <TeamLogo 
+                              logo={team2Logo} 
+                              name={team2Name || 'Team 2'} 
+                              size="xs" 
+                              className="w-6 h-6 object-contain" 
+                            />
                             <span className="font-medium">{team2Name || 'Team 2'}</span>
                             {match.team2Score !== null && (
                               <span className="font-bold ml-auto">{match.team2Score}</span>
