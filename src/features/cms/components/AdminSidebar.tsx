@@ -2,15 +2,18 @@ import { useState, useEffect, type ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { tekoFont, navActive, navHover } from '../lib/ui-helpers';
+import type { UserRole } from '../types';
 
 export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [icons, setIcons] = useState<{
     LayoutDashboard?: ComponentType<any>;
     Newspaper?: ComponentType<any>;
     Calendar?: ComponentType<any>;
     Users?: ComponentType<any>;
+    User?: ComponentType<any>;
     Shield?: ComponentType<any>;
     Briefcase?: ComponentType<any>;
     Images?: ComponentType<any>;
@@ -32,6 +35,7 @@ export default function AdminSidebar() {
         Newspaper: mod.Newspaper,
         Calendar: mod.Calendar,
         Users: mod.Users,
+        User: mod.User,
         Shield: mod.Shield,
         Briefcase: mod.Briefcase,
         Images: mod.Images,
@@ -45,6 +49,23 @@ export default function AdminSidebar() {
         X: mod.X,
       });
     });
+
+    // Fetch user role
+    const fetchUserRole = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            setUserRole(data.user.role);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+      }
+    };
+    
+    fetchUserRole();
 
     // Check if mobile on mount and resize
     const checkMobile = () => {
@@ -89,11 +110,19 @@ export default function AdminSidebar() {
     { href: '/admin/teams', icon: icons.Shield, label: 'Teams' },
     { href: '/admin/players', icon: icons.Users, label: 'Players' },
     { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff' },
+    { href: '/admin/users', icon: icons.Users, label: 'System Users' },
     { href: '/admin/media', icon: icons.Images, label: 'Media' },
     // { href: '/admin/pages', icon: icons.FileText, label: 'Pages' },
     // { href: '/admin/settings', icon: icons.Settings, label: 'Settings' },
-  ];
+  ].filter(item => {
+    // Only show Users menu item to admins
+    if (item.href === '/admin/users') {
+      return userRole === 'ADMIN';
+    }
+    return true;
+  });
 
+  const UserIcon = icons.User;
   const BasketballIcon = icons.Basketball;
   const ExternalLinkIcon = icons.ExternalLink;
   const LogOutIcon = icons.LogOut;
@@ -235,6 +264,21 @@ export default function AdminSidebar() {
           >
             {ExternalLinkIcon ? <ExternalLinkIcon size={20} className="mr-3 flex-shrink-0 !text-white" /> : <span className="w-5 h-5 mr-3 flex-shrink-0" />}
             <span className="!text-white">View Site</span>
+          </a>
+          <a
+            href="/admin/profile"
+            className={cn(
+              "flex items-center px-6 py-3.5 !text-white no-underline",
+              "transition-all duration-200",
+              "border-l-[3px] border-transparent",
+              navHover,
+              getActiveClass('/admin/profile') && navActive,
+              "text-[0.95rem] font-medium"
+            )}
+            onClick={handleNavClick}
+          >
+            {UserIcon ? <UserIcon size={20} className="mr-3 flex-shrink-0 !text-white" /> : <span className="w-5 h-5 mr-3 flex-shrink-0" />}
+            <span className="!text-white">My Profile</span>
           </a>
           <button
             type="button"
