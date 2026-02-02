@@ -1,5 +1,3 @@
-
-#!/usr/bin/env node
 /**
  * Build script for cPanel deployment
  * Works on Windows, Linux, and Mac without cross-env
