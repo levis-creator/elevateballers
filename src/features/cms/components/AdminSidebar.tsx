@@ -21,7 +21,7 @@ export default function AdminSidebar() {
     Settings?: ComponentType<any>;
     ExternalLink?: ComponentType<any>;
     LogOut?: ComponentType<any>;
-    Basketball?: ComponentType<any>;
+    Dribble?: ComponentType<any>;
     Trophy?: ComponentType<any>;
     Menu?: ComponentType<any>;
     X?: ComponentType<any>;
@@ -43,7 +43,7 @@ export default function AdminSidebar() {
         Settings: mod.Settings,
         ExternalLink: mod.ExternalLink,
         LogOut: mod.LogOut,
-        Basketball: mod.Basketball,
+        Dribble: mod.Dribble,
         Trophy: mod.Trophy,
         Menu: mod.Menu,
         X: mod.X,
@@ -123,7 +123,7 @@ export default function AdminSidebar() {
   });
 
   const UserIcon = icons.User;
-  const BasketballIcon = icons.Basketball;
+  const BasketballIcon = icons.Dribble;
   const ExternalLinkIcon = icons.ExternalLink;
   const LogOutIcon = icons.LogOut;
   const MenuIcon = icons.Menu;
