@@ -22,12 +22,12 @@ import {
   isOvertimePeriod
 } from '../lib/utils';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import type { GameStateData } from '../types';
+import type { GameStateData, MatchWithGameState } from '../types';
 import type { Match } from '@prisma/client';
 
 interface GameScoreboardProps {
   gameState: GameStateData | null;
-  match: Match | null;
+  match: MatchWithGameState | null;
   team1Name?: string;
   team2Name?: string;
   team1Logo?: string | null;
@@ -36,6 +36,7 @@ interface GameScoreboardProps {
   team2Id?: string | null;
   foulsForBonus?: number;
   onPeriodChange?: (period: number) => void;
+  onPossessionChange?: (teamId: string) => void;
 }
 
 export default function GameScoreboard({
@@ -49,6 +50,7 @@ export default function GameScoreboard({
   team2Id,
   foulsForBonus = 5,
   onPeriodChange,
+  onPossessionChange,
 }: GameScoreboardProps) {
   if (!gameState || !match) {
     return (
@@ -176,7 +178,15 @@ export default function GameScoreboard({
         )}
         <div className="grid grid-cols-2 gap-4">
           {/* Team 1 */}
-          <div className={`text-center relative ${team1HasPossession ? 'ring-2 ring-primary rounded-lg p-2 -m-2' : ''}`}>
+          <div 
+            className={`text-center relative transition-all duration-200 ${
+              team1HasPossession 
+                ? 'ring-2 ring-primary rounded-lg p-2 -m-2 bg-primary/5' 
+                : isMatchLive ? 'hover:bg-muted/50 rounded-lg p-2 -m-2 cursor-pointer' : ''
+            }`}
+            onClick={() => isMatchLive && team1Id && onPossessionChange?.(team1Id)}
+            title={isMatchLive ? `Give possession to ${team1Name}` : ''}
+          >
             <div className="flex items-center justify-center gap-2 mb-2">
               {team1HasPossession && (
                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
@@ -219,7 +229,15 @@ export default function GameScoreboard({
           </div>
 
           {/* Team 2 */}
-          <div className={`text-center relative ${team2HasPossession ? 'ring-2 ring-primary rounded-lg p-2 -m-2' : ''}`}>
+          <div 
+            className={`text-center relative transition-all duration-200 ${
+              team2HasPossession 
+                ? 'ring-2 ring-primary rounded-lg p-2 -m-2 bg-primary/5' 
+                : isMatchLive ? 'hover:bg-muted/50 rounded-lg p-2 -m-2 cursor-pointer' : ''
+            }`}
+            onClick={() => isMatchLive && team2Id && onPossessionChange?.(team2Id)}
+            title={isMatchLive ? `Give possession to ${team2Name}` : ''}
+          >
             <div className="flex items-center justify-center gap-2 mb-2">
               {team2HasPossession && (
                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />

@@ -73,3 +73,35 @@ export const POST: APIRoute = async ({ params, request }) => {
     );
   }
 };
+
+/**
+ * GET /api/games/[matchId]/substitution
+ * Get all substitutions for a match
+ */
+export const GET: APIRoute = async ({ params }) => {
+  try {
+    const matchId = params.matchId;
+    if (!matchId) {
+      return new Response(JSON.stringify({ error: 'Match ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const substitutions = await getMatchSubstitutions(matchId);
+
+    return new Response(JSON.stringify(substitutions), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error: any) {
+    console.error('Error fetching substitutions:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'Failed to fetch substitutions' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+};

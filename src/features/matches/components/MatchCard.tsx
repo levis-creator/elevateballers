@@ -6,6 +6,7 @@
 import type { Match } from '@prisma/client';
 import { formatMatchDate, formatMatchTime, getMatchStatusColor, getMatchStatusLabel } from '../lib/utils';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, isWinner } from '../lib/team-helpers';
+import TeamLogo from './TeamLogo';
 import { getLeagueName } from '../lib/league-helpers';
 
 interface MatchCardProps {
@@ -56,32 +57,24 @@ export default function MatchCard({
         </div>
         <div className="match-teams-compact">
           <div className={`match-team-compact ${team1IsWinner ? 'winner' : ''}`}>
-            {team1Logo && (
-              <img
-                src={team1Logo}
-                alt={team1Name}
-                className="team-logo-compact"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            )}
+            <TeamLogo 
+              logo={team1Logo} 
+              name={team1Name} 
+              size="sm" 
+              className="team-logo-compact" 
+            />
             <span className="team-name-compact">{team1Name}</span>
             {hasScore && <span className="team-score-compact">{match.team1Score}</span>}
             {team1IsWinner && <span className="winner-icon-compact">🏆</span>}
           </div>
           <span className="vs-compact">vs</span>
           <div className={`match-team-compact ${team2IsWinner ? 'winner' : ''}`}>
-            {team2Logo && (
-              <img
-                src={team2Logo}
-                alt={team2Name}
-                className="team-logo-compact"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            )}
+            <TeamLogo 
+              logo={team2Logo} 
+              name={team2Name} 
+              size="sm" 
+              className="team-logo-compact" 
+            />
             <span className="team-name-compact">{team2Name}</span>
             {hasScore && <span className="team-score-compact">{match.team2Score}</span>}
             {team2IsWinner && <span className="winner-icon-compact">🏆</span>}
@@ -116,32 +109,24 @@ export default function MatchCard({
       </div>
       <div className="match-card-teams">
         <div className={`match-team ${team1IsWinner ? 'winner' : ''}`}>
-          {team1Logo && (
-            <img
-              src={team1Logo}
-              alt={team1Name}
-              className="team-logo"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          )}
+          <TeamLogo 
+            logo={team1Logo} 
+            name={team1Name} 
+            size="md" 
+            className="team-logo" 
+          />
           <span className="team-name">{team1Name}</span>
           {hasScore && <span className="team-score">{match.team1Score}</span>}
           {team1IsWinner && <span className="winner-icon">🏆</span>}
         </div>
         <span className="vs">vs</span>
         <div className={`match-team ${team2IsWinner ? 'winner' : ''}`}>
-          {team2Logo && (
-            <img
-              src={team2Logo}
-              alt={team2Name}
-              className="team-logo"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          )}
+          <TeamLogo 
+            logo={team2Logo} 
+            name={team2Name} 
+            size="md" 
+            className="team-logo" 
+          />
           <span className="team-name">{team2Name}</span>
           {hasScore && <span className="team-score">{match.team2Score}</span>}
           {team2IsWinner && <span className="winner-icon">🏆</span>}

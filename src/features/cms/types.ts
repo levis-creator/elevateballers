@@ -28,6 +28,7 @@ import type {
   MatchPlayer,
   MatchEvent,
   MatchEventType,
+  Substitution,
 } from '@prisma/client';
 
 // Re-export Prisma types
@@ -56,6 +57,7 @@ export type {
   MatchPlayer,
   MatchEvent,
   MatchEventType,
+  Substitution,
 };
 
 // Extended types with relations
@@ -158,11 +160,13 @@ export type MatchWithFullDetails = Match & {
   season: Season | null;
   matchPlayers: MatchPlayerWithDetails[];
   events: MatchEventWithDetails[];
+  substitutions: Substitution[];
 };
 
 export type MatchPlayerWithDetails = MatchPlayer & {
   player: Player;
   team: Team;
+  subOut?: boolean;
 };
 
 export type MatchEventWithDetails = MatchEvent & {
@@ -352,6 +356,7 @@ export type CreateMatchPlayerInput = {
   position?: string;
   jerseyNumber?: number;
   minutesPlayed?: number;
+  subOut?: boolean;
 };
 
 export type UpdateMatchPlayerInput = Partial<Omit<CreateMatchPlayerInput, 'matchId' | 'playerId' | 'teamId'>>;
@@ -401,3 +406,12 @@ export type FolderWithMedia = Folder & {
     media: number;
   };
 };
+
+export type CreateUserInput = {
+  email: string;
+  name: string;
+  role?: UserRole; // Default is EDITOR
+  password?: string; // Optional if we generate it or handle it separately
+};
+
+export type UpdateUserInput = Partial<CreateUserInput>;

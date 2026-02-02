@@ -57,21 +57,21 @@ import type {
  */
 async function manageFeaturedLimit(excludeArticleId?: string): Promise<void> {
   const MAX_FEATURED = 5;
-  
+
   // Count featured articles, excluding the current one if updating
   const whereClause: any = {
     published: true,
     feature: true,
   };
-  
+
   if (excludeArticleId) {
     whereClause.id = { not: excludeArticleId };
   }
-  
+
   const featuredCount = await prisma.newsArticle.count({
     where: whereClause,
   });
-  
+
   // If we're at or over the limit, unfeature the oldest one
   if (featuredCount >= MAX_FEATURED) {
     // Find the oldest featured article (excluding the current one if updating)
@@ -85,7 +85,7 @@ async function manageFeaturedLimit(excludeArticleId?: string): Promise<void> {
         createdAt: true,
       },
     });
-    
+
     // Sort by publishedAt (oldest first), with nulls last, then by createdAt
     const sortedFeatured = allFeatured.sort((a, b) => {
       // If both have publishedAt, compare them
@@ -103,16 +103,16 @@ async function manageFeaturedLimit(excludeArticleId?: string): Promise<void> {
       // Both null, use createdAt
       return a.createdAt.getTime() - b.createdAt.getTime();
     });
-    
+
     const oldestFeatured = sortedFeatured[0];
-    
+
     if (oldestFeatured) {
       // Unfeature the oldest article
       await prisma.newsArticle.update({
         where: { id: oldestFeatured.id },
         data: { feature: false },
       });
-      
+
       console.log(`Automatically unfeatured oldest article: "${oldestFeatured.title}" (ID: ${oldestFeatured.id})`);
     }
   }
@@ -128,7 +128,7 @@ export async function createNewsArticle(
   if (data.feature === true && data.published === true) {
     await manageFeaturedLimit();
   }
-  
+
   const article = await prisma.newsArticle.create({
     data: {
       ...data,
@@ -181,16 +181,16 @@ export async function updateNewsArticle(
   // Check if feature is being set to true and article is/will be published
   const willBeFeatured = data.feature === true;
   const willBePublished = data.published === true || (data.published === undefined);
-  
+
   // Get current article state to check if it's already published
   const currentArticle = await prisma.newsArticle.findUnique({
     where: { id },
     select: { published: true, feature: true },
   });
-  
+
   const isCurrentlyPublished = currentArticle?.published ?? false;
   const isCurrentlyFeatured = currentArticle?.feature ?? false;
-  
+
   // Only manage limit if:
   // 1. Feature is being set to true AND
   // 2. Article is/will be published AND
@@ -361,18 +361,18 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
   if (data.team1Id && data.team2Id && data.team1Id === data.team2Id) {
     throw new Error('A team cannot be matched against itself');
   }
-  
+
   // Also check by name if IDs are not provided, but allow TBD matches (both teams null)
   // TBD matches are valid for bracket generation where teams will be filled in later
-  if (!data.team1Id && !data.team2Id && data.team1Name && data.team2Name && 
-      data.team1Name === data.team2Name && 
-      data.team1Name !== 'TBD' && data.team2Name !== 'TBD' &&
-      data.team1Name !== 'BYE' && data.team2Name !== 'BYE') {
+  if (!data.team1Id && !data.team2Id && data.team1Name && data.team2Name &&
+    data.team1Name === data.team2Name &&
+    data.team1Name !== 'TBD' && data.team2Name !== 'TBD' &&
+    data.team1Name !== 'BYE' && data.team2Name !== 'BYE') {
     throw new Error('A team cannot be matched against itself');
   }
 
   const matchData: any = {
-      date: new Date(data.date),
+    date: new Date(data.date),
     team1Score: data.team1Score,
     team2Score: data.team2Score,
     status: data.status || 'UPCOMING',
@@ -550,17 +550,17 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
     // Update winner if:
     // 1. Status was changed to COMPLETED, or
     // 2. Match is already COMPLETED and scores were updated
-    const statusChangedToCompleted = 
+    const statusChangedToCompleted =
       data.status === 'COMPLETED' && currentMatch?.status !== 'COMPLETED';
-    const scoresUpdatedOnCompletedMatch = 
-      currentMatch?.status === 'COMPLETED' && 
+    const scoresUpdatedOnCompletedMatch =
+      currentMatch?.status === 'COMPLETED' &&
       (data.team1Score !== undefined || data.team2Score !== undefined);
 
     if (statusChangedToCompleted || scoresUpdatedOnCompletedMatch) {
       // Import here to avoid circular dependency
       const { updateMatchWinner } = await import('../../game-tracking/lib/score-calculation');
       await updateMatchWinner(id, prisma);
-      
+
       // Automatically advance winner to next match (if enabled)
       if (getEnvBoolean('ENABLE_AUTOMATCHING', true)) {
         const { advanceWinnerToNextMatch } = await import('../../tournaments/lib/bracket-automation');
@@ -920,7 +920,7 @@ export async function deleteMedia(id: string): Promise<boolean> {
       try {
         const { fileExists } = await import('../../../lib/file-storage');
         const fileStillExists = await fileExists(media.filePath);
-        
+
         if (!fileStillExists) {
           // File doesn't exist - find and delete any other records with this filePath
           const orphanedRecords = await prisma.media.findMany({
@@ -1352,15 +1352,15 @@ export async function updateLeague(id: string, data: UpdateLeagueInput): Promise
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, '');
-        
+
         // Ensure slug is unique (excluding current league)
         let uniqueSlug = newSlug;
         let counter = 1;
-        while (await prisma.league.findFirst({ 
-          where: { 
+        while (await prisma.league.findFirst({
+          where: {
             slug: uniqueSlug,
             NOT: { id }
-          } 
+          }
         })) {
           uniqueSlug = `${newSlug}-${counter}`;
           counter++;
@@ -1435,11 +1435,11 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
   // Ensure slug is unique within the league
   let uniqueSlug = slug;
   let counter = 1;
-  while (await prisma.season.findFirst({ 
-    where: { 
+  while (await prisma.season.findFirst({
+    where: {
       slug: uniqueSlug,
       leagueId: data.leagueId
-    } 
+    }
   })) {
     uniqueSlug = `${slug}-${counter}`;
     counter++;
@@ -1475,16 +1475,16 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
-      
+
       // Ensure slug is unique within the league (excluding current season)
       let uniqueSlug = newSlug;
       let counter = 1;
-      while (await prisma.season.findFirst({ 
-        where: { 
+      while (await prisma.season.findFirst({
+        where: {
           slug: uniqueSlug,
           leagueId: leagueId,
           NOT: { id }
-        } 
+        }
       })) {
         uniqueSlug = `${newSlug}-${counter}`;
         counter++;
@@ -1494,12 +1494,12 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
       // If slug is being updated, ensure it's unique within the league
       let uniqueSlug = data.slug;
       let counter = 1;
-      while (await prisma.season.findFirst({ 
-        where: { 
+      while (await prisma.season.findFirst({
+        where: {
           slug: uniqueSlug,
           leagueId: leagueId,
           NOT: { id }
-        } 
+        }
       })) {
         uniqueSlug = `${data.slug}-${counter}`;
         counter++;
@@ -1554,9 +1554,11 @@ export async function createMatchPlayer(data: CreateMatchPlayerInput): Promise<M
         playerId: data.playerId,
         teamId: data.teamId,
         started: data.started ?? false,
+        isActive: data.started ?? false, // Sycnc initial active status with starter status
         position: data.position,
         jerseyNumber: data.jerseyNumber,
         minutesPlayed: data.minutesPlayed,
+        subOut: data.subOut ?? false,
       },
     });
   } catch (error) {
@@ -1570,9 +1572,17 @@ export async function createMatchPlayer(data: CreateMatchPlayerInput): Promise<M
  */
 export async function updateMatchPlayer(id: string, data: UpdateMatchPlayerInput): Promise<MatchPlayer | null> {
   try {
+    const updateData: any = { ...data };
+    if (data.started !== undefined) {
+      updateData.isActive = data.started;
+    }
+    if (data.subOut !== undefined) {
+      updateData.subOut = data.subOut;
+    }
+
     return await prisma.matchPlayer.update({
       where: { id },
-      data,
+      data: updateData,
     });
   } catch (error) {
     console.error('Error updating match player:', error);
@@ -1705,6 +1715,43 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
         await updateMatchScoresFromEvents(data.matchId, tx);
 
         return event;
+      });
+    }
+
+    // For substitution events, update player active status
+    if (data.eventType === 'SUBSTITUTION_IN' || data.eventType === 'SUBSTITUTION_OUT') {
+      return await prisma.$transaction(async (tx) => {
+        // Update player active status
+        if (data.playerId && data.teamId) {
+          await tx.matchPlayer.updateMany({
+            where: {
+              matchId: data.matchId,
+              playerId: data.playerId,
+              teamId: data.teamId,
+            },
+            data: {
+              isActive: data.eventType === 'SUBSTITUTION_IN',
+              subOut: data.eventType === 'SUBSTITUTION_OUT',
+            },
+          });
+        }
+
+        // Create the event
+        return await tx.matchEvent.create({
+          data: {
+            matchId: data.matchId,
+            eventType: data.eventType,
+            minute: data.minute,
+            period: period ?? 1,
+            secondsRemaining: secondsRemaining ?? null,
+            sequenceNumber,
+            teamId: data.teamId,
+            playerId: data.playerId,
+            assistPlayerId: data.assistPlayerId,
+            description: data.description,
+            metadata: data.metadata,
+          },
+        });
       });
     }
 
@@ -1844,9 +1891,32 @@ export async function deleteMatchEvent(id: string): Promise<boolean> {
 
     const wasScoringEvent = isScoringEvent(existingEvent.eventType);
 
-    // If it's a scoring event, recalculate scores after deletion
-    // (calculateScoresFromEvents already filters out undone events, so we always recalculate)
-    if (wasScoringEvent) {
+    // For substitution events, revert player active status
+    if (existingEvent.eventType === 'SUBSTITUTION_IN' || existingEvent.eventType === 'SUBSTITUTION_OUT') {
+      const matchEventWithPlayer = await prisma.matchEvent.findUnique({
+        where: { id },
+        select: { playerId: true, teamId: true },
+      });
+
+      await prisma.$transaction(async (tx) => {
+        if (matchEventWithPlayer?.playerId && matchEventWithPlayer.teamId) {
+          await tx.matchPlayer.updateMany({
+            where: {
+              matchId: existingEvent.matchId,
+              playerId: matchEventWithPlayer.playerId,
+              teamId: matchEventWithPlayer.teamId,
+            },
+            data: { isActive: existingEvent.eventType === 'SUBSTITUTION_OUT' }, // Reverse: OUT deleted -> active should be true
+          });
+        }
+
+        // Delete the event
+        await tx.matchEvent.delete({
+          where: { id },
+        });
+      });
+    } else if (wasScoringEvent) {
+      // If it's a scoring event, recalculate scores after deletion
       await prisma.$transaction(async (tx) => {
         // Delete the event
         await tx.matchEvent.delete({
@@ -1875,17 +1945,17 @@ export async function deleteMatchEvent(id: string): Promise<boolean> {
  */
 export async function createFolder(data: CreateFolderInput, createdBy?: string): Promise<Folder> {
   const { name, description, isPrivate = false } = data;
-  
+
   // Sanitize folder name
   const sanitizedName = name
     .replace(/\.\./g, '')
     .replace(/[^a-zA-Z0-9\-_/]/g, '')
     .replace(/\/+/g, '/')
     .replace(/^\/|\/$/g, '');
-  
+
   // Generate path
   const path = `${isPrivate ? 'private' : 'public'}/${sanitizedName}`;
-  
+
   return await prisma.folder.create({
     data: {
       name: sanitizedName,
@@ -1908,7 +1978,7 @@ export async function updateFolder(id: string, data: UpdateFolderInput): Promise
     }
 
     const updateData: any = {};
-    
+
     if (data.name !== undefined) {
       // Sanitize folder name
       const sanitizedName = data.name
@@ -1918,11 +1988,11 @@ export async function updateFolder(id: string, data: UpdateFolderInput): Promise
         .replace(/^\/|\/$/g, '');
       updateData.name = sanitizedName;
     }
-    
+
     if (data.description !== undefined) {
       updateData.description = data.description;
     }
-    
+
     if (data.isPrivate !== undefined) {
       updateData.isPrivate = data.isPrivate;
       // Update path to reflect privacy change

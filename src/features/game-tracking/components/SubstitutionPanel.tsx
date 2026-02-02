@@ -52,6 +52,20 @@ export default function SubstitutionPanel({
   const team1Name = match ? getTeam1Name(match) : 'Team 1';
   const team2Name = match ? getTeam2Name(match) : 'Team 2';
 
+  const [substitutions, setSubstitutions] = useState<any[]>([]);
+
+  const fetchSubstitutions = async () => {
+    try {
+      const response = await fetch(`/api/games/${matchId}/substitution`);
+      if (response.ok) {
+        const data = await response.json();
+        setSubstitutions(data || []);
+      }
+    } catch (err) {
+       console.error('Failed to fetch substitutions:', err);
+    }
+  };
+
   const fetchMatchPlayers = async () => {
     try {
       const response = await fetch(`/api/matches/${matchId}/players`);
@@ -83,6 +97,7 @@ export default function SubstitutionPanel({
   useEffect(() => {
     if (matchId) {
       fetchMatchPlayers();
+      fetchSubstitutions();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
@@ -91,6 +106,7 @@ export default function SubstitutionPanel({
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
       fetchMatchPlayers();
+      fetchSubstitutions();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
@@ -185,6 +201,7 @@ export default function SubstitutionPanel({
       setPlayerInId('');
       setPlayerOutId('');
       await fetchMatchPlayers();
+      await fetchSubstitutions();
       if (teamId) {
         await fetchTeamPlayers(teamId);
       }
@@ -219,15 +236,48 @@ export default function SubstitutionPanel({
     ? matchPlayers.filter((mp) => mp.teamId === teamId && mp.player)
     : [];
 
-  // Determine active players: use isActive if any players have it set, otherwise fall back to started
-  const hasAnyActivePlayers = matchTeamPlayers.some((mp) => mp.isActive);
-  const activePlayers = hasAnyActivePlayers
-    ? matchTeamPlayers.filter((mp) => mp.isActive)
-    : matchTeamPlayers.filter((mp) => mp.started);
+  // Logic to determine who is "On the Floor" vs "On the Bench"
+  // This needs to handle cases where `isActive` wasn't initialized for starters (legacy data or simple start).
+  // A player is ON THE FLOOR if:
+  // 1. They are explicitly marked active (mp.isActive === true)
+  // 2. OR They are a starter AND have never been subbed out.
+  
+  // Uses valid state variable 'substitutions' (safely defaulted to empty array in state init)
+  
+  const playersOnFloor = matchTeamPlayers.filter((mp) => {
+    // 1. Explicitly active
+    if (mp.isActive) return true;
+    
+    // 2. Explicitly subbed out (database flag)
+    if ((mp as any).subOut) return false;
 
-  // Get players NOT in the match (for "Player In" dropdown)
+    // 3. Fallback for legacy/starters: Started and NOT subbed out (via sub list checks if subOut is null/false)
+    if (mp.started) {
+      // In case subOut isn't populated for old records yet, check valid sub history
+      const hasBeenSubbedOut = substitutions.some((s: any) => s.playerOutId === mp.playerId);
+      return !hasBeenSubbedOut;
+    }
+    
+    return false;
+  });
+
+  // Bench players are those in the match roster but NOT on the floor
+  const playersOnBench = matchTeamPlayers.filter(
+    (mp) => !playersOnFloor.some(onFloor => onFloor.id === mp.id)
+  );
+
+  // Reserves are those in the team roster but NOT in the match roster at all
   const matchPlayerIds = new Set(matchTeamPlayers.map((mp) => mp.playerId));
-  const playersNotInMatch = teamPlayers.filter((player) => !matchPlayerIds.has(player.id));
+  const playersReserves = teamPlayers.filter((player) => !matchPlayerIds.has(player.id));
+
+  // "Player Out" candidates = Players On Floor
+  const activePlayers = playersOnFloor;
+
+  // "Player In" candidates = Players On Bench + Reserves
+  const playersAvailableToSubIn = [
+    ...playersOnBench.map(mp => mp.player),
+    ...playersReserves
+  ].filter(Boolean) as Player[];
 
   const getPlayerDisplayName = (player: Player | null | undefined) => {
     if (!player) return 'Unknown Player';
@@ -301,20 +351,20 @@ export default function SubstitutionPanel({
                   value={playerInId}
                   onValueChange={setPlayerInId}
                   required
-                  disabled={playersNotInMatch.length === 0}
+                  disabled={playersAvailableToSubIn.length === 0}
                 >
                   <SelectTrigger id="substitution-player-in">
                     <SelectValue placeholder="Select player to add" />
                   </SelectTrigger>
                   <SelectContent>
-                    {playersNotInMatch.map((player) => (
+                    {playersAvailableToSubIn.map((player) => (
                       <SelectItem key={player.id} value={player.id}>
                         {getPlayerDisplayName(player)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {playersNotInMatch.length === 0 && (
+                {playersAvailableToSubIn.length === 0 && (
                   <p className="text-xs text-muted-foreground">
                     No players available to substitute in
                   </p>
@@ -352,7 +402,7 @@ export default function SubstitutionPanel({
               !playerOutId ||
               playerInId === playerOutId ||
               activePlayers.length === 0 ||
-              playersNotInMatch.length === 0
+              playersAvailableToSubIn.length === 0
             }
             className="w-full"
           >

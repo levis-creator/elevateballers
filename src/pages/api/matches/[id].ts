@@ -8,7 +8,7 @@ export const prerender = false;
 export const GET: APIRoute = async ({ params, url }) => {
   try {
     const includeDetails = url.searchParams.get('includeDetails') === 'true';
-    
+
     let match;
     if (includeDetails) {
       console.log(`Fetching match ${params.id} with full details...`);
@@ -26,14 +26,17 @@ export const GET: APIRoute = async ({ params, url }) => {
     }
 
     return new Response(JSON.stringify(match), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, max-age=0',
+      },
     });
   } catch (error: any) {
     console.error('Error fetching match:', error);
     console.error('Error stack:', error.stack);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Failed to fetch match',
-      details: error.message 
+      details: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -44,7 +47,7 @@ export const GET: APIRoute = async ({ params, url }) => {
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requireAdmin(request);
-    
+
     // Check if match is completed - block all edits
     const existingMatch = await getMatchById(params.id!);
     if (existingMatch && existingMatch.status === 'COMPLETED') {
@@ -56,7 +59,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
         }
       );
     }
-    
+
     const data = await request.json();
 
     // Convert date string to Date if provided

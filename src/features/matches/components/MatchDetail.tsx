@@ -8,7 +8,8 @@ import {
   getMatchStatusLabel,
   getRelativeTimeDescription,
 } from '../lib/utils';
-import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, isWinner } from '../lib/team-helpers';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, isWinner, getTeamInitials } from '../lib/team-helpers';
+import TeamLogo from './TeamLogo';
 import { getLeagueName } from '../lib/league-helpers';
 import MatchImagesPublic from './MatchImagesPublic';
 
@@ -84,25 +85,128 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
 
   const [page1, setPage1] = useState(1);
   const [page2, setPage2] = useState(1);
+  const [localClock, setLocalClock] = useState<number | null>(match.clockSeconds);
   const itemsPerPage = 5;
 
-  const paginatedTeam1 = team1Players.slice((page1 - 1) * itemsPerPage, page1 * itemsPerPage);
-  const paginatedTeam2 = team2Players.slice((page2 - 1) * itemsPerPage, page2 * itemsPerPage);
-  const totalPages1 = Math.ceil(team1Players.length / itemsPerPage);
-  const totalPages2 = Math.ceil(team2Players.length / itemsPerPage);
+  // Polling for live updates
+  useEffect(() => {
+    if (match.status !== 'LIVE') return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/matches/${match.id}?includeDetails=true`);
+        if (response.ok) {
+          const updatedMatch = await response.json();
+          setMatch(updatedMatch);
+          // Sync local clock from server
+          if (updatedMatch.clockSeconds !== null) {
+            setLocalClock(updatedMatch.clockSeconds);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for match updates:', error);
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [match.id, match.status]);
+
+  // Local clock ticker
+  useEffect(() => {
+    if (match.status !== 'LIVE' || !match.clockRunning || localClock === null || localClock <= 0) {
+      return;
+    }
+
+    const ticker = setInterval(() => {
+      setLocalClock(prev => (prev !== null && prev > 0 ? prev - 1 : prev));
+    }, 1000);
+
+    return () => clearInterval(ticker);
+  }, [match.status, match.clockRunning, localClock === null || localClock <= 0]);
+
+  // Sync initial and polled clock updates
+  useEffect(() => {
+    setLocalClock(match.clockSeconds);
+  }, [match.clockSeconds]);
+
+  // Determine active players with fallback to starters if no one is explicitly marked as active
+  const getActivePlayers = (players: MatchPlayerWithDetails[]) => {
+    const explicitlyActive = players.filter(mp => mp.isActive);
+    if (explicitlyActive.length > 0 || match.status !== 'LIVE') {
+      return explicitlyActive;
+    }
+    // Fallback: If live but no active players found, show starters as active
+    return players.filter(mp => mp.started);
+  };
+
+  const activeTeam1 = getActivePlayers(team1Players);
+  const activeTeam1Ids = new Set(activeTeam1.map(p => p.id));
+  const benchTeam1 = team1Players.filter(mp => !activeTeam1Ids.has(mp.id));
+  const sortedTeam1 = [...activeTeam1, ...benchTeam1];
+  
+  const activeTeam2 = getActivePlayers(team2Players);
+  const activeTeam2Ids = new Set(activeTeam2.map(p => p.id));
+  const benchTeam2 = team2Players.filter(mp => !activeTeam2Ids.has(mp.id));
+  const sortedTeam2 = [...activeTeam2, ...benchTeam2];
+
+  // Update mp.isActive virtual property for rendering the badges
+  const isPlayerActive = (mp: MatchPlayerWithDetails, activeIds: Set<string>) => {
+    return activeIds.has(mp.id);
+  };
+
+  // Helper to get latest substitution info
+  const getPlayerSubInfo = (playerId: string, isActive: boolean) => {
+    // Check if substitutions exist on the match object (casted as any to avoid strict type checks if type definition isn't updated everywhere yet)
+    const subs = (match as any).substitutions;
+    if (!subs || !Array.isArray(subs) || subs.length === 0) return null;
+    
+    // Substitutions are ordered by createdAt desc in the query
+    if (isActive) {
+      // Find the last time this player was subbed IN
+      const subIn = subs.find((s: any) => s.playerInId === playerId);
+      if (subIn && subIn.playerOut) {
+         return `for ${subIn.playerOut.firstName} ${subIn.playerOut.lastName}`;
+      }
+    } else {
+      // Find the last time this player was subbed OUT
+      const subOut = subs.find((s: any) => s.playerOutId === playerId);
+      if (subOut && subOut.playerIn) {
+        return `for ${subOut.playerIn.firstName} ${subOut.playerIn.lastName}`;
+      }
+    }
+    return null;
+  };
+
+  const paginatedTeam1 = sortedTeam1.slice((page1 - 1) * itemsPerPage, page1 * itemsPerPage);
+  const paginatedTeam2 = sortedTeam2.slice((page2 - 1) * itemsPerPage, page2 * itemsPerPage);
+  const totalPages1 = Math.ceil(sortedTeam1.length / itemsPerPage);
+  const totalPages2 = Math.ceil(sortedTeam2.length / itemsPerPage);
 
   return (
     <div className="match-detail">
       <div className="match-detail-header">
         <div className="match-detail-meta">
           <span className="match-league">{getLeagueName(match)}</span>
-          <span
-            className="match-status-badge"
-            style={{ backgroundColor: statusColor, color: 'white' }}
-          >
-            {statusLabel}
-          </span>
+          <div className="status-container">
+            <span
+              className="match-status-badge"
+              style={{ backgroundColor: statusColor, color: 'white' }}
+            >
+              {statusLabel}
+            </span>
+            {match.status === 'LIVE' && <span className="live-indicator-pulse"></span>}
+          </div>
         </div>
+
+        {match.status === 'LIVE' && (
+          <div className="match-live-info">
+            <div className="current-period">{getPeriodLabel(match.currentPeriod)}</div>
+            <div className={`match-clock ${!match.clockRunning ? 'paused' : ''}`}>
+              {formatClockTime(localClock)}
+            </div>
+          </div>
+        )}
+
         <div className="match-detail-date">
           <span className="date-label">Match Date</span>
           <span className="date-value">{formatMatchDateTime(match.date)}</span>
@@ -112,16 +216,18 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
 
       <div className="match-detail-teams">
         <div className={`match-team-detail ${team1IsWinner ? 'winner' : ''}`}>
-          {team1Logo && (
-            <img
-              src={team1Logo}
-              alt={team1Name}
-              className="team-logo-large"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
+          {match.status === 'LIVE' && match.possessionTeamId === team1Id && (
+            <div className="possession-indicator left">
+              <span className="possession-dot"></span>
+              POSS
+            </div>
           )}
+          <TeamLogo 
+            logo={team1Logo} 
+            name={team1Name} 
+            size="xl" 
+            className="team-logo-large" 
+          />
           <h3 className="team-name-large">{team1Name}</h3>
           {hasScore && (
             <div className="team-score-large">{match.team1Score}</div>
@@ -144,16 +250,18 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
         </div>
 
         <div className={`match-team-detail ${team2IsWinner ? 'winner' : ''}`}>
-          {team2Logo && (
-            <img
-              src={team2Logo}
-              alt={team2Name}
-              className="team-logo-large"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
+          {match.status === 'LIVE' && match.possessionTeamId === team2Id && (
+            <div className="possession-indicator right">
+              <span className="possession-dot"></span>
+              POSS
+            </div>
           )}
+          <TeamLogo 
+            logo={team2Logo} 
+            name={team2Name} 
+            size="xl" 
+            className="team-logo-large" 
+          />
           <h3 className="team-name-large">{team2Name}</h3>
           {hasScore && (
             <div className="team-score-large">{match.team2Score}</div>
@@ -182,10 +290,37 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
               {paginatedTeam1.length > 0 ? (
                 <>
                   {paginatedTeam1.map((mp) => (
-                    <div key={mp.id} className="roster-item">
+                    <div key={mp.id} className={`roster-item ${isPlayerActive(mp, activeTeam1Ids) ? 'on-floor' : ''}`}>
                       <span className="player-num">{mp.jerseyNumber || '#'}</span>
                       <span className="player-name">{mp.player.firstName} {mp.player.lastName}</span>
-                      {mp.started && <span className="starter-badge">S</span>}
+                      {isPlayerActive(mp, activeTeam1Ids) ? (
+                         <div className="flex flex-col items-end">
+                            <span className="on-floor-badge pulse-dot-container">
+                              <span className="pulse-dot"></span> In
+                            </span>
+                            {(() => {
+                                const subInfo = getPlayerSubInfo(mp.playerId, true);
+                                if (subInfo) return <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">{subInfo}</span>
+                             })()}
+                         </div>
+                       ) : (
+                         <div className="flex flex-col items-end">
+                            {mp.started && <span className="starter-badge">S</span>}
+                             {(() => {
+                                const subInfo = getPlayerSubInfo(mp.playerId, false);
+                                if (mp.subOut) {
+                                  return (
+                                    <div className="flex flex-col items-end">
+                                      <span className="pulse-dot-container-red">
+                                        <span className="pulse-dot-red"></span> Out
+                                      </span>
+                                      {subInfo && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">{subInfo}</span>}
+                                    </div>
+                                  );
+                                }
+                             })()}
+                         </div>
+                      )}
                       {mp.position && <span className="player-pos">{mp.position}</span>}
                     </div>
                   ))}
@@ -220,10 +355,37 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
               {paginatedTeam2.length > 0 ? (
                 <>
                   {paginatedTeam2.map((mp) => (
-                    <div key={mp.id} className="roster-item">
+                    <div key={mp.id} className={`roster-item ${isPlayerActive(mp, activeTeam2Ids) ? 'on-floor' : ''}`}>
                       <span className="player-num">{mp.jerseyNumber || '#'}</span>
                       <span className="player-name">{mp.player.firstName} {mp.player.lastName}</span>
-                      {mp.started && <span className="starter-badge">S</span>}
+                      {isPlayerActive(mp, activeTeam2Ids) ? (
+                         <div className="flex flex-col items-end">
+                            <span className="on-floor-badge pulse-dot-container">
+                              <span className="pulse-dot"></span> In
+                            </span>
+                            {(() => {
+                                const subInfo = getPlayerSubInfo(mp.playerId, true);
+                                if (subInfo) return <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">{subInfo}</span>
+                             })()}
+                         </div>
+                       ) : (
+                         <div className="flex flex-col items-end">
+                            {mp.started && <span className="starter-badge">S</span>}
+                             {(() => {
+                                const subInfo = getPlayerSubInfo(mp.playerId, false);
+                                if (mp.subOut) {
+                                  return (
+                                    <div className="flex flex-col items-end">
+                                      <span className="pulse-dot-container-red">
+                                        <span className="pulse-dot-red"></span> Out
+                                      </span>
+                                      {subInfo && <span className="text-[10px] text-red-500 font-medium whitespace-nowrap">{subInfo}</span>}
+                                    </div>
+                                  );
+                                }
+                             })()}
+                         </div>
+                      )}
                       {mp.position && <span className="player-pos">{mp.position}</span>}
                     </div>
                   ))}
@@ -270,12 +432,16 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
                   </div>
                   <div className="event-content">
                     <div className="event-header">
-                      <span className="event-type">{EVENT_TYPE_LABELS[event.eventType] || event.eventType}</span>
+                      <span className="event-type">
+                        {event.eventType === 'OTHER' 
+                          ? (event.description || 'Other Event') 
+                          : (EVENT_TYPE_LABELS[event.eventType] || event.eventType)}
+                      </span>
                       <span className="event-player">
                         {event.player ? `${event.player.firstName} ${event.player.lastName}` : ''}
                       </span>
                     </div>
-                    {event.description && <p className="event-desc">{event.description}</p>}
+                    {event.description && event.eventType !== 'OTHER' && <p className="event-desc">{event.description}</p>}
                     {event.assistPlayer && (
                       <p className="event-assist">Assist by {event.assistPlayer.firstName} {event.assistPlayer.lastName}</p>
                     )}
@@ -313,6 +479,57 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
+        }
+
+        .status-container {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .live-indicator-pulse {
+          width: 8px;
+          height: 8px;
+          background-color: #ef4444;
+          border-radius: 50%;
+          box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
+          animation: status-pulse 1.5s infinite;
+        }
+
+        @keyframes status-pulse {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .match-live-info {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+          background: #f8fafc;
+          padding: 0.75rem 1.5rem;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          min-width: 120px;
+        }
+
+        .current-period {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+        }
+
+        .match-clock {
+          font-size: 1.5rem;
+          font-weight: 800;
+          font-family: monospace;
+          color: #1e293b;
+        }
+
+        .match-clock.paused {
+          color: #94a3b8;
         }
 
         .match-league {
@@ -418,8 +635,6 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
         }
 
         .team-logo-large {
-          width: 120px;
-          height: 120px;
           object-fit: contain;
         }
 
@@ -456,6 +671,40 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           font-size: 2rem;
           font-weight: 700;
           color: #94a3b8;
+        }
+        
+        .possession-indicator {
+          position: absolute;
+          top: -10px;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: #1e293b;
+          color: white;
+          padding: 0.25rem 0.75rem;
+          border-radius: 9999px;
+          font-size: 0.75rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          z-index: 10;
+        }
+
+        .possession-indicator.left { left: 50%; transform: translateX(-50%); }
+        .possession-indicator.right { right: 50%; transform: translateX(50%); }
+
+        .possession-dot {
+          width: 8px;
+          height: 8px;
+          background: #fbbf24;
+          border-radius: 50%;
+          animation: pulse-possession 1.5s infinite;
+        }
+
+        @keyframes pulse-possession {
+          0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+          70% { transform: scale(1.2); opacity: 0.8; box-shadow: 0 0 0 6px rgba(251, 191, 36, 0); }
+          100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
         }
 
         /* Sections */
@@ -579,6 +828,56 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           padding-right: 1rem;
         }
 
+        .roster-item.on-floor {
+          background: rgba(34, 197, 94, 0.08);
+          border-left: 3px solid #22c55e;
+          padding-left: 0.825rem;
+        }
+
+        .on-floor-badge {
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: #22c55e;
+          text-transform: uppercase;
+          background: rgba(34, 197, 94, 0.15);
+          padding: 2px 6px;
+          border-radius: 4px;
+          margin-left: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .pulse-dot-container {
+          display: inline-flex;
+          align-items: center;
+          margin-left: auto;
+        }
+
+        .pulse-dot {
+          width: 8px;
+          height: 8px;
+          background-color: #22c55e;
+          border-radius: 50%;
+          display: inline-block;
+          animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+          0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+          }
+          70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+          }
+          100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+          }
+        }
+
         .timeline-event {
           display: flex;
           flex-direction: column;
@@ -593,6 +892,42 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           align-self: flex-start;
           border-left: 4px solid #3b82f6;
           background: #eff6ff;
+        }
+
+        .pulse-dot-container-red {
+          display: inline-flex;
+          align-items: center;
+          margin-left: auto;
+          color: #ef4444;
+          font-weight: 600;
+          font-size: 0.75rem;
+        }
+
+        .pulse-dot-red {
+          width: 8px;
+          height: 8px;
+          background-color: #ef4444;
+          border-radius: 50%;
+          display: inline-block;
+          margin-right: 4px;
+        }
+
+        .pulse-dot-container-red {
+          display: inline-flex;
+          align-items: center;
+          margin-left: auto;
+          color: #ef4444;
+          font-weight: 600;
+          font-size: 0.75rem;
+        }
+
+        .pulse-dot-red {
+          width: 8px;
+          height: 8px;
+          background-color: #ef4444;
+          border-radius: 50%;
+          display: inline-block;
+          margin-right: 4px;
         }
 
         .timeline-event.right {

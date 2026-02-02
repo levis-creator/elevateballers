@@ -386,6 +386,7 @@ model MatchPlayer {
   awayJerseyNumber    Int?                @map("away_jersey_number")
   minutesPlayed       Int?                @map("minutes_played")
   isActive            Boolean             @default(false) @map("is_active")
+  subOut              Boolean             @default(false) @map("sub_out")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
   match               Match               @relation(fields: [matchId], references: [id], onDelete: Cascade)

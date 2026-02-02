@@ -17,6 +17,7 @@ import type { PlayByPlayEvent, MatchPeriod } from '../types';
 interface PlayByPlayLogProps {
   matchId: string;
   onRefresh?: () => void;
+  refreshTrigger?: number;
 }
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -44,7 +45,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
-export default function PlayByPlayLog({ matchId, onRefresh }: PlayByPlayLogProps) {
+export default function PlayByPlayLog({ matchId, onRefresh, refreshTrigger }: PlayByPlayLogProps) {
   const [events, setEvents] = useState<PlayByPlayEvent[]>([]);
   const [periods, setPeriods] = useState<MatchPeriod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +54,7 @@ export default function PlayByPlayLog({ matchId, onRefresh }: PlayByPlayLogProps
 
   useEffect(() => {
     fetchPlayByPlay();
-  }, [matchId]);
+  }, [matchId, refreshTrigger]);
 
   const fetchPlayByPlay = async () => {
     try {
@@ -167,7 +168,9 @@ export default function PlayByPlayLog({ matchId, onRefresh }: PlayByPlayLogProps
                       {getPeriodLabel(event.period)} {event.secondsRemaining ? formatClockTime(event.secondsRemaining) : `${event.minute}'`}
                     </span>
                     <span className={`font-medium ${event.isUndone ? 'line-through text-muted-foreground' : ''}`}>
-                      {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+                      {event.eventType === 'OTHER' 
+                        ? (event.description || 'Other Event') 
+                        : (EVENT_TYPE_LABELS[event.eventType] || event.eventType)}
                     </span>
                     {event.isUndone && (
                       <Badge variant="secondary" className="text-xs">
