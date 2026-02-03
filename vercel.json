@@ -1,6 +1,12 @@
 {
   "buildCommand": "npm run build:vercel",
   "framework": "astro",
+  "installCommand": "npm install",
+  "functions": {
+    "**/*.ts": {
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

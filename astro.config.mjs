@@ -14,16 +14,15 @@ const deployTarget = process.env.DEPLOY_TARGET || 'cpanel';
 export default defineConfig({
   integrations: [react()],
   output: 'server',
-  adapter: deployTarget === 'vercel' 
+  adapter: deployTarget === 'vercel'
     ? vercel({
-        functionPerRoute: false,
-        webAnalytics: {
-          enabled: true,
-        },
-      })
+      webAnalytics: {
+        enabled: true,
+      },
+    })
     : node({
-        mode: 'standalone'
-      }),
+      mode: 'standalone'
+    }),
   trailingSlash: 'ignore',
   vite: {
     resolve: {
@@ -36,8 +35,9 @@ export default defineConfig({
     },
     ssr: {
       noExternal: ['lucide-react', 'react-masonry-css'],
-      // Keep @prisma/client external so ESM output preserves default import (CJS interop on cPanel)
-      external: ['@prisma/client', '@prisma/adapter-mariadb'],
+      // Keep @prisma/client external only for cPanel (CJS interop)
+      // For Vercel, bundle it with the serverless function
+      external: deployTarget === 'cpanel' ? ['@prisma/client', '@prisma/adapter-mariadb'] : [],
     },
   },
 });
