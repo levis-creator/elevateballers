@@ -1,0 +1,41 @@
+# Vercel Ignore File
+# Files and directories to exclude from Vercel deployment
+
+# Development files
+.env.local
+.env.development
+
+# Build artifacts (will be rebuilt on Vercel)
+.astro/
+dist/
+node_modules/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git files
+.git/
+.gitignore
+
+# Documentation (optional - uncomment if you want to exclude)
+# *.md
+# docs/
+
+# Test files (optional)
+# **/*.test.ts
+# **/*.spec.ts
+
+# Scripts that are only for local development
+scripts/ngrok-tunnel.js
+scripts/build-cpanel.js
+
+# cPanel specific files
+server.js
