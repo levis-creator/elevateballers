@@ -11,7 +11,7 @@
     "dev:tunnel": "npm run dev & npm run dev:ngrok",
     "build": "prisma generate && astro build",
     "build:cpanel": "node scripts/build-cpanel.js",
-    "build:vercel": "cross-env DEPLOY_TARGET=vercel prisma generate && cross-env DEPLOY_TARGET=vercel astro build",
+    "build:vercel": "npx cross-env DEPLOY_TARGET=vercel prisma generate && npx cross-env DEPLOY_TARGET=vercel astro build",
     "start": "node server.js",
     "preview:cpanel": "npm run build:cpanel && npm run start",
     "preview": "echo The @astrojs/vercel adapter does not support 'astro preview'. Use 'npm run preview:vercel' instead (requires Vercel CLI) or 'npm run dev' for development.",

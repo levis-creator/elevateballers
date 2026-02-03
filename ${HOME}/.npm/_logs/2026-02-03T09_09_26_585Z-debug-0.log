@@ -1,0 +1,19 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.3
+2 info using node@v22.19.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\User\Desktop\projects\elevateballers\.npmrc
+5 error config prefix cannot be changed from project config: C:\Users\User\Desktop\projects\elevateballers\.npmrc.
+6 silly config load:file:C:\Users\User\.npmrc
+7 silly config load:file:C:\Users\User\Desktop\projects\elevateballers\${HOME}\prod\node_modules\etc\npmrc
+8 verbose title npm run build:cpanel
+9 verbose argv "run" "build:cpanel"
+10 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-03T09_09_26_585Z-
+11 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-03T09_09_26_585Z-debug-0.log
+12 silly logfile done cleaning log files
+13 verbose cwd C:\Users\User\Desktop\projects\elevateballers
+14 verbose os Windows_NT 10.0.26200
+15 verbose node v22.19.0
+16 verbose npm  v10.9.3
+17 verbose exit 0
+18 info ok
