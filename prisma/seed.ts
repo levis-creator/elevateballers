@@ -36,6 +36,7 @@ function createPrismaClient(): PrismaClient {
     connectionLimit?: number;
     idleTimeout?: number;
     connectTimeout?: number;
+    allowPublicKeyRetrieval?: boolean;
   };
 
   try {
@@ -50,6 +51,7 @@ function createPrismaClient(): PrismaClient {
       connectionLimit: 5,
       idleTimeout: 30000,
       connectTimeout: 15000,
+      allowPublicKeyRetrieval: true,
     };
   } catch (error) {
     throw new Error(

@@ -1,21 +1,27 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+// Load Prisma via require so SSR bundle doesn't emit ESM import of CJS package (breaks on cPanel)
+import { createRequire } from 'node:module';
+import type { PrismaClient as PrismaClientInstance } from '@prisma/client';
 import { config } from 'dotenv';
+
+const require = createRequire(import.meta.url);
+const { PrismaClient } = require('@prisma/client') as { PrismaClient: new (args?: object) => PrismaClientInstance };
+const { PrismaMariaDb } = require('@prisma/adapter-mariadb') as typeof import('@prisma/adapter-mariadb');
 
 // Load environment variables
 config();
 
 // PrismaClient is attached to the `global` object in development to prevent
 // exhausting your database connection limit.
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+interface GlobalWithPrisma {
+  prisma?: PrismaClientInstance;
+}
+const globalForPrisma = globalThis as GlobalWithPrisma;
 
 // Lazy initialization of adapter
 // This prevents errors during module load in serverless environments
-let adapter: PrismaMariaDb | null = null;
+let adapter: InstanceType<typeof PrismaMariaDb> | null = null;
 
-function getAdapter(): PrismaMariaDb {
+function getAdapter(): InstanceType<typeof PrismaMariaDb> {
   if (!adapter) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
@@ -36,6 +42,7 @@ function getAdapter(): PrismaMariaDb {
       connectionLimit?: number;
       idleTimeout?: number;
       connectTimeout?: number;
+      allowPublicKeyRetrieval?: boolean;
     };
 
     try {
@@ -47,9 +54,11 @@ function getAdapter(): PrismaMariaDb {
         user: decodeURIComponent(url.username),
         password: decodeURIComponent(url.password),
         database: url.pathname.slice(1), // Remove leading '/'
-        connectionLimit: process.env.NODE_ENV === 'production' ? 1 : 10,
+        connectionLimit: process.env.NODE_ENV === 'production' ? 5 : 10,
         idleTimeout: 30000,
         connectTimeout: 15000,
+        // Required when MySQL/MariaDB uses caching_sha2_password and RSA key exchange
+        allowPublicKeyRetrieval: true,
       };
     } catch (error) {
       throw new Error(
@@ -67,7 +76,7 @@ function getAdapter(): PrismaMariaDb {
 
 // Initialize adapter lazily - only create when PrismaClient is actually instantiated
 // This defers any connection errors until the client is actually used
-function createPrismaClient(): PrismaClient {
+function createPrismaClient(): PrismaClientInstance {
   try {
     return new PrismaClient({
       adapter: getAdapter(),
@@ -145,7 +154,7 @@ if (shouldRecreateClient) {
 // Create new Prisma client instance with improved error handling
 // The adapter and pool are created when PrismaClient is instantiated
 // Errors are caught and re-thrown with helpful messages for serverless environments
-let newPrisma: PrismaClient;
+let newPrisma: PrismaClientInstance;
 try {
   newPrisma = createPrismaClient();
   

@@ -36,6 +36,8 @@ export default defineConfig({
     },
     ssr: {
       noExternal: ['lucide-react', 'react-masonry-css'],
+      // Keep @prisma/client external so ESM output preserves default import (CJS interop on cPanel)
+      external: ['@prisma/client', '@prisma/adapter-mariadb'],
     },
   },
 });
