@@ -25,17 +25,20 @@
 
 .unsplashMasonry {
   display: flex;
-  margin-left: -8px; /* Tight gutter */
+  margin-left: -8px;
+  /* Tight gutter */
   width: auto;
 }
 
-.unsplashMasonry > div {
-  padding-left: 8px; /* Tight gutter */
+.unsplashMasonry>div {
+  padding-left: 8px;
+  /* Tight gutter */
   background-clip: padding-box;
 }
 
-.unsplashMasonry > div > div {
-  margin-bottom: 8px; /* Tight spacing */
+.unsplashMasonry>div>div {
+  margin-bottom: 8px;
+  /* Tight spacing */
 }
 
 /* Unsplash Image Card */
@@ -128,8 +131,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .unsplashGalleryLoading p {
@@ -137,17 +145,71 @@
   font-size: 16px;
 }
 
+/* Modern Tab Styles to replace legacy CSS */
+.mediaTabsContainer {
+  margin-bottom: 40px;
+}
+
+.tabsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.tabsTitle {
+  margin: 0;
+}
+
+.tabsNav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 20px;
+}
+
+.tabItem {
+  display: inline-block;
+}
+
+.tabLink {
+  text-decoration: none;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #151515;
+  font-size: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tabLink:hover {
+  color: #e21e22;
+}
+
+.tabItemActive .tabLink {
+  color: #e21e22;
+  border-bottom-color: #e21e22;
+}
+
+.galleryContent {
+  width: 100%;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1400px) {
   .unsplashMasonry {
     margin-left: -6px;
   }
-  
-  .unsplashMasonry > div {
+
+  .unsplashMasonry>div {
     padding-left: 6px;
   }
-  
-  .unsplashMasonry > div > div {
+
+  .unsplashMasonry>div>div {
     margin-bottom: 6px;
   }
 }
@@ -156,27 +218,32 @@
   .unsplashGalleryContainer {
     padding: 20px 10px;
   }
-  
+
   .unsplashGalleryHeader {
     margin-bottom: 24px;
   }
-  
+
+  .tabsHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .unsplashMasonry {
     margin-left: -4px;
   }
-  
-  .unsplashMasonry > div {
+
+  .unsplashMasonry>div {
     padding-left: 4px;
   }
-  
-  .unsplashMasonry > div > div {
+
+  .unsplashMasonry>div>div {
     margin-bottom: 4px;
   }
-  
+
   .unsplashImageOverlay {
     padding: 12px;
   }
-  
+
   .unsplashImageTitle {
     font-size: 12px;
   }

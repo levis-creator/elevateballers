@@ -85,7 +85,7 @@
             $('.bloglogo').removeClass("logoHide");
         });
 
-        stm_sort_media();
+
 
         // Event form validation
         $('.donation-popup-form').on('submit', function (e) {
@@ -159,10 +159,6 @@
                     if (data.html) {
                         var $items = $(data.html);
                         $('#' + category + '_media .stm-medias-unit').append($items);
-                        if ($.fn.isotope) {
-                            $('#' + category + '_media .stm-medias-unit').isotope('appended', $items, false);
-                        }
-                        stm_sort_media();
                     }
                 }
             });
@@ -326,26 +322,7 @@
         });
     }
 
-    function stm_sort_media() {
-        // init Isotope
-        if ($('.stm-medias-unit').length) {
-            if (typeof imagesLoaded == 'function' && $.fn.isotope) {
-                $('.stm-medias-unit').imagesLoaded(function () {
-                    $('.stm-medias-unit').isotope({
-                        itemSelector: '.stm-media-single-unit',
-                        layoutMode: 'masonry'
-                    });
-                });
-            }
-        }
 
-        $('.stm-media-tabs-nav a').on('shown.bs.tab', function (e) {
-            var tabId = $(this).attr('href');
-            if ($.fn.isotope) {
-                $(tabId + ' .stm-medias-unit').isotope('layout');
-            }
-        })
-    }
 
     function default_widgets_scripts() {
         var stm_menu_widget = $('.widget_nav_menu');
