@@ -4,7 +4,7 @@ import 'yet-another-react-lightbox/styles.css';
 import MasonryGrid from '../../../shared/components/ui/MasonryGrid';
 import { useMediaStore } from '../stores/useMediaStore';
 import styles from './MediaGallery.module.css';
-import { LayoutGrid, List, Play, Music, Image as ImageIcon } from 'lucide-react';
+import { Play, Music, Image as ImageIcon } from 'lucide-react';
 
 interface FeaturedMediaItem {
   id: string;
@@ -27,7 +27,7 @@ const TABS = [
  * Features grid/list views, premium animations, and lightbox integration
  */
 export default function MediaGallery() {
-  const { activeMediaTab, setActiveMediaTab, viewMode, setViewMode } = useMediaStore();
+  const { activeMediaTab, setActiveMediaTab } = useMediaStore();
   const [featuredMedia, setFeaturedMedia] = useState<FeaturedMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,25 +109,6 @@ export default function MediaGallery() {
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Featured Media</h2>
           <span className={styles.unsplashGallerySubtitle}>Visual highlights from across the league</span>
         </div>
-        
-        <div className={styles.viewControls}>
-          <div className="flex bg-gray-100 p-1 rounded-xl">
-            <button 
-              className={`${styles.viewBtn} ${viewMode === 'grid' ? styles.viewBtnActive : ''}`}
-              onClick={() => setViewMode('grid')}
-              aria-label="Grid view"
-            >
-              <LayoutGrid size={18} />
-            </button>
-            <button 
-              className={`${styles.viewBtn} ${viewMode === 'list' ? styles.viewBtnActive : ''}`}
-              onClick={() => setViewMode('list')}
-              aria-label="List view"
-            >
-              <List size={18} />
-            </button>
-          </div>
-        </div>
       </div>
 
       <div className={styles.mediaTabsContainer}>
@@ -156,86 +137,47 @@ export default function MediaGallery() {
         {loading ? (
           <SkeletonLoader />
         ) : filteredItems.length > 0 ? (
-          viewMode === 'grid' ? (
-            <div className={styles.unsplashGallery}>
-              <MasonryGrid
-                breakpointCols={{
-                  default: 3,
-                  1100: 3,
-                  768: 2,
-                  500: 1
-                }}
-                className={styles.unsplashMasonry}
-              >
-                {filteredItems.map((item) => (
-                  <div key={item.id} className={styles.unsplashImageCard}>
-                    <div className={styles.itemTypeBadge}>
-                      {item.type === 'IMAGE' && <ImageIcon size={12} className="mr-1 inline" />}
-                      {item.type === 'AUDIO' && <Music size={12} className="mr-1 inline" />}
-                      {item.type === 'VIDEO' && <Play size={12} className="mr-1 inline" />}
-                      {item.type}
-                    </div>
-                    <a
-                      href={item.url}
-                      onClick={(e) => handleItemClick(item, e)}
-                      className={styles.unsplashImageLink}
-                      target={item.type !== 'IMAGE' ? '_blank' : undefined}
-                      rel={item.type !== 'IMAGE' ? 'noopener noreferrer' : undefined}
-                    >
-                      <div className={styles.unsplashImageWrapper}>
-                        <img
-                          src={item.thumbnail || item.url}
-                          alt={item.title}
-                          className={styles.unsplashImage}
-                          loading="lazy"
-                        />
-                        <div className={styles.unsplashImageOverlay}>
-                          <h4 className={styles.unsplashImageTitle}>{item.title}</h4>
-                        </div>
-                      </div>
-                    </a>
-                  </div>
-                ))}
-              </MasonryGrid>
-            </div>
-          ) : (
-            <div className={styles.listViewContainer}>
+          <div className={styles.unsplashGallery}>
+            <MasonryGrid
+              breakpointCols={{
+                default: 3,
+                1100: 3,
+                768: 2,
+                500: 1
+              }}
+              className={styles.unsplashMasonry}
+            >
               {filteredItems.map((item) => (
-                <a 
-                  key={item.id} 
-                  href={item.url}
-                  onClick={(e) => handleItemClick(item, e)}
-                  className={styles.listMediaItem}
-                  target={item.type !== 'IMAGE' ? '_blank' : undefined}
-                  rel={item.type !== 'IMAGE' ? 'noopener noreferrer' : undefined}
-                >
-                  <div className={styles.listThumbnailWrapper}>
-                    <img 
-                      src={item.thumbnail || item.url} 
-                      alt={item.title} 
-                      className={styles.listThumbnail} 
-                    />
-                    {item.type !== 'IMAGE' && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        {item.type === 'AUDIO' ? <Music className="text-white" /> : <Play className="text-white" />}
+                <div key={item.id} className={styles.unsplashImageCard}>
+                  <div className={styles.itemTypeBadge}>
+                    {item.type === 'IMAGE' && <ImageIcon size={12} className="mr-1 inline" />}
+                    {item.type === 'AUDIO' && <Music size={12} className="mr-1 inline" />}
+                    {item.type === 'VIDEO' && <Play size={12} className="mr-1 inline" />}
+                    {item.type}
+                  </div>
+                  <a
+                    href={item.url}
+                    onClick={(e) => handleItemClick(item, e)}
+                    className={styles.unsplashImageLink}
+                    target={item.type !== 'IMAGE' ? '_blank' : undefined}
+                    rel={item.type !== 'IMAGE' ? 'noopener noreferrer' : undefined}
+                  >
+                    <div className={styles.unsplashImageWrapper}>
+                      <img
+                        src={item.thumbnail || item.url}
+                        alt={item.title}
+                        className={styles.unsplashImage}
+                        loading="lazy"
+                      />
+                      <div className={styles.unsplashImageOverlay}>
+                        <h4 className={styles.unsplashImageTitle}>{item.title}</h4>
                       </div>
-                    )}
-                  </div>
-                  <div className={styles.listInfo}>
-                    <h4 className={styles.listTitle}>{item.title}</h4>
-                    <div className={styles.listMeta}>
-                      <span className="flex items-center gap-1">
-                        {item.type === 'IMAGE' && <ImageIcon size={12} />}
-                        {item.type === 'AUDIO' && <Music size={12} />}
-                        {item.type}
-                      </span>
-                      <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
-                  </div>
-                </a>
+                  </a>
+                </div>
               ))}
-            </div>
-          )
+            </MasonryGrid>
+          </div>
         ) : (
           <div className="py-24 text-center text-gray-400 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
             <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
