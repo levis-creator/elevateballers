@@ -9,9 +9,10 @@ interface SelectionToolbarProps {
   filteredMediaCount: number;
   filteredMedia: MediaWithFolderAndUploader[];
   onSelectAll: () => void;
+  onBulkDelete: () => void;
 }
 
-export default function SelectionToolbar({ filteredMediaCount, filteredMedia, onSelectAll }: SelectionToolbarProps) {
+export default function SelectionToolbar({ filteredMediaCount, filteredMedia, onSelectAll, onBulkDelete }: SelectionToolbarProps) {
   const [icons, setIcons] = useState<{
     Check?: ComponentType<any>;
     X?: ComponentType<any>;
@@ -32,7 +33,6 @@ export default function SelectionToolbar({ filteredMediaCount, filteredMedia, on
   } = useMediaGalleryStore();
 
   const {
-    handleBulkDelete,
     handleBulkDuplicate,
     handleExportZip,
     handleBulkToggleFeatured,
@@ -156,7 +156,7 @@ export default function SelectionToolbar({ filteredMediaCount, filteredMedia, on
                 return allFeatured ? 'Unfeature' : 'Feature';
               })()}
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+            <Button variant="destructive" size="sm" onClick={onBulkDelete}>
               {Trash2Icon ? <Trash2Icon size={16} className="mr-2" /> : null}
               Delete
             </Button>

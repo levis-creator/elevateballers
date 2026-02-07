@@ -47,13 +47,16 @@ interface MediaGalleryState {
   advancedFiltersOpen: boolean;
   bulkRenameDialogOpen: boolean;
   bulkTagDialogOpen: boolean;
+  deleteConfirmOpen: boolean;
+  bulkDeleteConfirmOpen: boolean;
+  itemToDeleteId: string | null;
 
   // Clipboard
   clipboardItems: Set<string>;
   clipboardMode: 'copy' | 'cut' | null;
 
   // Sorting
-  sortField: 'title' | 'type' | 'size' | 'createdAt';
+  sortField: 'title' | 'type' | 'size' | 'createdAt' | 'featured';
   sortDirection: 'asc' | 'desc';
 
   // Drag & drop
@@ -96,6 +99,9 @@ interface MediaGalleryState {
   setAdvancedFiltersOpen: (open: boolean) => void;
   setBulkRenameDialogOpen: (open: boolean) => void;
   setBulkTagDialogOpen: (open: boolean) => void;
+  setDeleteConfirmOpen: (open: boolean) => void;
+  setBulkDeleteConfirmOpen: (open: boolean) => void;
+  setItemToDeleteId: (id: string | null) => void;
   setClipboardItems: (items: Set<string>) => void;
   setClipboardMode: (mode: 'copy' | 'cut' | null) => void;
   setSortField: (field: 'title' | 'type' | 'size' | 'createdAt' | 'featured') => void;
@@ -135,6 +141,9 @@ export const useMediaGalleryStore = create<MediaGalleryState>((set) => ({
   advancedFiltersOpen: false,
   bulkRenameDialogOpen: false,
   bulkTagDialogOpen: false,
+  deleteConfirmOpen: false,
+  bulkDeleteConfirmOpen: false,
+  itemToDeleteId: null,
   clipboardItems: new Set(),
   clipboardMode: null,
   sortField: 'createdAt',
@@ -213,6 +222,9 @@ export const useMediaGalleryStore = create<MediaGalleryState>((set) => ({
   setAdvancedFiltersOpen: (open) => set({ advancedFiltersOpen: open }),
   setBulkRenameDialogOpen: (open) => set({ bulkRenameDialogOpen: open }),
   setBulkTagDialogOpen: (open) => set({ bulkTagDialogOpen: open }),
+  setDeleteConfirmOpen: (open) => set({ deleteConfirmOpen: open }),
+  setBulkDeleteConfirmOpen: (open) => set({ bulkDeleteConfirmOpen: open }),
+  setItemToDeleteId: (id) => set({ itemToDeleteId: id }),
   setClipboardItems: (items) => set({ clipboardItems: items }),
   setClipboardMode: (mode) => set({ clipboardMode: mode }),
   setSortField: (field) => set({ sortField: field }),

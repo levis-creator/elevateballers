@@ -115,9 +115,7 @@ export default function MediaContextMenu({
         {onDelete && (
           <ContextMenuItem
             onClick={() => {
-              if (window.confirm('Are you sure you want to delete this media item?')) {
-                onDelete(media.id);
-              }
+              onDelete(media.id);
             }}
             className="text-destructive focus:text-destructive"
           >

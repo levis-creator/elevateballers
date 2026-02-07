@@ -21,11 +21,6 @@ export function useMediaOperations() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      const confirmed = window.confirm(
-        'Are you sure you want to delete this media item?\n\nThis action cannot be undone.'
-      );
-      if (!confirmed) return;
-
       try {
         const response = await fetch(`/api/media/${id}`, {
           method: 'DELETE',
@@ -66,11 +61,6 @@ export function useMediaOperations() {
 
   const handleBulkDelete = useCallback(async () => {
     if (selectedItems.size === 0) return;
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${selectedItems.size} media item(s)?\n\nThis action cannot be undone.`
-    );
-    if (!confirmed) return;
 
     try {
       const deletePromises = Array.from(selectedItems).map((id) =>

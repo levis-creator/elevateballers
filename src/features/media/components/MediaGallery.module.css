@@ -1,44 +1,105 @@
 /* Unsplash-style Gallery Container */
 .unsplashGalleryContainer {
   width: 100%;
-  max-width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 60px 20px;
+  position: relative;
 }
 
 .unsplashGalleryHeader {
-  text-align: center;
-  margin-bottom: 40px;
+  text-align: left;
+  margin-bottom: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding-bottom: 20px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
 }
 
 .unsplashGallerySubtitle {
+  color: #888;
+  font-size: 16px;
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* View Toggle Controls */
+.viewControls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.viewBtn {
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
   color: #666;
-  font-size: 18px;
-  margin-top: 10px;
-  font-weight: 300;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewBtn:hover {
+  background: #fff;
+  border-color: #ddd;
+  color: #151515;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.viewBtnActive {
+  background: #151515;
+  border-color: #151515;
+  color: #fff;
+}
+
+.viewBtnActive:hover {
+  background: #000;
+  color: #fff;
 }
 
 /* Unsplash Gallery Grid */
 .unsplashGallery {
   width: 100%;
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .unsplashMasonry {
   display: flex;
-  margin-left: -8px;
-  /* Tight gutter */
+  margin-left: -24px;
   width: auto;
 }
 
 .unsplashMasonry>div {
-  padding-left: 8px;
-  /* Tight gutter */
+  padding-left: 24px;
   background-clip: padding-box;
 }
 
 .unsplashMasonry>div>div {
-  margin-bottom: 8px;
-  /* Tight spacing */
+  margin-bottom: 24px;
 }
 
 /* Unsplash Image Card */
@@ -46,15 +107,17 @@
   width: 100%;
   position: relative;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 12px;
   background: #f5f5f5;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
+    box-shadow 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .unsplashImageCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  z-index: 10;
 }
 
 .unsplashImageLink {
@@ -68,7 +131,7 @@
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #eee;
 }
 
 .unsplashImage {
@@ -76,11 +139,11 @@
   height: auto;
   display: block;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .unsplashImageCard:hover .unsplashImage {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 /* Overlay on hover */
@@ -90,77 +153,128 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
+  background: linear-gradient(to bottom,
+      transparent 40%,
+      rgba(0, 0, 0, 0.05) 60%,
+      rgba(0, 0, 0, 0.8) 100%);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
   display: flex;
-  align-items: flex-end;
-  padding: 16px;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px;
+  backdrop-filter: blur(0px);
 }
 
 .unsplashImageCard:hover .unsplashImageOverlay {
   opacity: 1;
+  backdrop-filter: blur(2px);
 }
 
 .unsplashImageTitle {
   color: white;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(20px);
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  font-family: inherit;
 }
 
-/* Loading State */
-.unsplashGalleryLoading {
+.unsplashImageCard:hover .unsplashImageTitle {
+  transform: translateY(0);
+}
+
+.itemTypeBadge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #151515;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 5;
+}
+
+/* List View Styles */
+.listViewContainer {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.listMediaItem {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #666;
+  gap: 20px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #eee;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 
-.loadingSpinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #333;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
+.listMediaItem:hover {
+  border-color: #ddd;
+  background: #fcfcfc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateX(5px);
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
+.listThumbnailWrapper {
+  width: 100px;
+  height: 70px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #eee;
 }
 
-.unsplashGalleryLoading p {
-  margin: 0;
+.listThumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.listInfo {
+  flex: 1;
+}
+
+.listTitle {
+  font-weight: 600;
   font-size: 16px;
+  margin-bottom: 4px;
 }
 
-/* Modern Tab Styles to replace legacy CSS */
+.listMeta {
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  gap: 12px;
+}
+
+/* Tab Styles */
 .mediaTabsContainer {
   margin-bottom: 40px;
 }
 
 .tabsHeader {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-bottom: 30px;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.tabsTitle {
-  margin: 0;
+  gap: 30px;
 }
 
 .tabsNav {
@@ -168,7 +282,7 @@
   padding: 0;
   margin: 0;
   display: flex;
-  gap: 20px;
+  gap: 30px;
 }
 
 .tabItem {
@@ -179,72 +293,93 @@
   text-decoration: none;
   font-weight: 700;
   text-transform: uppercase;
-  color: #151515;
-  font-size: 14px;
-  padding-bottom: 8px;
+  color: #888;
+  font-size: 13px;
+  padding-bottom: 10px;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.1em;
 }
 
 .tabLink:hover {
-  color: #e21e22;
+  color: #151515;
 }
 
 .tabItemActive .tabLink {
-  color: #e21e22;
-  border-bottom-color: #e21e22;
+  color: #dd3333;
+  border-bottom-color: #dd3333;
 }
 
-.galleryContent {
-  width: 100%;
+/* Skeleton Loading */
+.skeletonGrid {
+  display: flex;
+  gap: 20px;
+}
+
+.skeletonColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skeletonItem {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Responsive adjustments */
-@media (max-width: 1400px) {
+@media (max-width: 1024px) {
   .unsplashMasonry {
-    margin-left: -6px;
+    margin-left: -16px;
   }
 
   .unsplashMasonry>div {
-    padding-left: 6px;
+    padding-left: 16px;
   }
 
   .unsplashMasonry>div>div {
-    margin-bottom: 6px;
+    margin-bottom: 16px;
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .unsplashGalleryContainer {
-    padding: 20px 10px;
+    padding: 40px 15px;
   }
 
   .unsplashGalleryHeader {
-    margin-bottom: 24px;
-  }
-
-  .tabsHeader {
     flex-direction: column;
     align-items: flex-start;
+    gap: 20px;
   }
 
-  .unsplashMasonry {
-    margin-left: -4px;
+  .tabsNav {
+    gap: 20px;
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 5px;
   }
 
-  .unsplashMasonry>div {
-    padding-left: 4px;
-  }
-
-  .unsplashMasonry>div>div {
-    margin-bottom: 4px;
-  }
-
-  .unsplashImageOverlay {
-    padding: 12px;
-  }
-
-  .unsplashImageTitle {
+  .tabLink {
     font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .listThumbnailWrapper {
+    width: 80px;
+    height: 60px;
   }
 }
