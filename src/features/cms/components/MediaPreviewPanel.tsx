@@ -380,9 +380,7 @@ export default function MediaPreviewPanel({ media, onClose, onEdit, onDelete }: 
                 size="sm"
                 className="w-full"
                 onClick={() => {
-                  if (window.confirm('Are you sure you want to delete this media item?')) {
-                    onDelete(media.id!);
-                  }
+                  onDelete(media.id!);
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-2" />

@@ -3,6 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +22,8 @@ import FolderBrowser from './FolderBrowser';
 import MediaPreviewPanel from './MediaPreviewPanel';
 import MoveMediaDialog from './MoveMediaDialog';
 import RenameMediaDialog from './RenameMediaDialog';
+import BulkRenameDialog from './BulkRenameDialog';
+import BulkTagDialog from './BulkTagDialog';
 import MediaToolbar from './MediaToolbar';
 import AdvancedFilters from './AdvancedFilters';
 import UploadQueue from './UploadQueue';
@@ -46,6 +58,9 @@ export default function MediaGallery() {
     renameMediaTitle,
     bulkRenameDialogOpen,
     bulkTagDialogOpen,
+    deleteConfirmOpen,
+    bulkDeleteConfirmOpen,
+    itemToDeleteId,
     selectedFolderId,
     sortField,
     sortDirection,
@@ -61,6 +76,9 @@ export default function MediaGallery() {
     setRenameMediaTitle,
     setBulkRenameDialogOpen,
     setBulkTagDialogOpen,
+    setDeleteConfirmOpen,
+    setBulkDeleteConfirmOpen,
+    setItemToDeleteId,
     setSortField,
     setSortDirection,
     setIsDragging,
@@ -71,8 +89,8 @@ export default function MediaGallery() {
   // Custom hooks
   const { fetchMedia, filteredMedia } = useMediaGallery();
   const {
-    handleDelete,
-    handleBulkDelete,
+    handleDelete: deleteAction,
+    handleBulkDelete: bulkDeleteAction,
     handleBulkMove,
     handleRename,
     handleDuplicate,
@@ -88,6 +106,19 @@ export default function MediaGallery() {
     handleBulkToggleFeatured,
     handleBulkDownload,
   } = useMediaOperations();
+
+  // Override handleDelete to open dialog
+  const handleDelete = useCallback((id: string) => {
+    setItemToDeleteId(id);
+    setDeleteConfirmOpen(true);
+  }, [setItemToDeleteId, setDeleteConfirmOpen]);
+
+  // Override handleBulkDelete to open dialog
+  const onHandleBulkDelete = useCallback(() => {
+    if (selectedItems.size > 0) {
+      setBulkDeleteConfirmOpen(true);
+    }
+  }, [selectedItems.size, setBulkDeleteConfirmOpen]);
 
   const {
     handleDragEnter,
@@ -139,7 +170,7 @@ export default function MediaGallery() {
   useEffect(() => {
     fetchMedia();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterType, selectedFolderId]); // Only depend on filterType and selectedFolderId, not fetchMedia itself
+  }, [filterType, selectedFolderId]); 
 
   // Handle item selection
   const handleItemClick = useCallback(
@@ -279,10 +310,9 @@ export default function MediaGallery() {
     [mediaItems, setPreviewMedia]
   );
 
-  // Keyboard shortcuts (Ctrl+A, Ctrl+C, etc.)
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in inputs
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
@@ -294,24 +324,22 @@ export default function MediaGallery() {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
 
-      // Ctrl/Cmd + A: Select all
       if (ctrlOrCmd && e.key === 'a') {
         e.preventDefault();
         handleSelectAll();
       }
-      // Ctrl/Cmd + C: Copy selected
       else if (ctrlOrCmd && e.key === 'c') {
         e.preventDefault();
-        useMediaGalleryStore.getState().setClipboardItems(new Set(selectedItems));
-        useMediaGalleryStore.getState().setClipboardMode('copy');
+        const state = useMediaGalleryStore.getState();
+        state.setClipboardItems(new Set(selectedItems));
+        state.setClipboardMode('copy');
       }
-      // Ctrl/Cmd + X: Cut selected
       else if (ctrlOrCmd && e.key === 'x') {
         e.preventDefault();
-        useMediaGalleryStore.getState().setClipboardItems(new Set(selectedItems));
-        useMediaGalleryStore.getState().setClipboardMode('cut');
+        const state = useMediaGalleryStore.getState();
+        state.setClipboardItems(new Set(selectedItems));
+        state.setClipboardMode('cut');
       }
-      // Ctrl/Cmd + V: Paste (move/copy)
       else if (ctrlOrCmd && e.key === 'v') {
         const state = useMediaGalleryStore.getState();
         if (state.clipboardItems.size > 0) {
@@ -325,18 +353,15 @@ export default function MediaGallery() {
           }
         }
       }
-      // Delete: Delete selected
       else if (e.key === 'Delete' && selectedItems.size > 0) {
         e.preventDefault();
-        handleBulkDelete();
+        onHandleBulkDelete(); // Use the dialog version
       }
-      // F2: Rename selected (first item)
       else if (e.key === 'F2' && selectedItems.size === 1) {
         e.preventDefault();
         const firstId = Array.from(selectedItems)[0];
         handleRenameClick(firstId);
       }
-      // Ctrl/Cmd + D: Duplicate selected
       else if (ctrlOrCmd && e.key === 'd' && selectedItems.size > 0) {
         e.preventDefault();
         handleBulkDuplicate(Array.from(selectedItems));
@@ -345,7 +370,7 @@ export default function MediaGallery() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItems, selectedFolderId, handleSelectAll, handleBulkMove, handleBulkDuplicate, handleBulkDelete, handleRenameClick]);
+  }, [selectedItems, selectedFolderId, handleSelectAll, handleBulkMove, handleBulkDuplicate, onHandleBulkDelete, handleRenameClick]);
 
   const PlusIcon = icons.Plus;
   const UploadIcon = icons.Upload;
@@ -353,7 +378,6 @@ export default function MediaGallery() {
   const AlertCircleIcon = icons.AlertCircle;
   const RefreshCwIcon = icons.RefreshCw;
 
-  // Loading state
   if (loading) {
     return (
       <div className="space-y-4">
@@ -364,7 +388,6 @@ export default function MediaGallery() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Card className="border-destructive">
@@ -391,7 +414,6 @@ export default function MediaGallery() {
       role="main"
       aria-label="Media Gallery"
     >
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -404,12 +426,13 @@ export default function MediaGallery() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-6 border-b" role="banner">
         <div>
-          <h1 className="text-3xl font-heading font-semibold mb-2 text-foreground">Media Gallery</h1>
-          <p className="text-muted-foreground">Manage images, videos, and audio files</p>
+          <h1 className="text-3xl font-heading font-semibold mb-1 text-foreground">Media Gallery</h1>
+          <p className="text-muted-foreground">Manage your visual assets and documents</p>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
+            className="rounded-xl"
             onClick={(e: React.MouseEvent) => {
               e.preventDefault();
               fileInputRef.current?.click();
@@ -418,7 +441,7 @@ export default function MediaGallery() {
             {UploadIcon ? <UploadIcon size={18} className="mr-2" /> : null}
             Upload Files
           </Button>
-          <Button asChild>
+          <Button asChild className="rounded-xl">
             <a href={`/admin/media/new${selectedFolderId ? `?folderId=${selectedFolderId}` : ''}`} data-astro-prefetch>
               {PlusIcon ? <PlusIcon size={18} className="mr-2" /> : null}
               Add Media
@@ -432,14 +455,15 @@ export default function MediaGallery() {
         filteredMediaCount={filteredMedia.length} 
         filteredMedia={filteredMedia}
         onSelectAll={handleSelectAll} 
+        onBulkDelete={onHandleBulkDelete}
       />
 
       {/* Upload Queue */}
       <UploadQueue onRefresh={fetchMedia} />
 
-      {/* Main Content with Folder Browser */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
-        {/* Folder Browser Sidebar */}
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar */}
         <div className="lg:col-span-1">
           <FolderBrowser
             selectedFolderId={selectedFolderId}
@@ -451,73 +475,46 @@ export default function MediaGallery() {
           />
         </div>
 
-        {/* Media Gallery Content */}
+        {/* Content */}
         <div
           className={cn(
-            'lg:col-span-3 space-y-4 md:space-y-6 relative transition-all',
-            isDragging && 'ring-2 ring-primary ring-offset-2 rounded-lg p-2 md:p-4 bg-primary/5'
+            'lg:col-span-3 space-y-6 relative transition-all min-h-[400px]',
+            isDragging && 'ring-2 ring-primary ring-offset-4 rounded-xl bg-primary/5'
           )}
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          role="region"
-          aria-label="Media gallery content"
         >
-          {/* Drag overlay */}
           {isDragging && (
-            <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 flex items-center justify-center pointer-events-none animate-in fade-in-0 duration-200">
-              <div className="text-center animate-in zoom-in-95 duration-200">
-                {UploadIcon ? (
-                  <UploadIcon size={48} className="mx-auto mb-2 text-primary animate-bounce" />
-                ) : null}
-                <p className="text-lg font-semibold text-primary">Drop files here to upload</p>
+            <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-xl z-10 flex items-center justify-center pointer-events-none backdrop-blur-sm animate-in fade-in duration-300">
+              <div className="text-center">
+                {UploadIcon ? <UploadIcon size={64} className="mx-auto mb-4 text-primary animate-bounce" /> : null}
+                <p className="text-2xl font-bold text-primary">Drop to Upload</p>
               </div>
             </div>
           )}
 
-          {/* Toolbar */}
           <MediaToolbar searchInputRef={searchInputRef} />
-
-          {/* Advanced Filters Panel */}
           {advancedFiltersOpen && <AdvancedFilters />}
 
-          {/* Empty State */}
           {filteredMedia.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="p-12 text-center">
+            <Card className="border-dashed py-20 bg-muted/30">
+              <CardContent className="text-center">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="text-muted-foreground">{ImagesIcon ? <ImagesIcon size={64} /> : null}</div>
+                  <div className="p-4 bg-muted rounded-full">
+                    {ImagesIcon ? <ImagesIcon size={40} className="text-muted-foreground" /> : null}
+                  </div>
                   <div>
-                    <h3 className="text-xl font-semibold mb-2">
-                      {useMediaGalleryStore.getState().searchTerm || useMediaGalleryStore.getState().filterType !== 'all'
-                        ? 'No media found'
-                        : 'No media yet'}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {useMediaGalleryStore.getState().searchTerm ||
-                      useMediaGalleryStore.getState().filterType !== 'all'
-                        ? 'Try adjusting your search or filters'
-                        : 'Add your first media item to get started'}
+                    <h3 className="text-xl font-bold">No media found</h3>
+                    <p className="text-muted-foreground max-w-xs mx-auto">
+                      Adjust your search or filters, or add some new media.
                     </p>
                   </div>
-                  {!useMediaGalleryStore.getState().searchTerm &&
-                    useMediaGalleryStore.getState().filterType === 'all' && (
-                      <Button asChild>
-                        <a
-                          href={`/admin/media/new${selectedFolderId ? `?folderId=${selectedFolderId}` : ''}`}
-                          data-astro-prefetch
-                        >
-                          {PlusIcon ? <PlusIcon size={18} className="mr-2" /> : null}
-                          Add Media
-                        </a>
-                      </Button>
-                    )}
                 </div>
               </CardContent>
             </Card>
           ) : viewMode === 'grid' ? (
-            /* Grid View */
             <MediaGrid
               items={filteredMedia}
               onItemClick={handleItemClick}
@@ -533,7 +530,6 @@ export default function MediaGallery() {
               onCopyPath={handleCopyFilePath}
             />
           ) : (
-            /* List View */
             <MediaList
               items={filteredMedia}
               onItemClick={handleItemClick}
@@ -556,22 +552,16 @@ export default function MediaGallery() {
         </div>
       </div>
 
-      {/* Preview Panel */}
+      {/* Panels & Dialogs */}
       {previewMedia && (
         <MediaPreviewPanel
           media={previewMedia}
           onClose={() => setPreviewMedia(null)}
-          onEdit={(id) => {
-            window.location.href = `/admin/media/${id}`;
-          }}
-          onDelete={(id) => {
-            handleDelete(id);
-            setPreviewMedia(null);
-          }}
+          onEdit={(id) => { window.location.href = `/admin/media/${id}`; }}
+          onDelete={handleDelete}
         />
       )}
 
-      {/* Move Dialog */}
       <MoveMediaDialog
         open={moveDialogOpen}
         onOpenChange={setMoveDialogOpen}
@@ -579,7 +569,6 @@ export default function MediaGallery() {
         onMove={handleBulkMove}
       />
 
-      {/* Rename Dialog */}
       {renameMediaId && (
         <RenameMediaDialog
           open={renameDialogOpen}
@@ -590,106 +579,66 @@ export default function MediaGallery() {
         />
       )}
 
-      {/* Bulk Rename Dialog */}
-      <Dialog open={bulkRenameDialogOpen} onOpenChange={setBulkRenameDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Bulk Rename {selectedItems.size} Item{selectedItems.size !== 1 ? 's' : ''}
-            </DialogTitle>
-            <DialogDescription>
-              Use patterns: {'{index}'} for item number, {'{name}'} for original name, {'{original}'} for original name
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="rename-pattern">Rename Pattern</Label>
-              <Input
-                id="rename-pattern"
-                placeholder="e.g., Image {index} or {name} - Copy"
-                defaultValue="{name}"
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === 'Enter') {
-                    const input = e.target as HTMLInputElement;
-                    handleBulkRename(input.value);
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Examples: &quot;Photo {'{index}'}&quot;, &quot;{'{name}'} - Copy&quot;, &quot;Image {'{index}'} -{' '}
-                {'{original}'}&quot;
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkRenameDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                const input = document.getElementById('rename-pattern') as HTMLInputElement;
-                if (input?.value) {
-                  handleBulkRename(input.value);
-                }
-              }}
-            >
-              Rename All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BulkRenameDialog
+        open={bulkRenameDialogOpen}
+        onOpenChange={setBulkRenameDialogOpen}
+        selectedCount={selectedItems.size}
+        onRename={handleBulkRename}
+      />
 
-      {/* Bulk Tag Dialog */}
-      <Dialog open={bulkTagDialogOpen} onOpenChange={setBulkTagDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Bulk Tag {selectedItems.size} Item{selectedItems.size !== 1 ? 's' : ''}
-            </DialogTitle>
-            <DialogDescription>Enter tags separated by commas. This will replace existing tags.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="bulk-tags">Tags</Label>
-              <Textarea
-                id="bulk-tags"
-                placeholder="e.g., sports, basketball, team"
-                rows={3}
-                onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                    const textarea = e.target as HTMLTextAreaElement;
-                    const tags = textarea.value
-                      .split(',')
-                      .map((t) => t.trim())
-                      .filter(Boolean);
-                    handleBulkTag(tags);
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">Separate tags with commas. Press Ctrl+Enter to apply.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkTagDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
+      <BulkTagDialog
+        open={bulkTagDialogOpen}
+        onOpenChange={setBulkTagDialogOpen}
+        selectedCount={selectedItems.size}
+        onTag={handleBulkTag}
+      />
+
+      {/* Delete Single Confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the media item. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDeleteId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                const textarea = document.getElementById('bulk-tags') as HTMLTextAreaElement;
-                if (textarea?.value) {
-                  const tags = textarea.value
-                    .split(',')
-                    .map((t) => t.trim())
-                    .filter(Boolean);
-                  handleBulkTag(tags);
+                if (itemToDeleteId) {
+                  deleteAction(itemToDeleteId);
+                  setItemToDeleteId(null);
                 }
               }}
             >
-              Apply Tags
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              Delete Item
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Multiple Confirmation */}
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedItems.size} items?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to delete {selectedItems.size} media files. This action is permanent and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => bulkDeleteAction()}
+            >
+              Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

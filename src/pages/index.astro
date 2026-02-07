@@ -464,20 +464,11 @@ import PageLoader from "../components/PageLoader";
     type="text/javascript"
     src="/js/jquery-migrate.min.js"
     id="jquery-migrate-js"></script>
-  <!-- Legacy Scripts (Select2, Fancybox, Counterup, etc.) removed in favor of React components -->
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/lightbox.js"
-    id="lightbox-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/splash.js"
-    id="stm-theme-scripts-js"></script>
+  <!-- Modern Scripts handle the UI now. Legacy scripts (splash.js, lightbox.js) removed to prevent UI overwriting issues -->
   <script
     is:inline
     type="text/javascript"
     src="/js/header.js"
     id="stm-theme-scripts-header-js"></script>
 </Layout>
+

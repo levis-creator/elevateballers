@@ -24,6 +24,9 @@ export default defineConfig({
       mode: 'standalone'
     }),
   trailingSlash: 'ignore',
+  image: {
+    remotePatterns: [{ protocol: 'https', hostname: 'cdn.sanity.io' }],
+  },
   vite: {
     resolve: {
       alias: {
@@ -31,13 +34,19 @@ export default defineConfig({
       },
     },
     optimizeDeps: {
-      include: ['lucide-react', 'react-masonry-css'],
+      include: ['react-masonry-css'],
     },
     ssr: {
-      noExternal: ['lucide-react', 'react-masonry-css'],
+      noExternal: ['react-masonry-css'],
       // Keep @prisma/client external only for cPanel (CJS interop)
       // For Vercel, bundle it with the serverless function
       external: deployTarget === 'cpanel' ? ['@prisma/client', '@prisma/adapter-mariadb'] : [],
+    },
+    server: {
+      fs: {
+        // Allow serving files from one level up to the project root
+        allow: ['..'],
+      },
     },
   },
 });

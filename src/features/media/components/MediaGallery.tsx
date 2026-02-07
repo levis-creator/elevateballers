@@ -1,32 +1,38 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
-import { useMediaStore } from '../stores/useMediaStore';
-import type { MediaItem, MediaFilter } from '../types';
-import { allMediaItems, filterMediaByType } from '../data/mediaData';
 import MasonryGrid from '../../../shared/components/ui/MasonryGrid';
+import { useMediaStore } from '../stores/useMediaStore';
 import styles from './MediaGallery.module.css';
+import { LayoutGrid, List, Play, Music, Image as ImageIcon } from 'lucide-react';
 
 interface FeaturedMediaItem {
   id: string;
   title: string;
   url: string;
+  type: 'IMAGE' | 'VIDEO' | 'AUDIO';
   thumbnail?: string;
-  type: string;
-  featured: boolean;
+  tags?: string[];
+  createdAt: string;
 }
 
+const TABS = [
+  { id: 'all_medias', label: 'All' },
+  { id: 'image_media', label: 'Images' },
+  { id: 'audio_media', label: 'Audio' },
+] as const;
+
 /**
- * MediaGallery component - Media gallery with type tabs and modern lightbox
- * Displays featured images in Unsplash-style masonry layout
+ * MediaGallery component - Modern public media gallery
+ * Features grid/list views, premium animations, and lightbox integration
  */
 export default function MediaGallery() {
-  const { activeMediaTab, setActiveMediaTab } = useMediaStore();
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const { activeMediaTab, setActiveMediaTab, viewMode, setViewMode } = useMediaStore();
   const [featuredMedia, setFeaturedMedia] = useState<FeaturedMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   // Fetch featured media from API
   useEffect(() => {
@@ -39,252 +45,230 @@ export default function MediaGallery() {
           throw new Error('Failed to fetch featured media');
         }
         const data = await response.json();
-        const images = data.filter((item: FeaturedMediaItem) => item.type === 'IMAGE');
-        setFeaturedMedia(images);
+        setFeaturedMedia(data);
       } catch (err: any) {
         console.error('Error fetching featured media:', err);
         setError(err.message || 'Failed to load featured images');
         setFeaturedMedia([]);
       } finally {
-        setLoading(false);
+        setTimeout(() => setLoading(false), 600);
       }
     };
 
     fetchFeaturedMedia();
   }, []);
 
-  const convertedMedia: MediaItem[] = useMemo(() => {
-    return featuredMedia.map((item, index) => ({
-      id: parseInt(item.id.replace(/\D/g, '')) || index,
-      type: 'image' as const,
-      title: item.title,
-      url: item.url,
-      thumbnail: item.thumbnail || item.url,
-      thumbnailAlt: item.title,
-      fancyboxGroup: 'featured_images',
-    }));
-  }, [featuredMedia]);
+  const filteredItems = useMemo(() => {
+    if (activeMediaTab === 'all_medias') return featuredMedia;
+    if (activeMediaTab === 'image_media') return featuredMedia.filter(item => item.type === 'IMAGE');
+    if (activeMediaTab === 'audio_media') return featuredMedia.filter(item => item.type === 'AUDIO');
+    return featuredMedia;
+  }, [featuredMedia, activeMediaTab]);
 
-  const filteredMedia: MediaItem[] = useMemo(() => {
-    const mediaToUse = convertedMedia.length > 0 ? convertedMedia : allMediaItems;
-    return filterMediaByType(mediaToUse, activeMediaTab);
-  }, [convertedMedia, activeMediaTab]);
+  const slides = useMemo(() => 
+    filteredItems
+      .filter(item => item.type === 'IMAGE')
+      .map(item => ({ src: item.url, title: item.title })),
+    [filteredItems]
+  );
 
-  const lightboxSlides = useMemo(() => {
-    const images = filteredMedia.filter((item) => item.type === 'image');
-    return images.map((item) => ({
-      src: item.url,
-      alt: item.title,
-      title: item.title,
-    }));
-  }, [filteredMedia]);
-
-  const tabs: { id: MediaFilter; label: string }[] = [
-    { id: 'all_medias', label: 'All' },
-    { id: 'image_media', label: 'Images' },
-    { id: 'audio_media', label: 'Audio' },
-  ];
-
-  const handleTabClick = (tab: MediaFilter, e: React.MouseEvent) => {
-    e.preventDefault();
-    setActiveMediaTab(tab);
-  };
-
-  const handleImageClick = (item: MediaItem, e: React.MouseEvent) => {
-    e.preventDefault();
-    if (item.type === 'image') {
-      const images = filteredMedia.filter((i) => i.type === 'image');
-      const index = images.findIndex((i) => i.id === item.id);
-      setLightboxIndex(index >= 0 ? index : 0);
-      setLightboxOpen(true);
-    } else if (item.type === 'audio') {
-      window.open(item.url, '_blank');
+  const handleItemClick = (item: FeaturedMediaItem, e: React.MouseEvent) => {
+    if (item.type === 'IMAGE') {
+      e.preventDefault();
+      const index = slides.findIndex(s => s.src === item.url);
+      if (index !== -1) {
+        setPhotoIndex(index);
+        setLightboxOpen(true);
+      }
+    } else if (item.type === 'AUDIO') {
+      // For audio, we could open a player or just the file
+      // e.preventDefault();
     }
   };
 
-  if (loading) {
+  if (error) {
     return (
-      <div className={styles.unsplashGalleryContainer}>
-        <div className={styles.unsplashGalleryHeader}>
-          <h2 className="stm-main-title-unit">Featured Gallery</h2>
-        </div>
-        <div className={styles.unsplashGalleryLoading}>
-          <div className={styles.loadingSpinner} />
-          <p>Loading featured images...</p>
-        </div>
+      <div className="p-12 text-center bg-red-50 text-red-600 rounded-2xl border border-red-100 max-w-2xl mx-auto my-12">
+        <h3 className="text-xl font-bold mb-2">Oops! Something went wrong</h3>
+        <p>{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-6 px-6 py-2 bg-red-600 text-white rounded-full font-semibold hover:bg-red-700 transition-all shadow-md"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
-  const showFeaturedOnly = convertedMedia.length > 0;
-
   return (
-    <>
-      {showFeaturedOnly ? (
-        <div className={styles.unsplashGalleryContainer}>
-          <div className={styles.unsplashGalleryHeader}>
-            <h2 className="stm-main-title-unit">Featured Gallery</h2>
-            <p className={styles.unsplashGallerySubtitle}>Discover our best moments</p>
-          </div>
-          <div className={styles.unsplashGallery}>
-            <MasonryGrid 
-              className={styles.unsplashMasonry}
-              breakpointCols={{
-                default: 5,
-                1400: 4,
-                1100: 3,
-                700: 2,
-                500: 1
-              }}
+    <div className={styles.unsplashGalleryContainer}>
+      {/* Premium Header */}
+      <div className={styles.unsplashGalleryHeader}>
+        <div className={styles.titleGroup}>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Featured Media</h2>
+          <span className={styles.unsplashGallerySubtitle}>Visual highlights from across the league</span>
+        </div>
+        
+        <div className={styles.viewControls}>
+          <div className="flex bg-gray-100 p-1 rounded-xl">
+            <button 
+              className={`${styles.viewBtn} ${viewMode === 'grid' ? styles.viewBtnActive : ''}`}
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
             >
-              {convertedMedia.map((item) => (
-                <UnsplashImageCard
-                  key={item.id}
-                  item={item}
-                  onClick={handleImageClick}
-                />
-              ))}
-            </MasonryGrid>
+              <LayoutGrid size={18} />
+            </button>
+            <button 
+              className={`${styles.viewBtn} ${viewMode === 'list' ? styles.viewBtnActive : ''}`}
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+            >
+              <List size={18} />
+            </button>
           </div>
         </div>
-      ) : (
-        <div className={styles.mediaTabsContainer}>
-          <div className={styles.tabsHeader}>
-            <h2 className={`${styles.tabsTitle} stm-main-title-unit`}>Media Gallery</h2>
-            <nav className={styles.tabsNavContainer}>
-              <ul className={styles.tabsNav}>
-                {tabs.map((tab) => (
-                  <li 
-                    key={tab.id} 
-                    className={`${styles.tabItem} ${activeMediaTab === tab.id ? styles.tabItemActive : ''}`}
-                  >
+      </div>
+
+      <div className={styles.mediaTabsContainer}>
+        <div className={styles.tabsHeader}>
+          <ul className={styles.tabsNav}>
+            {TABS.map((tab) => (
+              <li 
+                key={tab.id}
+                className={`${styles.tabItem} ${activeMediaTab === tab.id ? styles.tabItemActive : ''}`}
+              >
+                <a
+                  href={`#${tab.id}`}
+                  className={styles.tabLink}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveMediaTab(tab.id as any);
+                  }}
+                >
+                  {tab.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {loading ? (
+          <SkeletonLoader />
+        ) : filteredItems.length > 0 ? (
+          viewMode === 'grid' ? (
+            <div className={styles.unsplashGallery}>
+              <MasonryGrid
+                breakpointCols={{
+                  default: 3,
+                  1100: 3,
+                  768: 2,
+                  500: 1
+                }}
+                className={styles.unsplashMasonry}
+              >
+                {filteredItems.map((item) => (
+                  <div key={item.id} className={styles.unsplashImageCard}>
+                    <div className={styles.itemTypeBadge}>
+                      {item.type === 'IMAGE' && <ImageIcon size={12} className="mr-1 inline" />}
+                      {item.type === 'AUDIO' && <Music size={12} className="mr-1 inline" />}
+                      {item.type === 'VIDEO' && <Play size={12} className="mr-1 inline" />}
+                      {item.type}
+                    </div>
                     <a
-                      href={`#${tab.id}`}
-                      className={styles.tabLink}
-                      onClick={(e) => handleTabClick(tab.id, e)}
+                      href={item.url}
+                      onClick={(e) => handleItemClick(item, e)}
+                      className={styles.unsplashImageLink}
+                      target={item.type !== 'IMAGE' ? '_blank' : undefined}
+                      rel={item.type !== 'IMAGE' ? 'noopener noreferrer' : undefined}
                     >
-                      <span>{tab.label}</span>
+                      <div className={styles.unsplashImageWrapper}>
+                        <img
+                          src={item.thumbnail || item.url}
+                          alt={item.title}
+                          className={styles.unsplashImage}
+                          loading="lazy"
+                        />
+                        <div className={styles.unsplashImageOverlay}>
+                          <h4 className={styles.unsplashImageTitle}>{item.title}</h4>
+                        </div>
+                      </div>
                     </a>
-                  </li>
+                  </div>
                 ))}
-              </ul>
-            </nav>
+              </MasonryGrid>
+            </div>
+          ) : (
+            <div className={styles.listViewContainer}>
+              {filteredItems.map((item) => (
+                <a 
+                  key={item.id} 
+                  href={item.url}
+                  onClick={(e) => handleItemClick(item, e)}
+                  className={styles.listMediaItem}
+                  target={item.type !== 'IMAGE' ? '_blank' : undefined}
+                  rel={item.type !== 'IMAGE' ? 'noopener noreferrer' : undefined}
+                >
+                  <div className={styles.listThumbnailWrapper}>
+                    <img 
+                      src={item.thumbnail || item.url} 
+                      alt={item.title} 
+                      className={styles.listThumbnail} 
+                    />
+                    {item.type !== 'IMAGE' && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        {item.type === 'AUDIO' ? <Music className="text-white" /> : <Play className="text-white" />}
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.listInfo}>
+                    <h4 className={styles.listTitle}>{item.title}</h4>
+                    <div className={styles.listMeta}>
+                      <span className="flex items-center gap-1">
+                        {item.type === 'IMAGE' && <ImageIcon size={12} />}
+                        {item.type === 'AUDIO' && <Music size={12} />}
+                        {item.type}
+                      </span>
+                      <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )
+        ) : (
+          <div className="py-24 text-center text-gray-400 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+            <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
+            <p className="text-xl font-medium">No media items found in this category.</p>
+            <p className="text-sm mt-2">Try selecting another tab or check back later.</p>
           </div>
+        )}
+      </div>
 
-          <div className={styles.galleryContent}>
-            <MasonryGrid 
-              breakpointCols={{
-                default: 3,
-                1100: 3,
-                700: 2,
-                500: 1
-              }}
-            >
-              {filteredMedia
-                .filter((item) => {
-                  if (activeMediaTab === 'all_medias') return true;
-                  if (activeMediaTab === 'image_media') return item.type === 'image';
-                  if (activeMediaTab === 'audio_media') return item.type === 'audio';
-                  return true;
-                })
-                .map((item) => (
-                  <MediaCard
-                    key={item.id}
-                    item={item}
-                    onClick={handleImageClick}
-                  />
-                ))}
-            </MasonryGrid>
-          </div>
-        </div>
-      )}
-
-      {/* Modern Lightbox */}
       <Lightbox
         open={lightboxOpen}
         close={() => setLightboxOpen(false)}
-        slides={lightboxSlides}
-        index={lightboxIndex}
-        on={{
-          view: ({ index }) => setLightboxIndex(index),
-        }}
-        styles={{
-          container: { backgroundColor: 'rgba(0, 0, 0, 0.9)' },
-        }}
-        carousel={{
-          finite: false,
-        }}
-        render={{
-          buttonPrev: lightboxSlides.length <= 1 ? () => null : undefined,
-          buttonNext: lightboxSlides.length <= 1 ? () => null : undefined,
-        }}
+        index={photoIndex}
+        slides={slides}
       />
-    </>
-  );
-}
-
-/**
- * UnsplashImageCard component
- */
-function UnsplashImageCard({
-  item,
-  onClick,
-}: {
-  item: MediaItem;
-  onClick: (item: MediaItem, e: React.MouseEvent) => void;
-}) {
-  return (
-    <div className={styles.unsplashImageCard}>
-      <a
-        href={item.url}
-        onClick={(e) => onClick(item, e)}
-        className={styles.unsplashImageLink}
-        title={item.title}
-      >
-        <div className={styles.unsplashImageWrapper}>
-          <img 
-            decoding="async" 
-            src={item.thumbnail || item.url} 
-            alt={item.thumbnailAlt || item.title}
-            className={styles.unsplashImage}
-            loading="lazy"
-          />
-          <div className={styles.unsplashImageOverlay}>
-            <div className={styles.unsplashImageTitle}>{item.title}</div>
-          </div>
-        </div>
-      </a>
     </div>
   );
 }
 
-/**
- * MediaCard component
- */
-function MediaCard({
-  item,
-  onClick,
-}: {
-  item: MediaItem;
-  onClick: (item: MediaItem, e: React.MouseEvent) => void;
-}) {
-  const isAudio = item.type === 'audio';
-
+function SkeletonLoader() {
   return (
-    <div className={`stm-media-single-unit stm-media-single-unit-${item.type}`} style={{ width: '100%', float: 'none' }}>
-      <div className="stm-media-preview">
-        <a
-          href={item.url}
-          onClick={(e) => onClick(item, e)}
-          className={isAudio ? 'stm-iframe' : 'stm-fancybox'}
-          title={item.title}
-          data-fancybox-group={item.fancyboxGroup}
-        >
-          <img decoding="async" src={item.thumbnail} alt={item.thumbnailAlt || item.title} />
-          <div className="icon" />
-          <div className="title">{item.title}</div>
-        </a>
-      </div>
+    <div className={styles.skeletonGrid}>
+      {[1, 2, 3].map((col) => (
+        <div key={col} className={styles.skeletonColumn}>
+          {[1, 2].map((row) => (
+            <div 
+              key={row} 
+              className={styles.skeletonItem}
+              style={{ height: row === 1 ? '320px' : '220px' }}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

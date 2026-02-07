@@ -1,20 +1,7 @@
-/**
- * Protected File Serving API
- * Serves files from private folders with access control
- * Public files are served directly by the static file server
- */
-
 import type { APIRoute } from 'astro';
-import { promises as fs } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { getCurrentUser } from '../../../features/cms/lib/auth';
 import { checkFolderAccess } from '../../../lib/folder-access';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const projectRoot = join(__dirname, '../../..');
-const uploadsBasePath = join(projectRoot, 'public', 'uploads');
+import { readFile } from '../../../lib/file-storage';
 
 export const prerender = false;
 
@@ -27,7 +14,7 @@ export const GET: APIRoute = async ({ params, request }) => {
   try {
     // Get the path segments
     const pathSegments = params.path?.split('/') || [];
-    
+
     if (pathSegments.length < 2) {
       return new Response('Invalid path', { status: 400 });
     }
@@ -45,9 +32,9 @@ export const GET: APIRoute = async ({ params, request }) => {
     if (isPrivate) {
       // Check user authentication and access
       const user = await getCurrentUser(request);
-      
+
       if (!user) {
-        return new Response('Unauthorized', { 
+        return new Response('Unauthorized', {
           status: 401,
           headers: { 'Content-Type': 'text/plain' },
         });
@@ -56,9 +43,9 @@ export const GET: APIRoute = async ({ params, request }) => {
       // Check folder access
       const folderPath = `${privacyLevel}/${folderName}`;
       const hasAccess = await checkFolderAccess(folderPath, user);
-      
+
       if (!hasAccess) {
-        return new Response('Forbidden', { 
+        return new Response('Forbidden', {
           status: 403,
           headers: { 'Content-Type': 'text/plain' },
         });
@@ -66,34 +53,27 @@ export const GET: APIRoute = async ({ params, request }) => {
     }
 
     // Security: Prevent path traversal
-    // Sanitize folder name and file name
     const sanitizedFolderName = folderName.replace(/\.\./g, '').replace(/[^a-zA-Z0-9\-_]/g, '');
     const sanitizedFileName = fileName.replace(/\.\./g, '').replace(/[^a-zA-Z0-9\-_.]/g, '');
-    
+
     if (!sanitizedFolderName || !sanitizedFileName) {
       return new Response('Invalid path', { status: 400 });
     }
-    
-    // Construct file path using sanitized values
-    const filePath = join(uploadsBasePath, privacyLevel, sanitizedFolderName, sanitizedFileName);
-    
-    // Double-check: Ensure the resolved path is still within uploads directory
-    const normalizedPath = join(uploadsBasePath, privacyLevel, sanitizedFolderName, sanitizedFileName);
-    if (!normalizedPath.startsWith(uploadsBasePath)) {
-      return new Response('Invalid path', { status: 400 });
-    }
 
-    // Check if file exists
+    const fullRelativePath = `${privacyLevel}/${sanitizedFolderName}/${sanitizedFileName}`;
+
+    // Read file via storage helper (handles local vs supabase)
+    let fileBuffer;
     try {
-      await fs.access(filePath);
-    } catch {
-      return new Response('File not found', { status: 404 });
+      fileBuffer = await readFile(fullRelativePath);
+    } catch (err: any) {
+      if (err.message?.includes('ENOENT') || err.message?.includes('not found')) {
+        return new Response('File not found', { status: 404 });
+      }
+      throw err;
     }
 
-    // Read file
-    const fileBuffer = await fs.readFile(filePath);
-    
-    // Determine content type from file extension
+    // Determine content type
     const ext = fileName.split('.').pop()?.toLowerCase();
     const mimeTypes: Record<string, string> = {
       jpg: 'image/jpeg',
@@ -107,7 +87,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       pdf: 'application/pdf',
       json: 'application/json',
     };
-    
+
     const contentType = ext ? mimeTypes[ext] || 'application/octet-stream' : 'application/octet-stream';
 
     // Return file with appropriate headers
@@ -115,9 +95,9 @@ export const GET: APIRoute = async ({ params, request }) => {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': isPrivate 
-          ? 'private, max-age=3600' // Private files: shorter cache, no public caching
-          : 'public, max-age=31536000, immutable', // Public files: long cache
+        'Cache-Control': isPrivate
+          ? 'private, max-age=3600'
+          : 'public, max-age=31536000, immutable',
         'Content-Disposition': `inline; filename="${fileName}"`,
       },
     });

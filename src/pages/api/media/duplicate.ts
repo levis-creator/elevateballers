@@ -1,9 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdmin } from '../../../features/cms/lib/auth';
 import { prisma } from '../../../lib/prisma';
-import { promises as fs } from 'fs';
-import { join } from 'path';
-import { fileExists } from '../../../lib/file-storage';
+import { saveFile, readFile, getStorageType } from '../../../lib/file-storage';
 
 export const prerender = false;
 
@@ -40,57 +38,40 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // If the media has a filePath, duplicate the physical file
+    // Duplication logic
     let newFilePath: string | null = null;
     let newUrl: string | null = null;
 
     if (originalMedia.filePath) {
       try {
-        // Check if file exists
-        const exists = await fileExists(originalMedia.filePath);
-        if (!exists) {
-          return new Response(
-            JSON.stringify({ error: 'Source file not found' }),
-            {
-              status: 404,
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
-        }
-
-        const projectRoot = process.cwd();
-        // filePath format is "uploads/public/..." or "uploads/private/..."
-        // Actual file location is "public/uploads/public/..." or "public/uploads/private/..."
-        const normalizedPath = originalMedia.filePath.startsWith('public/') 
-          ? originalMedia.filePath 
-          : `public/${originalMedia.filePath}`;
-        const sourcePath = join(projectRoot, normalizedPath);
-
-        // Read the original file
-        const fileBuffer = await readFile(sourcePath);
+        // Read the original file via unified helper
+        // filePath in DB is "uploads/public/folder/file.ext"
+        // readFile expects path relative to uploads dir, so we remove "uploads/"
+        const relativePath = originalMedia.filePath.replace(/^uploads\//, '');
+        const fileBuffer = await readFile(relativePath);
 
         // Generate new filename
-        const pathParts = originalMedia.filePath.split('/');
-        const fileName = pathParts[pathParts.length - 1];
-        const nameParts = fileName.split('.');
+        const originalFileName = originalMedia.filePath.split('/').pop() || 'file';
+        const nameParts = originalFileName.split('.');
         const ext = nameParts.length > 1 ? nameParts.pop() : '';
         const baseName = nameParts.join('.');
         const timestamp = Date.now();
         const newFileName = `${baseName}-copy-${timestamp}${ext ? '.' + ext : ''}`;
 
-        // Determine destination folder
-        const folderPath = originalMedia.folder?.path || 'public/general';
-        const destPath = join(projectRoot, folderPath, newFileName);
+        // Save to storage (local or supabase)
+        const folderName = originalMedia.folder?.name || 'general';
+        const { filePath, publicUrl } = await saveFile(
+          folderName,
+          fileBuffer,
+          originalMedia.isPrivate,
+          newFileName
+        );
 
-        // Write the duplicate file
-        await writeFile(destPath, fileBuffer);
-
-        // Set new paths
-        newFilePath = `${folderPath}/${newFileName}`;
-        newUrl = `/${folderPath}/${newFileName}`;
+        newFilePath = filePath;
+        newUrl = publicUrl;
       } catch (fileError: any) {
         console.error('Error duplicating file:', fileError);
-        // Continue without file duplication - create DB record only
+        // Continue but result might be broken
       }
     }
 
@@ -99,7 +80,7 @@ export const POST: APIRoute = async ({ request }) => {
       data: {
         title: `${originalMedia.title} (Copy)`,
         url: newUrl || originalMedia.url,
-        thumbnail: originalMedia.thumbnail,
+        thumbnail: originalMedia.type === 'IMAGE' ? (newUrl || originalMedia.thumbnail) : originalMedia.thumbnail,
         filePath: newFilePath || originalMedia.filePath,
         folderId: originalMedia.folderId,
         type: originalMedia.type,

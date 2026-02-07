@@ -4,7 +4,7 @@
  */
 
 import { prisma } from './prisma';
-import { sanitizeFolderName, ensureDirectory, getUploadsBasePath } from './file-storage';
+import { sanitizeFolderName, ensureDirectory, getUploadsBasePath, getStorageType } from './file-storage';
 import { join } from 'path';
 import { PREDEFINED_FOLDER_NAMES } from './folder-constants';
 
@@ -60,23 +60,29 @@ export const DEFAULT_FOLDERS: DefaultFolder[] = [
  * This function is idempotent - safe to call multiple times
  */
 export async function initializeDefaultFolders(): Promise<void> {
+  const storageType = getStorageType();
+
   try {
-    // Ensure base uploads directory exists
-    await ensureDirectory(getUploadsBasePath());
-    await ensureDirectory(join(getUploadsBasePath(), 'public'));
-    await ensureDirectory(join(getUploadsBasePath(), 'private'));
+    // Only handle filesystem initialization if using local storage
+    if (storageType === 'local') {
+      await ensureDirectory(getUploadsBasePath());
+      await ensureDirectory(join(getUploadsBasePath(), 'public'));
+      await ensureDirectory(join(getUploadsBasePath(), 'private'));
+    }
 
     for (const folderData of DEFAULT_FOLDERS) {
       const sanitizedName = sanitizeFolderName(folderData.name);
       const path = `${folderData.isPrivate ? 'private' : 'public'}/${sanitizedName}`;
 
-      // Create physical directory on filesystem
-      const physicalFolderPath = join(
-        getUploadsBasePath(),
-        folderData.isPrivate ? 'private' : 'public',
-        sanitizedName
-      );
-      await ensureDirectory(physicalFolderPath);
+      // Create physical directory on filesystem if local
+      if (storageType === 'local') {
+        const physicalFolderPath = join(
+          getUploadsBasePath(),
+          folderData.isPrivate ? 'private' : 'public',
+          sanitizedName
+        );
+        await ensureDirectory(physicalFolderPath);
+      }
 
       // Check if folder exists in database
       const existing = await prisma.folder.findUnique({
@@ -94,10 +100,7 @@ export async function initializeDefaultFolders(): Promise<void> {
             createdBy: null, // System-created folders
           },
         });
-        console.log(`Created default folder (database + filesystem): ${sanitizedName}`);
-      } else {
-        // Folder exists in database, but ensure physical directory exists
-        console.log(`Verified physical directory exists for folder: ${sanitizedName}`);
+        console.log(`Created default folder in database: ${sanitizedName}`);
       }
     }
   } catch (error) {
