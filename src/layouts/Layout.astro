@@ -865,6 +865,16 @@ import "../styles/landing-enhancements.css";
 				var c = document.body.className;
 				c = c.replace(/woocommerce-no-js/, "woocommerce-js");
 				document.body.className = c;
+
+				// Debug log to check select2 availability
+				console.log(
+					"jQuery version:",
+					window.jQuery ? window.jQuery.fn.jquery : "not found",
+				);
+				console.log(
+					"Select2 is function:",
+					typeof window.jQuery.fn.select2 === "function",
+				);
 			});
 		</script>
 	</body>
