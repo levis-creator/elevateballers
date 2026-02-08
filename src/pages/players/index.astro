@@ -1,0 +1,574 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TopBar from "../../features/layout/components/TopBar.astro";
+import Header from "../../features/layout/components/Header";
+import Footer from "../../features/layout/components/Footer.astro";
+import { getPlayers } from "../../features/cms/lib/queries";
+import type { Player } from "../../features/cms/types";
+import type { TeamPlayer } from "../../features/team/data/teamData";
+import Spacing from "../../shared/components/ui/Spacing.astro";
+import PageLoader from "../../components/PageLoader";
+import TeamPlayerTable from "../../features/team/components/TeamPlayerTable.astro";
+
+// Fetch all approved players (getPlayers filters by approved: true for public access)
+let players: Player[] = [];
+try {
+    players = await getPlayers(undefined, false); // false = only approved players
+} catch (error) {
+    console.error("Error fetching players:", error);
+}
+
+// Helper function to get stat from JSON stats object
+function getStat(stats: any, key: string): number {
+    if (!stats || typeof stats !== "object") return 0;
+    return stats[key] || 0;
+}
+
+// Transform database Player to TeamPlayer format
+function transformPlayerToTeamPlayer(player: Player): TeamPlayer {
+    const stats = player.stats || {};
+    const name =
+        [player.firstName, player.lastName].filter(Boolean).join(" ") ||
+        "Unknown Player";
+
+    return {
+        id: player.id,
+        name,
+        position: player.position || "",
+        height: player.height || "",
+        weight: player.weight || "",
+        fgPercent: getStat(stats, "fgPercent") || getStat(stats, "fg") || 0,
+        ftPercent: getStat(stats, "ftPercent") || getStat(stats, "ft") || 0,
+        threePointPercent:
+            getStat(stats, "threePointPercent") || getStat(stats, "3p") || 0,
+        rpg: getStat(stats, "rpg") || 0,
+        apg: getStat(stats, "apg") || 0,
+        spg: getStat(stats, "spg") || 0,
+        bpg: getStat(stats, "bpg") || 0,
+        ppg: getStat(stats, "ppg") || 0,
+        eff: getStat(stats, "eff") || 0,
+        image: player.image || undefined,
+        url: `/players/${player.id}`,
+    };
+}
+
+// Transform all players
+const teamPlayers: TeamPlayer[] = players.map(transformPlayerToTeamPlayer);
+
+// Create a single category with all approved players
+const playerCategories =
+    teamPlayers.length > 0
+        ? [
+              {
+                  name: "ALL PLAYERS",
+                  players: teamPlayers,
+              },
+          ]
+        : [];
+---
+
+<Layout
+    title="Players Directory - Elevate Basketball Rising Stars"
+    description="Meet the athletes of Elevate Basketball. View player profiles, stats, positions, and performance data for all our approved league participants."
+>
+    <PageLoader client:load />
+    <div id="wrapper">
+        <TopBar />
+        <Header client:load currentPath={Astro.url.pathname} />
+        <div id="main">
+            <div
+                class="stm-title-box-unit transparent-header_on title_box-357"
+                style="padding-top: 0; padding-bottom: 0px;"
+            >
+            </div>
+            <div class="container">
+                <section class="wpb-content-wrapper">
+                    <div class="vc_row wpb_row vc_row-fluid">
+                        <div
+                            class="wpb_column vc_column_container vc_col-sm-12"
+                        >
+                            <div class="vc_column-inner">
+                                <div class="wpb_wrapper">
+                                    <Spacing
+                                        id="stm-spacing-players-header"
+                                        lg="50"
+                                        md="50"
+                                        sm="40"
+                                        xs="40"
+                                    />
+
+                                    <h1
+                                        class="heading-font"
+                                        style="text-align: center; margin-bottom: 50px; color: #dd3333;"
+                                    >
+                                        PLAYERS
+                                    </h1>
+
+                                    {
+                                        playerCategories.map((category) => (
+                                            <div class="player-category-section">
+                                                <h3 class="heading-font category-heading">
+                                                    {category.name}
+                                                </h3>
+                                                <TeamPlayerTable
+                                                    players={category.players}
+                                                    client:load
+                                                />
+                                            </div>
+                                        ))
+                                    }
+
+                                    <Spacing
+                                        id="stm-spacing-players-footer"
+                                        lg="50"
+                                        md="50"
+                                        sm="40"
+                                        xs="40"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <Footer />
+
+        <div class="sp-footer-sponsors">
+            <div class="sportspress"><div class="sp-sponsors"></div></div>
+        </div>
+    </div>
+    <!--main-->
+    <!--wrapper-->
+
+    <div class="rev-close-btn">
+        <span class="close-left"></span>
+        <span class="close-right"></span>
+    </div>
+
+    <script is:inline>
+        window.RS_MODULES = window.RS_MODULES || {};
+        window.RS_MODULES.modules = window.RS_MODULES.modules || {};
+        window.RS_MODULES.waiting = window.RS_MODULES.waiting || [];
+        window.RS_MODULES.defered = true;
+        window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};
+        window.RS_MODULES.type = "compiled";
+    </script>
+    <script is:inline type="speculationrules">
+        {
+            "prefetch": [
+                {
+                    "source": "document",
+                    "where": {
+                        "and": [
+                            { "href_matches": "/*" },
+                            {
+                                "not": {
+                                    "href_matches": [
+                                        "/wp-*.php",
+                                        "/wp-admin/*",
+                                        "/wp-content/uploads/*",
+                                        "/wp-content/*",
+                                        "/wp-content/plugins/*",
+                                        "/wp-content/themes/elevate/*",
+                                        "/*\\?(.+)"
+                                    ]
+                                }
+                            },
+                            {
+                                "not": {
+                                    "selector_matches": "a[rel~=\"nofollow\"]"
+                                }
+                            },
+                            {
+                                "not": {
+                                    "selector_matches": ".no-prefetch, .no-prefetch a"
+                                }
+                            }
+                        ]
+                    },
+                    "eagerness": "conservative"
+                }
+            ]
+        }
+    </script>
+
+    <style is:inline type="text/css">
+        .sp-footer-sponsors {
+            background: #f4f4f4;
+            color: #363f48;
+        }
+        .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+            color: #363f48;
+        }
+
+        /* Smooth scroll behavior - Matching homepage */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Players page specific styles - Matching exact colors from elevateballers.com/players/ */
+        .sp-template-player-list {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Page title styling */
+        .wpb_wrapper h2.heading-font {
+            font-size: 40px;
+            line-height: 44px;
+            margin-bottom: 50px;
+            color: #dd3333 !important;
+        }
+
+        /* Category/League sub-heading styling */
+        .player-category-section {
+            margin-bottom: 50px;
+        }
+
+        .player-category-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .wpb_wrapper h3.heading-font.category-heading {
+            font-size: 24px;
+            line-height: 28px;
+            margin-bottom: 20px;
+            margin-top: 0;
+            color: #dd3333 !important;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sp-template-player-list .sp-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sp-template-player-list table.sp-player-list.sp-data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 5px;
+        }
+
+        /* Table header - Exact match: red background #e21e22, white text */
+        .sp-template-player-list table.sp-player-list.sp-data-table thead {
+            background-color: #e21e22;
+            color: #fff;
+        }
+
+        .sp-template-player-list table.sp-player-list.sp-data-table thead th {
+            background-color: #e21e22;
+            color: #fff;
+            padding: 13px 7px;
+            text-align: left;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th:first-child,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td:first-child {
+            padding-left: 39px;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-name {
+            text-align: left;
+            padding-left: 20px !important;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-position,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-height,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-weight,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-fg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-ft,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-3p,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-rpg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-apg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-spg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-bpg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-ppg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            thead
+            th.data-eff {
+            text-align: center;
+        }
+
+        /* Table body - Exact match: white for even, #e8e8e8 for odd */
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            tr.odd
+            td,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            tr:nth-child(odd)
+            td {
+            background-color: #e8e8e8 !important;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            tr.even
+            td,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            tr:nth-child(even)
+            td {
+            background-color: #fff;
+        }
+
+        .sp-template-player-list table.sp-player-list.sp-data-table tbody td {
+            background-color: #fff;
+            padding: 13px 7px;
+            text-align: left;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-name {
+            text-align: left;
+            padding-left: 5px;
+            color: #535353;
+            font-weight: 700;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-position,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-height,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-weight,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-fg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-ft,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-3p,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-rpg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-apg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-spg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-bpg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-ppg,
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-eff {
+            text-align: center;
+        }
+
+        /* Links - Exact match: #595959, hover #009bdc */
+        .sp-template-player-list table.sp-player-list.sp-data-table tbody td a {
+            color: #595959;
+            text-decoration: none;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td
+            a:hover {
+            color: #009bdc;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-name
+            a {
+            color: #535353;
+            text-decoration: none;
+        }
+
+        .sp-template-player-list
+            table.sp-player-list.sp-data-table
+            tbody
+            td.data-name
+            a:hover {
+            color: #009bdc;
+        }
+
+        /* Responsive styles - Matching original */
+        @media (max-width: 991px) {
+            .sp-template-player-list .sp-table-wrapper {
+                margin: 0 -15px;
+                padding: 0 15px;
+            }
+
+            .sp-template-player-list table.sp-player-list.sp-data-table {
+                font-size: 14px;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                thead
+                th,
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                tbody
+                td {
+                padding: 10px 5px;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                thead
+                th:first-child,
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                tbody
+                td:first-child {
+                padding-left: 10px;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                thead
+                th.data-name {
+                padding-left: 10px !important;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                tbody
+                td.data-name {
+                padding-left: 5px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .sp-template-player-list table.sp-player-list.sp-data-table {
+                font-size: 12px;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                thead
+                th,
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                tbody
+                td {
+                padding: 8px 3px;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                thead
+                th:first-child,
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                tbody
+                td:first-child {
+                padding-left: 8px;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                thead
+                th.data-name {
+                padding-left: 8px !important;
+            }
+
+            .sp-template-player-list
+                table.sp-player-list.sp-data-table
+                tbody
+                td.data-name {
+                padding-left: 5px;
+            }
+        }
+    </style>
+
+    <div
+        class="sp-header-sponsors"
+        style="margin-top: 10px; margin-right: 10px;"
+    >
+        <div class="sportspress"><div class="sp-sponsors"></div></div>
+    </div>
+
+    <script is:inline type="text/javascript">
+        jQuery(document).ready(function ($) {
+            $(".sp-header").prepend($(".sp-header-sponsors"));
+        });
+    </script>
+
+    <style is:inline type="text/css">
+        /* Hide reCAPTCHA V3 badge */
+        .grecaptcha-badge {
+            visibility: hidden !important;
+        }
+    </style>
+</Layout>
