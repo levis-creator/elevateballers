@@ -1,0 +1,43 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\User\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.7.0
+2 info using node@v22.19.0
+3 silly config load:file:C:\Users\User\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\User\Desktop\projects\elevateballers\.npmrc
+5 silly config load:file:C:\Users\User\.npmrc
+6 silly config load:file:C:\Users\User\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm i
+8 verbose argv "i"
+9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_16_44_484Z-
+10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_16_44_484Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly logfile done cleaning log files
+14 verbose shrinkwrap failed to load node_modules/.package-lock.json out of date, updated: node_modules
+15 silly idealTree buildDeps
+16 silly reify mark retired [
+16 silly reify   'C:\\Users\\User\\Desktop\\projects\\elevateballers\\node_modules\\@prisma\\config\\node_modules\\magicast'
+16 silly reify ]
+17 silly reify moves {
+17 silly reify   'C:\\Users\\User\\Desktop\\projects\\elevateballers\\node_modules\\@prisma\\config\\node_modules\\magicast': 'C:\\Users\\User\\Desktop\\projects\\elevateballers\\node_modules\\@prisma\\config\\node_modules\\.magicast-t06JDo4A'
+17 silly reify }
+18 verbose stack Error: command failed
+18 verbose stack     at promiseSpawn (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\promise-spawn\lib\index.js:22:22)
+18 verbose stack     at spawnWithShell (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\promise-spawn\lib\index.js:124:10)
+18 verbose stack     at promiseSpawn (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\promise-spawn\lib\index.js:12:12)
+18 verbose stack     at runScriptPkg (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\run-script\lib\run-script-pkg.js:79:13)
+18 verbose stack     at runScript (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\run-script\lib\run-script.js:12:10)
+18 verbose stack     at async Install.exec (C:\Users\User\AppData\Roaming\npm\node_modules\npm\lib\commands\install.js:163:9)
+18 verbose stack     at async Npm.exec (C:\Users\User\AppData\Roaming\npm\node_modules\npm\lib\npm.js:208:9)
+18 verbose stack     at async module.exports (C:\Users\User\AppData\Roaming\npm\node_modules\npm\lib\cli\entry.js:67:5)
+19 verbose pkgid elevateballers@0.0.1
+20 error code 1
+21 error path C:\Users\User\Desktop\projects\elevateballers
+22 error command failed
+23 error command C:\WINDOWS\system32\cmd.exe /d /s /c prisma generate
+24 verbose cwd C:\Users\User\Desktop\projects\elevateballers
+25 verbose os Windows_NT 10.0.26200
+26 verbose node v22.19.0
+27 verbose npm  v11.7.0
+28 verbose exit 1
+29 verbose code 1
+30 error A complete log of this run can be found in: C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_16_44_484Z-debug-0.log

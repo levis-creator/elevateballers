@@ -8,31 +8,45 @@ import { reverseCategoryMap } from '../../cms/types';
  * Normalize image URL to ensure it's a valid, accessible path
  * Handles absolute URLs, relative paths, and WordPress-style paths
  */
-function normalizeImageUrl(imageUrl: string | null | undefined): string {
-  if (!imageUrl || imageUrl.trim() === '') {
+function normalizeImageUrl(imageUrl: any): string {
+  if (!imageUrl) {
     return '/images/placeholder-350x250.gif';
   }
 
-  const trimmedUrl = imageUrl.trim();
+  // If handle case where imageUrl might be an object instead of a string
+  let url = '';
+  if (typeof imageUrl === 'string') {
+    url = imageUrl.trim();
+  } else if (typeof imageUrl === 'object') {
+    // Some CMS responses might return an object with a url property
+    url = (imageUrl.url || imageUrl.src || '').toString().trim();
+  }
+
+  if (!url || url === '') {
+    return '/images/placeholder-350x250.gif';
+  }
 
   // If it's already an absolute URL (http/https), return as-is
-  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
-    return trimmedUrl;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // If it's a WordPress upload URL that we know might be broken, 
+    // we could potentially try to map it to a local version, 
+    // but for now we'll let the error handler in the component deal with it.
+    return url;
   }
 
   // If it starts with '/', it's already a root-relative path
-  if (trimmedUrl.startsWith('/')) {
-    return trimmedUrl;
+  if (url.startsWith('/')) {
+    return url;
   }
 
   // Handle WordPress-style paths (wp-content/uploads/...)
   // These should be accessible from the root
-  if (trimmedUrl.startsWith('wp-content/') || trimmedUrl.startsWith('images/')) {
-    return `/${trimmedUrl}`;
+  if (url.startsWith('wp-content/') || url.startsWith('images/')) {
+    return `/${url}`;
   }
 
   // Otherwise, prepend '/' to make it root-relative
-  return `/${trimmedUrl}`;
+  return `/${url}`;
 }
 
 /**

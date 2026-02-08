@@ -1,8 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import TopBar from "../features/layout/components/TopBar.astro";
-import Header from "../features/layout/components/Header.astro";
-import MobileMenu from "../features/layout/components/MobileMenu";
+import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
@@ -12,8 +11,7 @@ import PageLoader from "../components/PageLoader";
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
-    <Header />
-    <MobileMenu client:load />
+    <Header client:load currentPath={Astro.url.pathname} />
     <div id="main">
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
@@ -320,57 +318,12 @@ import PageLoader from "../components/PageLoader";
     });
   </script>
 
-  <script is:inline>
-    (function () {
-      function maybePrefixUrlField() {
-        const value = this.value.trim();
-        if (value !== "" && value.indexOf("http") !== 0) {
-          this.value = "http://" + value;
-        }
-      }
-
-      const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]',
-      );
-      for (let j = 0; j < urlFields.length; j++) {
-        urlFields[j].addEventListener("blur", maybePrefixUrlField);
-      }
-    })();
-  </script>
   <style is:inline type="text/css">
     /* Hide reCAPTCHA V3 badge */
     .grecaptcha-badge {
       visibility: hidden !important;
     }
   </style>
-  <script is:inline>
-    const lazyloadRunObserver = () => {
-      const lazyloadBackgrounds = document.querySelectorAll(
-        `.e-con.e-parent:not(.e-lazyloaded)`,
-      );
-      const lazyloadBackgroundObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              let lazyloadBackground = entry.target;
-              if (lazyloadBackground) {
-                lazyloadBackground.classList.add("e-lazyloaded");
-              }
-              lazyloadBackgroundObserver.unobserve(entry.target);
-            }
-          });
-        },
-        { rootMargin: "200px 0px 200px 0px" },
-      );
-      lazyloadBackgrounds.forEach((lazyloadBackground) => {
-        lazyloadBackgroundObserver.observe(lazyloadBackground);
-      });
-    };
-    const events = ["DOMContentLoaded", "elementor/lazyload/observe"];
-    events.forEach((event) => {
-      document.addEventListener(event, lazyloadRunObserver);
-    });
-  </script>
 
   <script is:inline type="text/javascript" id="sportspress-js-extra">
     /* <![CDATA[ */

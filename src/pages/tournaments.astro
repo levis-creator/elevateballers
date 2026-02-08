@@ -1,8 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import TopBar from "../features/layout/components/TopBar.astro";
-import Header from "../features/layout/components/Header.astro";
-import MobileMenu from "../features/layout/components/MobileMenu";
+import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import TournamentBracket from "../features/tournaments/components/TournamentBracket";
@@ -88,8 +87,7 @@ const mockMatches = [
     <PageLoader client:load />
     <div id="wrapper">
         <TopBar />
-        <Header />
-        <MobileMenu client:load />
+        <Header client:load currentPath={Astro.url.pathname} />
         <div id="main">
             <div
                 class="stm-title-box-unit transparent-header_on title_box-357"
