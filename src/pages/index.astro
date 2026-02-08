@@ -19,7 +19,10 @@ import { isFeatureEnabled } from "../lib/feature-flags";
 import PageLoader from "../components/PageLoader";
 ---
 
-<Layout>
+<Layout
+  title="Elevate Basketball - Premier Basketball League & Community"
+  description="Experience the thrill of elite basketball with Elevate. Join our premier league, track live standings, discover rising stars, and be part of the most dynamic basketball community."
+>
   <PageLoader client:load />
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
@@ -32,6 +35,7 @@ import PageLoader from "../components/PageLoader";
     }
 
     <main id="main" role="main">
+      <h1 class="sr-only">Elevate Basketball - Premier Basketball League</h1>
       <!-- Hero Section: Post Slider -->
       <FeatureGate feature="home.postSlider">
         <section class="hero-section" aria-label="Featured content">

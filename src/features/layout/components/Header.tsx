@@ -107,7 +107,7 @@ export default function Header({
             {/* Logo */}
             <div className="logo-main" style={{ marginTop: "22px" }}>
               <a className="blogname" href="/" title="Home">
-                <h1>Elevate</h1>
+                <div className="h1">Elevate</div>
               </a>
             </div>
             <div className="stm-main-menu">
@@ -160,7 +160,7 @@ export default function Header({
         <div className="stm-header-mobile clearfix">
           <div className="logo-main" style={{ marginTop: "22px" }}>
             <a className="blogname" href="/" title="Home">
-              <h1>Elevate</h1>
+              <div className="h1">Elevate</div>
             </a>
           </div>
           <div className="stm-mobile-right">

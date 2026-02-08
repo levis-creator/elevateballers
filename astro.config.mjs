@@ -7,13 +7,16 @@ import vercel from '@astrojs/vercel';
 import { fileURLToPath } from 'url';
 import { resolve } from 'path';
 
+import sitemap from '@astrojs/sitemap';
+
 // Determine adapter based on environment variable
 // Set DEPLOY_TARGET=vercel for Vercel, or DEPLOY_TARGET=cpanel (or unset) for cPanel
 const deployTarget = process.env.DEPLOY_TARGET || 'cpanel';
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [react(), tailwind()],
+  site: 'https://elevateballers.com',
+  integrations: [react(), tailwind(), sitemap()],
   output: 'server',
   adapter: deployTarget === 'vercel'
     ? vercel({
