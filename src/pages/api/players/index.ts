@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    
+
     const data = await request.json();
 
     // Validate required fields

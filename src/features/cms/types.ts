@@ -31,6 +31,7 @@ import type {
   Substitution,
   PlayerOfTheWeek,
   Sponsor,
+  MatchStage,
 } from '@prisma/client';
 
 // Re-export Prisma types
@@ -62,6 +63,7 @@ export type {
   Substitution,
   PlayerOfTheWeek,
   Sponsor,
+  MatchStage,
 };
 
 // Extended types with relations
@@ -235,6 +237,8 @@ export type UpdateSeasonInput = Partial<CreateSeasonInput>;
 export type CreatePlayerInput = {
   firstName?: string;
   lastName?: string;
+  email?: string;
+  phone?: string;
   height?: string; // Height in feet format (e.g., "6'2\"")
   weight?: string; // Weight in kilograms (e.g., "84 kg")
   image?: string;

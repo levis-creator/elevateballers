@@ -35,6 +35,8 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    email: '',
+    phone: '',
     height: '',
     weight: '',
     image: '',
@@ -80,6 +82,8 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
       setFormData({
         firstName: (player as any).firstName || '',
         lastName: (player as any).lastName || '',
+        email: (player as any).email || '',
+        phone: (player as any).phone || '',
         height: (player as any).height || '',
         weight: (player as any).weight || '',
         image: player.image || '',
@@ -119,6 +123,8 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
       const payload = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
+        email: formData.email.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
         height: formData.height.trim() || undefined,
         weight: formData.weight.trim() || undefined,
         image: formData.image.trim() || undefined,
@@ -329,6 +335,35 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
                       placeholder="Doe"
                       className={cn(formInput)}
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className={cn(formLabel)}>Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                      disabled={saving}
+                      placeholder="john.doe@example.com"
+                      className={cn(formInput)}
+                    />
+                    <p className={cn(formHelperText)}>Private contact information</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className={cn(formLabel)}>Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                      disabled={saving}
+                      placeholder="0712345678"
+                      className={cn(formInput)}
+                    />
+                    <p className={cn(formHelperText)}>Private contact information</p>
                   </div>
                 </div>
 

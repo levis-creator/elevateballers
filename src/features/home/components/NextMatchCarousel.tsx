@@ -55,7 +55,7 @@ export default function NextMatchCarousel() {
           </div>
           <h3>NO MATCHES SCHEDULED</h3>
           <p>We're preparing the next season's schedule. Check back soon for the heat!</p>
-          <a href="/matches" className="btn-secondary-outline">View Full Schedule</a>
+          <a href="/upcoming_matches" className="btn-secondary-outline">View Full Schedule</a>
         </div>
       ) : (
         <div className="matches-grid">

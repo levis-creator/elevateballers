@@ -424,27 +424,49 @@ export async function getTeamBySlug(slug: string): Promise<TeamWithPlayers | nul
 /**
  * Get players with optional team filter
  */
-export async function getPlayers(teamId?: string, includeUnapproved: boolean = false): Promise<Player[]> {
+export async function getPlayers(teamId?: string, isAdmin: boolean = false): Promise<Player[]> {
   const where: any = {
-    ...(includeUnapproved ? {} : { approved: true }),
+    ...(isAdmin ? {} : { approved: true }),
   };
 
   if (teamId) {
     where.teamId = teamId;
   }
 
-  return await prisma.player.findMany({
-    where,
-    include: {
-      team: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          approved: true,
-        },
+  const select: any = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    image: true,
+    bio: true,
+    height: true,
+    weight: true,
+    position: true,
+    jerseyNumber: true,
+    stats: true,
+    approved: true,
+    teamId: true,
+    createdAt: true,
+    updatedAt: true,
+    team: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        approved: true,
       },
     },
+  };
+
+  // Only include contact info for admins
+  if (isAdmin) {
+    select.email = true;
+    select.phone = true;
+  }
+
+  return await prisma.player.findMany({
+    where,
+    select,
     orderBy: [
       {
         firstName: 'asc',
@@ -453,19 +475,41 @@ export async function getPlayers(teamId?: string, includeUnapproved: boolean = f
         lastName: 'asc',
       },
     ],
-  });
+  }) as unknown as Player[];
 }
 
 /**
  * Get a single player by ID
  */
-export async function getPlayerById(id: string): Promise<Player | null> {
+export async function getPlayerById(id: string, isAdmin: boolean = false): Promise<Player | null> {
+  const select: any = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    image: true,
+    bio: true,
+    height: true,
+    weight: true,
+    position: true,
+    jerseyNumber: true,
+    stats: true,
+    approved: true,
+    teamId: true,
+    createdAt: true,
+    updatedAt: true,
+    team: true,
+  };
+
+  // Only include contact info for admins
+  if (isAdmin) {
+    select.email = true;
+    select.phone = true;
+  }
+
   return await prisma.player.findUnique({
     where: { id },
-    include: {
-      team: true,
-    },
-  });
+    select,
+  }) as unknown as Player | null;
 }
 
 /**

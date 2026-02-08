@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -205,8 +206,10 @@ model Player {
   updatedAt          DateTime                   @updatedAt @map("updated_at")
   teamId             String?                    @map("team_id")
   firstName          String?                    @map("first_name")
-  height             String?
   lastName           String?                    @map("last_name")
+  email              String?
+  phone              String?
+  height             String?
   weight             String?
   assistEvents       MatchEvent[]               @relation("AssistEvents")
   matchEvents        MatchEvent[]

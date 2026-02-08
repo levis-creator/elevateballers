@@ -29,11 +29,8 @@ export const POST: APIRoute = async ({ request }) => {
       teamId = team?.id;
     }
 
-    // Create player with bio including registration info
+    // Create player with bio excluding private contact info
     const bioParts = [
-      data.email && `Email: ${data.email}`,
-      data.phone && `Phone: ${data.phone}`,
-      data.teamName && `Team: ${data.teamName}`,
       data.additionalInfo && `Additional Info: ${data.additionalInfo}`,
     ]
       .filter(Boolean)
@@ -42,6 +39,8 @@ export const POST: APIRoute = async ({ request }) => {
     const player = await createPlayer({
       firstName: data.firstName,
       lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
       height: data.height,
       weight: data.weight,
       position: data.position,
@@ -73,10 +72,10 @@ export const POST: APIRoute = async ({ request }) => {
       // Don't fail the registration if notification creation fails
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       message: 'Player registration submitted successfully',
-      player 
+      player
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },

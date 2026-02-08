@@ -29,7 +29,8 @@
     "db:seed": "node prisma/seed.js",
     "create-admin": "node scripts/create-admin.js",
     "db:migrate-to-production": "tsx scripts/migrate-db-to-production.ts",
-    "fix:dates": "node scripts/fix-invalid-dates.js"
+    "fix:dates": "node scripts/fix-invalid-dates.js",
+    "cleanup:private": "tsx scripts/cleanup-private-info.ts"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
