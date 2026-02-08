@@ -1,23 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Match } from '@prisma/client';
 import { formatMatchDate } from '../../matches/lib/utils';
 import { getLeagueName } from '../../matches/lib/league-helpers';
 
-/**
- * RecentResultsCarousel component - Completed matches carousel
- * Uses jQuery Owl Carousel
- */
 export default function RecentResultsCarousel() {
-  const carouselRef = useRef<HTMLDivElement>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch completed matches
     fetch('/api/matches?status=completed')
       .then((res) => res.json())
       .then((data) => {
-        setMatches(data.slice(0, 5)); // Limit to 5 matches
+        setMatches(data.slice(0, 5));
         setLoading(false);
       })
       .catch((err) => {
@@ -26,131 +20,224 @@ export default function RecentResultsCarousel() {
       });
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !(window as any).jQuery || matches.length === 0) {
-      return;
-    }
-
-    const $ = (window as any).jQuery;
-    const owl = $(carouselRef.current);
-
-    const initCarousel = () => {
-      if ($.fn.owlCarousel && owl.length) {
-        owl.owlCarousel({
-          items: 1,
-          dots: true,
-          nav: false,
-          autoplay: false,
-          loop: matches.length > 1,
-        });
-      }
-    };
-
-    if ($.fn.owlCarousel) {
-      initCarousel();
-    } else {
-      const checkInterval = setInterval(() => {
-        if ($.fn.owlCarousel) {
-          clearInterval(checkInterval);
-          initCarousel();
-        }
-      }, 100);
-
-      return () => clearInterval(checkInterval);
-    }
-
-    return () => {
-      if (owl && owl.data('owl.carousel')) {
-        owl.trigger('destroy.owl.carousel');
-      }
-    };
-  }, [matches]);
-
   if (loading) {
     return (
-      <div className="stm-next-match-carousel-wrap style_3 results-style">
-        <h2 className="stm-carousel-title">RECENT RESULTS</h2>
-        <div className="loading-matches">Loading results...</div>
+      <div className="upcoming-matches-redesign loading">
+        <div className="section-header">
+          <h2 className="section-title">RECENT RESULTS</h2>
+          <div className="title-underline results-accent"></div>
+        </div>
+        <div className="skeleton-container">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-card"></div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (matches.length === 0) {
-    return null; // Don't show if no results
+    return null;
   }
 
   return (
-    <div className="stm-next-match-carousel-wrap style_3 results-style">
-      <h2 className="stm-carousel-title" style={{ backgroundColor: '#10b981' }}>RECENT RESULTS</h2>
-      <div className="stm-next-match-carousel2">
-        <div ref={carouselRef} className="stm-next-match-carousel__item">
-          {matches.map((match) => (
-            <div key={match.id} className="stm-next-match-carousel__item">
-              <div className="event-results results-score">
-                 <div className="team-logo-wrap">
-                    {match.team1Logo && (
-                      <img
-                        decoding="async"
-                        src={match.team1Logo}
-                        alt={match.team1Name ?? ''}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                 </div>
-                 <div className="final-score heading-font">
-                    {match.team1Score} - {match.team2Score}
-                 </div>
-                 <div className="team-logo-wrap">
-                    {match.team2Logo && (
-                      <img
-                        decoding="async"
-                        src={match.team2Logo}
-                        alt={match.team2Name ?? ''}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                 </div>
-              </div>
-              <div className="event-data">
-                <div className="teams-titles">
-                  <a href={`/matches/${match.id}`}>
-                    {match.team1Name} vs {match.team2Name}
-                  </a>
-                </div>
-                <div className="event-league">{getLeagueName(match) || match.leagueName || ''}</div>
-              </div>
-              <div className="event-date">{formatMatchDate(match.date)}</div>
-            </div>
-          ))}
+    <div className="upcoming-matches-redesign results-theme">
+      <div className="section-header">
+        <div className="header-content">
+          <h2 className="section-title">RECENT RESULTS</h2>
+          <span className="match-count">LATEST {matches.length} GAMES</span>
         </div>
+        <div className="title-underline results-accent"></div>
       </div>
+
+      <div className="matches-grid">
+        {matches.map((match) => (
+          <a key={match.id} href={`/matches/${match.id}`} className="match-card-modern result-card">
+            <div className="match-card-header">
+              <span className="league-tag">{getLeagueName(match) || match.leagueName || 'ELEVATE LEAGUE'}</span>
+              <span className="match-time">{formatMatchDate(match.date)}</span>
+            </div>
+            
+            <div className="match-card-body">
+              <div className="team-entry team-home">
+                <div className="logo-wrap">
+                  {match.team1Logo ? (
+                    <img src={match.team1Logo} alt={match.team1Name ?? ''} />
+                  ) : (
+                    <div className="initials">{match.team1Name?.substring(0, 2).toUpperCase()}</div>
+                  )}
+                </div>
+                <span className="name">{match.team1Name}</span>
+              </div>
+
+              <div className="score-display">
+                <span className={`score ${Number(match.team1Score) > Number(match.team2Score) ? 'winner' : ''}`}>
+                  {match.team1Score}
+                </span>
+                <span className="score-divider">-</span>
+                <span className={`score ${Number(match.team2Score) > Number(match.team1Score) ? 'winner' : ''}`}>
+                  {match.team2Score}
+                </span>
+              </div>
+
+              <div className="team-entry team-away">
+                <span className="name">{match.team2Name}</span>
+                <div className="logo-wrap">
+                  {match.team2Logo ? (
+                    <img src={match.team2Logo} alt={match.team2Name ?? ''} />
+                  ) : (
+                    <div className="initials">{match.team2Name?.substring(0, 2).toUpperCase()}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="match-card-footer">
+              <span className="final-badge">FINAL RESULT</span>
+              <span className="view-details">
+                RECAP <i className="fas fa-arrow-right"></i>
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+
       <style>{`
-        .results-style .stm-carousel-title {
-          background-color: #10b981 !important;
+        .upcoming-matches-redesign.results-theme {
+          color: white;
+          padding: 1rem 0;
         }
-        .results-score {
+
+        .results-accent {
+          background: #10b981 !important;
+        }
+
+        .score-display {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 20px;
+          gap: 0.75rem;
+          background: rgba(0, 0, 0, 0.4);
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .final-score {
-          font-size: 28px;
+
+        .score {
+          font-family: var(--font-heading);
+          font-size: 1.8rem;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.6);
+          min-width: 30px;
+          text-align: center;
+        }
+
+        .score.winner {
+          color: white;
+          text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        .score-divider {
+          opacity: 0.3;
           font-weight: 900;
-          color: #fff;
-          background: rgba(0,0,0,0.3);
-          padding: 5px 15px;
-          border-radius: 4px;
         }
-        .team-logo-wrap img {
-          max-width: 60px;
-          height: auto;
+
+        .result-card::before {
+          background: #10b981 !important;
+        }
+
+        .final-badge {
+          background: rgba(16, 185, 129, 0.1);
+          color: #10b981;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 1px;
+        }
+
+        /* Re-using styles from NextMatchCarousel for consistency */
+        .section-header { margin-bottom: 2rem; }
+        .header-content { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.5rem; }
+        .section-title { font-family: var(--font-heading); font-size: 2.5rem; margin: 0; color: white !important; line-height: 1; }
+        .match-count { font-family: var(--font-heading); color: #10b981; letter-spacing: 2px; font-weight: 600; font-size: 0.9rem; }
+        .title-underline { height: 4px; width: 60px; background: var(--color-primary, #dd3333); border-radius: 2px; }
+        .matches-grid { display: flex; flex-direction: column; gap: 1rem; max-height: 600px; overflow-y: auto; padding-right: 0.5rem; }
+        .matches-grid::-webkit-scrollbar { width: 4px; }
+        .matches-grid::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        
+        .match-card-modern {
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          text-decoration: none;
+          color: white;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .match-card-modern::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          height: 100%;
+          width: 4px;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .match-card-modern:hover {
+          background: rgba(255, 255, 255, 0.1);
+          transform: translateX(5px);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .match-card-modern:hover::before {
+          opacity: 1;
+        }
+
+        .match-card-header { display: flex; justify-content: space-between; align-items: center; }
+        .league-tag { font-size: 0.75rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 1px; }
+        .match-time { font-size: 0.8rem; opacity: 0.7; font-weight: 500; }
+        .match-card-body { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .team-entry { flex: 1; display: flex; align-items: center; gap: 1rem; }
+        .team-away { justify-content: flex-end; text-align: right; }
+        .logo-wrap { width: 36px; height: 36px; flex-shrink: 0; background: rgba(255, 255, 255, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; }
+        .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+        .initials { font-weight: 700; font-size: 0.8rem; color: var(--color-gray-400); }
+        .name { font-family: var(--font-heading); font-size: 1.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .match-card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.75rem; }
+        .view-details { font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 0.5rem; transition: transform 0.3s ease; }
+        .match-card-modern:hover .view-details { transform: translateX(3px); }
+
+        .skeleton-card {
+          height: 140px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          margin-bottom: 1rem;
+          animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+          0% { opacity: 0.5; }
+          50% { opacity: 0.8; }
+          100% { opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+          .section-title { font-size: 2rem; }
+          .name { font-size: 1.1rem; }
+          .team-entry { gap: 0.5rem; }
+          .score { font-size: 1.4rem; }
         }
       `}</style>
     </div>
   );
 }
+

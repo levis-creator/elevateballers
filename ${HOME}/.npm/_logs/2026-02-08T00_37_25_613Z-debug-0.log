@@ -5,15 +5,9 @@
 4 silly config load:file:C:\Users\User\Desktop\projects\elevateballers\.npmrc
 5 silly config load:file:C:\Users\User\.npmrc
 6 silly config load:file:C:\Users\User\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm run preview:vercel
-8 verbose argv "run" "preview:vercel"
-9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-06T13_08_02_364Z-
-10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-06T13_08_02_364Z-debug-0.log
+7 verbose title npm run dev
+8 verbose argv "run" "dev"
+9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T00_37_25_613Z-
+10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T00_37_25_613Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
-13 verbose cwd C:\Users\User\Desktop\projects\elevateballers
-14 verbose os Windows_NT 10.0.26200
-15 verbose node v22.19.0
-16 verbose npm  v11.7.0
-17 verbose exit 1
-18 verbose code 1

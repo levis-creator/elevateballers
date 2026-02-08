@@ -1,19 +1,35 @@
 ---
-import type { PlayerOfTheWeek } from '../types';
-import { playerOfTheWeek } from '../data/homeData';
-import { Image } from 'astro:assets';
-import { resolveAssetUrl } from '../../../lib/asset-url';
+import { getActivePlayerOfTheWeek } from "../../cms/lib/editorial-queries";
+import { playerOfTheWeek as staticPlayer } from "../data/homeData";
+import { Image } from "astro:assets";
+import { resolveAssetUrl } from "../../../lib/asset-url";
 
-const player: PlayerOfTheWeek = playerOfTheWeek;
+// Fetch dynamic POTW from database
+const activePotw = await getActivePlayerOfTheWeek();
+
+// Use dynamic data if available, otherwise fallback to static
+const player = activePotw
+  ? {
+      id: activePotw.player.id,
+      name: `${activePotw.player.firstName} ${activePotw.player.lastName}`,
+      image: activePotw.customImage || activePotw.player.image,
+      description: activePotw.description,
+      // These fields are not in the new schema but used in the component
+      imageAlt: `${activePotw.player.firstName} ${activePotw.player.lastName} - Player of the Week`,
+      signature: null,
+    }
+  : staticPlayer;
 
 // Resolve image URLs to absolute paths for Astro Image component
 const playerImageUrl = resolveAssetUrl(player.image) || player.image;
-const signatureImageUrl = player.signature ? resolveAssetUrl(player.signature) || player.signature : null;
+const signatureImageUrl = player.signature
+  ? resolveAssetUrl(player.signature) || player.signature
+  : null;
 
 const descriptionHtml = player.description
-  .split('\n\n')
-  .map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
-  .join('');
+  .split("\n\n")
+  .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
+  .join("");
 ---
 
 <div class="stm-coach-excerption-wrapp">
@@ -23,17 +39,30 @@ const descriptionHtml = player.description
   <div class="clearfix"></div>
   <div class="stm-data-wrapp">
     <div class="stm-photo-wrapp">
-      <Image src={playerImageUrl} alt={player.imageAlt || player.name} width={300} height={300} />
+      <Image
+        src={playerImageUrl || "/images/default-player.png"}
+        alt={player.imageAlt || player.name}
+        width={300}
+        height={300}
+        onerror="this.onerror=null;this.src='/images/default-player.png';"
+      />
     </div>
     <div class="stm-excerption-wrapp">
       <span class="stm-excerption" set:html={descriptionHtml}>
         <div class="stm-name-sign-wrapp">
           <span class="stm-coach-name heading-font">{player.name}</span>
-          {signatureImageUrl && (
-            <div class="stm-img-wrapp">
-              <Image src={signatureImageUrl} alt={`${player.name} signature`} width={200} height={50} />
-            </div>
-          )}
+          {
+            signatureImageUrl && (
+              <div class="stm-img-wrapp">
+                <Image
+                  src={signatureImageUrl}
+                  alt={`${player.name} signature`}
+                  width={200}
+                  height={50}
+                />
+              </div>
+            )
+          }
         </div>
       </span>
     </div>

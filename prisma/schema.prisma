@@ -217,6 +217,7 @@ model Player {
   jumpBallsAsPlayer2 JumpBall[]                 @relation("JumpBallPlayer2")
   team               Team?                      @relation(fields: [teamId], references: [id])
   notifications      RegistrationNotification[]
+  playerOfTheWeek    PlayerOfTheWeek[]
 
   @@index([teamId])
   @@index([approved])
@@ -794,4 +795,34 @@ model EmailReport {
   @@index([recipientEmail])
   @@index([createdAt])
   @@map("email_reports")
+}
+
+model PlayerOfTheWeek {
+  id           String   @id @default(cuid())
+  playerId     String   @map("player_id")
+  customImage  String?  @map("custom_image")
+  description  String   @db.LongText
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([active])
+  @@map("player_of_the_week")
+}
+
+model Sponsor {
+  id        String   @id @default(cuid())
+  name      String
+  image     String
+  link      String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([active])
+  @@index([order])
+  @@map("sponsors")
 }

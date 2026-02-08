@@ -25,6 +25,8 @@ export default function AdminSidebar() {
     Trophy?: ComponentType<any>;
     Menu?: ComponentType<any>;
     X?: ComponentType<any>;
+    Star?: ComponentType<any>;
+    Handshake?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -47,6 +49,8 @@ export default function AdminSidebar() {
         Trophy: mod.Trophy,
         Menu: mod.Menu,
         X: mod.X,
+        Star: mod.Star,
+        Handshake: mod.Handshake,
       });
     });
 
@@ -102,25 +106,52 @@ export default function AdminSidebar() {
     };
   }, [isMobile]);
 
-  const navItems = [
-    { href: '/admin', icon: icons.LayoutDashboard, label: 'Dashboard' },
-    { href: '/admin/news', icon: icons.Newspaper, label: 'News Articles' },
-    { href: '/admin/matches', icon: icons.Calendar, label: 'Matches' },
-    { href: '/admin/leagues', icon: icons.Trophy, label: 'Leagues' },
-    { href: '/admin/teams', icon: icons.Shield, label: 'Teams' },
-    { href: '/admin/players', icon: icons.Users, label: 'Players' },
-    { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff' },
-    { href: '/admin/users', icon: icons.Users, label: 'System Users' },
-    { href: '/admin/media', icon: icons.Images, label: 'Media' },
-    // { href: '/admin/pages', icon: icons.FileText, label: 'Pages' },
-    // { href: '/admin/settings', icon: icons.Settings, label: 'Settings' },
-  ].filter(item => {
-    // Only show Users menu item to admins
-    if (item.href === '/admin/users') {
-      return userRole === 'ADMIN';
+  const navGroups = [
+    {
+      label: 'GENERAL',
+      items: [
+        { href: '/admin', icon: icons.LayoutDashboard, label: 'Dashboard' },
+        { href: '/admin/media', icon: icons.Images, label: 'Media Highlights' },
+      ]
+    },
+    {
+      label: 'COMPETITION',
+      items: [
+        { href: '/admin/leagues', icon: icons.Trophy, label: 'Leagues' },
+        { href: '/admin/matches', icon: icons.Calendar, label: 'Matches' },
+        { href: '/admin/teams', icon: icons.Shield, label: 'Teams' },
+      ]
+    },
+    {
+      label: 'PERSONNEL',
+      items: [
+        { href: '/admin/players', icon: icons.Users, label: 'Players' },
+        { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff' },
+      ]
+    },
+    {
+      label: 'EDITORIAL',
+      items: [
+        { href: '/admin/news', icon: icons.Newspaper, label: 'News Articles' },
+        { href: '/admin/highlights/potw', icon: icons.Star, label: 'Player of the Week' },
+        { href: '/admin/highlights/sponsors', icon: icons.Handshake, label: 'Sponsors' },
+      ]
+    },
+    {
+      label: 'SYSTEM',
+      items: [
+        { href: '/admin/users', icon: icons.Users, label: 'System Users' },
+      ]
     }
-    return true;
-  });
+  ].map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      if (item.href === '/admin/users') {
+        return userRole === 'ADMIN';
+      }
+      return true;
+    })
+  })).filter(group => group.items.length > 0);
 
   const UserIcon = icons.User;
   const BasketballIcon = icons.Dribbble;
@@ -221,32 +252,41 @@ export default function AdminSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4" aria-label="Main navigation">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = getActiveClass(item.href);
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center px-6 py-3.5 !text-white no-underline",
-                  "transition-all duration-200",
-                  "border-l-[3px] border-transparent",
-                  navHover,
-                  isActive && navActive,
-                  "text-[0.95rem] font-medium"
-                )}
-                {...(isActive && { 'aria-current': 'page' })}
-                aria-label={item.label}
-                data-astro-prefetch
-                onClick={handleNavClick}
-              >
-                {Icon ? <Icon size={20} className="mr-3 flex-shrink-0 !text-white" aria-hidden="true" /> : <span className="w-5 h-5 mr-3 flex-shrink-0" aria-hidden="true" />}
-                <span className="!text-white">{item.label}</span>
-              </a>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide" aria-label="Main navigation">
+          {navGroups.map((group) => (
+            <div key={group.label} className="mb-6 last:mb-0">
+              <div className="px-6 mb-2 text-[0.7rem] font-bold text-white/40 tracking-[0.1em] uppercase">
+                {group.label}
+              </div>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = getActiveClass(item.href);
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center px-6 py-2.5 !text-white no-underline",
+                        "transition-all duration-200",
+                        "border-l-[3px] border-transparent",
+                        navHover,
+                        isActive && navActive,
+                        "text-[0.9rem] font-medium"
+                      )}
+                      {...(isActive && { 'aria-current': 'page' })}
+                      aria-label={item.label}
+                      data-astro-prefetch
+                      onClick={handleNavClick}
+                    >
+                      {Icon ? <Icon size={18} className="mr-3 flex-shrink-0 !text-white" aria-hidden="true" /> : <span className="w-4 h-4 mr-3 flex-shrink-0" aria-hidden="true" />}
+                      <span className="!text-white">{item.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Sidebar Footer */}

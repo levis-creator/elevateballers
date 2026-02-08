@@ -11,12 +11,9 @@ import {
 import { getStageDisplayName } from "../../matches/lib/stage-helpers";
 import type { MatchDTO } from "../../matches/types";
 
-// Fetch the most upcoming match from API endpoint
-// Prioritize championships, then other stages, then any upcoming match
 let match: MatchDTO | null = null;
 
 try {
-  // First try to get championships
   const championshipUrl = new URL("/api/matches", Astro.url.origin);
   championshipUrl.searchParams.set("status", "UPCOMING");
   championshipUrl.searchParams.set("stage", "CHAMPIONSHIP");
@@ -32,7 +29,6 @@ try {
     }
   }
 
-  // If no championship, get any upcoming match
   if (!match) {
     const apiUrl = new URL("/api/matches", Astro.url.origin);
     apiUrl.searchParams.set("status", "UPCOMING");
@@ -50,319 +46,438 @@ try {
   console.error("Error fetching next match from API:", error);
 }
 
-// Return nothing if no match found
-if (!match) {
-  return null;
-}
+const matchDate = match ? formatMatchDate(match.date) : null;
+const matchUrl = match ? `/matches/${match.id}` : "#";
+const leagueName = match ? getLeagueName(match) || "ELEVATE BASKETBALL" : "";
+const team1Name = match ? getTeam1Name(match) : "";
+const team1Logo = match ? getTeam1Logo(match) : null;
+const team2Name = match ? getTeam2Name(match) : "";
+const team2Logo = match ? getTeam2Logo(match) : null;
+const stageDisplay = match
+  ? match.stage
+    ? getStageDisplayName(match.stage).toUpperCase()
+    : "UPCOMING MATCH"
+  : "SEASON PREVIEW";
 
-const matchDate = formatMatchDate(match.date);
-const matchUrl = `/matches/${match.id}`;
-const leagueName = getLeagueName(match) || "";
-const team1Name = getTeam1Name(match);
-const team1Logo = getTeam1Logo(match);
-const team2Name = getTeam2Name(match);
-const team2Logo = getTeam2Logo(match);
-const stageDisplay = match.stage
-  ? getStageDisplayName(match.stage).toUpperCase()
-  : "UPCOMING MATCH";
-
-const team1Initials = getTeamInitials(team1Name);
-const team2Initials = getTeamInitials(team2Name);
+const team1Initials = team1Name ? getTeamInitials(team1Name) : "";
+const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
 ---
 
-<section class="marquee-matchup-section section" aria-label="Featured match">
-  <div class="container">
-    <div class="marquee-matchup-hero">
-      <div class="marquee-matchup-content">
-        <h1 class="marquee-matchup-title">MARQUEE MATCHUP</h1>
-        <p class="marquee-matchup-league">{leagueName}</p>
+<section class="marquee" aria-label="Featured match">
+  {
+    match ? (
+      <a href={matchUrl} class="marquee-link">
+        <div class="marquee-accent" aria-hidden="true" />
 
-        <div class="marquee-matchup-teams">
-          <div class="marquee-matchup-team">
-            <a href={matchUrl}>
-              {
-                team1Logo && (
-                  <img
-                    src={team1Logo}
-                    alt={team1Name}
-                    class="marquee-matchup-logo"
-                  />
-                )
-              }
-              {
-                !team1Logo && (
-                  <div class="marquee-matchup-logo marquee-matchup-logo-placeholder">
-                    {team1Initials}
-                  </div>
-                )
-              }
-            </a>
-            <div class="marquee-matchup-team-name marquee-matchup-team-1">
-              <a href={matchUrl}>{team1Name}</a>
+        <div class="marquee-inner">
+          <header class="marquee-meta">
+            <span class="marquee-league">{leagueName}</span>
+            <span class="marquee-stage">{stageDisplay}</span>
+          </header>
+
+          <div class="marquee-matchup">
+            <div class="marquee-team marquee-team--home">
+              <div class="marquee-team-logo">
+                {team1Logo ? (
+                  <img src={team1Logo} alt="" width="120" height="120" />
+                ) : (
+                  <span class="marquee-initials">{team1Initials}</span>
+                )}
+              </div>
+              <span class="marquee-team-name">{team1Name}</span>
+            </div>
+
+            <div class="marquee-vs" aria-hidden="true">
+              <span class="marquee-vs-text">VS</span>
+            </div>
+
+            <div class="marquee-team marquee-team--away">
+              <div class="marquee-team-logo">
+                {team2Logo ? (
+                  <img src={team2Logo} alt="" width="120" height="120" />
+                ) : (
+                  <span class="marquee-initials">{team2Initials}</span>
+                )}
+              </div>
+              <span class="marquee-team-name">{team2Name}</span>
             </div>
           </div>
 
-          <div class="marquee-matchup-vs">VS</div>
-
-          <div class="marquee-matchup-team">
-            <a href={matchUrl}>
-              {
-                team2Logo && (
-                  <img
-                    src={team2Logo}
-                    alt={team2Name}
-                    class="marquee-matchup-logo"
-                  />
-                )
-              }
-              {
-                !team2Logo && (
-                  <div class="marquee-matchup-logo marquee-matchup-logo-placeholder">
-                    {team2Initials}
-                  </div>
-                )
-              }
-            </a>
-            <div class="marquee-matchup-team-name marquee-matchup-team-2">
-              <a href={matchUrl}>{team2Name}</a>
+          <footer class="marquee-footer">
+            <time
+              class="marquee-date"
+              datetime={match?.date?.toISOString() ?? undefined}
+            >
+              {matchDate}
+            </time>
+            <span class="marquee-cta">View match →</span>
+          </footer>
+        </div>
+      </a>
+    ) : (
+      <div class="marquee marquee--empty">
+        <div class="marquee-accent" aria-hidden="true" />
+        <div class="marquee-empty-bg" aria-hidden="true" />
+        <div class="marquee-inner">
+          <header class="marquee-meta">
+            <span class="marquee-league">ELEVATE BASKETBALL</span>
+            <span class="marquee-stage">{stageDisplay}</span>
+          </header>
+          <div class="marquee-empty-content">
+            <div class="empty-icon-wrap">
+              <i class="fas fa-calendar-alt" />
             </div>
+            <h2 class="marquee-empty-title">THE NEXT CHAPTER</h2>
+            <p class="marquee-empty-desc">
+              Our athletes are prepping. The new season schedule is drafting.
+            </p>
+            <div class="empty-status">
+              <span class="pulse-dot" />
+              RECRUITMENT IN PROGRESS
+            </div>
+            <a href="/upcoming-fixtures/" class="marquee-empty-btn">
+              EXPLORE MATCH CENTER
+              <i class="fas fa-arrow-right" />
+            </a>
           </div>
         </div>
-
-        <div class="marquee-matchup-date">{matchDate}</div>
       </div>
-
-      <div class="marquee-matchup-overlay">{stageDisplay}</div>
-    </div>
-  </div>
+    )
+  }
 </section>
 
 <style>
-  :root {
-    --marquee-primary-red: #e63946;
-    --marquee-accent-gold: #f1c40f;
-    --marquee-team-purple: #6f42c1;
-    --marquee-bg-dark: #121212;
-    --marquee-text-light: #f8f9fa;
-    --marquee-card-bg: rgba(255, 255, 255, 0.08);
-  }
+  .marquee {
+    --marquee-bg: var(--color-gray-900, #111827);
+    --marquee-accent: var(--color-primary, #dd3333);
+    --marquee-text: var(--color-white, #fff);
+    --marquee-muted: var(--color-gray-400, #9ca3af);
+    --marquee-highlight: var(--color-secondary, #ffba00);
 
-  .marquee-matchup-section {
-    background-color: var(--color-gray-100, #f0f0f0);
-    padding: 0 !important;
-  }
-
-  .marquee-matchup-section .container {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .basketball_two .container {
-    max-width: 1170px;
-    padding: 0;
-  }
-
-  .marquee-matchup-hero {
     position: relative;
-    min-height: 100vh;
-    background: url("https://thumbs.dreamstime.com/b/basketball-court-hoop-under-spotlight-image-depicts-indoor-single-illuminated-features-polished-wooden-floor-427006957.jpg")
-      no-repeat center center/cover;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    background: var(--marquee-bg);
+    border-radius: 12px;
     overflow: hidden;
+    font-family: var(--font-heading, "Teko", sans-serif);
   }
 
-  .marquee-matchup-hero::before {
-    content: "";
+  .marquee-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .marquee-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .marquee-link:hover .marquee-cta {
+    color: var(--marquee-accent);
+  }
+
+  .marquee-accent {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.4),
-      rgba(0, 0, 0, 0.8)
-    );
-    z-index: 1;
+    width: 6px;
+    height: 100%;
+    background: var(--marquee-accent);
   }
 
-  .marquee-matchup-content {
+  .marquee-inner {
     position: relative;
-    z-index: 2;
-    padding: 60px 20px 40px;
-    text-align: center;
+    padding: 1.5rem 1.5rem 1.5rem 2rem;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
 
-  .marquee-matchup-title {
-    font-family: "Teko", sans-serif;
-    font-size: clamp(3rem, 8vw, 7rem);
-    color: var(--marquee-primary-red);
-    margin: 0;
-    text-shadow: 0 0 20px rgba(230, 57, 70, 0.6);
-    letter-spacing: 8px;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .marquee-matchup-league {
-    font-family: "Rubik", sans-serif;
-    font-size: clamp(1.2rem, 3vw, 2rem);
-    color: var(--marquee-accent-gold);
-    margin: 10px 0 60px;
-    font-weight: 600;
-    letter-spacing: 4px;
-  }
-
-  .marquee-matchup-teams {
+  .marquee-meta {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 40px;
+    justify-content: space-between;
+    gap: 1rem;
     flex-wrap: wrap;
-    margin: 40px 0;
   }
 
-  .marquee-matchup-team {
+  .marquee-league {
+    font-size: 0.95rem;
+    letter-spacing: 0.2em;
+    color: var(--marquee-highlight);
+    text-transform: uppercase;
+  }
+
+  .marquee-stage {
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    color: var(--marquee-muted);
+    padding: 0.25rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+
+  .marquee-matchup {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1.5rem 2rem;
+    flex: 1;
+    min-height: 140px;
+  }
+
+  .marquee-team {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 250px;
+    gap: 0.75rem;
+    text-align: center;
   }
 
-  .marquee-matchup-logo {
-    width: 200px;
-    height: 200px;
-    object-fit: contain;
+  .marquee-team--home {
+    flex-direction: column;
+  }
+
+  .marquee-team--away {
+    flex-direction: column;
+  }
+
+  .marquee-team-logo {
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
-    border: 6px solid var(--marquee-accent-gold);
-    box-shadow: 0 0 30px rgba(241, 196, 15, 0.5);
-    transition: transform 0.4s ease;
-    background: var(--marquee-card-bg);
-    padding: 20px;
-    display: block;
-  }
-
-  .marquee-matchup-logo:hover {
-    transform: scale(1.1);
-  }
-
-  .marquee-matchup-logo-placeholder {
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--marquee-accent-gold);
-    font-size: 5rem;
-    font-weight: 800;
-    font-family: "Teko", sans-serif;
-    letter-spacing: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
   }
 
-  .marquee-matchup-team-name {
-    font-family: "Teko", sans-serif;
-    font-size: clamp(2.5rem, 6vw, 4.5rem);
-    margin-top: 20px;
-    font-weight: bold;
-    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
-    line-height: 1.2;
+  .marquee-team-logo img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
   }
 
-  .marquee-matchup-team-name a {
-    text-decoration: none;
-    color: inherit;
-    transition: opacity 0.3s ease;
+  .marquee-initials {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.25);
+    letter-spacing: 0.05em;
   }
 
-  .marquee-matchup-team-name a:hover {
+  .marquee-team-name {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 600;
+    color: var(--marquee-text);
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .marquee-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    flex-shrink: 0;
+  }
+
+  .marquee-vs-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--marquee-highlight);
+    letter-spacing: 0.05em;
+  }
+
+  .marquee-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .marquee-date {
+    font-family: var(--font-body, "Rubik", sans-serif);
+    font-size: 0.95rem;
+    color: var(--marquee-muted);
+    font-weight: 500;
+  }
+
+  .marquee-cta {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--marquee-muted);
+    letter-spacing: 0.05em;
+    transition: color 0.2s ease;
+  }
+
+  /* Empty state */
+  .marquee--empty {
+    min-height: 400px;
+  }
+
+  .marquee-empty-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.95)),
+      url("https://images.unsplash.com/photo-1544919982-b61976f0ba43?auto=format&fit=crop&q=80&w=1200")
+        no-repeat center center;
+    background-size: cover;
+    opacity: 0.4;
+    z-index: 0;
+  }
+
+  .marquee--empty .marquee-inner {
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    min-height: 400px;
+  }
+
+  .marquee-empty-content {
+    text-align: center;
+    padding: 2rem 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .empty-icon-wrap {
+    font-size: 3rem;
+    color: var(--marquee-accent);
+    margin-bottom: 2rem;
     opacity: 0.8;
   }
 
-  .marquee-matchup-team-1 {
-    color: var(--marquee-primary-red);
-  }
-
-  .marquee-matchup-team-2 {
-    color: var(--marquee-team-purple);
-  }
-
-  .marquee-matchup-vs {
-    font-family: "Teko", sans-serif;
-    font-size: clamp(4rem, 10vw, 8rem);
-    background: linear-gradient(45deg, var(--marquee-accent-gold), #ffd60a);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 0 0 20px rgba(241, 196, 15, 0.8);
-    animation: marquee-pulse 2s infinite;
-    font-weight: 700;
+  .marquee-empty-title {
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    font-weight: 800;
+    color: var(--marquee-text);
+    margin: 0 0 1rem;
+    letter-spacing: -1px;
+    text-transform: uppercase;
     line-height: 1;
   }
 
-  @keyframes marquee-pulse {
-    0%,
+  .marquee-empty-desc {
+    font-family: var(--font-body, "Rubik", sans-serif);
+    font-size: 1.25rem;
+    color: var(--marquee-muted);
+    margin: 0 0 2rem;
+    line-height: 1.6;
+  }
+
+  .empty-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--marquee-highlight);
+    margin-bottom: 2.5rem;
+    border: 1px solid rgba(252, 185, 0, 0.2);
+  }
+
+  .pulse-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--marquee-highlight);
+    border-radius: 50%;
+    animation: status-pulse 2s infinite;
+  }
+
+  @keyframes status-pulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(252, 185, 0, 0.7);
+    }
+    70% {
+      transform: scale(1.1);
+      box-shadow: 0 0 0 10px rgba(252, 185, 0, 0);
+    }
     100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.8;
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(252, 185, 0, 0);
     }
   }
 
-  .marquee-matchup-date {
-    font-family: "Rubik", sans-serif;
-    font-size: 1.5rem;
-    color: var(--marquee-accent-gold);
-    margin: 40px 0;
-    letter-spacing: 3px;
-    font-weight: 600;
-  }
-
-  .marquee-matchup-overlay {
-    position: relative;
-    z-index: 2;
-    padding: 40px;
-    font-family: "Teko", sans-serif;
-    font-size: clamp(4rem, 12vw, 10rem);
-    color: var(--marquee-accent-gold);
-    text-shadow:
-      0 0 40px rgba(0, 0, 0, 0.9),
-      0 0 60px var(--marquee-primary-red);
-    letter-spacing: 10px;
-    animation: marquee-glow 3s ease-in-out infinite alternate;
-    text-align: center;
+  .marquee-empty-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    line-height: 1;
+    letter-spacing: 0.05em;
+    color: white;
+    background: var(--marquee-accent);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 30px rgba(221, 51, 51, 0.3);
   }
 
-  @keyframes marquee-glow {
-    from {
-      text-shadow:
-        0 0 40px rgba(0, 0, 0, 0.9),
-        0 0 60px var(--marquee-primary-red);
-    }
-    to {
-      text-shadow:
-        0 0 60px rgba(0, 0, 0, 0.9),
-        0 0 100px var(--marquee-primary-red);
-    }
+  .marquee-empty-btn:hover {
+    transform: translateY(-5px);
+    background: var(--color-primary-dark, #bb2222);
+    box-shadow: 0 15px 40px rgba(221, 51, 51, 0.5);
+  }
+
+  .marquee-empty-btn i {
+    transition: transform 0.3s ease;
+  }
+
+  .marquee-empty-btn:hover i {
+    transform: translateX(5px);
   }
 
   @media (max-width: 768px) {
-    .marquee-matchup-teams {
+    .marquee-matchup {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      text-align: center;
+    }
+
+    .marquee-team--home {
+      order: 1;
+    }
+
+    .marquee-vs {
+      order: 2;
+      margin: 0 auto;
+    }
+
+    .marquee-team--away {
+      order: 3;
+    }
+
+    .marquee-inner {
+      padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+      min-height: 320px;
+    }
+
+    .marquee-footer {
       flex-direction: column;
-    }
-    .marquee-matchup-vs {
-      order: -1;
-      margin-bottom: 20px;
-    }
-    .marquee-matchup-logo {
-      width: 150px;
-      height: 150px;
-    }
-    .marquee-matchup-logo-placeholder svg {
-      width: 60px;
-      height: 60px;
+      align-items: flex-start;
     }
   }
 </style>

@@ -225,6 +225,7 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
                   src={player.image}
                   alt={playerName}
                   className="w-32 h-32 rounded-xl object-cover border-4 border-border"
+                  onError={(e) => { e.currentTarget.src = '/images/default-player.png'; }}
                 />
               ) : (
                 <div className="w-32 h-32 rounded-xl bg-muted flex items-center justify-center border-4 border-border">

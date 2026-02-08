@@ -13,7 +13,7 @@ import NextMatchCarousel from "../features/home/components/NextMatchCarousel";
 import LatestNews from "../features/home/components/LatestNews";
 import RecentResultsCarousel from "../features/home/components/RecentResultsCarousel";
 import Sponsors from "../features/home/components/Sponsors";
-import StatsLeadersCarousel from "../features/home/components/StatsLeadersCarousel";
+import StatsLeadersSection from "../features/home/components/StatsLeadersSection";
 import MediaGallery from "../features/media/components/MediaGallery";
 import FeatureGate from "../components/FeatureGate.astro";
 import { isFeatureEnabled } from "../lib/feature-flags";
@@ -109,19 +109,8 @@ import PageLoader from "../components/PageLoader";
           aria-label="Statistics and leaders"
         >
           <div class="container">
-            <div class="stats-leaders-header">
-              <h2 class="section-title">Stats Leaders</h2>
-              <a
-                href="http://elevateballers.com/stats/"
-                class="btn btn-primary btn-lg"
-                title="View all statistics"
-              >
-                View All Stats
-              </a>
-            </div>
-
-            <!-- Stats Players Carousel - React Component -->
-            <StatsLeadersCarousel client:load />
+            <!-- Redesigned Stats Leaders Section - Integrated React Component -->
+            <StatsLeadersSection client:load />
           </div>
         </section>
       </FeatureGate>
@@ -169,7 +158,7 @@ import PageLoader from "../components/PageLoader";
             <div class="registration-cta-content">
               <h2 class="registration-title">
                 <a
-                  href="https://elevateballers.com/registration-test/"
+                  href="/league-registration/"
                   title="Register to Join the League"
                 >
                   Register to Join the League
@@ -181,7 +170,7 @@ import PageLoader from "../components/PageLoader";
               </p>
               <a
                 class="btn btn-secondary btn-lg"
-                href="http://elevateballers.com/registration-test"
+                href="/league-registration/"
                 title="Join Us"
               >
                 Join Us
@@ -295,7 +284,7 @@ import PageLoader from "../components/PageLoader";
     }
 
     .marquee-matchup-section {
-      background-color: var(--color-gray-100, #f0f0f0);
+      padding: 0 !important;
     }
 
     .next-match-section {
@@ -314,7 +303,11 @@ import PageLoader from "../components/PageLoader";
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(45, 30, 73, 0.8);
+      background: radial-gradient(
+        circle at center,
+        rgba(45, 30, 73, 0.6) 0%,
+        rgba(20, 10, 40, 0.95) 100%
+      );
       z-index: 0;
     }
 
@@ -471,4 +464,3 @@ import PageLoader from "../components/PageLoader";
     src="/js/header.js"
     id="stm-theme-scripts-header-js"></script>
 </Layout>
-
