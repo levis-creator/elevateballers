@@ -1,10 +1,6 @@
 import { useRef } from 'react';
 import CountUp from 'react-countup';
 import { useInView } from 'react-intersection-observer';
-import pkg from 'react-lazy-load-image-component';
-// Safety check for CJS module loading in Vite/SSR
-const LazyLoadImage = pkg?.LazyLoadImage || ((props: any) => <img {...props} />);
-import 'react-lazy-load-image-component/src/effects/blur.css';
 import { stats } from '../data/homeData';
 
 /**
@@ -26,11 +22,11 @@ export default function StatsSection() {
               <div className="wpb_wrapper">
                 <div className="stm-stats-wrapp default">
                   {/* Lazy load icons with blur effect */}
-                  <LazyLoadImage
+                  <img
                     src={stat.icon}
                     alt={stat.iconAlt || stat.label}
-                    effect="blur"
-                    wrapperClassName="stm-stat-icon-wrapper"
+                    className="stm-stat-icon"
+                    loading="eager"
                   />
                   <div className="stm-stat-info-wrapp">
                     <span className="stm-stat-points heading-font">

@@ -1,7 +1,6 @@
 ---
 import { getActivePlayerOfTheWeek } from "../../cms/lib/editorial-queries";
 import { playerOfTheWeek as staticPlayer } from "../data/homeData";
-import { Image } from "astro:assets";
 import { resolveAssetUrl } from "../../../lib/asset-url";
 
 // Fetch dynamic POTW from database
@@ -39,11 +38,12 @@ const descriptionHtml = player.description
   <div class="clearfix"></div>
   <div class="stm-data-wrapp">
     <div class="stm-photo-wrapp">
-      <Image
+      <img
         src={playerImageUrl || "/images/default-player.png"}
         alt={player.imageAlt || player.name}
-        width={300}
-        height={300}
+        width="300"
+        height="300"
+        loading="eager"
         onerror="this.onerror=null;this.src='/images/default-player.png';"
       />
     </div>
@@ -54,11 +54,12 @@ const descriptionHtml = player.description
           {
             signatureImageUrl && (
               <div class="stm-img-wrapp">
-                <Image
+                <img
                   src={signatureImageUrl}
                   alt={`${player.name} signature`}
-                  width={200}
-                  height={50}
+                  width="200"
+                  height="50"
+                  loading="lazy"
                 />
               </div>
             )
