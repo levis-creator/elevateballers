@@ -7,7 +7,10 @@ import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
 ---
 
-<Layout>
+<Layout
+  title="About Elevate - Our Mission, Vision & Basketball Community"
+  description="Learn about Elevate Ballers, our mission to elevate the game of basketball, and the inclusive community we've built for players of all skill levels."
+>
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
@@ -32,12 +35,12 @@ import PageLoader from "../components/PageLoader";
                     xs="40"
                   />
 
-                  <h2
+                  <h1
                     class="heading-font"
                     style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                   >
                     ABOUT
-                  </h2>
+                  </h1>
 
                   <div
                     class="about-content"

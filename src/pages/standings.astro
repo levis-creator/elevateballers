@@ -25,7 +25,10 @@ try {
 }
 ---
 
-<Layout>
+<Layout
+  title="League Standings - Elevate Basketball"
+  description="Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions."
+>
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
@@ -50,12 +53,12 @@ try {
                     xs="40"
                   />
 
-                  <h2
+                  <h1
                     class="heading-font"
                     style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                   >
                     STANDINGS
-                  </h2>
+                  </h1>
 
                   <div class="sp-template sp-template-league-table">
                     <StandingsPage initialStandings={standings} client:load />

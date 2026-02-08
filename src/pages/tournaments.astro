@@ -14,7 +14,7 @@ const mockMatches = [
         nextMatchId: null, // Final
         tournamentRoundText: "Final",
         startTime: "2024-06-15",
-        state: "DONE",
+        state: "DONE" as const,
         participants: [
             {
                 id: "team-1",
@@ -39,7 +39,7 @@ const mockMatches = [
         nextMatchId: "1",
         tournamentRoundText: "Semi-Final",
         startTime: "2024-06-10",
-        state: "DONE",
+        state: "DONE" as const,
         participants: [
             {
                 id: "team-1",
@@ -62,7 +62,7 @@ const mockMatches = [
         nextMatchId: "1",
         tournamentRoundText: "Semi-Final",
         startTime: "2024-06-11",
-        state: "DONE",
+        state: "DONE" as const,
         participants: [
             {
                 id: "team-2",
@@ -83,7 +83,10 @@ const mockMatches = [
 ];
 ---
 
-<Layout>
+<Layout
+    title="Tournament Brackets - Elevate Basketball Playoffs"
+    description="Follow the path to the championship! View live tournament brackets, match results, and playoff schedules for Elevate Basketball."
+>
     <PageLoader client:load />
     <div id="wrapper">
         <TopBar />
@@ -110,12 +113,12 @@ const mockMatches = [
                                         xs="40"
                                     />
 
-                                    <h2
+                                    <h1
                                         class="heading-font"
                                         style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                                     >
                                         TOURNAMENT BRACKET
-                                    </h2>
+                                    </h1>
 
                                     <div
                                         class="bracket-container"

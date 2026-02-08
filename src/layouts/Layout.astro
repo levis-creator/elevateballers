@@ -2,89 +2,31 @@
 import "../styles/admin.css"; // Import Tailwind CSS
 import "../styles/design-system.css";
 import "../styles/landing-enhancements.css";
+import SEO from "../components/SEO.astro";
+
+interface Props {
+	title?: string;
+	description?: string;
+	image?: string;
+	canonicalURL?: string;
+	type?: string;
+}
+
+const { title, description, image, canonicalURL, type } = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en-US" class="no-js">
 	<head>
 		<meta name="format-detection" content="telephone=no" />
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="profile" href="http://gmpg.org/xfn/11" />
-		<meta
-			name="robots"
-			content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+		<SEO
+			title={title}
+			description={description}
+			image={image}
+			canonicalURL={canonicalURL}
+			type={type}
 		/>
-
-		<title>Home page - Elevate</title>
-		<link rel="canonical" href="http://elevateballers.com/" />
-		<meta property="og:locale" content="en_US" />
-		<meta property="og:type" content="website" />
-		<meta property="og:title" content="Home page - Elevate" />
-		<meta property="og:url" content="http://elevateballers.com/" />
-		<meta property="og:site_name" content="Elevate" />
-		<meta
-			property="article:modified_time"
-			content="2025-12-17T11:02:46+00:00"
-		/>
-		<meta name="twitter:card" content="summary_large_image" />
-		<script type="application/ld+json" is:inline>
-			{
-				"@context": "https://schema.org",
-				"@graph": [
-					{
-						"@type": "WebPage",
-						"@id": "http://elevateballers.com/",
-						"url": "http://elevateballers.com/",
-						"name": "Home page - Elevate",
-						"isPartOf": {
-							"@id": "http://elevateballers.com/#website"
-						},
-						"datePublished": "2016-04-19T05:29:11+00:00",
-						"dateModified": "2025-12-17T11:02:46+00:00",
-						"breadcrumb": {
-							"@id": "http://elevateballers.com/#breadcrumb"
-						},
-						"inLanguage": "en-US",
-						"potentialAction": [
-							{
-								"@type": "ReadAction",
-								"target": ["http://elevateballers.com/"]
-							}
-						]
-					},
-					{
-						"@type": "BreadcrumbList",
-						"@id": "http://elevateballers.com/#breadcrumb",
-						"itemListElement": [
-							{
-								"@type": "ListItem",
-								"position": 1,
-								"name": "Home"
-							}
-						]
-					},
-					{
-						"@type": "WebSite",
-						"@id": "http://elevateballers.com/#website",
-						"url": "http://elevateballers.com/",
-						"name": "Elevate",
-						"description": "",
-						"potentialAction": [
-							{
-								"@type": "SearchAction",
-								"target": {
-									"@type": "EntryPoint",
-									"urlTemplate": "http://elevateballers.com/?s={search_term_string}"
-								},
-								"query-input": "required name=search_term_string"
-							}
-						],
-						"inLanguage": "en-US"
-					}
-				]
-			}
-		</script>
 
 		<link rel="dns-prefetch" href="https://maps.googleapis.com" />
 		<link rel="dns-prefetch" href="https://static.addtoany.com" />

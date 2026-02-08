@@ -59,7 +59,7 @@ const startItem = totalCount === 0 ? 0 : (currentPageRes - 1) * PER_PAGE + 1;
 const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
 ---
 
-<Layout>
+<Layout title={pageTitle} description={pageDescription}>
   <script is:inline define:vars={{ pageTitle, pageDescription, pageUrl }}>
     // Update page title
     document.title = pageTitle;
@@ -153,12 +153,12 @@ const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
                     xs="40"
                   />
 
-                  <h2
+                  <h1
                     class="heading-font"
                     style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                   >
                     TEAMS
-                  </h2>
+                  </h1>
 
                   <form class="teams-search-form" method="get" action="/teams">
                     <label for="teams-search-input" class="teams-search-label"
