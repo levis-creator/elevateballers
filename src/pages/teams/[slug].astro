@@ -3,8 +3,7 @@ export const prerender = false;
 
 import Layout from "../../layouts/Layout.astro";
 import TopBar from "../../features/layout/components/TopBar.astro";
-import Header from "../../features/layout/components/Header.astro";
-import MobileMenu from "../../features/layout/components/MobileMenu";
+import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
 import { getTeamBySlug, getStaffByTeam } from "../../features/cms/lib/queries";
 import { resolveAssetUrl, getDisplayImageUrl } from "../../lib/asset-url";
@@ -59,23 +58,23 @@ let teamStats = {
 try {
   // Fetch completed matches
   const completedMatches = await getFilteredMatches(
-    { teamId: team.id, status: 'COMPLETED' },
-    'date-desc',
-    10
+    { teamId: team.id, status: "COMPLETED" },
+    "date-desc",
+    10,
   );
-  
+
   // Fetch upcoming matches
   const upcomingMatches = await getFilteredMatches(
-    { teamId: team.id, status: 'UPCOMING' },
-    'date-asc',
-    5
+    { teamId: team.id, status: "UPCOMING" },
+    "date-asc",
+    5,
   );
-  
+
   teamMatches = {
     completed: completedMatches,
     upcoming: upcomingMatches,
   };
-  
+
   // Calculate team statistics
   teamStats = calculateTeamStatistics(completedMatches, team.id);
 } catch (error) {
@@ -176,8 +175,7 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
-    <Header />
-    <MobileMenu client:load />
+    <Header client:load currentPath={Astro.url.pathname} />
     <div id="main">
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
@@ -205,7 +203,9 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                         resolveAssetUrl(team.logo) ? (
                           <div class="team-logo-large">
                             <Image
-                              src={getDisplayImageUrl(team.logo, Astro.url.origin)!}
+                              src={
+                                getDisplayImageUrl(team.logo, Astro.url.origin)!
+                              }
                               alt={`${team.name} logo`}
                               width={150}
                               height={150}
@@ -240,43 +240,59 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                         <h2 class="section-title">Team Statistics</h2>
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
                           <div class="bg-white rounded-lg border p-4 text-center shadow-sm">
-                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">Record</div>
+                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">
+                              Record
+                            </div>
                             <div class="text-3xl font-bold text-[#dd3333]">
                               {teamStats.wins}-{teamStats.losses}
                               {teamStats.draws > 0 && `-${teamStats.draws}`}
                             </div>
                             <div class="text-xs text-gray-500 mt-1">
-                              {teamStats.totalMatches} {teamStats.totalMatches === 1 ? 'match' : 'matches'}
+                              {teamStats.totalMatches}{" "}
+                              {teamStats.totalMatches === 1
+                                ? "match"
+                                : "matches"}
                             </div>
                           </div>
                           <div class="bg-white rounded-lg border p-4 text-center shadow-sm">
-                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">Win %</div>
+                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">
+                              Win %
+                            </div>
                             <div class="text-3xl font-bold text-[#dd3333]">
-                              {teamStats.totalMatches > 0 
+                              {teamStats.totalMatches > 0
                                 ? teamStats.winPercentage.toFixed(1)
-                                : '0.0'}%
+                                : "0.0"}
+                              %
                             </div>
                           </div>
                           <div class="bg-white rounded-lg border p-4 text-center shadow-sm">
-                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">Points Per Game</div>
+                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">
+                              Points Per Game
+                            </div>
                             <div class="text-3xl font-bold text-[#dd3333]">
                               {teamStats.averagePointsScored.toFixed(1)}
                             </div>
                           </div>
                           <div class="bg-white rounded-lg border p-4 text-center shadow-sm">
-                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">Points Allowed</div>
+                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">
+                              Points Allowed
+                            </div>
                             <div class="text-3xl font-bold text-[#dd3333]">
                               {teamStats.averagePointsAllowed.toFixed(1)}
                             </div>
                           </div>
                           <div class="bg-white rounded-lg border p-4 text-center shadow-sm">
-                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">Total Points</div>
+                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">
+                              Total Points
+                            </div>
                             <div class="text-3xl font-bold text-[#dd3333]">
                               {teamStats.totalPointsScored}
                             </div>
                           </div>
                           <div class="bg-white rounded-lg border p-4 text-center shadow-sm">
-                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">Points Allowed</div>
+                            <div class="text-sm text-gray-600 mb-2 uppercase font-semibold">
+                              Points Allowed
+                            </div>
                             <div class="text-3xl font-bold text-[#dd3333]">
                               {teamStats.totalPointsAllowed}
                             </div>
@@ -300,69 +316,101 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
 
                   <!-- Recent Matches Section -->
                   {
-                    teamMatches.completed && teamMatches.completed.length > 0 && (
-                      <div class="team-section">
-                        <h2 class="section-title">Recent Matches</h2>
-                        <div class="space-y-3 mt-6">
-                          {teamMatches.completed.map((match: any) => {
-                            const isTeam1 = match.team1Id === team.id;
-                            const teamScore = isTeam1 ? match.team1Score : match.team2Score;
-                            const opponentScore = isTeam1 ? match.team2Score : match.team1Score;
-                            const opponent = isTeam1 ? (match.team2 || { name: match.team2Name }) : (match.team1 || { name: match.team1Name });
-                            const matchDate = new Date(match.date);
-                            const isWin = teamScore !== null && opponentScore !== null && teamScore > opponentScore;
-                            const isLoss = teamScore !== null && opponentScore !== null && teamScore < opponentScore;
-                            const borderColor = isWin ? 'border-l-green-500' : isLoss ? 'border-l-red-500' : 'border-l-gray-500';
-                            
-                            return (
-                              <div class={`bg-white rounded-lg border-l-4 ${borderColor} p-4 shadow-sm hover:shadow-md transition-shadow`}>
-                                <div class="flex items-center justify-between mb-2">
-                                  <div class="text-sm text-gray-600">
-                                    {matchDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                  </div>
-                                  {match.league && (
-                                    <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-700">
-                                      {match.league.name || match.leagueName}
-                                    </span>
-                                  )}
-                                </div>
-                                <div class="flex items-center gap-3">
-                                  <div class="flex items-center gap-2 flex-1">
-                                    <span class="font-semibold text-lg">{team.name}</span>
-                                    {teamScore !== null && (
-                                      <span class={`text-2xl font-bold ${isWin ? 'text-green-600' : isLoss ? 'text-red-600' : 'text-gray-600'}`}>
-                                        {teamScore}
+                    teamMatches.completed &&
+                      teamMatches.completed.length > 0 && (
+                        <div class="team-section">
+                          <h2 class="section-title">Recent Matches</h2>
+                          <div class="space-y-3 mt-6">
+                            {teamMatches.completed.map((match: any) => {
+                              const isTeam1 = match.team1Id === team.id;
+                              const teamScore = isTeam1
+                                ? match.team1Score
+                                : match.team2Score;
+                              const opponentScore = isTeam1
+                                ? match.team2Score
+                                : match.team1Score;
+                              const opponent = isTeam1
+                                ? match.team2 || { name: match.team2Name }
+                                : match.team1 || { name: match.team1Name };
+                              const matchDate = new Date(match.date);
+                              const isWin =
+                                teamScore !== null &&
+                                opponentScore !== null &&
+                                teamScore > opponentScore;
+                              const isLoss =
+                                teamScore !== null &&
+                                opponentScore !== null &&
+                                teamScore < opponentScore;
+                              const borderColor = isWin
+                                ? "border-l-green-500"
+                                : isLoss
+                                  ? "border-l-red-500"
+                                  : "border-l-gray-500";
+
+                              return (
+                                <div
+                                  class={`bg-white rounded-lg border-l-4 ${borderColor} p-4 shadow-sm hover:shadow-md transition-shadow`}
+                                >
+                                  <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm text-gray-600">
+                                      {matchDate.toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                        year: "numeric",
+                                      })}
+                                    </div>
+                                    {match.league && (
+                                      <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-700">
+                                        {match.league.name || match.leagueName}
                                       </span>
                                     )}
                                   </div>
-                                  <span class="text-gray-400">vs</span>
-                                  <div class="flex items-center gap-2 flex-1">
-                                    <span class="font-semibold text-lg">{opponent.name || 'Opponent'}</span>
-                                    {opponentScore !== null && (
-                                      <span class={`text-2xl font-bold ${isLoss ? 'text-green-600' : isWin ? 'text-red-600' : 'text-gray-600'}`}>
-                                        {opponentScore}
+                                  <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-2 flex-1">
+                                      <span class="font-semibold text-lg">
+                                        {team.name}
                                       </span>
-                                    )}
+                                      {teamScore !== null && (
+                                        <span
+                                          class={`text-2xl font-bold ${isWin ? "text-green-600" : isLoss ? "text-red-600" : "text-gray-600"}`}
+                                        >
+                                          {teamScore}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span class="text-gray-400">vs</span>
+                                    <div class="flex items-center gap-2 flex-1">
+                                      <span class="font-semibold text-lg">
+                                        {opponent.name || "Opponent"}
+                                      </span>
+                                      {opponentScore !== null && (
+                                        <span
+                                          class={`text-2xl font-bold ${isLoss ? "text-green-600" : isWin ? "text-red-600" : "text-gray-600"}`}
+                                        >
+                                          {opponentScore}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )
+                      )
                   }
 
                   {
-                    teamMatches.completed && teamMatches.completed.length > 0 && (
-                      <Spacing
-                        id="stm-spacing-team-recent-matches"
-                        lg="40"
-                        md="40"
-                        sm="30"
-                        xs="30"
-                      />
-                    )
+                    teamMatches.completed &&
+                      teamMatches.completed.length > 0 && (
+                        <Spacing
+                          id="stm-spacing-team-recent-matches"
+                          lg="40"
+                          md="40"
+                          sm="30"
+                          xs="30"
+                        />
+                      )
                   }
 
                   <!-- Upcoming Matches Section -->
@@ -373,16 +421,25 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                         <div class="space-y-3 mt-6">
                           {teamMatches.upcoming.map((match: any) => {
                             const isTeam1 = match.team1Id === team.id;
-                            const opponent = isTeam1 ? (match.team2 || { name: match.team2Name }) : (match.team1 || { name: match.team1Name });
+                            const opponent = isTeam1
+                              ? match.team2 || { name: match.team2Name }
+                              : match.team1 || { name: match.team1Name };
                             const matchDate = new Date(match.date);
-                            
+
                             return (
                               <div class="bg-white rounded-lg border-l-4 border-l-blue-500 p-4 shadow-sm hover:shadow-md transition-shadow">
                                 <div class="flex items-center justify-between mb-2">
                                   <div class="text-sm text-gray-600">
-                                    {matchDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    {matchDate.toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    })}
                                     <span class="ml-2 text-gray-500">
-                                      {matchDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                      {matchDate.toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                      })}
                                     </span>
                                   </div>
                                   {match.league && (
@@ -393,11 +450,15 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                                 </div>
                                 <div class="flex items-center gap-3">
                                   <div class="flex items-center gap-2 flex-1">
-                                    <span class="font-semibold text-lg">{team.name}</span>
+                                    <span class="font-semibold text-lg">
+                                      {team.name}
+                                    </span>
                                   </div>
                                   <span class="text-gray-400">vs</span>
                                   <div class="flex items-center gap-2 flex-1">
-                                    <span class="font-semibold text-lg">{opponent.name || 'Opponent'}</span>
+                                    <span class="font-semibold text-lg">
+                                      {opponent.name || "Opponent"}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -467,7 +528,12 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                                 {staff.image ? (
                                   <div class="staff-image">
                                     <Image
-                                      src={getDisplayImageUrl(staff.image, Astro.url.origin) || staff.image}
+                                      src={
+                                        getDisplayImageUrl(
+                                          staff.image,
+                                          Astro.url.origin,
+                                        ) || staff.image
+                                      }
                                       alt={`${staff.firstName} ${staff.lastName}`}
                                       width={280}
                                       height={200}

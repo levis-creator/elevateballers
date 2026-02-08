@@ -1,11 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  important: true,
   darkMode: ["class"],
   content: [
-    './src/pages/admin/**/*.{astro,tsx,ts}',
-    './src/features/cms/**/*.{astro,tsx,ts}',
-    './src/features/game-tracking/**/*.{astro,tsx,ts}',
-    './src/components/ui/**/*.{tsx,ts}',
+    './src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
   ],
   theme: {
     extend: {

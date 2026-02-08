@@ -2,7 +2,8 @@ import { useRef } from 'react';
 import CountUp from 'react-countup';
 import { useInView } from 'react-intersection-observer';
 import pkg from 'react-lazy-load-image-component';
-const { LazyLoadImage } = pkg;
+// Safety check for CJS module loading in Vite/SSR
+const LazyLoadImage = pkg?.LazyLoadImage || ((props: any) => <img {...props} />);
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { stats } from '../data/homeData';
 

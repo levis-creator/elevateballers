@@ -1,7 +1,7 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import TopBar from "../../features/layout/components/TopBar.astro";
-import Header from "../../features/layout/components/Header.astro";
+import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
 import { prisma } from "../../lib/prisma";
 import { isFeatureEnabled } from "../../lib/feature-flags";
@@ -72,7 +72,11 @@ const allLeaders = await Promise.all(
 <Layout>
     <div id="wrapper">
         {isFeatureEnabled("layout.topbar") && <TopBar />}
-        {isFeatureEnabled("layout.header") && <Header />}
+        {
+            isFeatureEnabled("layout.header") && (
+                <Header client:load currentPath={Astro.url.pathname} />
+            )
+        }
 
         <main id="main" class="stats-leaders-page">
             <section class="page-title-section">

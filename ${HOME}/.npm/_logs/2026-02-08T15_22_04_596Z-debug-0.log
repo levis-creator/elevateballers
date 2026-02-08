@@ -1,0 +1,42 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\User\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.7.0
+2 info using node@v22.19.0
+3 silly config load:file:C:\Users\User\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\User\Desktop\projects\elevateballers\.npmrc
+5 silly config load:file:C:\Users\User\.npmrc
+6 silly config load:file:C:\Users\User\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install @astrojs/tailwind\
+8 verbose argv "install" "@astrojs/tailwind\\"
+9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_22_04_596Z-
+10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_22_04_596Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+14 verbose stack Error: Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Users\User\Desktop\projects\elevateballers\@astrojs\tailwind\package.json'
+14 verbose stack     at async open (node:internal/fs/promises:641:25)
+14 verbose stack     at async readFile (node:internal/fs/promises:1245:14)
+14 verbose stack     at async read (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\package-json\lib\read-package.js:9:18)
+14 verbose stack     at async PackageJson.load (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\package-json\lib\index.js:131:31)
+14 verbose stack     at async PackageJson.normalize (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\package-json\lib\index.js:117:5)
+14 verbose stack     at async C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:527:22
+14 verbose stack     at async Promise.all (index 0)
+14 verbose stack     at async #add (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:516:5)
+14 verbose stack     at async #applyUserRequestsToNode (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:485:7)
+14 verbose stack     at async #applyUserRequests (C:\Users\User\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\arborist\lib\arborist\build-ideal-tree.js:421:7)
+15 error code ENOENT
+16 error syscall open
+17 error path C:\Users\User\Desktop\projects\elevateballers\@astrojs\tailwind\package.json
+18 error errno -4058
+19 error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Users\User\Desktop\projects\elevateballers\@astrojs\tailwind\package.json'
+20 error enoent This is related to npm not being able to find a file.
+20 error enoent
+21 silly unfinished npm timer reify 1770564126967
+22 silly unfinished npm timer reify:loadTrees 1770564127000
+23 silly unfinished npm timer idealTree:userRequests 1770564128964
+24 verbose cwd C:\Users\User\Desktop\projects\elevateballers
+25 verbose os Windows_NT 10.0.26200
+26 verbose node v22.19.0
+27 verbose npm  v11.7.0
+28 verbose exit -4058
+29 verbose code -4058
+30 error A complete log of this run can be found in: C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_22_04_596Z-debug-0.log

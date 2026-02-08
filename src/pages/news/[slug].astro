@@ -1,52 +1,53 @@
 ---
 export const prerender = false;
 
-import Layout from '../../layouts/Layout.astro';
-import TopBar from '../../features/layout/components/TopBar.astro';
-import Header from '../../features/layout/components/Header.astro';
-import MobileMenu from '../../features/layout/components/MobileMenu';
-import Footer from '../../features/layout/components/Footer.astro';
-import { getNewsArticleBySlug, getNewsArticles } from '../../features/cms/lib/queries';
-import { reverseCategoryMap } from '../../features/cms/types';
-import CommentsList from '../../features/comments/components/CommentsList';
-import { prisma } from '../../lib/prisma';
-import NewsSidebar from '../../features/news/components/NewsSidebar.astro';
-import NewsBreadcrumbs from '../../features/news/components/NewsBreadcrumbs.astro';
-import PageLoader from '../../components/PageLoader';
-import { Image } from 'astro:assets';
-import { getDisplayImageUrl } from '../../lib/asset-url';
+import Layout from "../../layouts/Layout.astro";
+import TopBar from "../../features/layout/components/TopBar.astro";
+import Header from "../../features/layout/components/Header";
+import Footer from "../../features/layout/components/Footer.astro";
+import {
+  getNewsArticleBySlug,
+  getNewsArticles,
+} from "../../features/cms/lib/queries";
+import { reverseCategoryMap } from "../../features/cms/types";
+import CommentsList from "../../features/comments/components/CommentsList";
+import { prisma } from "../../lib/prisma";
+import NewsSidebar from "../../features/news/components/NewsSidebar.astro";
+import NewsBreadcrumbs from "../../features/news/components/NewsBreadcrumbs.astro";
+import PageLoader from "../../components/PageLoader";
+import { Image } from "astro:assets";
+import { getDisplayImageUrl } from "../../lib/asset-url";
 
 const { slug } = Astro.params;
 if (!slug) {
-  return Astro.redirect('/404', 302);
+  return Astro.redirect("/404", 302);
 }
 
 let article;
 try {
   article = await getNewsArticleBySlug(slug);
   if (!article || !article.published) {
-    return Astro.redirect('/404', 302);
+    return Astro.redirect("/404", 302);
   }
 } catch (error) {
-  console.error('Error fetching article:', error);
-  return Astro.redirect('/404', 302);
+  console.error("Error fetching article:", error);
+  return Astro.redirect("/404", 302);
 }
 
-
 const category = reverseCategoryMap[article.category] || article.category;
-const publishedDate = article.publishedAt 
-  ? new Date(article.publishedAt).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+const publishedDate = article.publishedAt
+  ? new Date(article.publishedAt).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     })
   : null;
 
 const modifiedDate = article.updatedAt
   ? new Date(article.updatedAt).toISOString()
   : publishedDate
-  ? new Date(article.publishedAt!).toISOString()
-  : null;
+    ? new Date(article.publishedAt!).toISOString()
+    : null;
 
 // Get comment count
 let commentCount = 0;
@@ -60,18 +61,17 @@ try {
     });
   }
 } catch (error) {
-  console.error('Error fetching comment count:', error);
+  console.error("Error fetching comment count:", error);
 }
-
 
 const getCategoryColor = (cat: string): string => {
   const colors: Record<string, string> = {
-    'Interviews': '#667eea',
-    'Championships': '#f5576c',
-    'Match report': '#4facfe',
-    'Analysis': '#43e97b',
+    Interviews: "#667eea",
+    Championships: "#f5576c",
+    "Match report": "#4facfe",
+    Analysis: "#43e97b",
   };
-  return colors[cat] || '#64748b';
+  return colors[cat] || "#64748b";
 };
 
 const categoryColor = getCategoryColor(category);
@@ -80,155 +80,196 @@ const categoryColor = getCategoryColor(category);
 const pageTitle = `${article.title} - Elevate`;
 const pageDescription = article.excerpt || article.title;
 const pageUrl = `${Astro.url.origin}/news/${slug}`;
-const pageImage = article.image || `${Astro.url.origin}/images/Elevate_Icon-200x200.png`;
-const publishedTime = article.publishedAt ? new Date(article.publishedAt).toISOString() : null;
+const pageImage =
+  article.image || `${Astro.url.origin}/images/Elevate_Icon-200x200.png`;
+const publishedTime = article.publishedAt
+  ? new Date(article.publishedAt).toISOString()
+  : null;
 const modifiedTime = modifiedDate;
 ---
 
 <Layout>
-  <script is:inline define:vars={{ pageTitle, pageDescription, pageUrl, pageImage, publishedTime, modifiedTime, authorName: article.author.name, articleTitle: article.title }}>
-      // Update page title
-      document.title = pageTitle;
-      
-      // Update or create meta tags
-      const updateMeta = (name, content, property = false) => {
-        const attr = property ? 'property' : 'name';
-        let meta = document.querySelector(`meta[${attr}="${name}"]`);
-        if (!meta) {
-          meta = document.createElement('meta');
-          meta.setAttribute(attr, name);
-          document.head.appendChild(meta);
-        }
-        meta.setAttribute('content', content);
-      };
-      
-      // Update canonical link
-      let canonical = document.querySelector('link[rel="canonical"]');
-      if (!canonical) {
-        canonical = document.createElement('link');
-        canonical.setAttribute('rel', 'canonical');
-        document.head.appendChild(canonical);
+  <script
+    is:inline
+    define:vars={{
+      pageTitle,
+      pageDescription,
+      pageUrl,
+      pageImage,
+      publishedTime,
+      modifiedTime,
+      authorName: article.author.name,
+      articleTitle: article.title,
+    }}
+  >
+    // Update page title
+    document.title = pageTitle;
+
+    // Update or create meta tags
+    const updateMeta = (name, content, property = false) => {
+      const attr = property ? "property" : "name";
+      let meta = document.querySelector(`meta[${attr}="${name}"]`);
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.setAttribute(attr, name);
+        document.head.appendChild(meta);
       }
-      canonical.setAttribute('href', pageUrl);
-      
-      // Set meta tags
-      updateMeta('og:locale', 'en_US', true);
-      updateMeta('og:type', 'article', true);
-      updateMeta('og:title', pageTitle, true);
-      updateMeta('og:description', pageDescription, true);
-      updateMeta('og:url', pageUrl, true);
-      updateMeta('og:site_name', 'Elevate', true);
-      if (publishedTime) updateMeta('article:published_time', publishedTime, true);
-      if (modifiedTime) updateMeta('article:modified_time', modifiedTime, true);
-      updateMeta('og:image', pageImage, true);
-      updateMeta('author', authorName);
-      updateMeta('twitter:card', 'summary_large_image');
-      updateMeta('twitter:label1', 'Written by');
-      updateMeta('twitter:data1', authorName);
-      updateMeta('twitter:label2', 'Est. reading time');
-      updateMeta('twitter:data2', '3 minutes');
-    </script>
-    
-    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      meta.setAttribute("content", content);
+    };
+
+    // Update canonical link
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", pageUrl);
+
+    // Set meta tags
+    updateMeta("og:locale", "en_US", true);
+    updateMeta("og:type", "article", true);
+    updateMeta("og:title", pageTitle, true);
+    updateMeta("og:description", pageDescription, true);
+    updateMeta("og:url", pageUrl, true);
+    updateMeta("og:site_name", "Elevate", true);
+    if (publishedTime)
+      updateMeta("article:published_time", publishedTime, true);
+    if (modifiedTime) updateMeta("article:modified_time", modifiedTime, true);
+    updateMeta("og:image", pageImage, true);
+    updateMeta("author", authorName);
+    updateMeta("twitter:card", "summary_large_image");
+    updateMeta("twitter:label1", "Written by");
+    updateMeta("twitter:data1", authorName);
+    updateMeta("twitter:label2", "Est. reading time");
+    updateMeta("twitter:data2", "3 minutes");
+  </script>
+
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "WebPage",
           "@id": pageUrl,
-          "url": pageUrl,
-          "name": pageTitle,
-          "isPartOf": { "@id": `${Astro.url.origin}/#website` },
-          "primaryImageOfPage": { "@id": `${pageUrl}#primaryimage` },
-          "image": { "@id": `${pageUrl}#primaryimage` },
-          "thumbnailUrl": pageImage,
-          ...(publishedTime && { "datePublished": publishedTime }),
-          ...(modifiedTime && { "dateModified": modifiedTime }),
-          "author": {
+          url: pageUrl,
+          name: pageTitle,
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          primaryImageOfPage: { "@id": `${pageUrl}#primaryimage` },
+          image: { "@id": `${pageUrl}#primaryimage` },
+          thumbnailUrl: pageImage,
+          ...(publishedTime && { datePublished: publishedTime }),
+          ...(modifiedTime && { dateModified: modifiedTime }),
+          author: {
             "@id": `${Astro.url.origin}/#/schema/person/${article.author.id}`,
-            "name": article.author.name
+            name: article.author.name,
           },
-          "breadcrumb": { "@id": `${pageUrl}#breadcrumb` },
-          "inLanguage": "en-US",
-          "potentialAction": [{ "@type": "ReadAction", "target": [pageUrl] }]
+          breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+          inLanguage: "en-US",
+          potentialAction: [{ "@type": "ReadAction", target: [pageUrl] }],
         },
         {
           "@type": "ImageObject",
-          "inLanguage": "en-US",
+          inLanguage: "en-US",
           "@id": `${pageUrl}#primaryimage`,
-          "url": pageImage,
-          "contentUrl": pageImage,
-          ...(article.image && { "width": 2560, "height": 1707 })
+          url: pageImage,
+          contentUrl: pageImage,
+          ...(article.image && { width: 2560, height: 1707 }),
         },
         {
           "@type": "BreadcrumbList",
           "@id": `${pageUrl}#breadcrumb`,
-          "itemListElement": [
-            { "@type": "ListItem", "position": 1, "name": "Home", "item": `${Astro.url.origin}/` },
-            { "@type": "ListItem", "position": 2, "name": "News", "item": `${Astro.url.origin}/news/` },
-            { "@type": "ListItem", "position": 3, "name": article.title }
-          ]
-        }
-      ]
-    })} />
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "News",
+              item: `${Astro.url.origin}/news/`,
+            },
+            { "@type": "ListItem", position: 3, name: article.title },
+          ],
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
-    <Header />
-    <MobileMenu client:load />
-    
+    <Header client:load currentPath={Astro.url.pathname} />
+
     <main id="main" role="main">
       <!--SINGLE POST-->
-      <div id={`post-${article.id}`} class={`post-${article.id} post type-post status-publish format-standard has-post-thumbnail hentry category-${article.category.toLowerCase()}`}>
+      <div
+        id={`post-${article.id}`}
+        class={`post-${article.id} post type-post status-publish format-standard has-post-thumbnail hentry category-${article.category.toLowerCase()}`}
+      >
         <div class="stm-single-post stm-default-page">
           <div class="container">
             <div class="row stm-format-">
               <!-- Main Content -->
               <div class="col-md-9 col-sm-12 col-xs-12">
                 <div class="sidebar-margin-top clearfix"></div>
-                
+
                 <!-- Breadcrumbs -->
                 <div class="stm-small-title-box">
                   <div class="stm-title-box-unit">
-                    <NewsBreadcrumbs items={[
-                      { label: 'Elevate', url: '/' },
-                      { label: 'News', url: '/news/' },
-                      { label: category, url: `/news?category=${category}` },
-                      { label: article.title }
-                    ]} />
-                    
+                    <NewsBreadcrumbs
+                      items={[
+                        { label: "Elevate", url: "/" },
+                        { label: "News", url: "/news/" },
+                        { label: category, url: `/news?category=${category}` },
+                        { label: article.title },
+                      ]}
+                    />
+
                     <!-- Page Title -->
                     <div class="stm-page-title">
-        <div class="container">
+                      <div class="container">
                         <div class="clearfix stm-title-box-title-wrapper">
                           <h1 class="stm-main-title-unit">{article.title}</h1>
                         </div>
                       </div>
                     </div>
+                  </div>
                 </div>
-              </div>
 
                 <!-- Post Thumbnail -->
-            {article.image && (
-                  <div class="post-thumbnail">
-                    <Image 
-                      src={getDisplayImageUrl(article.image, Astro.url.origin) || article.image} 
-                      width={1170} 
-                      height={650} 
-                      class="img-responsive wp-post-image" 
-                      alt={article.title}
-                    />
-              </div>
-            )}
+                {
+                  article.image && (
+                    <div class="post-thumbnail">
+                      <Image
+                        src={
+                          getDisplayImageUrl(article.image, Astro.url.origin) ||
+                          article.image
+                        }
+                        width={1170}
+                        height={650}
+                        class="img-responsive wp-post-image"
+                        alt={article.title}
+                      />
+                    </div>
+                  )
+                }
 
                 <!-- Post Meta -->
                 <div class="stm-single-post-meta clearfix normal_font">
                   <div class="stm-meta-left-part">
-                    {publishedDate && (
-                      <div class="stm-date">
-                        <i class="fa fa-calendar-o"></i>
-                        {publishedDate}
-                      </div>
-                    )}
+                    {
+                      publishedDate && (
+                        <div class="stm-date">
+                          <i class="fa fa-calendar-o" />
+                          {publishedDate}
+                        </div>
+                      )
+                    }
                     <div class="stm-author">
                       <i class="fa fa-user"></i>
                       {article.author.name}
@@ -245,7 +286,7 @@ const modifiedTime = modifiedDate;
 
                 <!-- Post Content -->
                 <div class="post-content">
-            <div class="article-body" set:html={article.content} />
+                  <div class="article-body" set:html={article.content} />
                   <div class="clearfix"></div>
                 </div>
 
@@ -256,13 +297,21 @@ const modifiedTime = modifiedDate;
 
                 <!-- Comments -->
                 <div class="stm_post_comments">
-            <CommentsList client:load articleId={article.id} showForm={true} />
-          </div>
-        </div>
+                  <CommentsList
+                    client:load
+                    articleId={article.id}
+                    showForm={true}
+                  />
+                </div>
+              </div>
 
               <!-- Sidebar -->
               <div class="col-md-3 hidden-sm hidden-xs af-margin-88">
-                <NewsSidebar searchQuery="" showTags={false} showInstagram={false} />
+                <NewsSidebar
+                  searchQuery=""
+                  showTags={false}
+                  showInstagram={false}
+                />
               </div>
             </div>
           </div>
@@ -288,13 +337,12 @@ const modifiedTime = modifiedDate;
       background: #ffffff;
     }
 
-
     .stm-page-title {
       margin-bottom: 2rem;
     }
 
     .stm-main-title-unit {
-      font-family: 'Teko', sans-serif;
+      font-family: "Teko", sans-serif;
       font-size: 50px;
       line-height: 54px;
       color: #dd3333;
@@ -364,7 +412,7 @@ const modifiedTime = modifiedDate;
       font-size: 16px;
       line-height: 1.8;
       color: #333;
-      font-family: 'Rubik', sans-serif;
+      font-family: "Rubik", sans-serif;
     }
 
     .article-body :global(p) {
@@ -377,7 +425,7 @@ const modifiedTime = modifiedDate;
     .article-body :global(h4),
     .article-body :global(h5),
     .article-body :global(h6) {
-      font-family: 'Teko', sans-serif;
+      font-family: "Teko", sans-serif;
       color: #dd3333;
       margin: 2rem 0 1rem 0;
       font-weight: 600;
@@ -407,9 +455,6 @@ const modifiedTime = modifiedDate;
       height: auto;
       margin: 2rem 0;
     }
-
-
-
 
     /* Comments Section */
     .stm_post_comments {
@@ -462,7 +507,6 @@ const modifiedTime = modifiedDate;
       animation: spin 1s linear infinite;
     }
 
-
     @media (max-width: 768px) {
       .stm-main-title-unit {
         font-size: 32px;
@@ -480,8 +524,6 @@ const modifiedTime = modifiedDate;
         gap: 1rem;
         align-items: flex-start;
       }
-
     }
   </style>
 </Layout>
-

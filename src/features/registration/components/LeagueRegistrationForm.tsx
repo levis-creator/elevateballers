@@ -394,6 +394,7 @@ export default function LeagueRegistrationForm() {
               value={teamFormData.leagueId}
               onChange={handleTeamChange}
               disabled={leaguesLoading}
+              className="disable-select2"
               style={{ width: '100%', padding: '12px', border: '1px solid #d8d8d8', borderRadius: '3px', fontFamily: 'Rubik', fontSize: '14px' }}
             >
               <option value="">Select League</option>
@@ -521,6 +522,7 @@ export default function LeagueRegistrationForm() {
                 name="position"
                 value={playerFormData.position}
                 onChange={handlePlayerChange}
+                className="disable-select2"
                 style={{ width: '100%', padding: '12px', border: '1px solid #d8d8d8', borderRadius: '3px', fontFamily: 'Rubik', fontSize: '14px' }}
               >
                 <option value="">Select Position</option>
@@ -556,6 +558,7 @@ export default function LeagueRegistrationForm() {
                 onChange={handlePlayerChange}
                 disabled={teamsLoading}
                 required
+                className="disable-select2"
                 style={{ width: '100%', padding: '12px', border: '1px solid #d8d8d8', borderRadius: '3px', fontFamily: 'Rubik', fontSize: '14px' }}
               >
                 <option value="">Select Team</option>
