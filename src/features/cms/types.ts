@@ -29,6 +29,8 @@ import type {
   MatchEvent,
   MatchEventType,
   Substitution,
+  PlayerOfTheWeek,
+  Sponsor,
 } from '@prisma/client';
 
 // Re-export Prisma types
@@ -58,6 +60,8 @@ export type {
   MatchEvent,
   MatchEventType,
   Substitution,
+  PlayerOfTheWeek,
+  Sponsor,
 };
 
 // Extended types with relations
@@ -415,3 +419,28 @@ export type CreateUserInput = {
 };
 
 export type UpdateUserInput = Partial<CreateUserInput>;
+
+export type PlayerOfTheWeekWithPlayer = PlayerOfTheWeek & {
+  player: Player & {
+    team: Team | null;
+  };
+};
+
+export type CreatePlayerOfTheWeekInput = {
+  playerId: string;
+  customImage?: string;
+  description: string;
+  active?: boolean;
+};
+
+export type UpdatePlayerOfTheWeekInput = Partial<CreatePlayerOfTheWeekInput>;
+
+export type CreateSponsorInput = {
+  name: string;
+  image: string;
+  link?: string;
+  order?: number;
+  active?: boolean;
+};
+
+export type UpdateSponsorInput = Partial<CreateSponsorInput>;

@@ -503,14 +503,14 @@ export default function PlayerList() {
                           alt={getPlayerName(player)}
                           className="w-12 h-12 rounded-full border-2 border-slate-200 object-cover"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${getPlayerName(player)}`;
+                            (e.target as HTMLImageElement).src = '/images/default-player.png';
                           }}
                         />
                       ) : (
                         <img
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${getPlayerName(player)}`}
+                          src="/images/default-player.png"
                           alt={getPlayerName(player)}
-                          className="w-12 h-12 rounded-full border-2 border-slate-200"
+                          className="w-12 h-12 rounded-full border-2 border-slate-200 object-cover"
                         />
                       )}
                       <div>

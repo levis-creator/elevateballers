@@ -1,5 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { sponsors } from '../data/homeData';
+import { useEffect, useRef, useState } from 'react';
+import { sponsors as staticSponsors } from '../data/homeData';
+
+interface Sponsor {
+  id: string;
+  name: string;
+  image: string;
+  link?: string;
+}
 
 /**
  * Sponsors component - Sponsor carousel
@@ -7,14 +14,37 @@ import { sponsors } from '../data/homeData';
  */
 export default function Sponsors() {
   const carouselRef = useRef<HTMLDivElement>(null);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !(window as any).jQuery) {
+    const fetchSponsors = async () => {
+      try {
+        const response = await fetch('/api/highlights/sponsors?active=true');
+        if (response.ok) {
+          const data = await response.json();
+          // Map API data to component needs if necessary, otherwise use as is
+          setSponsors(data.length > 0 ? data : staticSponsors);
+        } else {
+          setSponsors(staticSponsors as any);
+        }
+      } catch (error) {
+        console.error('Error fetching sponsors:', error);
+        setSponsors(staticSponsors as any);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSponsors();
+  }, []);
+
+  useEffect(() => {
+    if (loading || typeof window === 'undefined' || !(window as any).jQuery || sponsors.length === 0) {
       return;
     }
 
     const $ = (window as any).jQuery;
-    const unique_class = 'stm-images-carousel-sponsors';
     const owl = $(carouselRef.current);
 
     const initCarousel = () => {
@@ -25,7 +55,7 @@ export default function Sponsors() {
           dots: false,
           autoplay: false,
           slideBy: 4,
-          loop: true,
+          loop: sponsors.length > 4, // Only loop if we have enough items
           responsive: {
             0: {
               items: 1,
@@ -70,7 +100,15 @@ export default function Sponsors() {
         owl.trigger('destroy.owl.carousel');
       }
     };
-  }, []);
+  }, [loading, sponsors]);
+
+  if (loading) {
+    return (
+      <div style={{ height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Loading sponsors...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -93,14 +131,23 @@ export default function Sponsors() {
           <div ref={carouselRef} className="stm-image-carousel-init">
             {sponsors.map((sponsor) => (
               <div key={sponsor.id} className="stm-single-image-carousel">
-                <img
-                  decoding="async"
-                  src={sponsor.image}
-                  width={sponsor.width}
-                  height={sponsor.height}
-                  alt={sponsor.alt}
-                  title={sponsor.title}
-                />
+                {sponsor.link ? (
+                  <a href={sponsor.link} target="_blank" rel="noopener noreferrer">
+                    <img
+                      decoding="async"
+                      src={sponsor.image}
+                      alt={sponsor.name}
+                      title={sponsor.name}
+                    />
+                  </a>
+                ) : (
+                  <img
+                    decoding="async"
+                    src={sponsor.image}
+                    alt={sponsor.name}
+                    title={sponsor.name}
+                  />
+                )}
               </div>
             ))}
           </div>

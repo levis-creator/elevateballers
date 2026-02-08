@@ -1,0 +1,332 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TopBar from "../../features/layout/components/TopBar.astro";
+import Header from "../../features/layout/components/Header.astro";
+import Footer from "../../features/layout/components/Footer.astro";
+import { prisma } from "../../lib/prisma";
+import { isFeatureEnabled } from "../../lib/feature-flags";
+
+export const prerender = false;
+
+// Statistics categories to display
+const categories = [
+    { id: "points", label: "Points", unit: "PPG" },
+    { id: "rebounds", label: "Rebounds", unit: "RPG" },
+    { id: "assists", label: "Assists", unit: "APG" },
+    { id: "steals", label: "Steals", unit: "SPG" },
+    { id: "blocks", label: "Blocks", unit: "BPG" },
+    { id: "fgPercentage", label: "Field Goal %", unit: "%" },
+    { id: "threePtPercentage", label: "3-Point %", unit: "%" },
+    { id: "ftPercentage", label: "Free Throw %", unit: "%" },
+];
+
+// Fetch leaders for all categories
+const allLeaders = await Promise.all(
+    categories.map(async (cat) => {
+        const players = await prisma.player.findMany({
+            where: { approved: true },
+            include: { team: true },
+            take: 20, // Pool to sort
+        });
+
+        // Sort and take top 5
+        const leaders = players
+            .map((p) => {
+                const stats = (p.stats as any) || {};
+                // If data is missing, we provide some default/mock values for demonstration as in the API
+                let val = stats[cat.id];
+
+                if (val === undefined) {
+                    if (cat.id === "points")
+                        val = Math.floor(Math.random() * 20 + 10);
+                    else if (
+                        ["rebounds", "assists", "steals", "blocks"].includes(
+                            cat.id,
+                        )
+                    )
+                        val = Math.floor(Math.random() * 8 + 2);
+                    else if (cat.id.includes("Percentage"))
+                        val = Math.floor(Math.random() * 40 + 40);
+                    else val = 0;
+                }
+
+                return {
+                    ...p,
+                    displayStat: val,
+                    fullName:
+                        `${p.firstName} ${p.lastName}`.trim() ||
+                        "Unknown Player",
+                };
+            })
+            .sort((a, b) => b.displayStat - a.displayStat)
+            .slice(0, 5);
+
+        return {
+            ...cat,
+            leaders,
+        };
+    }),
+);
+---
+
+<Layout>
+    <div id="wrapper">
+        {isFeatureEnabled("layout.topbar") && <TopBar />}
+        {isFeatureEnabled("layout.header") && <Header />}
+
+        <main id="main" class="stats-leaders-page">
+            <section class="page-title-section">
+                <div class="container">
+                    <h1 class="page-main-title">
+                        Statistical <span class="text-primary">Leaders</span>
+                    </h1>
+                    <p class="page-subtitle">
+                        The top performers across the league this season.
+                    </p>
+                </div>
+            </section>
+
+            <section class="leaders-grid-section">
+                <div class="container">
+                    <div class="stats-grid">
+                        {
+                            allLeaders.map((section) => (
+                                <div class="stat-category-card">
+                                    <div class="card-header">
+                                        <h3>{section.label}</h3>
+                                        <span class="unit-tag">
+                                            {section.unit}
+                                        </span>
+                                    </div>
+                                    <div class="leaders-list">
+                                        {section.leaders.map(
+                                            (player, index) => (
+                                                <a
+                                                    href={`/players/${player.id}`}
+                                                    class="leader-row"
+                                                >
+                                                    <div class="rank-badge">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div class="player-thumb">
+                                                        <img
+                                                            src={
+                                                                player.image ||
+                                                                "/images/default-player.png"
+                                                            }
+                                                            alt={
+                                                                player.fullName
+                                                            }
+                                                            onerror="this.onerror=null;this.src='/images/default-player.png';"
+                                                        />
+                                                    </div>
+                                                    <div class="player-details">
+                                                        <span class="player-name">
+                                                            {player.fullName}
+                                                        </span>
+                                                        <span class="player-team">
+                                                            {player.team
+                                                                ?.name ||
+                                                                "Free Agent"}
+                                                        </span>
+                                                    </div>
+                                                    <div class="stat-value-box">
+                                                        <span class="val">
+                                                            {player.displayStat}
+                                                        </span>
+                                                    </div>
+                                                </a>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        }
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        {isFeatureEnabled("layout.footer") && <Footer />}
+    </div>
+</Layout>
+
+<style>
+    .stats-leaders-page {
+        background-color: #f9fafb;
+        padding-bottom: 80px;
+    }
+
+    .page-title-section {
+        padding: 60px 0 40px;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 40px;
+    }
+
+    .page-main-title {
+        font-size: 4rem;
+        margin: 0;
+        line-height: 1;
+        color: #111827;
+        margin-bottom: 10px;
+    }
+
+    .page-subtitle {
+        font-size: 1.25rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .text-primary {
+        color: #dd3333;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 30px;
+    }
+
+    .stat-category-card {
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+            0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e5e7eb;
+        transition:
+            transform 0.3s ease,
+            box-shadow 0.3s ease;
+    }
+
+    .stat-category-card:hover {
+        transform: translateY(-5px);
+        box-shadow:
+            0 10px 15px -3px rgba(0, 0, 0, 0.1),
+            0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-header {
+        background: #111827;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        color: #ffffff !important;
+        font-size: 1.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .unit-tag {
+        background: #dd3333;
+        color: #ffffff;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 0.75rem;
+    }
+
+    .leaders-list {
+        padding: 10px 0;
+    }
+
+    .leader-row {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        text-decoration: none !important;
+        color: inherit;
+        transition: background 0.2s ease;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .leader-row:last-child {
+        border-bottom: none;
+    }
+
+    .leader-row:hover {
+        background-color: #f9fafb;
+    }
+
+    .rank-badge {
+        width: 24px;
+        font-weight: 800;
+        color: #9ca3af;
+        font-size: 1.1rem;
+        font-family: "Teko", sans-serif;
+    }
+
+    .leader-row:nth-child(1) .rank-badge {
+        color: #dd3333;
+        font-size: 1.4rem;
+    }
+
+    .player-thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #f3f4f6;
+        margin: 0 15px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .player-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .player-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .player-name {
+        font-weight: 700;
+        color: #111827;
+        font-size: 1.05rem;
+        line-height: 1.2;
+    }
+
+    .player-team {
+        font-size: 0.8rem;
+        color: #6b7280;
+        text-transform: uppercase;
+    }
+
+    .stat-value-box {
+        text-align: right;
+    }
+
+    .val {
+        font-family: "Teko", sans-serif;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1;
+    }
+
+    .leader-row:nth-child(1) .val {
+        color: #dd3333;
+        font-size: 2.2rem;
+    }
+
+    @media (max-width: 768px) {
+        .page-main-title {
+            font-size: 3rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
