@@ -675,8 +675,9 @@ import "../styles/landing-enhancements.css";
 						? window.innerHeight
 						: window.RSIH;
 				try {
-					var pw = document.getElementById(e.c).parentNode
-							.offsetWidth,
+					var container = document.getElementById(e.c);
+					if (!container) return;
+					var pw = container.parentNode.offsetWidth,
 						newh;
 					pw =
 						pw === 0 ||
@@ -777,12 +778,6 @@ import "../styles/landing-enhancements.css";
 			events.forEach((event) => {
 				document.addEventListener(event, lazyloadRunObserver);
 			});
-
-			(function () {
-				var c = document.body.className;
-				c = c.replace(/woocommerce-no-js/, "woocommerce-js");
-				document.body.className = c;
-			})();
 		</script>
 
 		<!-- External Scripts - Load at end of body -->
@@ -794,6 +789,27 @@ import "../styles/landing-enhancements.css";
 		<slot />
 
 		<!-- Additional Scripts -->
+		<script
+			is:inline
+			type="text/javascript"
+			src="/js1/jquery.min.js"
+			id="jquery-core-js"></script>
+		<script
+			is:inline
+			type="text/javascript"
+			src="/js1/jquery-migrate.min.js"
+			id="jquery-migrate-js"></script>
+		<script
+			is:inline
+			type="text/javascript"
+			src="/js1/lightbox.js"
+			id="lightbox-js"></script>
+		<script
+			is:inline
+			type="text/javascript"
+			src="/js1/splash.js"
+			id="stm-theme-scripts-js"></script>
+
 		<script is:inline>
 			(function () {
 				function maybePrefixUrlField() {
@@ -809,6 +825,12 @@ import "../styles/landing-enhancements.css";
 					urlFields[j].addEventListener("blur", maybePrefixUrlField);
 				}
 			})();
+
+			document.addEventListener("DOMContentLoaded", function () {
+				var c = document.body.className;
+				c = c.replace(/woocommerce-no-js/, "woocommerce-js");
+				document.body.className = c;
+			});
 		</script>
 	</body>
 </html>

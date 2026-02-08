@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Match } from '@prisma/client';
-import { formatMatchDate } from '../../matches/lib/utils';
-import { getLeagueName } from '../../matches/lib/league-helpers';
+import { formatMatchDate } from '@/features/matches/lib/utils';
+import { getLeagueName } from '@/features/matches/lib/league-helpers';
 
 export default function RecentResultsCarousel() {
   const [matches, setMatches] = useState<Match[]>([]);

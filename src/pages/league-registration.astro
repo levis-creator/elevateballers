@@ -253,38 +253,5 @@ import PageLoader from "../components/PageLoader";
   </script>
 
   <!-- Legacy Scripts removed in favor of React components -->
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/lightbox.js"
-    id="lightbox-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/splash.js"
-    id="stm-theme-scripts-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/header.js"
-    id="stm-theme-scripts-header-js"></script>
-  <script is:inline type="text/javascript">
-    (function () {
-      var c = document.body.className;
-      c = c.replace(/woocommerce-no-js/, "woocommerce-js");
-      document.body.className = c;
-    })();
-  </script>
-  <!-- Select2 initialization removed - using native select elements -->
-  <script is:inline type="text/javascript">
-    jQuery(document).ready(function ($) {
-      $(".sp-header-loaded").prepend($(".sp-league-menu"));
-    });
-  </script>
-  <script is:inline type="text/javascript">
-    jQuery(document).ready(function ($) {
-      $(".sp-header-loaded").prepend($(".sp-header-scoreboard"));
-    });
-  </script>
 </Layout>
 <!-- wrapper -->
