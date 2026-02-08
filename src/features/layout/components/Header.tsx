@@ -104,12 +104,7 @@ export default function Header({
             />
           )}
           <div className="container stm-header-container">
-            {/* Logo */}
-            <div className="logo-main" style={{ marginTop: "22px" }}>
-              <a className="blogname" href="/" title="Home">
-                <div className="h1">Elevate</div>
-              </a>
-            </div>
+
             <div className="stm-main-menu">
               <div
                 className="stm-main-menu-unit stm-search-enabled"
@@ -158,11 +153,7 @@ export default function Header({
 
         {/* MOBILE HEADER */}
         <div className="stm-header-mobile clearfix">
-          <div className="logo-main" style={{ marginTop: "22px" }}>
-            <a className="blogname" href="/" title="Home">
-              <div className="h1">Elevate</div>
-            </a>
-          </div>
+
           <div className="stm-mobile-right">
             <div className="clearfix">
               <div
