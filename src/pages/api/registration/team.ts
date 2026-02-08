@@ -11,7 +11,7 @@ export const prerender = false;
 function parseName(fullName: string): { firstName: string; lastName: string } {
   const trimmed = fullName.trim();
   const parts = trimmed.split(/\s+/);
-  
+
   if (parts.length === 1) {
     // Single name - use as first name, empty last name
     return { firstName: parts[0], lastName: '' };
@@ -68,12 +68,11 @@ export const POST: APIRoute = async ({ request }) => {
       leagueName = league?.name;
     }
 
-    // Create team with description including registration info
+    // Create team with description excluding private contact info
+    // Coach details are already saved in the Staff record linked to this team
     const description = [
       leagueName && `League: ${leagueName}`,
       data.coachName && `Coach: ${data.coachName}`,
-      data.contactEmail && `Contact Email: ${data.contactEmail}`,
-      data.contactPhone && `Contact Phone: ${data.contactPhone}`,
       data.additionalInfo && `Additional Info: ${data.additionalInfo}`,
     ]
       .filter(Boolean)
@@ -87,7 +86,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Parse coach name and create staff member
     const { firstName, lastName } = parseName(data.coachName);
-    
+
     // Check if staff with same email already exists
     let coachStaff = await prisma.staff.findFirst({
       where: {
@@ -202,8 +201,8 @@ export const POST: APIRoute = async ({ request }) => {
       // Don't fail the registration if notification creation fails
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       message: 'Team registration submitted successfully',
       team,
       coach: coachStaff,

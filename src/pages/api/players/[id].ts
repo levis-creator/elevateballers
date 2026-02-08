@@ -5,9 +5,18 @@ import { requireAdmin } from '../../../features/cms/lib/auth';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
-    const player = await getPlayerById(params.id!);
+    // Try to get admin user to decide whether to include contact info
+    let isAdmin = false;
+    try {
+      await requireAdmin(request);
+      isAdmin = true;
+    } catch {
+      isAdmin = false;
+    }
+
+    const player = await getPlayerById(params.id!, isAdmin);
 
     if (!player) {
       return new Response(JSON.stringify({ error: 'Player not found' }), {
