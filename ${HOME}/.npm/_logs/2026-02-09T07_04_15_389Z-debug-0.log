@@ -5,22 +5,22 @@
 4 silly config load:file:C:\Users\User\Desktop\projects\elevateballers\.npmrc
 5 silly config load:file:C:\Users\User\.npmrc
 6 silly config load:file:C:\Users\User\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm install @types/react-lazy-load-image-component
-8 verbose argv "install" "@types/react-lazy-load-image-component" "--save-dev"
-9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_44_11_986Z-
-10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-08T15_44_11_986Z-debug-0.log
+7 verbose title npm install @astrojs/sitemap
+8 verbose argv "install" "@astrojs/sitemap"
+9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-09T07_04_15_389Z-
+10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-09T07_04_15_389Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
 13 silly logfile done cleaning log files
 14 silly idealTree buildDeps
-15 silly fetch manifest @types/react-lazy-load-image-component@^1.6.5
-16 silly packumentCache full:https://registry.npmjs.org/@types%2freact-lazy-load-image-component cache-miss
-17 http cache https://registry.npmjs.org/@types%2freact-lazy-load-image-component 602ms (cache hit)
-18 silly packumentCache full:https://registry.npmjs.org/@types%2freact-lazy-load-image-component set size:27087 disposed:false
-19 silly placeDep ROOT @types/react-lazy-load-image-component@1.6.5 REPLACE for: elevateballers@0.0.1 want: ^1.6.5
+15 silly fetch manifest @astrojs/sitemap@^3.7.0
+16 silly packumentCache full:https://registry.npmjs.org/@astrojs%2fsitemap cache-miss
+17 http fetch GET 200 https://registry.npmjs.org/@astrojs%2fsitemap 6358ms (cache stale)
+18 silly packumentCache full:https://registry.npmjs.org/@astrojs%2fsitemap set size:221023 disposed:false
+19 silly placeDep ROOT @astrojs/sitemap@3.7.0 REPLACE for: elevateballers@0.0.1 want: ^3.7.0
 20 silly fetch manifest magicast@^0.3.5
 21 silly packumentCache full:https://registry.npmjs.org/magicast cache-miss
-22 http fetch GET 200 https://registry.npmjs.org/magicast 506ms (cache stale)
+22 http fetch GET 200 https://registry.npmjs.org/magicast 241ms (cache stale)
 23 silly packumentCache full:https://registry.npmjs.org/magicast set size:81021 disposed:false
 24 silly placeDep node_modules/@prisma/config magicast@0.3.5 OK for: c12@3.1.0 want: ^0.3.5
 25 silly reify moves {}
