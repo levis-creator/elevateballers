@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { saveFile, sanitizeFolderName } from '../../../lib/file-storage';
 import { compressImage, shouldCompress } from '../../../lib/image-compression';
@@ -28,7 +28,7 @@ interface UploadResult {
 export const POST: APIRoute = async ({ request }) => {
   try {
     // Require admin authentication
-    const user = await requireAdmin(request);
+    const user = await requirePermission(request, 'media:batch_upload');
 
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];

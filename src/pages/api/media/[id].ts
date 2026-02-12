@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getMediaById } from '../../../features/cms/lib/queries';
 import { updateMedia, deleteMedia } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:update');
     const data = await request.json();
 
     const mediaItem = await updateMedia(params.id!, data);
@@ -59,7 +59,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:update');
     const success = await deleteMedia(params.id!);
 
     if (!success) {

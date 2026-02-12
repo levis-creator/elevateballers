@@ -38,40 +38,74 @@ export async function findUserById(id: string): Promise<User | null> {
       id: true,
       email: true,
       name: true,
-      role: true,
       createdAt: true,
       updatedAt: true,
+      userRoles: {
+        select: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            }
+          }
+        }
+      }
     },
-  });
+  }) as any; // Type assertion to handle schema mismatch
 }
 
 /**
  * Create a new user
+ * @param roleName - Optional role name (defaults to 'Editor')
  */
 export async function createUser(
   email: string,
   password: string,
   name: string,
-  role: UserRole = 'EDITOR'
+  roleName: string = 'Editor'
 ): Promise<User> {
   const passwordHash = await hashPassword(password);
 
-  return await prisma.user.create({
+  // Find the role by name
+  const role = await prisma.role.findUnique({
+    where: { name: roleName }
+  });
+
+  if (!role) {
+    throw new Error(`Role "${roleName}" not found`);
+  }
+
+  // Create user and assign role
+  const user = await prisma.user.create({
     data: {
       email,
       passwordHash,
       name,
-      role,
+      userRoles: {
+        create: {
+          roleId: role.id
+        }
+      }
     },
+    include: {
+      userRoles: {
+        include: {
+          role: true
+        }
+      }
+    }
   });
+
+  return user as any; // Type assertion to handle schema mismatch
 }
 
 /**
  * Create a JWT token for a user
  */
-export function createToken(user: { id: string; email: string; role: string }): string {
+export function createToken(user: { id: string; email: string }): string {
   return jwt.sign(
-    { userId: user.id, email: user.email, role: user.role },
+    { userId: user.id, email: user.email },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -80,13 +114,13 @@ export function createToken(user: { id: string; email: string; role: string }): 
 /**
  * Verify and decode a JWT token
  */
-export function verifyToken(token: string): { userId: string; email: string; role: string } | null {
+export function verifyToken(token: string): { userId: string; email: string } | null {
   try {
     if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
       console.error('JWT_SECRET is not properly configured!');
       return null;
     }
-    return jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role: string };
+    return jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Token verification failed:', error instanceof Error ? error.message : error);
@@ -151,12 +185,31 @@ export async function requireAuth(request: Request): Promise<User> {
 
 /**
  * Require admin role - throws error if user is not admin
+ * @deprecated Use requirePermission from rbac/middleware instead
  */
 export async function requireAdmin(request: Request): Promise<User> {
   const user = await requireAuth(request);
-  if (user.role !== 'ADMIN') {
+
+  // Check if user has Admin role
+  const userWithRoles = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: {
+      userRoles: {
+        include: {
+          role: true
+        }
+      }
+    }
+  });
+
+  const hasAdminRole = userWithRoles?.userRoles.some(
+    ur => ur.role.name === 'Admin'
+  );
+
+  if (!hasAdminRole) {
     throw new Error('Forbidden: Admin access required');
   }
+
   return user;
 }
 

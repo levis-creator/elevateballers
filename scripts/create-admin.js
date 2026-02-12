@@ -65,36 +65,135 @@ async function main() {
   const password = process.env.ADMIN_PASSWORD || 'admin123';
   const name = process.env.ADMIN_NAME || 'Admin User';
 
-  console.log('🚀 Creating admin user...');
+  console.log('🚀 Creating admin user with RBAC...');
   console.log(`Email: ${email}`);
-  console.log(`Name: ${name}`);
-
-  const hashedPassword = await hashPassword(password);
+  console.log(`Name: ${name}\n`);
 
   try {
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: {
-        passwordHash: hashedPassword,
-        name,
-        role: 'ADMIN',
-      },
-      create: {
-        email,
-        passwordHash: hashedPassword,
-        name,
-        role: 'ADMIN',
-      },
+    // Check if Admin role exists
+    const adminRole = await prisma.role.findUnique({
+      where: { name: 'Admin' },
+      include: {
+        _count: {
+          select: { permissions: true }
+        }
+      }
     });
 
-    console.log('\n✅ Admin user created/updated successfully!');
-    console.log(`   User ID: ${user.id}`);
-    console.log(`   Email: ${user.email}`);
-    console.log(`   Role: ${user.role}`);
+    if (!adminRole) {
+      console.error('❌ Admin role not found in database!');
+      console.error('\nPlease run the seed scripts first:');
+      console.error('  1. node scripts/enhance-rbac.js');
+      console.error('  2. node scripts/update-admin-permissions.js\n');
+      process.exit(1);
+    }
+
+    console.log(`✓ Admin role found (${adminRole._count.permissions} permissions)\n`);
+
+    const hashedPassword = await hashPassword(password);
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    });
+
+    let user;
+
+    if (existingUser) {
+      console.log('⚠️  User already exists, updating...');
+
+      // Update user
+      user = await prisma.user.update({
+        where: { email },
+        data: {
+          passwordHash: hashedPassword,
+          name,
+        },
+      });
+
+      // Check if user already has Admin role
+      const hasAdminRole = existingUser.userRoles.some(
+        ur => ur.role.name === 'Admin'
+      );
+
+      if (!hasAdminRole) {
+        console.log('✓ Assigning Admin role...');
+        await prisma.userRole.create({
+          data: {
+            userId: user.id,
+            roleId: adminRole.id,
+          },
+        });
+      } else {
+        console.log('✓ User already has Admin role');
+      }
+    } else {
+      // Create new user
+      user = await prisma.user.create({
+        data: {
+          email,
+          passwordHash: hashedPassword,
+          name,
+          emailVerified: new Date(), // Auto-verify admin
+        },
+      });
+
+      console.log('✓ User created');
+
+      // Assign Admin role
+      await prisma.userRole.create({
+        data: {
+          userId: user.id,
+          roleId: adminRole.id,
+        },
+      });
+
+      console.log('✓ Admin role assigned');
+    }
+
+    // Fetch final user with roles and permissions
+    const finalUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                _count: {
+                  select: { permissions: true }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const totalPermissions = finalUser.userRoles.reduce(
+      (sum, ur) => sum + ur.role._count.permissions,
+      0
+    );
+
+    console.log('\n' + '='.repeat(60));
+    console.log('✅ Admin user created/updated successfully!');
+    console.log('='.repeat(60));
+    console.log(`\nUser ID: ${user.id}`);
+    console.log(`Email: ${user.email}`);
+    console.log(`Name: ${user.name}`);
+    console.log(`Roles: ${finalUser.userRoles.map(ur => ur.role.name).join(', ')}`);
+    console.log(`Total Permissions: ${totalPermissions}`);
     console.log('\n📝 Login credentials:');
     console.log(`   Email: ${email}`);
     console.log(`   Password: ${password}`);
     console.log('\n⚠️  Remember to change the default password after first login!');
+    console.log('\nYou can now login at: /admin/login\n');
   } catch (error) {
     console.error('\n❌ Error creating admin user:', error);
     throw error;

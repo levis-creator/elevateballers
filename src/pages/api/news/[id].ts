@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getNewsArticleById } from '../../../features/cms/lib/queries';
 import { updateNewsArticle, deleteNewsArticle, generateSlug } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap } from '../../../features/cms/types';
 
 export const prerender = false;
@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'news_articles:update');
     const data = await request.json();
 
     // If slug is being updated, check if it's unique
@@ -93,7 +93,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'news_articles:update');
     const success = await deleteNewsArticle(params.id!);
 
     if (!success) {

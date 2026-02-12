@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getLeagues } from '../../../features/cms/lib/queries';
 import { createLeague } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'leagues:create');
     const data = await request.json();
 
     // Validate required fields

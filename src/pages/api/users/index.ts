@@ -8,7 +8,7 @@ export const prerender = false;
 // GET /api/users - List users
 export const GET: APIRoute = async ({ request }) => {
     try {
-        const currentUser = await requireAdmin(request);
+        const currentUser = await requirePermission(request, 'users:read');
 
         const url = new URL(request.url);
         const role = url.searchParams.get('role');
@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ request }) => {
 // POST /api/users - Create user
 export const POST: APIRoute = async ({ request }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'users:read');
         const data = await request.json();
 
         if (!data.email || !data.password || !data.name) {

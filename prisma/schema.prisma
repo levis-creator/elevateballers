@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-3.0.x"]
 }
 
@@ -8,18 +8,77 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  passwordHash String        @map("password_hash")
-  name         String
-  role         UserRole      @default(EDITOR)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  comments     Comment[]
-  newsArticles NewsArticle[]
-  uploadedMedia Media[]      @relation("MediaUploader")
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String        @map("password_hash")
+  name          String
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  comments      Comment[]
+  uploadedMedia Media[]       @relation("MediaUploader")
+  newsArticles  NewsArticle[]
+  userRoles     UserRole[]
 
   @@map("users")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false) @map("is_system")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  permissions RolePermission[]
+  userRoles   UserRole[]
+
+  @@index([name])
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  resource    String
+  action      String
+  description String?
+  category    String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at")
+  roles       RolePermission[]
+
+  @@unique([resource, action])
+  @@index([resource])
+  @@index([category])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
 }
 
 model NewsArticle {
@@ -73,7 +132,7 @@ model Season {
   startDate   DateTime @map("start_date")
   endDate     DateTime @map("end_date")
   active      Boolean  @default(true)
-  bracketType String?  @map("bracket_type") // 'single' or 'double' - tournament bracket format
+  bracketType String?  @map("bracket_type")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   leagueId    String   @map("league_id")
@@ -118,33 +177,32 @@ model Match {
   team2Timeouts         Int              @default(0) @map("team2_timeouts")
   team1Fouls            Int              @default(0) @map("team1_fouls")
   team2Fouls            Int              @default(0) @map("team2_fouls")
-  duration              Int?             @map("duration") // Match duration in minutes
+  duration              Int?             @map("duration")
   trackingMode          GameTrackingMode @default(BOTH) @map("tracking_mode")
   winnerId              String?          @map("winner_id")
-  // Bracket relationship fields
   nextWinnerMatchId     String?          @map("next_winner_match_id")
   nextLoserMatchId      String?          @map("next_loser_match_id")
   bracketPosition       Int?             @map("bracket_position")
   bracketRound          Int?             @map("bracket_round")
-  bracketType           String?          @map("bracket_type") // 'upper', 'lower', or 'grand-final'
-  events                MatchEvent[]
-  matchPlayers          MatchPlayer[]
-  periods               MatchPeriod[]
-  timeouts              Timeout[]
-  substitutions         Substitution[]
+  bracketType           String?          @map("bracket_type")
   gameStates            GameState[]
   jumpBalls             JumpBall[]
+  events                MatchEvent[]
+  periods               MatchPeriod[]
+  matchPlayers          MatchPlayer[]
+  gameRules             GameRules?       @relation(fields: [gameRulesId], references: [id])
   league                League?          @relation(fields: [leagueId], references: [id])
+  nextLoserMatch        Match?           @relation("NextLoserMatches", fields: [nextLoserMatchId], references: [id])
+  previousLoserMatches  Match[]          @relation("NextLoserMatches")
+  nextWinnerMatch       Match?           @relation("NextWinnerMatches", fields: [nextWinnerMatchId], references: [id])
+  previousWinnerMatches Match[]          @relation("NextWinnerMatches")
+  possessionTeam        Team?            @relation("PossessionMatches", fields: [possessionTeamId], references: [id])
   season                Season?          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   team1                 Team?            @relation("Team1Matches", fields: [team1Id], references: [id])
   team2                 Team?            @relation("Team2Matches", fields: [team2Id], references: [id])
-  gameRules             GameRules?       @relation(fields: [gameRulesId], references: [id])
-  possessionTeam        Team?            @relation("PossessionMatches", fields: [possessionTeamId], references: [id])
   winner                Team?            @relation("WinnerMatches", fields: [winnerId], references: [id])
-  nextWinnerMatch       Match?           @relation("NextWinnerMatches", fields: [nextWinnerMatchId], references: [id])
-  nextLoserMatch        Match?           @relation("NextLoserMatches", fields: [nextLoserMatchId], references: [id])
-  previousWinnerMatches Match[]          @relation("NextWinnerMatches")
-  previousLoserMatches  Match[]          @relation("NextLoserMatches")
+  substitutions         Substitution[]
+  timeouts              Timeout[]
 
   @@index([date])
   @@index([status])
@@ -167,25 +225,25 @@ model Match {
 model Team {
   id                 String                     @id @default(cuid())
   name               String                     @unique
-  nickname           String?
   logo               String?
   description        String?
   approved           Boolean                    @default(false)
   createdAt          DateTime                   @default(now()) @map("created_at")
   updatedAt          DateTime                   @updatedAt @map("updated_at")
   slug               String                     @unique
+  nickname           String?
+  jumpBallPossession JumpBall[]                 @relation("JumpBallPossession")
   matchEvents        MatchEvent[]
   matchPlayers       MatchPlayer[]
+  possessionMatches  Match[]                    @relation("PossessionMatches")
   team1Matches       Match[]                    @relation("Team1Matches")
   team2Matches       Match[]                    @relation("Team2Matches")
-  possessionMatches  Match[]                    @relation("PossessionMatches")
   winnerMatches      Match[]                    @relation("WinnerMatches")
-  timeouts           Timeout[]
-  substitutions      Substitution[]
-  jumpBallPossession JumpBall[]                 @relation("JumpBallPossession")
   players            Player[]
-  staff              TeamStaff[]
   notifications      RegistrationNotification[]
+  substitutions      Substitution[]
+  staff              TeamStaff[]
+  timeouts           Timeout[]
 
   @@index([name])
   @@index([slug])
@@ -205,21 +263,21 @@ model Player {
   updatedAt          DateTime                   @updatedAt @map("updated_at")
   teamId             String?                    @map("team_id")
   firstName          String?                    @map("first_name")
+  height             String?
   lastName           String?                    @map("last_name")
+  weight             String?
   email              String?
   phone              String?
-  height             String?
-  weight             String?
+  jumpBallsAsPlayer1 JumpBall[]                 @relation("JumpBallPlayer1")
+  jumpBallsAsPlayer2 JumpBall[]                 @relation("JumpBallPlayer2")
   assistEvents       MatchEvent[]               @relation("AssistEvents")
   matchEvents        MatchEvent[]
   matchPlayers       MatchPlayer[]
-  substitutionsIn    Substitution[]             @relation("SubstitutionIn")
-  substitutionsOut   Substitution[]             @relation("SubstitutionOut")
-  jumpBallsAsPlayer1 JumpBall[]                 @relation("JumpBallPlayer1")
-  jumpBallsAsPlayer2 JumpBall[]                 @relation("JumpBallPlayer2")
+  playerOfTheWeek    PlayerOfTheWeek[]
   team               Team?                      @relation(fields: [teamId], references: [id])
   notifications      RegistrationNotification[]
-  playerOfTheWeek    PlayerOfTheWeek[]
+  substitutionsIn    Substitution[]             @relation("SubstitutionIn")
+  substitutionsOut   Substitution[]             @relation("SubstitutionOut")
 
   @@index([teamId])
   @@index([approved])
@@ -242,44 +300,44 @@ model Folder {
 }
 
 model Media {
-  id               String     @id @default(cuid())
+  id               String      @id @default(cuid())
   title            String
   url              String
-  filePath         String?    @map("file_path")
-  folderId         String?    @map("folder_id")
-  size             Int?       // File size in bytes after compression
-  originalSize     Int?       @map("original_size") // File size before compression
-  compressionRatio Float?     @map("compression_ratio") // Percentage reduction
-  mimeType         String?    @map("mime_type")
   type             MediaType
   thumbnail        String?
-  isPrivate        Boolean    @default(false) @map("is_private")
-  featured         Boolean    @default(false)
-  uploadedBy       String?    @map("uploaded_by")
-  // MySQL does not support native string[] types. Use Json instead.
   tags             Json?
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
-  folder           Folder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  uploader         User?      @relation("MediaUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  filePath         String?     @map("file_path")
+  folderId         String?     @map("folder_id")
+  size             Int?
+  originalSize     Int?        @map("original_size")
+  compressionRatio Float?      @map("compression_ratio")
+  mimeType         String?     @map("mime_type")
+  isPrivate        Boolean     @default(false) @map("is_private")
+  uploadedBy       String?     @map("uploaded_by")
+  featured         Boolean     @default(false)
   fileUsages       FileUsage[]
+  folder           Folder?     @relation(fields: [folderId], references: [id])
+  uploader         User?       @relation("MediaUploader", fields: [uploadedBy], references: [id])
 
   @@index([type])
   @@index([folderId])
   @@index([isPrivate])
   @@index([featured])
   @@index([filePath])
+  @@index([uploadedBy], map: "media_uploaded_by_fkey")
   @@map("media")
 }
 
 model FileUsage {
-  id         String      @id @default(cuid())
-  mediaId   String      @map("media_id")
+  id         String              @id @default(cuid())
+  mediaId    String              @map("media_id")
   entityType FileUsageEntityType @map("entity_type")
-  entityId  String      @map("entity_id")
-  fieldName String      @map("field_name")
-  createdAt  DateTime    @default(now()) @map("created_at")
-  media     Media       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  entityId   String              @map("entity_id")
+  fieldName  String              @map("field_name")
+  createdAt  DateTime            @default(now()) @map("created_at")
+  media      Media               @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@index([mediaId])
   @@index([entityType])
@@ -330,8 +388,8 @@ model Staff {
   image         String?
   createdAt     DateTime                   @default(now()) @map("created_at")
   updatedAt     DateTime                   @updatedAt @map("updated_at")
-  teams         TeamStaff[]
   notifications RegistrationNotification[]
+  teams         TeamStaff[]
 
   @@index([role])
   @@map("staff")
@@ -390,9 +448,9 @@ model MatchPlayer {
   awayJerseyNumber    Int?                @map("away_jersey_number")
   minutesPlayed       Int?                @map("minutes_played")
   isActive            Boolean             @default(false) @map("is_active")
-  subOut              Boolean             @default(false) @map("sub_out")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
+  subOut              Boolean             @default(false) @map("sub_out")
   match               Match               @relation(fields: [matchId], references: [id], onDelete: Cascade)
   player              Player              @relation(fields: [playerId], references: [id], onDelete: Cascade)
   team                Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -436,89 +494,8 @@ model MatchEvent {
   @@index([period])
   @@index([sequenceNumber])
   @@index([isUndone])
+  @@index([assistPlayerId], map: "match_events_assist_player_id_fkey")
   @@map("match_events")
-}
-
-enum UserRole {
-  ADMIN
-  EDITOR
-}
-
-enum NewsCategory {
-  INTERVIEWS
-  CHAMPIONSHIPS
-  MATCH_REPORT
-  ANALYSIS
-}
-
-enum MatchStatus {
-  UPCOMING
-  LIVE
-  COMPLETED
-}
-
-enum MatchStage {
-  REGULAR_SEASON
-  PRESEASON
-  EXHIBITION
-  PLAYOFF
-  QUARTER_FINALS
-  SEMI_FINALS
-  CHAMPIONSHIP
-  QUALIFIER
-  OTHER
-}
-
-enum MediaType {
-  IMAGE
-  VIDEO
-  AUDIO
-}
-
-enum FileUsageEntityType {
-  PLAYER
-  TEAM
-  NEWS_ARTICLE
-  STAFF
-  LEAGUE
-  MEDIA
-}
-
-enum StaffRole {
-  COACH
-  ASSISTANT_COACH
-  MANAGER
-  ASSISTANT_MANAGER
-  PHYSIOTHERAPIST
-  TRAINER
-  ANALYST
-  OTHER
-}
-
-enum MatchEventType {
-  TWO_POINT_MADE
-  TWO_POINT_MISSED
-  THREE_POINT_MADE
-  THREE_POINT_MISSED
-  FREE_THROW_MADE
-  FREE_THROW_MISSED
-  ASSIST
-  REBOUND_OFFENSIVE
-  REBOUND_DEFENSIVE
-  STEAL
-  BLOCK
-  TURNOVER
-  FOUL_PERSONAL
-  FOUL_TECHNICAL
-  FOUL_FLAGRANT
-  SUBSTITUTION_IN
-  SUBSTITUTION_OUT
-  TIMEOUT
-  INJURY
-  BREAK
-  PLAY_RESUMED
-  JUMP_BALL
-  OTHER
 }
 
 model RegistrationNotification {
@@ -532,33 +509,17 @@ model RegistrationNotification {
   metadata  Json?
   createdAt DateTime                     @default(now()) @map("created_at")
   updatedAt DateTime                     @updatedAt @map("updated_at")
-  team      Team?                        @relation(fields: [teamId], references: [id], onDelete: Cascade)
   player    Player?                      @relation(fields: [playerId], references: [id], onDelete: Cascade)
   staff     Staff?                       @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  team      Team?                        @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([type])
   @@index([read])
   @@index([createdAt])
   @@index([teamId])
   @@index([playerId])
+  @@index([staffId], map: "registration_notifications_staff_id_fkey")
   @@map("registration_notifications")
-}
-
-enum RegistrationNotificationType {
-  TEAM_REGISTERED
-  PLAYER_REGISTERED
-  PLAYER_AUTO_LINKED
-}
-
-enum GameTrackingMode {
-  TEAM
-  INDIVIDUAL
-  BOTH
-}
-
-enum TimeoutType {
-  SIXTY_SECOND
-  THIRTY_SECOND
 }
 
 model GameRules {
@@ -568,8 +529,8 @@ model GameRules {
   numberOfPeriods         Int      @default(4) @map("number_of_periods")
   minutesPerPeriod        Int      @default(10) @map("minutes_per_period")
   overtimeLength          Int      @default(5) @map("overtime_length")
-  halftimePeriod          Int      @default(2) @map("halftime_period") // Period that ends at halftime (2 for 4 quarters, 1 for 2 halves)
-  halftimeDurationMinutes Int      @default(15) @map("halftime_duration_minutes") // Duration of halftime break in minutes
+  halftimePeriod          Int      @default(2) @map("halftime_period")
+  halftimeDurationMinutes Int      @default(15) @map("halftime_duration_minutes")
   timeouts60Second        Int      @default(6) @map("timeouts_60_second")
   timeouts30Second        Int      @default(2) @map("timeouts_30_second")
   timeoutsPerOvertime     Int      @default(2) @map("timeouts_per_overtime")
@@ -660,9 +621,9 @@ model Substitution {
   secondsRemaining Int?     @map("seconds_remaining")
   createdAt        DateTime @default(now()) @map("created_at")
   match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   playerIn         Player   @relation("SubstitutionIn", fields: [playerInId], references: [id])
   playerOut        Player   @relation("SubstitutionOut", fields: [playerOutId], references: [id])
+  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([matchId])
   @@index([teamId])
@@ -706,13 +667,14 @@ model JumpBall {
   @@index([period])
   @@index([player1Id])
   @@index([player2Id])
+  @@index([possessionTeamId], map: "jump_balls_possession_team_id_fkey")
   @@map("jump_balls")
 }
 
 model EventHistory {
   id            String   @id @default(cuid())
   matchEventId  String   @map("match_event_id")
-  action        String // CREATE, UPDATE, DELETE, UNDO
+  action        String
   previousValue Json?    @map("previous_value")
   newValue      Json?    @map("new_value")
   changedBy     String?  @map("changed_by")
@@ -723,29 +685,13 @@ model EventHistory {
   @@map("event_history")
 }
 
-enum ReportType {
-  GAME_STATISTICS
-  KEY_GAME_STATISTICS
-  PLAYER_STATISTICS
-  TEAM_STATISTICS
-  PLAY_BY_PLAY
-  SHOT_CHART
-  TURNOVER_TYPES
-  FOUL_TYPES
-}
-
-enum ReportFormat {
-  PDF
-  CSV
-}
-
 model ReportTemplate {
   id          String             @id @default(cuid())
   name        String
   description String?
   reportType  ReportType         @map("report_type")
   format      ReportFormat       @default(PDF)
-  template    Json // Template configuration/structure
+  template    Json
   isDefault   Boolean            @default(false) @map("is_default")
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")
@@ -765,13 +711,13 @@ model ReportGeneration {
   fileName     String          @map("file_name")
   filePath     String?         @map("file_path")
   fileUrl      String?         @map("file_url")
-  parameters   Json? // Query parameters used (matchId, playerId, etc.)
+  parameters   Json?
   generatedBy  String?         @map("generated_by")
-  status       String          @default("PENDING") // PENDING, COMPLETED, FAILED
+  status       String          @default("PENDING")
   errorMessage String?         @map("error_message")
   createdAt    DateTime        @default(now()) @map("created_at")
-  template     ReportTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   emailReports EmailReport[]
+  template     ReportTemplate? @relation(fields: [templateId], references: [id])
 
   @@index([templateId])
   @@index([reportType])
@@ -786,7 +732,7 @@ model EmailReport {
   recipientEmail     String           @map("recipient_email")
   recipientName      String?          @map("recipient_name")
   subject            String
-  status             String           @default("PENDING") // PENDING, SENT, FAILED
+  status             String           @default("PENDING")
   sentAt             DateTime?        @map("sent_at")
   errorMessage       String?          @map("error_message")
   createdAt          DateTime         @default(now()) @map("created_at")
@@ -800,14 +746,14 @@ model EmailReport {
 }
 
 model PlayerOfTheWeek {
-  id           String   @id @default(cuid())
-  playerId     String   @map("player_id")
-  customImage  String?  @map("custom_image")
-  description  String   @db.LongText
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  playerId    String   @map("player_id")
+  customImage String?  @map("custom_image")
+  description String   @db.LongText
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([playerId])
   @@index([active])
@@ -827,4 +773,114 @@ model Sponsor {
   @@index([active])
   @@index([order])
   @@map("sponsors")
+}
+
+enum NewsCategory {
+  INTERVIEWS
+  CHAMPIONSHIPS
+  MATCH_REPORT
+  ANALYSIS
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+}
+
+enum MatchStage {
+  REGULAR_SEASON
+  PRESEASON
+  EXHIBITION
+  PLAYOFF
+  QUARTER_FINALS
+  SEMI_FINALS
+  CHAMPIONSHIP
+  QUALIFIER
+  OTHER
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum FileUsageEntityType {
+  PLAYER
+  TEAM
+  NEWS_ARTICLE
+  STAFF
+  LEAGUE
+  MEDIA
+}
+
+enum StaffRole {
+  COACH
+  ASSISTANT_COACH
+  MANAGER
+  ASSISTANT_MANAGER
+  PHYSIOTHERAPIST
+  TRAINER
+  ANALYST
+  OTHER
+}
+
+enum MatchEventType {
+  TWO_POINT_MADE
+  TWO_POINT_MISSED
+  THREE_POINT_MADE
+  THREE_POINT_MISSED
+  FREE_THROW_MADE
+  FREE_THROW_MISSED
+  ASSIST
+  REBOUND_OFFENSIVE
+  REBOUND_DEFENSIVE
+  STEAL
+  BLOCK
+  TURNOVER
+  FOUL_PERSONAL
+  FOUL_TECHNICAL
+  FOUL_FLAGRANT
+  SUBSTITUTION_IN
+  SUBSTITUTION_OUT
+  TIMEOUT
+  INJURY
+  BREAK
+  PLAY_RESUMED
+  JUMP_BALL
+  OTHER
+}
+
+enum RegistrationNotificationType {
+  TEAM_REGISTERED
+  PLAYER_REGISTERED
+  PLAYER_AUTO_LINKED
+}
+
+enum GameTrackingMode {
+  TEAM
+  INDIVIDUAL
+  BOTH
+}
+
+enum TimeoutType {
+  SIXTY_SECOND
+  THIRTY_SECOND
+}
+
+enum ReportType {
+  GAME_STATISTICS
+  KEY_GAME_STATISTICS
+  PLAYER_STATISTICS
+  TEAM_STATISTICS
+  PLAY_BY_PLAY
+  SHOT_CHART
+  TURNOVER_TYPES
+  FOUL_TYPES
+}
+
+enum ReportFormat {
+  PDF
+  CSV
 }

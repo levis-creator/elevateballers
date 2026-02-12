@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getTeams } from '../../../features/cms/lib/queries';
 import { createTeam } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       includeUnapproved = false;
     } else {
       try {
-        await requireAdmin(request);
+        await requirePermission(request, 'teams:create');
         includeUnapproved = true; // Admins can see unapproved teams
       } catch {
         // Not an admin, only show approved teams
@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:create');
     const data = await request.json();
 
     // Validate required fields

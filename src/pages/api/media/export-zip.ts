@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { getFileUrl, fileExists } from '../../../lib/file-storage';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:export');
     const { filePaths } = await request.json();
 
     if (!Array.isArray(filePaths) || filePaths.length === 0) {

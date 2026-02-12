@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getNewsArticles, getAllNewsArticles, getFeaturedNewsArticles, getArticleCommentCount } from '../../../features/cms/lib/queries';
 import { createNewsArticle, generateSlug } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap, type NewsArticleDTO } from '../../../features/cms/types';
 
 export const prerender = false;
@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ request }) => {
     
     // Admin access requires authentication and returns all articles (including unpublished)
     if (admin) {
-      await requireAdmin(request);
+      await requirePermission(request, 'news_articles:create');
       articles = await getAllNewsArticles(true);
     } 
     // Featured articles endpoint - public access, only returns published featured articles
@@ -82,7 +82,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const user = await requireAdmin(request);
+    const user = await requirePermission(request, 'news_articles:create');
     const data = await request.json();
 
     // Validate required fields

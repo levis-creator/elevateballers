@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request }) => {
     // Check if user is admin (for private folders)
     let isAdmin = false;
     try {
-      await requireAdmin(request);
+      await requirePermission(request, 'folders:create');
       isAdmin = true;
     } catch {
       // Not an admin, only show public folders
@@ -49,7 +49,7 @@ export const GET: APIRoute = async ({ request }) => {
  */
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const user = await requireAdmin(request);
+    const user = await requirePermission(request, 'folders:create');
     const data = await request.json();
 
     // Validate required fields

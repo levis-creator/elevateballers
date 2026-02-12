@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
 import { previewBracketMatches, validateBracketOptions } from '@/features/tournaments/lib/bracket-generator';
-import { requireAdmin } from '@/features/cms/lib/auth';
+import { requirePermission } from '@/features/rbac/middleware';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'matches:read');
     const data = await request.json();
 
     const options = {

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getActivePlayerOfTheWeek, getPlayerOfTheWeekHistory } from '../../../features/cms/lib/editorial-queries';
 import { setActivePlayerOfTheWeek, updatePlayerOfTheWeek, deletePlayerOfTheWeek } from '../../../features/cms/lib/editorial-mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'potw:create');
         const data = await request.json();
 
         if (!data.playerId || !data.description) {
@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ request }) => {
 
 export const PUT: APIRoute = async ({ request }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'potw:create');
         const data = await request.json();
         const { id, ...updateData } = data;
 
@@ -86,7 +86,7 @@ export const PUT: APIRoute = async ({ request }) => {
 
 export const DELETE: APIRoute = async ({ request, url }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'potw:create');
         const id = new URL(url).searchParams.get('id');
 
         if (!id) {

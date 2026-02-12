@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { getFileUsage, getFileUsageSummary } from '../../../lib/file-usage';
 
 export const prerender = false;
@@ -12,7 +12,7 @@ export const prerender = false;
  */
 export const GET: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:read');
     
     const url = new URL(request.url);
     const mediaId = url.searchParams.get('mediaId');

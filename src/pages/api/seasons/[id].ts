@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSeasonById } from '../../../features/cms/lib/queries';
 import { updateSeason, deleteSeason } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'seasons:update');
     const data = await request.json();
     const season = await updateSeason(params.id!, data);
     if (!season) {
@@ -54,7 +54,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'seasons:update');
     const success = await deleteSeason(params.id!);
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to delete season' }), {

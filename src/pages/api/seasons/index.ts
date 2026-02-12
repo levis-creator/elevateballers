@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSeasons } from '../../../features/cms/lib/queries';
 import { createSeason } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ url }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'seasons:create');
     const data = await request.json();
 
     if (!data.name || !data.startDate || !data.endDate || !data.leagueId) {

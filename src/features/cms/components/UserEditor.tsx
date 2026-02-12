@@ -1,20 +1,21 @@
 import { useState, useEffect, type ComponentType } from 'react';
-import type { User, CreateUserInput, UpdateUserInput, UserRole } from '../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface UserEditorProps {
   userId?: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
 }
 
 export default function UserEditor({ userId }: UserEditorProps) {
@@ -22,12 +23,13 @@ export default function UserEditor({ userId }: UserEditorProps) {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [formData, setFormData] = useState<CreateUserInput>({
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'EDITOR',
     password: '',
   });
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [icons, setIcons] = useState<{
     ArrowLeft?: ComponentType<any>;
     Save?: ComponentType<any>;
@@ -51,10 +53,22 @@ export default function UserEditor({ userId }: UserEditorProps) {
   }, []);
 
   useEffect(() => {
+    fetchRoles();
     if (!isNew && userId) {
       fetchUser(userId);
     }
   }, [userId, isNew]);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch('/api/roles');
+      if (!response.ok) throw new Error('Failed to fetch roles');
+      const data = await response.json();
+      setAvailableRoles(data.roles || []);
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+    }
+  };
 
   const fetchUser = async (id: string) => {
     try {
@@ -65,9 +79,15 @@ export default function UserEditor({ userId }: UserEditorProps) {
       setFormData({
         name: data.name,
         email: data.email,
-        role: data.role,
         password: '', // Password is not returned
       });
+
+      // Fetch user roles
+      const rolesResponse = await fetch(`/api/users/${id}/role`);
+      if (rolesResponse.ok) {
+        const rolesData = await rolesResponse.json();
+        setSelectedRoleIds(rolesData.roles.map((r: Role) => r.id));
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load user');
     } finally {
@@ -75,8 +95,16 @@ export default function UserEditor({ userId }: UserEditorProps) {
     }
   };
 
-  const handleChange = (field: keyof CreateUserInput, value: string) => {
+  const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleRole = (roleId: string) => {
+    setSelectedRoleIds(prev =>
+      prev.includes(roleId)
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,10 +112,16 @@ export default function UserEditor({ userId }: UserEditorProps) {
     setSaving(true);
     setError('');
 
+    if (selectedRoleIds.length === 0) {
+      setError('Please select at least one role');
+      setSaving(false);
+      return;
+    }
+
     try {
       const url = isNew ? '/api/users' : `/api/users/${userId}`;
       const method = isNew ? 'POST' : 'PUT';
-      
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -97,6 +131,20 @@ export default function UserEditor({ userId }: UserEditorProps) {
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to save user');
+      }
+
+      const userData = await response.json();
+      const savedUserId = isNew ? userData.user.id : userId;
+
+      // Assign roles
+      const rolesResponse = await fetch(`/api/users/${savedUserId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roleIds: selectedRoleIds }),
+      });
+
+      if (!rolesResponse.ok) {
+        throw new Error('Failed to assign roles');
       }
 
       // Redirect back to list
@@ -179,24 +227,43 @@ export default function UserEditor({ userId }: UserEditorProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role" className="flex items-center gap-2">
+              <Label className="flex items-center gap-2">
                 {ShieldIcon ? <ShieldIcon size={16} /> : null}
-                Role
+                Roles
               </Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => handleChange('role', value as UserRole)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EDITOR">Editor</SelectItem>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-2 border rounded-md p-4">
+                {availableRoles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Loading roles...</p>
+                ) : (
+                  availableRoles.map(role => (
+                    <div key={role.id} className="flex items-start gap-3">
+                      <Checkbox
+                        id={`role-${role.id}`}
+                        checked={selectedRoleIds.includes(role.id)}
+                        onCheckedChange={() => toggleRole(role.id)}
+                      />
+                      <label
+                        htmlFor={`role-${role.id}`}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{role.name}</span>
+                          {role.isSystem && (
+                            <Badge variant="secondary" className="text-xs">System</Badge>
+                          )}
+                        </div>
+                        {role.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {role.description}
+                          </p>
+                        )}
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Admins have full access. Editors can manage content but not system settings.
+                Select one or more roles for this user. Multiple roles combine their permissions.
               </p>
             </div>
 

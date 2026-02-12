@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSponsors } from '../../../../features/cms/lib/editorial-queries';
 import { createSponsor, reorderSponsors } from '../../../../features/cms/lib/editorial-mutations';
-import { requireAdmin } from '../../../../features/cms/lib/auth';
+import { requirePermission } from '../../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'sponsors:create');
         const data = await request.json();
 
         // Handle reordering

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCurrentUser, hashPassword } from '../../../features/cms/lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { getUserWithPermissions } from '../../../features/rbac/permissions';
 
 export const prerender = false;
 
@@ -15,14 +16,19 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
+    // Get user with roles and permissions
+    const userWithPermissions = await getUserWithPermissions(user.id);
+
+    if (!userWithPermissions) {
+      return new Response(JSON.stringify({ error: 'User not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(
       JSON.stringify({
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        },
+        user: userWithPermissions,
       }),
       {
         status: 200,
@@ -59,19 +65,17 @@ export const PUT: APIRoute = async ({ request }) => {
       updateData.passwordHash = await hashPassword(password);
     }
 
-    const updatedUser = await prisma.user.update({
+    await prisma.user.update({
       where: { id: user.id },
       data: updateData,
     });
 
+    // Get updated user with roles and permissions
+    const updatedUserWithPermissions = await getUserWithPermissions(user.id);
+
     return new Response(
       JSON.stringify({
-        user: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          name: updatedUser.name,
-          role: updatedUser.role,
-        },
+        user: updatedUserWithPermissions,
       }),
       {
         status: 200,

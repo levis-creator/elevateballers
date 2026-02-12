@@ -10,7 +10,7 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request }) => {
   try {
     // Require admin authentication
-    const user = await requireAdmin(request);
+    const user = await requirePermission(request, 'media:create');
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
