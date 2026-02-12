@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getArticleComments, getAllArticleComments } from '../../../features/cms/lib/queries';
 import { createComment } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     // Admin access returns all comments (including unapproved)
     if (admin) {
-      await requireAdmin(request);
+      await requirePermission(request, 'comments:create');
       comments = await getAllArticleComments(articleId);
     } else {
       // Public access only returns approved comments

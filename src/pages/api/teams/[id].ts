@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getTeamById } from '../../../features/cms/lib/queries';
 import { updateTeam, deleteTeam } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -11,7 +11,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     // Try to get admin user, but don't fail if not authenticated
     let includeUnapproved = false;
     try {
-      await requireAdmin(request);
+      await requirePermission(request, 'teams:update');
       includeUnapproved = true; // Admins can see unapproved teams
     } catch {
       // Not an admin, only show approved teams
@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:update');
     const data = await request.json();
 
     // If name is being updated, check if it's unique
@@ -91,7 +91,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:update');
     const success = await deleteTeam(params.id!);
 
     if (!success) {

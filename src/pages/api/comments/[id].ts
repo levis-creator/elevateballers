@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCommentById } from '../../../features/cms/lib/queries';
 import { updateComment, deleteComment, approveComment, rejectComment } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -39,7 +39,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ request, params }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'comments:update');
     const { id } = params;
 
     if (!id) {
@@ -115,7 +115,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
 export const DELETE: APIRoute = async ({ request, params }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'comments:update');
     const { id } = params;
 
     if (!id) {

@@ -8,7 +8,7 @@ export const prerender = false;
 // GET /api/users/[id] - Get single user
 export const GET: APIRoute = async ({ request, params }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'users:read');
         const { id } = params;
 
         if (!id) {
@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ request, params }) => {
 // PUT /api/users/[id] - Update user
 export const PUT: APIRoute = async ({ request, params }) => {
     try {
-        const callingUser = await requireAdmin(request);
+        const callingUser = await requirePermission(request, 'users:read');
         const { id } = params;
         const data = await request.json();
 
@@ -137,7 +137,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 // DELETE /api/users/[id] - Delete user
 export const DELETE: APIRoute = async ({ request, params }) => {
     try {
-        const callingUser = await requireAdmin(request);
+        const callingUser = await requirePermission(request, 'users:read');
         const { id } = params;
 
         if (!id) {

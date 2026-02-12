@@ -1,0 +1,18 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import RoleList from '../../../features/cms/components/RoleList';
+import { checkAuth } from '../../../features/cms/lib/auth-astro';
+
+// Check authentication
+const user = await checkAuth(Astro.request);
+
+if (!user) {
+  return Astro.redirect('/admin/login');
+}
+---
+
+<AdminLayout title="Roles - Admin">
+  <RoleList client:load />
+</AdminLayout>

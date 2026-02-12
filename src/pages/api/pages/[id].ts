@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getPageContentById } from '../../../features/cms/lib/queries';
 import { updatePageContent, deletePageContent } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'page_contents:update');
     const data = await request.json();
 
     const page = await updatePageContent(params.id!, data);
@@ -59,7 +59,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'page_contents:update');
     const success = await deletePageContent(params.id!);
 
     if (!success) {

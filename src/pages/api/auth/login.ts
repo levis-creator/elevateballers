@@ -46,10 +46,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
+    // Fetch user with roles for response
+    const { prisma } = await import('../../../lib/prisma');
+    const userWithRoles = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    });
+
     const token = createToken({
       id: user.id,
       email: user.email,
-      role: user.role,
     });
 
     // Detect if we're in production and using HTTPS
@@ -100,7 +112,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          roles: userWithRoles?.userRoles.map(ur => ({
+            id: ur.role.id,
+            name: ur.role.name,
+            description: ur.role.description,
+          })) || [],
         },
       }),
       {

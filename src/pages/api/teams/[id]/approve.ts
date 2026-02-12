@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../../features/cms/lib/auth';
+import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
 
 export const prerender = false;
 
 export const PATCH: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:approve');
     const { id } = params;
     const data = await request.json();
 

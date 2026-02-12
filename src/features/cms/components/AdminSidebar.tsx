@@ -27,6 +27,7 @@ export default function AdminSidebar() {
     X?: ComponentType<any>;
     Star?: ComponentType<any>;
     Handshake?: ComponentType<any>;
+    ShieldCheck?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -51,24 +52,27 @@ export default function AdminSidebar() {
         X: mod.X,
         Star: mod.Star,
         Handshake: mod.Handshake,
+        ShieldCheck: mod.ShieldCheck,
       });
     });
 
-    // Fetch user role
+    // Fetch user roles
     const fetchUserRole = async () => {
       try {
         const response = await fetch('/api/auth/me');
         if (response.ok) {
           const data = await response.json();
-          if (data.user) {
-            setUserRole(data.user.role);
+          if (data.user && data.user.roles) {
+            // Check if user has Admin role
+            const hasAdminRole = data.user.roles.some((r: any) => r.name === 'Admin');
+            setUserRole(hasAdminRole ? 'ADMIN' : 'EDITOR');
           }
         }
       } catch (error) {
         console.error('Error fetching user role:', error);
       }
     };
-    
+
     fetchUserRole();
 
     // Check if mobile on mount and resize
@@ -141,12 +145,14 @@ export default function AdminSidebar() {
       label: 'SYSTEM',
       items: [
         { href: '/admin/users', icon: icons.Users, label: 'System Users' },
+        { href: '/admin/roles', icon: icons.ShieldCheck, label: 'Roles & Permissions' },
       ]
     }
   ].map(group => ({
     ...group,
     items: group.items.filter(item => {
-      if (item.href === '/admin/users') {
+      // Only show admin-only pages to admins
+      if (item.href === '/admin/users' || item.href === '/admin/roles') {
         return userRole === 'ADMIN';
       }
       return true;

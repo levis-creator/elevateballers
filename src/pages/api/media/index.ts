@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getMedia, getFeaturedMedia } from '../../../features/cms/lib/queries';
 import { createMedia } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -338,7 +338,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:create');
     const data = await request.json();
 
     // Validate required fields

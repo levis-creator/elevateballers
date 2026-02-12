@@ -101,19 +101,29 @@ export default function UserList() {
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (roleName: string) => {
     const colors: Record<string, string> = {
-      'ADMIN': 'bg-primary',
-      'EDITOR': 'bg-blue-500',
+      'Admin': 'bg-primary',
+      'Editor': 'bg-blue-500',
+      'Content Manager': 'bg-purple-500',
+      'Scorekeeper': 'bg-green-500',
+      'Viewer': 'bg-gray-500',
+      'Statistician': 'bg-orange-500',
     };
-    return colors[role] || 'bg-slate-500';
+    return colors[roleName] || 'bg-slate-500';
   };
 
   const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+    (user) => {
+      const searchLower = searchTerm.toLowerCase();
+      const nameMatch = user.name.toLowerCase().includes(searchLower);
+      const emailMatch = user.email.toLowerCase().includes(searchLower);
+      const roleMatch = user.roles?.some(r =>
+        r.name.toLowerCase().includes(searchLower)
+      ) || false;
+
+      return nameMatch || emailMatch || roleMatch;
+    }
   );
 
   const PlusIcon = icons.Plus;
@@ -275,12 +285,23 @@ export default function UserList() {
                     </a>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn('text-white border-0', getRoleColor(user.role))}
-                    >
-                      {user.role}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {user.roles && user.roles.length > 0 ? (
+                        user.roles.map((role) => (
+                          <Badge
+                            key={role.id}
+                            variant="outline"
+                            className={cn('text-white border-0', getRoleColor(role.name))}
+                          >
+                            {role.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-400 text-white border-0">
+                          No Role
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

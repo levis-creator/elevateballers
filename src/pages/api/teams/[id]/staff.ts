@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getStaffByTeam, getTeamById } from '../../../../features/cms/lib/queries';
 import { assignStaffToTeam, removeStaffFromTeam, updateTeamStaff } from '../../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../../features/cms/lib/auth';
+import { requirePermission } from '../../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const POST: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:manage_staff');
     const data = await request.json();
 
     // Validate required fields
@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:manage_staff');
     const data = await request.json();
 
     if (!data.teamStaffId) {
@@ -105,7 +105,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:manage_staff');
     const url = new URL(request.url);
     const teamStaffId = url.searchParams.get('teamStaffId');
 

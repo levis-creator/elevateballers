@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'registration_notifications:read');
     
     const url = new URL(request.url);
     const unreadOnly = url.searchParams.get('unread') === 'true';
@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const PATCH: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'registration_notifications:read');
     const data = await request.json();
 
     if (!data.id) {

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getPlayerById } from '../../../features/cms/lib/queries';
 import { updatePlayer, deletePlayer } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     // Try to get admin user to decide whether to include contact info
     let isAdmin = false;
     try {
-      await requireAdmin(request);
+      await requirePermission(request, 'players:update');
       isAdmin = true;
     } catch {
       isAdmin = false;
@@ -39,7 +39,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'players:update');
     const data = await request.json();
 
     // Convert jerseyNumber to number if provided
@@ -78,7 +78,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'players:update');
     const success = await deletePlayer(params.id!);
 
     if (!success) {

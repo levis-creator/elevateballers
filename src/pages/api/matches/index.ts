@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getFilteredMatches } from '../../../features/matches/lib/queries';
 import { createMatch } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import type { MatchFilter, MatchSortOption, MatchDTO, MatchStage } from '../../../features/matches/types';
 
 export const prerender = false;
@@ -153,7 +153,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'matches:create');
     const data = await request.json();
 
     // Validate required fields

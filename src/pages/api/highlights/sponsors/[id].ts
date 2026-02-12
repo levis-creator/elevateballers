@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { updateSponsor, deleteSponsor } from '../../../../features/cms/lib/editorial-mutations';
 import { getSponsorById } from '../../../../features/cms/lib/editorial-queries';
-import { requireAdmin } from '../../../../features/cms/lib/auth';
+import { requirePermission } from '../../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'sponsors:update');
         const id = params.id;
         if (!id) {
             return new Response(JSON.stringify({ error: 'ID is required' }), {
@@ -63,7 +63,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
     try {
-        await requireAdmin(request);
+        await requirePermission(request, 'sponsors:update');
         const id = params.id;
         if (!id) {
             return new Response(JSON.stringify({ error: 'ID is required' }), {

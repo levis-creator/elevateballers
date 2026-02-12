@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { getFolderById } from '../../../features/cms/lib/queries';
 import { updateFolder, deleteFolder } from '../../../features/cms/lib/mutations';
 
@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ params }) => {
  */
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'folders:update');
     const data = await request.json();
 
     const folder = await updateFolder(params.id!, data);
@@ -88,7 +88,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
  */
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'folders:update');
     const success = await deleteFolder(params.id!);
 
     if (!success) {

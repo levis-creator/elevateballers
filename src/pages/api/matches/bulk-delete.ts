@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'matches:bulk_delete');
     const { ids } = await request.json();
 
     if (!Array.isArray(ids) || ids.length === 0) {

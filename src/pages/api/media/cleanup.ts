@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { fileExists } from '../../../lib/file-storage';
 
@@ -11,7 +11,7 @@ export const prerender = false;
  */
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:cleanup');
 
     // Get all media records with filePath
     const mediaWithFiles = await prisma.media.findMany({

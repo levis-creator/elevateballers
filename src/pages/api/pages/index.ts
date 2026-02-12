@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getAllPageContents, getPageContentBySlug } from '../../../features/cms/lib/queries';
 import { createPageContent } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'page_contents:create');
     const data = await request.json();
 
     if (!data.slug || !data.title || !data.content) {

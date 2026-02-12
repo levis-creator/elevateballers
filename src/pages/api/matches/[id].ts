@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getMatchById, getMatchWithFullDetails } from '../../../features/cms/lib/queries';
 import { updateMatch, deleteMatch } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ params, url }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'matches:update');
 
     // Check if match is completed - block all edits
     const existingMatch = await getMatchById(params.id!);
@@ -100,7 +100,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'matches:update');
     const success = await deleteMatch(params.id!);
 
     if (!success) {
