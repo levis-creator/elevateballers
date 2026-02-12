@@ -6,28 +6,37 @@ import { requireAdmin } from '../../../features/cms/lib/auth';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, url }) => {
   const startTime = Date.now();
   try {
     console.log('[API /teams] GET request received at', new Date().toISOString());
     console.log('[API /teams] Fetching teams from database...');
-    
+
+    // Check if the query parameter explicitly requests approved teams only
+    const approvedParam = url.searchParams.get('approved');
+
     // Try to get admin user, but don't fail if not authenticated
     let includeUnapproved = false;
-    try {
-      await requireAdmin(request);
-      includeUnapproved = true; // Admins can see unapproved teams
-    } catch {
-      // Not an admin, only show approved teams
+
+    // If approved=true is explicitly requested, always filter for approved teams
+    if (approvedParam === 'true') {
       includeUnapproved = false;
+    } else {
+      try {
+        await requireAdmin(request);
+        includeUnapproved = true; // Admins can see unapproved teams
+      } catch {
+        // Not an admin, only show approved teams
+        includeUnapproved = false;
+      }
     }
-    
+
     // Add a timeout wrapper for the database query
     const queryPromise = getTeams(includeUnapproved);
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Database query timeout after 5 seconds')), 5000)
     );
-    
+
     const teams = await Promise.race([queryPromise, timeoutPromise]) as any;
     const duration = Date.now() - startTime;
     

@@ -88,12 +88,12 @@ export default function LeagueRegistrationForm() {
     fetchLeagues();
   }, []);
 
-  // Fetch teams from database
+  // Fetch teams from database (approved teams only for public registration)
   useEffect(() => {
     const fetchTeams = async () => {
       try {
         setTeamsLoading(true);
-        const response = await fetch('/api/teams');
+        const response = await fetch('/api/teams?approved=true');
         if (response.ok) {
           const data = await response.json();
           setTeams(data);
