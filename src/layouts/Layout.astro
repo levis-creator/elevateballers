@@ -28,6 +28,15 @@ const { title, description, image, canonicalURL, type } = Astro.props;
 			type={type}
 		/>
 
+		<!-- Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-VVZ9P3XBLP"></script>
+		<script is:inline>
+			window.dataLayer = window.dataLayer || [];
+			function gtag(){dataLayer.push(arguments);}
+			gtag('js', new Date());
+			gtag('config', 'G-VVZ9P3XBLP');
+		</script>
+
 		<link rel="dns-prefetch" href="https://maps.googleapis.com" />
 		<link rel="dns-prefetch" href="https://static.addtoany.com" />
 		<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
