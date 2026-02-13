@@ -4,7 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { saveFile, sanitizeFolderName } from '../../../lib/file-storage';
 import { compressImage, shouldCompress } from '../../../lib/image-compression';
 import { getFolderByName } from '../../../lib/folder-access';
-import { requirePermission } from '../../features/rbac/middleware';
+import { requirePermission } from '@/features/rbac/middleware';
 
 export const prerender = false;
 
