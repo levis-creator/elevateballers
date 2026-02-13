@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermissions } from '../../hooks/usePermissions';
+import { usePermissions } from '../../features/rbac/usePermissions';
 import { Can, CanView, CanCreate, CanEdit, CanDelete, IsAdmin } from '../PermissionGate';
 
 /**

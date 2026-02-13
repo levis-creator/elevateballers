@@ -7,10 +7,10 @@ export async function getStaticPaths() {
 }
 
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
-import { checkAuth } from '../../../../features/cms/lib/auth-astro';
+import { requirePermissionPage } from '../../../../features/rbac/auth-helpers';
 import PlayerView from '../../../../features/cms/components/PlayerView';
 
-const user = await checkAuth(Astro.request);
+const user = await requirePermissionPage(Astro.request, 'players:read');
 if (!user) {
   return Astro.redirect('/admin/login', 302);
 }

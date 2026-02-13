@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 
 /**
  * User with roles and permissions
@@ -25,30 +26,82 @@ interface PermissionContextValue {
 
 const PermissionContext = createContext<PermissionContextValue | undefined>(undefined);
 
+// ---------------------------------------------------------------------------
+// sessionStorage cache — stale-while-revalidate
+// ---------------------------------------------------------------------------
+
+const CACHE_KEY = 'eb_permissions';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CachedPermissions {
+  user: UserWithPermissions;
+  timestamp: number;
+}
+
+function readCache(): UserWithPermissions | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cached: CachedPermissions = JSON.parse(raw);
+    // Reject if older than TTL (force fresh fetch)
+    if (Date.now() - cached.timestamp > CACHE_TTL_MS) {
+      sessionStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    return cached.user;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(user: UserWithPermissions) {
+  try {
+    const entry: CachedPermissions = { user, timestamp: Date.now() };
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // sessionStorage full or unavailable — silently ignore
+  }
+}
+
+/** Clear the permission cache. Call this on logout. */
+export function clearPermissionCache() {
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
 /**
- * Permission Provider - Wrap your app with this to enable permission checking
+ * Permission Provider - Wrap your app with this to enable permission checking.
  *
- * @example
- * ```tsx
- * <PermissionProvider>
- *   <App />
- * </PermissionProvider>
- * ```
+ * Uses a stale-while-revalidate strategy:
+ * - On mount, immediately hydrates from sessionStorage (no loading flash)
+ * - Revalidates in the background against /api/auth/me
+ * - Cache expires after 5 minutes, forcing a fresh blocking fetch
  */
 export function PermissionProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserWithPermissions | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = readCache();
+  const [user, setUser] = useState<UserWithPermissions | null>(cached);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchPermissions = async () => {
+  const fetchPermissions = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       setError(null);
       const response = await fetch('/api/auth/me');
 
       if (!response.ok) {
         if (response.status === 401) {
           setUser(null);
+          clearPermissionCache();
           return;
         }
         throw new Error('Failed to fetch user permissions');
@@ -56,16 +109,32 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       setUser(data.user);
+      if (data.user) {
+        writeCache(data.user);
+      } else {
+        clearPermissionCache();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
-      setUser(null);
+      // Only surface errors on foreground fetches; background failures
+      // are silent (we already have cached data).
+      if (!background) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+        setUser(null);
+        clearPermissionCache();
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPermissions();
+    if (cached) {
+      // We have cached data — revalidate in background
+      fetchPermissions(true);
+    } else {
+      // No cache — blocking fetch
+      fetchPermissions(false);
+    }
   }, []);
 
   const value: PermissionContextValue = {
@@ -74,7 +143,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     roles: user?.roles.map(r => r.name) || [],
     loading,
     error,
-    refetch: fetchPermissions,
+    refetch: () => fetchPermissions(false),
   };
 
   return (
@@ -85,8 +154,8 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Hook to access permission context
- * Must be used within PermissionProvider
+ * Hook to access permission context.
+ * Must be used within PermissionProvider.
  */
 function usePermissionContext() {
   const context = useContext(PermissionContext);
@@ -97,24 +166,17 @@ function usePermissionContext() {
 }
 
 /**
- * Laravel-style permission hook
+ * Primary permissions hook. Provides all permission and role checking utilities.
  *
  * @example
  * ```tsx
- * const { can, canEdit, canView, canCreate, canDelete, hasRole, isAdmin } = usePermissions();
+ * const { can, canEdit, canView, isAdmin, loading } = usePermissions();
  *
- * // Laravel-style: can('action', 'resource') or can('resource:action')
- * if (can('edit', 'news_articles')) { ... }
+ * // Primary format: can('resource:action')
  * if (can('news_articles:edit')) { ... }
  *
- * // Simplified helpers
+ * // Convenience helpers
  * if (canEdit('news_articles')) { ... }
- * if (canView('users')) { ... }
- * if (canCreate('teams')) { ... }
- * if (canDelete('matches')) { ... }
- *
- * // Role checking
- * if (hasRole('Admin')) { ... }
  * if (isAdmin) { ... }
  * ```
  */
@@ -122,117 +184,112 @@ export function usePermissions() {
   const { user, permissions, roles, loading, error, refetch } = usePermissionContext();
 
   /**
-   * Check if user has a specific permission
-   * Supports both formats:
-   * - can('edit', 'news_articles')
-   * - can('news_articles:edit')
+   * Check if user has a specific permission.
+   *
+   * Accepts two formats:
+   *   can('resource:action')       - preferred
+   *   can('action', 'resource')    - Laravel-style convenience
    */
-  const can = (actionOrPermission: string, resource?: string): boolean => {
-    if (loading) return false;
-    if (!user) return false;
+  const can = useCallback((actionOrPermission: string, resource?: string): boolean => {
+    if (loading || !user) return false;
 
-    let permission: string;
-
-    if (resource) {
-      // Laravel-style: can('edit', 'news_articles')
-      permission = `${resource}:${actionOrPermission}`;
-    } else {
-      // Direct format: can('news_articles:edit')
-      permission = actionOrPermission;
-    }
+    const permission = resource
+      ? `${resource}:${actionOrPermission}`
+      : actionOrPermission;
 
     return permissions.includes(permission);
-  };
+  }, [user, permissions, loading]);
 
-  /**
-   * Check if user can edit a resource
-   */
-  const canEdit = (resource: string): boolean => {
-    return can('edit', resource);
-  };
+  const canView = useCallback((resource: string): boolean => {
+    return can(`${resource}:read`) || can(`${resource}:view`);
+  }, [can]);
 
-  /**
-   * Check if user can view/read a resource
-   */
-  const canView = (resource: string): boolean => {
-    return can('read', resource);
-  };
+  const canCreate = useCallback((resource: string): boolean => {
+    return can(`${resource}:create`);
+  }, [can]);
 
-  /**
-   * Check if user can create a resource
-   */
-  const canCreate = (resource: string): boolean => {
-    return can('create', resource);
-  };
+  const canEdit = useCallback((resource: string): boolean => {
+    return can(`${resource}:edit`) || can(`${resource}:update`);
+  }, [can]);
 
-  /**
-   * Check if user can delete a resource
-   */
-  const canDelete = (resource: string): boolean => {
-    return can('delete', resource);
-  };
+  const canDelete = useCallback((resource: string): boolean => {
+    return can(`${resource}:delete`);
+  }, [can]);
 
-  /**
-   * Check if user can update a resource (alias for canEdit)
-   */
-  const canUpdate = (resource: string): boolean => {
-    return can('update', resource);
-  };
+  const canUpdate = useCallback((resource: string): boolean => {
+    return can(`${resource}:update`) || can(`${resource}:edit`);
+  }, [can]);
 
-  /**
-   * Check if user has ANY of the specified permissions
-   */
-  const canAny = (permissionsToCheck: string[]): boolean => {
-    if (loading) return false;
-    if (!user) return false;
+  const canPublish = useCallback((resource: string): boolean => {
+    return can(`${resource}:publish`);
+  }, [can]);
+
+  const canApprove = useCallback((resource: string): boolean => {
+    return can(`${resource}:approve`);
+  }, [can]);
+
+  const canManage = useCallback((resource: string): boolean => {
+    return can(`${resource}:manage`) || (
+      canView(resource) &&
+      canCreate(resource) &&
+      canEdit(resource) &&
+      canDelete(resource)
+    );
+  }, [can, canView, canCreate, canEdit, canDelete]);
+
+  /** Check if user has ANY of the specified permissions (resource:action strings). */
+  const canAny = useCallback((permissionsToCheck: string[]): boolean => {
+    if (loading || !user) return false;
     return permissionsToCheck.some(perm => permissions.includes(perm));
-  };
+  }, [user, permissions, loading]);
 
-  /**
-   * Check if user has ALL of the specified permissions
-   */
-  const canAll = (permissionsToCheck: string[]): boolean => {
-    if (loading) return false;
-    if (!user) return false;
+  const hasAnyPermission = canAny;
+
+  /** Check if user has ALL of the specified permissions. */
+  const canAll = useCallback((permissionsToCheck: string[]): boolean => {
+    if (loading || !user) return false;
     return permissionsToCheck.every(perm => permissions.includes(perm));
-  };
+  }, [user, permissions, loading]);
 
-  /**
-   * Check if user has a specific role
-   */
-  const hasRole = (roleName: string): boolean => {
-    if (loading) return false;
-    if (!user) return false;
+  const hasAllPermissions = canAll;
+
+  const hasRole = useCallback((roleName: string): boolean => {
+    if (loading || !user) return false;
     return roles.includes(roleName);
-  };
+  }, [user, roles, loading]);
 
-  /**
-   * Check if user has ANY of the specified roles
-   */
-  const hasAnyRole = (roleNames: string[]): boolean => {
-    if (loading) return false;
-    if (!user) return false;
+  const hasAnyRole = useCallback((roleNames: string[]): boolean => {
+    if (loading || !user) return false;
     return roleNames.some(role => roles.includes(role));
-  };
+  }, [user, roles, loading]);
 
-  /**
-   * Check if user has ALL of the specified roles
-   */
-  const hasAllRoles = (roleNames: string[]): boolean => {
-    if (loading) return false;
-    if (!user) return false;
+  const hasAllRoles = useCallback((roleNames: string[]): boolean => {
+    if (loading || !user) return false;
     return roleNames.every(role => roles.includes(role));
-  };
+  }, [user, roles, loading]);
 
-  /**
-   * Check if user is an admin
-   */
   const isAdmin = hasRole('Admin');
-
-  /**
-   * Check if user is authenticated
-   */
   const isAuthenticated = !!user;
+
+  const getAllPermissions = useCallback((): string[] => {
+    return user?.permissions || [];
+  }, [user]);
+
+  const getAllRoles = useCallback(() => {
+    return user?.roles || [];
+  }, [user]);
+
+  const getUser = useCallback(() => {
+    return user;
+  }, [user]);
+
+  const isSuperAdmin = useCallback((): boolean => {
+    return hasRole('Super Admin');
+  }, [hasRole]);
+
+  const isEditor = useCallback((): boolean => {
+    return hasRole('Editor');
+  }, [hasRole]);
 
   return {
     // User data
@@ -243,15 +300,20 @@ export function usePermissions() {
     error,
     refetch,
 
-    // Permission checking (Laravel-style)
+    // Permission checking
     can,
-    canEdit,
     canView,
     canCreate,
+    canEdit,
     canDelete,
     canUpdate,
+    canPublish,
+    canApprove,
+    canManage,
     canAny,
     canAll,
+    hasAnyPermission,
+    hasAllPermissions,
 
     // Role checking
     hasRole,
@@ -259,27 +321,20 @@ export function usePermissions() {
     hasAllRoles,
     isAdmin,
     isAuthenticated,
+    isSuperAdmin,
+    isEditor,
+
+    // Data getters
+    getAllPermissions,
+    getAllRoles,
+    getUser,
   };
 }
 
-/**
- * Component to conditionally render based on permissions
- *
- * @example
- * ```tsx
- * <Can permission="news_articles:edit">
- *   <button>Edit Article</button>
- * </Can>
- *
- * <Can action="edit" resource="news_articles">
- *   <button>Edit Article</button>
- * </Can>
- *
- * <Can action="edit" resource="news_articles" fallback={<div>No access</div>}>
- *   <button>Edit Article</button>
- * </Can>
- * ```
- */
+// ---------------------------------------------------------------------------
+// Declarative components
+// ---------------------------------------------------------------------------
+
 interface CanProps {
   permission?: string;
   action?: string;
@@ -288,6 +343,20 @@ interface CanProps {
   children: ReactNode;
 }
 
+/**
+ * Declarative permission gate component.
+ *
+ * @example
+ * ```tsx
+ * <Can permission="news_articles:edit">
+ *   <button>Edit</button>
+ * </Can>
+ *
+ * <Can action="edit" resource="news_articles" fallback={<p>No access</p>}>
+ *   <button>Edit</button>
+ * </Can>
+ * ```
+ */
 export function Can({ permission, action, resource, fallback = null, children }: CanProps) {
   const { can } = usePermissions();
 
@@ -304,20 +373,6 @@ export function Can({ permission, action, resource, fallback = null, children }:
   return hasPermission ? <>{children}</> : <>{fallback}</>;
 }
 
-/**
- * Component to conditionally render based on roles
- *
- * @example
- * ```tsx
- * <HasRole role="Admin">
- *   <button>Admin Only</button>
- * </HasRole>
- *
- * <HasRole roles={['Admin', 'Editor']} requireAll={false}>
- *   <button>Admin or Editor</button>
- * </HasRole>
- * ```
- */
 interface HasRoleProps {
   role?: string;
   roles?: string[];
@@ -326,6 +381,20 @@ interface HasRoleProps {
   children: ReactNode;
 }
 
+/**
+ * Declarative role gate component.
+ *
+ * @example
+ * ```tsx
+ * <HasRole role="Admin">
+ *   <AdminPanel />
+ * </HasRole>
+ *
+ * <HasRole roles={['Admin', 'Editor']} requireAll={false}>
+ *   <ContentTools />
+ * </HasRole>
+ * ```
+ */
 export function HasRole({ role, roles, requireAll = false, fallback = null, children }: HasRoleProps) {
   const { hasRole, hasAnyRole, hasAllRoles } = usePermissions();
 

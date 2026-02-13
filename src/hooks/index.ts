@@ -1,44 +1,25 @@
 /**
- * UI Permissions System - Main Export
- * 
- * This module provides a comprehensive Laravel-style permissions system for the UI.
- * It integrates with the existing RBAC infrastructure and provides both hooks and
- * components for permission checking.
- * 
+ * UI Hooks - Main Export
+ *
+ * Re-exports the permissions system from the canonical RBAC module.
+ *
  * @example
  * ```tsx
- * // Using hooks
- * import { usePermissions } from '@/hooks/usePermissions';
- * 
+ * import { usePermissions } from '@/hooks';
+ *
  * function MyComponent() {
- *   const permissions = usePermissions();
- *   
- *   if (permissions.canEdit('news')) {
- *     return <EditButton />;
- *   }
- * }
- * 
- * // Using components
- * import { CanEdit } from '@/components/PermissionGate';
- * 
- * function MyComponent() {
- *   return (
- *     <CanEdit resource="news">
- *       <EditButton />
- *     </CanEdit>
- *   );
+ *   const { can, canEdit, isAdmin, loading } = usePermissions();
+ *   if (canEdit('news_articles')) { ... }
  * }
  * ```
  */
 
-// Re-export hooks
 export {
     usePermissions,
     usePermissionCheck,
     useRoleCheck,
-} from './usePermissions';
-
-// Re-export types if needed
-export type {
-    // Add any exported types here if you want to expose them
+    PermissionProvider,
+    Can,
+    HasRole,
+    type UserWithPermissions,
 } from './usePermissions';

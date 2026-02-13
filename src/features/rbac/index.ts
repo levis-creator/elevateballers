@@ -67,17 +67,9 @@ export {
 export {
   PermissionProvider,
   usePermissions,
+  clearPermissionCache,
   Can,
   HasRole,
   type UserWithPermissions,
 } from './usePermissions';
 
-// Legacy hooks (for backward compatibility)
-export {
-  usePermission,
-  usePermissions as usePermissionsList,
-  useHasAnyPermission,
-  useHasAllPermissions,
-  useHasRole,
-  useRoles,
-} from './hooks';
