@@ -2,7 +2,6 @@ import type { APIRoute } from 'astro';
 import { createBracketMatches, validateBracketOptions, type GeneratedMatch } from '@/features/tournaments/lib/bracket-generator';
 import { calculateBracketStats } from '@/features/tournaments/lib/bracket-stats';
 import { requirePermission } from '@/features/rbac/middleware';
-import { requirePermission } from '../../features/rbac/middleware';
 
 export const prerender = false;
 
