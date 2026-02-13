@@ -4,10 +4,10 @@ export const ssr = false;
 
 import AdminLayout from "../../../features/cms/components/AdminLayout.astro";
 import UserList from "../../../features/cms/components/UserList";
-import { checkAuth } from "../../../features/cms/lib/auth-astro";
+import { requireAdmin } from "../../../features/rbac/auth-helpers";
 
-const user = await checkAuth(Astro.request);
-if (!user || user.role !== "ADMIN") {
+const user = await requireAdmin(Astro.request);
+if (!user) {
     return Astro.redirect("/admin/login", 302);
 }
 ---
