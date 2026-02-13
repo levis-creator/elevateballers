@@ -1,8 +1,8 @@
 ---
 export const prerender = false;
-import { checkAuth } from '../../../features/cms/lib/auth-astro';
+import { requirePermissionPage } from '../../../features/rbac/auth-helpers';
 
-const user = await checkAuth(Astro.request);
+const user = await requirePermissionPage(Astro.request, 'leagues:read');
 if (!user) {
   return Astro.redirect('/admin/login', 302);
 }

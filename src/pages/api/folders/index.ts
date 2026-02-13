@@ -3,7 +3,7 @@ import { requireAdmin, getCurrentUser } from '../../../features/cms/lib/auth';
 import { getFolders } from '../../../features/cms/lib/queries';
 import { createFolder } from '../../../features/cms/lib/mutations';
 import { initializeDefaultFolders } from '../../../lib/folder-init';
-import { requirePermission } from '../../features/rbac/middleware';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 

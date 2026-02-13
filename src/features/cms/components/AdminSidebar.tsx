@@ -2,6 +2,7 @@ import { useState, useEffect, type ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { tekoFont, navActive, navHover } from '../lib/ui-helpers';
+import { clearPermissionCache } from '@/features/rbac/usePermissions';
 import type { UserRole } from '../types';
 
 export default function AdminSidebar() {
@@ -184,6 +185,7 @@ export default function AdminSidebar() {
 
   const handleLogout = async () => {
     if (!confirm('Are you sure you want to logout?')) return;
+    clearPermissionCache();
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
