@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requireAdmin, createUser } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 import type { UserRole } from '../../../features/cms/types';
 
 export const prerender = false;
@@ -8,7 +9,7 @@ export const prerender = false;
 // GET /api/users - List users
 export const GET: APIRoute = async ({ request }) => {
     try {
-        const currentUser = await requirePermission(request, 'users:read');
+        await requirePermission(request, 'users:read');
 
         const url = new URL(request.url);
         const role = url.searchParams.get('role');
@@ -24,9 +25,19 @@ export const GET: APIRoute = async ({ request }) => {
                 id: true,
                 name: true,
                 email: true,
-                role: true,
                 createdAt: true,
                 updatedAt: true,
+                userRoles: {
+                    select: {
+                        role: {
+                            select: {
+                                id: true,
+                                name: true,
+                                description: true,
+                            }
+                        }
+                    }
+                },
                 _count: {
                     select: {
                         newsArticles: true,
@@ -39,7 +50,14 @@ export const GET: APIRoute = async ({ request }) => {
             },
         });
 
-        return new Response(JSON.stringify(users), {
+        // Transform to include roles array
+        const transformedUsers = users.map(user => ({
+            ...user,
+            roles: user.userRoles.map(ur => ur.role),
+            userRoles: undefined,
+        }));
+
+        return new Response(JSON.stringify(transformedUsers), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
@@ -55,7 +73,7 @@ export const GET: APIRoute = async ({ request }) => {
 // POST /api/users - Create user
 export const POST: APIRoute = async ({ request }) => {
     try {
-        await requirePermission(request, 'users:read');
+        await requirePermission(request, 'users:create');
         const data = await request.json();
 
         if (!data.email || !data.password || !data.name) {

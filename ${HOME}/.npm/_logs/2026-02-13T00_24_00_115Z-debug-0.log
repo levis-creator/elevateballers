@@ -7,8 +7,8 @@
 6 silly config load:file:C:\Users\User\AppData\Roaming\npm\etc\npmrc
 7 verbose title npm exec prisma migrate deploy
 8 verbose argv "exec" "--" "prisma" "migrate" "deploy"
-9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-09T07_49_58_546Z-
-10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-09T07_49_58_546Z-debug-0.log
+9 verbose logfile logs-max:10 dir:C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-13T00_24_00_115Z-
+10 verbose logfile C:\Users\User\Desktop\projects\elevateballers\${HOME}\.npm\_logs\2026-02-13T00_24_00_115Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 verbose cwd C:\Users\User\Desktop\projects\elevateballers

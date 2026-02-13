@@ -170,7 +170,7 @@ export default function LeagueRegistrationForm() {
           lastName: playerFormData.lastName.trim(),
           email: playerFormData.email.trim(),
           phone: playerFormData.phone.trim(),
-          position: playerFormData.position || undefined,
+          position: playerFormData.position.trim(),
           jerseyNumber: playerFormData.jerseyNumber ? parseInt(playerFormData.jerseyNumber) : undefined,
           height: playerFormData.height.trim() || undefined,
           weight: playerFormData.weight.trim() || undefined,
@@ -516,12 +516,13 @@ export default function LeagueRegistrationForm() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', color: '#363f48', fontWeight: '600' }}>
-                Position
+                Position <span style={{ color: '#dd3333' }}>*</span>
               </label>
               <select
                 name="position"
                 value={playerFormData.position}
                 onChange={handlePlayerChange}
+                required
                 className="disable-select2"
                 style={{ width: '100%', padding: '12px', border: '1px solid #d8d8d8', borderRadius: '3px', fontFamily: 'Rubik', fontSize: '14px' }}
               >
