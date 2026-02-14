@@ -130,4 +130,21 @@
   .grid-cols-4 {
     /* Tailwind utilities will apply via @tailwind utilities above */
   }
+
+  /* Admin Header Specific Overrides */
+  .admin-header-button {
+    background-color: transparent !important;
+    color: #333 !important;
+  }
+
+  .admin-header-button:hover,
+  .admin-header-button[data-state="open"] {
+    background-color: #f3f4f6 !important;
+    color: #000 !important;
+  }
+
+  /* Ensure icons inside don't get colored */
+  .admin-header-button svg {
+    color: inherit !important;
+  }
 }
