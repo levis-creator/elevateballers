@@ -1,7 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import { checkAuth } from '../../cms/lib/auth-astro';
-import AdminSidebar from './AdminSidebar';
+import AdminShell from './AdminShell';
 import { hasPermission, hasAnyPermission, hasAllPermissions } from '../../rbac/permissions';
 import '../../../styles/admin.css';
 
@@ -51,11 +51,11 @@ if (permissionsAll?.length) {
 
 <Layout title={title}>
   <div class="flex min-h-screen bg-[#f9fafb] relative w-full font-sans">
-    <!-- Sidebar Navigation -->
-    <AdminSidebar client:load />
+    <!-- Sidebar + Header (shared PermissionProvider) -->
+    <AdminShell client:load />
 
     <!-- Main Content Area -->
-    <main class="flex-1 ml-[260px] min-h-screen w-[calc(100%-260px)] md:ml-[260px] md:w-[calc(100%-260px)] max-md:ml-0 max-md:w-full">
+    <main class="flex-1 ml-[var(--admin-sidebar-width)] pt-[var(--admin-header-height)] min-h-screen w-[calc(100%-var(--admin-sidebar-width))] max-md:ml-0 max-md:w-full max-md:pt-14">
       <div class="p-8 max-w-[1400px] mx-auto w-full max-md:p-4 max-[480px]:p-3 admin-page scroll-smooth">
         <slot />
       </div>
@@ -76,6 +76,8 @@ if (permissionsAll?.length) {
       --admin-gray-900: #111827;
       --admin-success: #10b981;
       --admin-error: #ef4444;
+      --admin-header-height: 4rem;
+      --admin-sidebar-width: 260px;
     }
 
     /* Override any conflicting styles from main Layout */
