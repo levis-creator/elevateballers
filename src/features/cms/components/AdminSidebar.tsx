@@ -1,14 +1,13 @@
 import { useState, useEffect, type ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { tekoFont, navActive, navHover } from '../lib/ui-helpers';
+import { tekoFont } from '../lib/ui-helpers';
 import { clearPermissionCache } from '@/features/rbac/usePermissions';
-import type { UserRole } from '../types';
 
 export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [icons, setIcons] = useState<{
     LayoutDashboard?: ComponentType<any>;
     Newspaper?: ComponentType<any>;
@@ -57,24 +56,22 @@ export default function AdminSidebar() {
       });
     });
 
-    // Fetch user roles
-    const fetchUserRole = async () => {
+    // Fetch user permissions
+    const fetchUserPermissions = async () => {
       try {
         const response = await fetch('/api/auth/me');
         if (response.ok) {
           const data = await response.json();
-          if (data.user && data.user.roles) {
-            // Check if user has Admin role
-            const hasAdminRole = data.user.roles.some((r: any) => r.name === 'Admin');
-            setUserRole(hasAdminRole ? 'ADMIN' : 'EDITOR');
+          if (data.user?.permissions) {
+            setUserPermissions(data.user.permissions);
           }
         }
       } catch (error) {
-        console.error('Error fetching user role:', error);
+        console.error('Error fetching user permissions:', error);
       }
     };
 
-    fetchUserRole();
+    fetchUserPermissions();
 
     // Check if mobile on mount and resize
     const checkMobile = () => {
@@ -111,53 +108,89 @@ export default function AdminSidebar() {
     };
   }, [isMobile]);
 
+  const canAccess = (permission?: string) => {
+    if (!permission) return true;
+    return userPermissions.includes(permission);
+  };
+
+  const canAccessAny = (permissions?: string[]) => {
+    if (!permissions || permissions.length === 0) return true;
+    return permissions.some((permission) => userPermissions.includes(permission));
+  };
+
+  const canAccessAll = (permissions?: string[]) => {
+    if (!permissions || permissions.length === 0) return true;
+    return permissions.every((permission) => userPermissions.includes(permission));
+  };
+
   const navGroups = [
     {
       label: 'GENERAL',
       items: [
-        { href: '/admin', icon: icons.LayoutDashboard, label: 'Dashboard' },
-        { href: '/admin/media', icon: icons.Images, label: 'Media Highlights' },
+        {
+          href: '/admin',
+          icon: icons.LayoutDashboard,
+          label: 'Dashboard',
+          permissionsAny: [
+            'news_articles:read',
+            'matches:read',
+            'players:read',
+            'media:read',
+            'page_contents:read',
+            'teams:read',
+            'leagues:read',
+            'seasons:read',
+            'staff:read',
+            'roles:read',
+            'users:read',
+            'reports:read',
+            'notifications:read',
+            'game_rules:read',
+            'potw:read',
+            'sponsors:read',
+            'tournaments:read',
+          ],
+        },
+        { href: '/admin/media', icon: icons.Images, label: 'Media Library', permission: 'media:read' },
       ]
     },
     {
       label: 'COMPETITION',
       items: [
-        { href: '/admin/leagues', icon: icons.Trophy, label: 'Leagues' },
-        { href: '/admin/matches', icon: icons.Calendar, label: 'Matches' },
-        { href: '/admin/teams', icon: icons.Shield, label: 'Teams' },
+        { href: '/admin/leagues', icon: icons.Trophy, label: 'Leagues', permission: 'leagues:read' },
+        { href: '/admin/matches', icon: icons.Calendar, label: 'Matches', permission: 'matches:read' },
+        { href: '/admin/teams', icon: icons.Shield, label: 'Teams', permission: 'teams:read' },
       ]
     },
     {
       label: 'PERSONNEL',
       items: [
-        { href: '/admin/players', icon: icons.Users, label: 'Players' },
-        { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff' },
+        { href: '/admin/players', icon: icons.Users, label: 'Players', permission: 'players:read' },
+        { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff', permission: 'staff:read' },
       ]
     },
     {
       label: 'EDITORIAL',
       items: [
-        { href: '/admin/news', icon: icons.Newspaper, label: 'News Articles' },
-        { href: '/admin/highlights/potw', icon: icons.Star, label: 'Player of the Week' },
-        { href: '/admin/highlights/sponsors', icon: icons.Handshake, label: 'Sponsors' },
+        { href: '/admin/news', icon: icons.Newspaper, label: 'News Articles', permission: 'news_articles:read' },
+        { href: '/admin/highlights/potw', icon: icons.Star, label: 'Player of the Week', permission: 'potw:read' },
+        { href: '/admin/highlights/sponsors', icon: icons.Handshake, label: 'Sponsors', permission: 'sponsors:read' },
       ]
     },
     {
       label: 'SYSTEM',
       items: [
-        { href: '/admin/users', icon: icons.Users, label: 'System Users' },
-        { href: '/admin/roles', icon: icons.ShieldCheck, label: 'Roles & Permissions' },
+        { href: '/admin/users', icon: icons.Users, label: 'System Users', permission: 'users:read' },
+        { href: '/admin/roles', icon: icons.ShieldCheck, label: 'Roles & Permissions', permission: 'roles:read' },
       ]
     }
   ].map(group => ({
     ...group,
-    items: group.items.filter(item => {
-      // Only show admin-only pages to admins
-      if (item.href === '/admin/users' || item.href === '/admin/roles') {
-        return userRole === 'ADMIN';
-      }
-      return true;
-    })
+    items: group.items.filter(item => (
+      canAccess(item.permission) &&
+      canAccessAny(item.permissionsAny) &&
+      canAccessAll(item.permissionsAll)
+    ))
   })).filter(group => group.items.length > 0);
 
   const UserIcon = icons.User;
@@ -238,9 +271,9 @@ export default function AdminSidebar() {
         className={cn(
           "admin-sidebar",
           "fixed left-0 top-0 h-screen w-[260px]",
-          "bg-[#1e293b]",
+          "bg-gradient-to-b from-[#0b1220] via-[#0f172a] to-[#1f2937]",
           "flex flex-col",
-          "z-[1000] shadow-lg",
+          "z-[1000] shadow-[0_24px_60px_rgba(2,6,23,0.45)] border-r border-white/5",
           "transition-transform duration-300 ease-in-out",
           "md:translate-x-0",
           isMobile && !isOpen && "-translate-x-full",
@@ -257,13 +290,14 @@ export default function AdminSidebar() {
             {BasketballIcon ? <BasketballIcon size={24} className="!text-primary mr-2" /> : <span className="w-6 h-6 mr-2" />}
             <span className="text-xl font-bold !text-white" style={tekoFont}>Elevate CMS</span>
           </a>
+          <div className="mt-3 text-xs uppercase tracking-[0.25em] text-white/40">RBAC Enabled</div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide" aria-label="Main navigation">
           {navGroups.map((group) => (
             <div key={group.label} className="mb-6 last:mb-0">
-              <div className="px-6 mb-2 text-[0.7rem] font-bold text-white/40 tracking-[0.1em] uppercase">
+              <div className="px-6 mb-2 text-[0.65rem] font-semibold text-white/40 tracking-[0.3em] uppercase">
                 {group.label}
               </div>
               <div className="space-y-1">
@@ -275,11 +309,11 @@ export default function AdminSidebar() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center px-6 py-2.5 !text-white no-underline",
+                        "flex items-center px-4 py-2.5 !text-white no-underline mx-3 rounded-xl",
                         "transition-all duration-200",
-                        "border-l-[3px] border-transparent",
-                        navHover,
-                        isActive && navActive,
+                        "border border-transparent",
+                        "hover:bg-white/10 hover:border-white/10",
+                        isActive && "bg-white/10 border-white/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
                         "text-[0.9rem] font-medium"
                       )}
                       {...(isActive && { 'aria-current': 'page' })}
@@ -302,10 +336,10 @@ export default function AdminSidebar() {
           <a
             href="/"
             className={cn(
-              "flex items-center px-6 py-3.5 !text-white no-underline",
+              "flex items-center px-4 py-3.5 !text-white no-underline mx-3 rounded-xl",
               "transition-all duration-200",
-              "border-l-[3px] border-transparent",
-              navHover,
+              "border border-transparent",
+              "hover:bg-white/10 hover:border-white/10",
               "text-[0.95rem] font-medium"
             )}
             onClick={handleNavClick}
@@ -316,11 +350,11 @@ export default function AdminSidebar() {
           <a
             href="/admin/profile"
             className={cn(
-              "flex items-center px-6 py-3.5 !text-white no-underline",
+              "flex items-center px-4 py-3.5 !text-white no-underline mx-3 rounded-xl",
               "transition-all duration-200",
-              "border-l-[3px] border-transparent",
-              navHover,
-              getActiveClass('/admin/profile') && navActive,
+              "border border-transparent",
+              "hover:bg-white/10 hover:border-white/10",
+              getActiveClass('/admin/profile') && "bg-white/10 border-white/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
               "text-[0.95rem] font-medium"
             )}
             onClick={handleNavClick}
@@ -333,9 +367,9 @@ export default function AdminSidebar() {
             onClick={handleLogout}
             aria-label="Logout from admin panel"
             className={cn(
-              "flex items-center px-6 py-3.5 !text-white w-full text-left",
+              "flex items-center px-4 py-3.5 !text-white w-full text-left mx-3 rounded-xl",
               "transition-all duration-200",
-              "border-l-[3px] border-transparent",
+              "border border-transparent",
               "hover:bg-red-500/20 hover:border-red-500",
               "text-[0.95rem] font-medium",
               "bg-transparent border-0 cursor-pointer"
