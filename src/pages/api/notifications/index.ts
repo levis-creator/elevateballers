@@ -6,8 +6,8 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'registration_notifications:read');
-    
+    await requirePermission(request, 'notifications:read');
+
     const url = new URL(request.url);
     const unreadOnly = url.searchParams.get('unread') === 'true';
     const limitParam = url.searchParams.get('limit');
@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const PATCH: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'registration_notifications:read');
+    await requirePermission(request, 'notifications:read');
     const data = await request.json();
 
     if (!data.id) {

@@ -6,7 +6,7 @@ import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import PageContentEditor from '../../../features/cms/components/PageContentEditor';
 ---
 
-<AdminLayout title="Create Page - Admin">
+<AdminLayout title="Create Page - Admin" permission="page_contents:create">
   <PageContentEditor client:load />
 </AdminLayout>
 

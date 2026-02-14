@@ -3,15 +3,8 @@ export const prerender = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import RoleList from '../../../features/cms/components/RoleList';
-import { requirePermissionPage } from '../../../features/rbac/auth-helpers';
-
-const user = await requirePermissionPage(Astro.request, 'roles:read');
-
-if (!user) {
-  return Astro.redirect('/admin/login');
-}
 ---
 
-<AdminLayout title="Roles - Admin">
+<AdminLayout title="Roles - Admin" permission="roles:read">
   <RoleList client:load />
 </AdminLayout>

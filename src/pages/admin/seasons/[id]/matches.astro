@@ -4,12 +4,6 @@ export const ssr = false;
 
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
 import SeasonMatchesList from '../../../../features/cms/components/SeasonMatchesList';
-import { requirePermissionPage } from '../../../../features/rbac/auth-helpers';
-
-const user = await requirePermissionPage(Astro.request, 'matches:read');
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
 
 const { id } = Astro.params;
 
@@ -18,6 +12,6 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="Season Matches - Admin">
+<AdminLayout title="Season Matches - Admin" permission="matches:read">
   <SeasonMatchesList seasonId={id} client:load />
 </AdminLayout>

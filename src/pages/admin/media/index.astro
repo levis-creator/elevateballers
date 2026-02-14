@@ -6,7 +6,7 @@ import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import MediaGalleryWrapper from '../../../features/cms/components/MediaGalleryWrapper';
 ---
 
-<AdminLayout title="Media Management - Admin">
+<AdminLayout title="Media Management - Admin" permission="media:read">
   <MediaGalleryWrapper client:load />
 </AdminLayout>
 

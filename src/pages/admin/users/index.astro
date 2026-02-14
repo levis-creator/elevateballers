@@ -4,14 +4,8 @@ export const ssr = false;
 
 import AdminLayout from "../../../features/cms/components/AdminLayout.astro";
 import UserList from "../../../features/cms/components/UserList";
-import { requireAdmin } from "../../../features/rbac/auth-helpers";
-
-const user = await requireAdmin(Astro.request);
-if (!user) {
-    return Astro.redirect("/admin/login", 302);
-}
 ---
 
-<AdminLayout title="User Management - Admin">
+<AdminLayout title="User Management - Admin" permission="users:read">
     <UserList client:load />
 </AdminLayout>

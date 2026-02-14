@@ -1,7 +1,7 @@
 import { prisma } from '../../../lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import type { User, UserRole } from '../types';
+import type { User } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -130,16 +130,11 @@ export function verifyToken(token: string): { userId: string; email: string } | 
 }
 
 /**
- * Get the current user from request cookies
+ * Get the current user ID from request cookies without a database check
  */
-export async function getCurrentUser(request: Request): Promise<User | null> {
+export function getUserIdFromRequest(request: Request): string | null {
   const cookieHeader = request.headers.get('cookie');
-  if (!cookieHeader) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('No cookie header found in request');
-    }
-    return null;
-  }
+  if (!cookieHeader) return null;
 
   const cookies = Object.fromEntries(
     cookieHeader.split('; ').map((c) => {
@@ -149,23 +144,21 @@ export async function getCurrentUser(request: Request): Promise<User | null> {
   );
 
   const token = cookies['auth-token'];
-  if (!token) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('No auth-token cookie found');
-    }
-    return null;
-  }
+  if (!token) return null;
 
   const payload = verifyToken(token);
-  if (!payload) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Token verification failed - invalid or expired token');
-    }
-    return null;
-  }
+  return payload?.userId || null;
+}
+
+/**
+ * Get the current user from request cookies
+ */
+export async function getCurrentUser(request: Request): Promise<User | null> {
+  const userId = getUserIdFromRequest(request);
+  if (!userId) return null;
 
   try {
-    return await findUserById(payload.userId);
+    return await findUserById(userId);
   } catch (error) {
     console.error('Error finding user by ID:', error);
     return null;

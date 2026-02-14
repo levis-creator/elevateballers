@@ -12,7 +12,7 @@ import MatchEditor from '../../../features/cms/components/MatchEditor';
 const { id } = Astro.params;
 ---
 
-<AdminLayout title="Edit Match - Admin">
+<AdminLayout title="Edit Match - Admin" permission="matches:update">
   <MatchEditor matchId={id} client:load />
 </AdminLayout>
 

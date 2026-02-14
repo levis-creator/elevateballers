@@ -2,13 +2,22 @@
 import Layout from '../../../layouts/Layout.astro';
 import { checkAuth } from '../../cms/lib/auth-astro';
 import AdminSidebar from './AdminSidebar';
+import { hasPermission, hasAnyPermission, hasAllPermissions } from '../../rbac/permissions';
 import '../../../styles/admin.css';
 
 interface Props {
   title?: string;
+  permission?: string;
+  permissionsAny?: string[];
+  permissionsAll?: string[];
 }
 
-const { title = 'Admin - Elevate Ballers CMS' } = Astro.props;
+const {
+  title = 'Admin - Elevate Ballers CMS',
+  permission,
+  permissionsAny,
+  permissionsAll,
+} = Astro.props;
 
 // Check authentication
 const user = await checkAuth(Astro.request);
@@ -16,6 +25,27 @@ const user = await checkAuth(Astro.request);
 // Redirect to login if not authenticated
 if (!user) {
   return Astro.redirect('/admin/login', 302);
+}
+
+if (permission) {
+  const allowed = await hasPermission(user.id, permission);
+  if (!allowed) {
+    return Astro.redirect('/unauthorized', 302);
+  }
+}
+
+if (permissionsAny?.length) {
+  const allowed = await hasAnyPermission(user.id, permissionsAny);
+  if (!allowed) {
+    return Astro.redirect('/unauthorized', 302);
+  }
+}
+
+if (permissionsAll?.length) {
+  const allowed = await hasAllPermissions(user.id, permissionsAll);
+  if (!allowed) {
+    return Astro.redirect('/unauthorized', 302);
+  }
 }
 ---
 

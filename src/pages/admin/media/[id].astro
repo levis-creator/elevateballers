@@ -12,7 +12,7 @@ import MediaEditor from '../../../features/cms/components/MediaEditor';
 const { id } = Astro.params;
 ---
 
-<AdminLayout title="Edit Media - Admin">
+<AdminLayout title="Edit Media - Admin" permission="media:update">
   <MediaEditor mediaId={id} client:load />
 </AdminLayout>
 
