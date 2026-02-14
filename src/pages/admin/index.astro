@@ -4,23 +4,30 @@ export const ssr = true; // Enable SSR for proper server-side auth checks
 
 import AdminLayout from '../../features/cms/components/AdminLayout.astro';
 import Dashboard from '../../features/cms/components/Dashboard';
-import { checkAuth } from '../../features/cms/lib/auth-astro';
-
-// Check authentication
-try {
-  const user = await checkAuth(Astro.request);
-  if (!user) {
-    console.log('No authenticated user, redirecting to login');
-    return Astro.redirect('/admin/login', 302);
-  }
-  console.log('Authenticated user:', user.email);
-} catch (error) {
-  console.error('Auth check error in admin index:', error);
-  return Astro.redirect('/admin/login', 302);
-}
 ---
 
-<AdminLayout title="CMS Dashboard">
+<AdminLayout
+  title="CMS Dashboard"
+  permissionsAny={[
+    'news_articles:read',
+    'matches:read',
+    'players:read',
+    'media:read',
+    'page_contents:read',
+    'teams:read',
+    'leagues:read',
+    'seasons:read',
+    'staff:read',
+    'roles:read',
+    'users:read',
+    'reports:read',
+    'notifications:read',
+    'game_rules:read',
+    'potw:read',
+    'sponsors:read',
+    'tournaments:read',
+  ]}
+>
   <Dashboard client:load />
 </AdminLayout>
 

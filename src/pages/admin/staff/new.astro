@@ -6,7 +6,7 @@ import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import StaffEditor from '../../../features/cms/components/StaffEditor';
 ---
 
-<AdminLayout title="Create Staff Member - Admin">
+<AdminLayout title="Create Staff Member - Admin" permission="staff:create">
   <StaffEditor client:load />
 </AdminLayout>
 

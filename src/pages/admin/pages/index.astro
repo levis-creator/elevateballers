@@ -6,7 +6,7 @@ import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import PageContentList from '../../../features/cms/components/PageContentList';
 ---
 
-<AdminLayout title="Page Content Management - Admin">
+<AdminLayout title="Page Content Management - Admin" permission="page_contents:read">
   <PageContentList client:load />
 </AdminLayout>
 

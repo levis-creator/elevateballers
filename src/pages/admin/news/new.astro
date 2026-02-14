@@ -6,7 +6,7 @@ import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import NewsEditor from '../../../features/cms/components/NewsEditor';
 ---
 
-<AdminLayout title="Create News Article - Admin">
+<AdminLayout title="Create News Article - Admin" permission="news_articles:create">
   <NewsEditor client:load />
 </AdminLayout>
 

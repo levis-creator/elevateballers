@@ -4,15 +4,9 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import LeagueEditor from '../../../features/cms/components/LeagueEditor';
-import { requirePermissionPage } from '../../../features/rbac/auth-helpers';
-
-const user = await requirePermissionPage(Astro.request, 'leagues:create');
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
 ---
 
-<AdminLayout title="Create League - Admin">
+<AdminLayout title="Create League - Admin" permission="leagues:create">
   <LeagueEditor client:load />
 </AdminLayout>
 

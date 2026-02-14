@@ -94,9 +94,10 @@ export async function hasAllPermissions(
 }
 
 /**
- * Get user with their roles and permissions
+ * Get user with their roles and permissions in a single optimized query
  */
 export async function getUserWithPermissions(userId: string) {
+  // Use a single query to get everything we need
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -120,15 +121,24 @@ export async function getUserWithPermissions(userId: string) {
     return null;
   }
 
-  // Flatten permissions
-  const permissions = await getUserPermissions(userId);
+  // Flatten roles and permissions in memory to avoid extra DB calls
+  const permissionsSet = new Set<string>();
+  const roles = user.userRoles.map(ur => {
+    // Add all permissions from this role
+    if (ur.role.permissions) {
+      for (const rp of ur.role.permissions) {
+        if (rp.permission) {
+          permissionsSet.add(`${rp.permission.resource}:${rp.permission.action}`);
+        }
+      }
+    }
 
-  // Extract role names
-  const roles = user.userRoles.map(ur => ({
-    id: ur.role.id,
-    name: ur.role.name,
-    description: ur.role.description,
-  }));
+    return {
+      id: ur.role.id,
+      name: ur.role.name,
+      description: ur.role.description,
+    };
+  });
 
   return {
     id: user.id,
@@ -137,7 +147,7 @@ export async function getUserWithPermissions(userId: string) {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     roles,
-    permissions,
+    permissions: Array.from(permissionsSet),
   };
 }
 

@@ -4,15 +4,9 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import NewsList from '../../../features/cms/components/NewsList';
-import { requirePermissionPage } from '../../../features/rbac/auth-helpers';
-
-const user = await requirePermissionPage(Astro.request, 'news_articles:read');
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
 ---
 
-<AdminLayout title="News Management - Admin">
+<AdminLayout title="News Management - Admin" permission="news_articles:read">
   <NewsList client:load />
 </AdminLayout>
 

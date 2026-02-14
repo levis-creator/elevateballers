@@ -6,7 +6,7 @@ import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import PlayerEditor from '../../../features/cms/components/PlayerEditor';
 ---
 
-<AdminLayout title="Create Player - Admin">
+<AdminLayout title="Create Player - Admin" permission="players:create">
   <PlayerEditor client:load />
 </AdminLayout>
 

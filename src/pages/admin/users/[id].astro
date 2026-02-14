@@ -4,16 +4,13 @@ export const ssr = false;
 
 import AdminLayout from "../../../features/cms/components/AdminLayout.astro";
 import UserEditor from "../../../features/cms/components/UserEditor";
-import { requireAdmin } from "../../../features/rbac/auth-helpers";
-
-const user = await requireAdmin(Astro.request);
-if (!user) {
-    return Astro.redirect("/admin/login", 302);
-}
 
 const { id } = Astro.params;
 ---
 
-<AdminLayout title="Edit User - Admin">
+<AdminLayout
+    title="Edit User - Admin"
+    permissionsAll={['users:update', 'users:manage_roles', 'roles:read']}
+>
     <UserEditor userId={id} client:load />
 </AdminLayout>

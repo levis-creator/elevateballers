@@ -12,7 +12,7 @@ import StaffEditor from '../../../features/cms/components/StaffEditor';
 const { id } = Astro.params;
 ---
 
-<AdminLayout title="Edit Staff Member - Admin">
+<AdminLayout title="Edit Staff Member - Admin" permission="staff:update">
   <StaffEditor staffId={id} client:load />
 </AdminLayout>
 

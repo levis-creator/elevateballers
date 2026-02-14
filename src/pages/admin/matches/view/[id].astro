@@ -8,12 +8,6 @@ export async function getStaticPaths() {
 
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
 import MatchDetailView from '../../../../features/cms/components/MatchDetailView';
-import { requirePermissionPage } from '../../../../features/rbac/auth-helpers';
-
-const user = await requirePermissionPage(Astro.request, 'matches:read');
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
 
 const { id } = Astro.params;
 
@@ -22,7 +16,7 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="Match Details - Admin">
+<AdminLayout title="Match Details - Admin" permission="matches:read">
   <MatchDetailView matchId={id} client:load />
 </AdminLayout>
 

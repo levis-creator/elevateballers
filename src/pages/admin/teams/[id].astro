@@ -13,7 +13,7 @@ const { id } = Astro.params;
 ---
 
 
-<AdminLayout title="Edit Team - Admin">
+<AdminLayout title="Edit Team - Admin" permission="teams:update">
   <TeamEditor teamId={id} client:load />
 </AdminLayout>
 

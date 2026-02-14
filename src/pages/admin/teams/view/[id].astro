@@ -7,13 +7,7 @@ export async function getStaticPaths() {
 }
 
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
-import { requirePermissionPage } from '../../../../features/rbac/auth-helpers';
 import TeamView from '../../../../features/cms/components/TeamView';
-
-const user = await requirePermissionPage(Astro.request, 'teams:read');
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
 
 const { id } = Astro.params;
 if (!id) {
@@ -21,7 +15,7 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="View Team - Admin">
+<AdminLayout title="View Team - Admin" permission="teams:read">
   <TeamView teamId={id} client:load />
 </AdminLayout>
 

@@ -17,16 +17,16 @@ export const GET: APIRoute = async ({ request }) => {
     const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
     let articles;
-    
+
     // Admin access requires authentication and returns all articles (including unpublished)
     if (admin) {
       await requirePermission(request, 'news_articles:create');
       articles = await getAllNewsArticles(true);
-    } 
+    }
     // Featured articles endpoint - public access, only returns published featured articles
     else if (featured) {
       articles = await getFeaturedNewsArticles();
-    } 
+    }
     // Regular public endpoint - only returns published articles
     else {
       articles = await getNewsArticles(category);
@@ -37,16 +37,33 @@ export const GET: APIRoute = async ({ request }) => {
       articles = articles.slice(0, limit);
     }
 
-    // Add comments count to each article
-    const articlesWithComments: NewsArticleDTO[] = await Promise.all(
-      articles.map(async (article) => {
-        const commentsCount = await getArticleCommentCount(article.id);
-        return {
-          ...article,
-          commentsCount,
-        } as NewsArticleDTO;
-      })
-    );
+    // Optimized: Fetch all comment counts in a single query if there are articles
+    const articleIds = articles.map(a => a.id);
+    let countsMap: Record<string, number> = {};
+
+    if (articleIds.length > 0) {
+      const counts = await prisma.comment.groupBy({
+        by: ['articleId'],
+        _count: {
+          id: true,
+        },
+        where: {
+          articleId: {
+            in: articleIds,
+          },
+          approved: true,
+        },
+      });
+
+      countsMap = Object.fromEntries(
+        counts.map(c => [c.articleId, c._count.id])
+      );
+    }
+
+    const articlesWithComments: NewsArticleDTO[] = articles.map((article) => ({
+      ...article,
+      commentsCount: countsMap[article.id] || 0,
+    } as NewsArticleDTO));
 
     return new Response(JSON.stringify(articlesWithComments), {
       headers: { 'Content-Type': 'application/json' },
@@ -59,11 +76,11 @@ export const GET: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    
+
     // Handle invalid date errors specifically
-    if (error instanceof Error && 
-        (error.message.includes('Invalid time value') || 
-         error.message.includes('RangeError'))) {
+    if (error instanceof Error &&
+      (error.message.includes('Invalid time value') ||
+        error.message.includes('RangeError'))) {
       console.error('⚠️  Invalid dates detected in database. Run: npm run fix:dates');
       // Return empty array instead of error to prevent site crash
       return new Response(JSON.stringify([]), {
@@ -71,7 +88,7 @@ export const GET: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    
+
     console.error('Error fetching news articles:', error);
     return new Response(JSON.stringify({ error: 'Failed to fetch articles' }), {
       status: 500,

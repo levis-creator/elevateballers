@@ -8,17 +8,11 @@ export async function getStaticPaths() {
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import LeagueEditor from '../../../features/cms/components/LeagueEditor';
-import { requirePermissionPage } from '../../../features/rbac/auth-helpers';
-
-const user = await requirePermissionPage(Astro.request, 'leagues:edit');
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
 
 const { id } = Astro.params;
 ---
 
-<AdminLayout title="Edit League - Admin">
+<AdminLayout title="Edit League - Admin" permission="leagues:update">
   <LeagueEditor leagueId={id} client:load />
 </AdminLayout>
 
