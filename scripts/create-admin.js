@@ -118,9 +118,9 @@ async function main() {
         },
       });
 
-      // Check if user already has Admin role
+      // Check if user already has Admin role by comparing IDs
       const hasAdminRole = existingUser.userRoles.some(
-        ur => ur.role.name === 'Admin'
+        ur => ur.roleId === adminRole.id
       );
 
       if (!hasAdminRole) {
@@ -141,7 +141,6 @@ async function main() {
           email,
           passwordHash: hashedPassword,
           name,
-          emailVerified: new Date(), // Auto-verify admin
         },
       });
 

@@ -40,11 +40,44 @@ export default function Header({
 }: Props) {
   const { isMobileMenuOpen, toggleMobileMenu, closeMobileMenu } = useLayoutStore();
   const [pathname, setPathname] = useState(currentPath);
+  const [resolvedBackgroundImage, setResolvedBackgroundImage] = useState(backgroundImage);
 
   // Update pathname on client side
   useEffect(() => {
     setPathname(window.location.pathname);
   }, []);
+
+  // Load dynamic header background image (if set) with local fallback
+  useEffect(() => {
+    if (!showBackground) return;
+
+    let isMounted = true;
+
+    const loadHeaderBackground = async () => {
+      try {
+        const res = await fetch('/api/settings?category=appearance');
+        if (!res.ok) return;
+
+        const settings = await res.json();
+        const headerImage = Array.isArray(settings)
+          ? settings.find((s: { key: string; value: string }) => s.key === 'header_banner_image_url')
+          : null;
+
+        const nextImage = headerImage?.value?.trim();
+        if (isMounted && nextImage) {
+          setResolvedBackgroundImage(nextImage);
+        }
+      } catch (error) {
+        console.error('Error fetching header background setting:', error);
+      }
+    };
+
+    loadHeaderBackground();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showBackground]);
 
   // Check if we're on the homepage
   const isHomepage = pathname === "/" || pathname === "";
@@ -100,7 +133,7 @@ export default function Header({
           {showBackground && (
             <div
               className="stm-header-background"
-              style={{ backgroundImage: `url('${backgroundImage}')` }}
+              style={{ backgroundImage: `url('${resolvedBackgroundImage}')` }}
             />
           )}
           <div className="container stm-header-container">
@@ -271,5 +304,4 @@ export default function Header({
     </>
   );
 }
-
 

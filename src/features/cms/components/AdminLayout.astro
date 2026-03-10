@@ -22,32 +22,48 @@ const {
 // Check authentication
 const user = await checkAuth(Astro.request);
 
-// Redirect to login if not authenticated
+let redirectUrl: string | null = null;
+
 if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
-
-if (permission) {
+  redirectUrl = '/admin/login';
+} else if (permission) {
   const allowed = await hasPermission(user.id, permission);
-  if (!allowed) {
-    return Astro.redirect('/unauthorized', 302);
-  }
-}
-
-if (permissionsAny?.length) {
+  if (!allowed) redirectUrl = '/unauthorized';
+} else if (permissionsAny?.length) {
   const allowed = await hasAnyPermission(user.id, permissionsAny);
-  if (!allowed) {
-    return Astro.redirect('/unauthorized', 302);
-  }
+  if (!allowed) redirectUrl = '/unauthorized';
+} else if (permissionsAll?.length) {
+  const allowed = await hasAllPermissions(user.id, permissionsAll);
+  if (!allowed) redirectUrl = '/unauthorized';
 }
 
-if (permissionsAll?.length) {
-  const allowed = await hasAllPermissions(user.id, permissionsAll);
-  if (!allowed) {
-    return Astro.redirect('/unauthorized', 302);
+if (redirectUrl) {
+  try {
+    // Try to perform a proper server-side redirect
+    return Astro.redirect(redirectUrl, 302);
+  } catch (e) {
+    // If output stream has already started, Astro.redirect throws ResponseSentError
+    // We fall back to yielding a meta refresh + client-side script in this case
+    // (This variable checking is done in the template below)
   }
 }
 ---
+
+{redirectUrl ? (
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta http-equiv="refresh" content={`0;url=${redirectUrl}`} />
+      <title>Redirecting...</title>
+      <script define:vars={{ url: redirectUrl }}>
+        window.location.href = url;
+      </script>
+    </head>
+    <body style="background: #f9fafb; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
+      <p>Redirecting to <a href={redirectUrl} style="color: #dd3333; text-decoration: none; font-weight: bold;">{redirectUrl}</a>...</p>
+    </body>
+  </html>
+) : (
 
 <Layout title={title}>
   <div class="flex min-h-screen bg-[#f9fafb] relative w-full font-sans">
@@ -100,3 +116,4 @@ if (permissionsAll?.length) {
     }
   </style>
 </Layout>
+)}

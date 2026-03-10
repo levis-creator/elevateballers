@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { config } from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
 config();
 
@@ -26,7 +28,11 @@ function createPrismaClient() {
 
 const prisma = createPrismaClient();
 
-// Permission category mapping
+const CSV_PERMISSIONS_PATH = process.env.PERMISSIONS_CSV
+  ? path.resolve(process.env.PERMISSIONS_CSV)
+  : path.resolve(process.cwd(), 'scripts/data/permissions.csv');
+
+// Legacy/fallback permission category mapping
 const PERMISSION_CATEGORIES = {
   teams: 'Teams',
   players: 'Players',
@@ -50,7 +56,7 @@ const PERMISSION_CATEGORIES = {
   tournaments: 'Tournaments',
 };
 
-// Additional permissions to add
+// Additional permissions to add (legacy fallback when CSV is unavailable)
 const ADDITIONAL_PERMISSIONS = [
   // Teams
   { resource: 'teams', action: 'approve', description: 'Approve team registrations', category: 'Teams' },
@@ -101,50 +107,165 @@ const ADDITIONAL_PERMISSIONS = [
   { resource: 'registration_notifications', action: 'manage', description: 'Manage notifications', category: 'Notifications' },
 ];
 
+function parseCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      i++;
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values.map((value) => value.trim());
+}
+
+function loadPermissionsFromCsv() {
+  if (!fs.existsSync(CSV_PERMISSIONS_PATH)) {
+    return null;
+  }
+
+  const raw = fs.readFileSync(CSV_PERMISSIONS_PATH, 'utf8');
+  const lines = raw.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length < 2) return null;
+
+  const headers = parseCsvLine(lines[0]);
+  const idx = (name) => headers.indexOf(name);
+
+  const resourceIdx = idx('resource');
+  const actionIdx = idx('action');
+  const descriptionIdx = idx('description');
+  const categoryIdx = idx('category');
+
+  if (resourceIdx === -1 || actionIdx === -1) {
+    return null;
+  }
+
+  const permissions = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCsvLine(lines[i]);
+    const resource = values[resourceIdx];
+    const action = values[actionIdx];
+    if (!resource || !action) continue;
+
+    permissions.push({
+      resource,
+      action,
+      description: values[descriptionIdx] || null,
+      category: values[categoryIdx] || null,
+    });
+  }
+
+  return permissions;
+}
+
 async function enhanceRBAC() {
   console.log('\n🔧 Enhancing RBAC system...\n');
 
   try {
-    // 1. Update existing permissions with categories
-    console.log('1️⃣  Adding categories to existing permissions...');
-    const existingPermissions = await prisma.permission.findMany();
+    const csvPermissions = loadPermissionsFromCsv();
 
-    let updatedCount = 0;
-    for (const perm of existingPermissions) {
-      const category = PERMISSION_CATEGORIES[perm.resource];
-      if (category && !perm.category) {
-        await prisma.permission.update({
-          where: { id: perm.id },
-          data: { category },
-        });
-        updatedCount++;
-      }
-    }
-    console.log(`   ✅ Updated ${updatedCount} permissions with categories\n`);
+    if (csvPermissions && csvPermissions.length > 0) {
+      console.log(`1️⃣  Seeding permissions from CSV (${CSV_PERMISSIONS_PATH})...`);
+      let addedCount = 0;
+      let updatedCount = 0;
 
-    // 2. Add additional permissions
-    console.log('2️⃣  Adding new permissions...');
-    let addedCount = 0;
-
-    for (const perm of ADDITIONAL_PERMISSIONS) {
-      const existing = await prisma.permission.findUnique({
-        where: {
-          resource_action: {
-            resource: perm.resource,
-            action: perm.action,
+      for (const perm of csvPermissions) {
+        const existing = await prisma.permission.findUnique({
+          where: {
+            resource_action: {
+              resource: perm.resource,
+              action: perm.action,
+            },
           },
-        },
-      });
-
-      if (!existing) {
-        await prisma.permission.create({
-          data: perm,
         });
-        addedCount++;
-        console.log(`   ➕ Added: ${perm.resource}:${perm.action}`);
+
+        if (!existing) {
+          await prisma.permission.create({ data: perm });
+          addedCount++;
+        } else {
+          const needsUpdate =
+            (perm.description && perm.description !== existing.description) ||
+            (perm.category && perm.category !== existing.category);
+
+          if (needsUpdate) {
+            await prisma.permission.update({
+              where: { id: existing.id },
+              data: {
+                description: perm.description ?? existing.description,
+                category: perm.category ?? existing.category,
+              },
+            });
+            updatedCount++;
+          }
+        }
       }
+
+      console.log(`   ✅ Added ${addedCount} permissions`);
+      console.log(`   ✅ Updated ${updatedCount} permissions\n`);
+    } else {
+      // 1. Update existing permissions with categories
+      console.log('1️⃣  Adding categories to existing permissions...');
+      const existingPermissions = await prisma.permission.findMany();
+
+      let updatedCount = 0;
+      for (const perm of existingPermissions) {
+        const category = PERMISSION_CATEGORIES[perm.resource];
+        if (category && !perm.category) {
+          await prisma.permission.update({
+            where: { id: perm.id },
+            data: { category },
+          });
+          updatedCount++;
+        }
+      }
+      console.log(`   ✅ Updated ${updatedCount} permissions with categories\n`);
+
+      // 2. Add additional permissions
+      console.log('2️⃣  Adding new permissions...');
+      let addedCount = 0;
+
+      for (const perm of ADDITIONAL_PERMISSIONS) {
+        const existing = await prisma.permission.findUnique({
+          where: {
+            resource_action: {
+              resource: perm.resource,
+              action: perm.action,
+            },
+          },
+        });
+
+        if (!existing) {
+          await prisma.permission.create({
+            data: perm,
+          });
+          addedCount++;
+          console.log(`   ➕ Added: ${perm.resource}:${perm.action}`);
+        }
+      }
+      console.log(`   ✅ Added ${addedCount} new permissions\n`);
     }
-    console.log(`   ✅ Added ${addedCount} new permissions\n`);
 
     // 3. Mark existing roles as system roles
     console.log('3️⃣  Marking existing roles as system roles...');

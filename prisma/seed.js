@@ -71,13 +71,97 @@ async function seedAdmin() {
   console.log(`Email: ${email}`);
   console.log(`Name: ${name}`);
 
+  // Create or get Admin role (canonical RBAC role name)
+  let adminRole = await prisma.role.findUnique({
+    where: { name: 'Admin' },
+  });
+
+  if (!adminRole) {
+    // Try to migrate legacy ADMIN role if it exists
+    const legacyAdminRole = await prisma.role.findUnique({
+      where: { name: 'ADMIN' },
+    });
+
+    if (legacyAdminRole) {
+      adminRole = await prisma.role.update({
+        where: { id: legacyAdminRole.id },
+        data: {
+          name: 'Admin',
+          description: legacyAdminRole.description || 'System Administrator',
+          isSystem: true,
+        },
+      });
+      console.log('✅ Migrated legacy role "ADMIN" to "Admin".');
+    } else {
+      adminRole = await prisma.role.create({
+        data: {
+          name: 'Admin',
+          description: 'System Administrator',
+          isSystem: true,
+        },
+      });
+      console.log('✅ Created Admin role.');
+    }
+  } else if (!adminRole.isSystem) {
+    adminRole = await prisma.role.update({
+      where: { id: adminRole.id },
+      data: { isSystem: true },
+    });
+  }
+
+  // Ensure Admin role has all permissions
+  const allPermissions = await prisma.permission.findMany({
+    select: { id: true },
+  });
+
+  if (allPermissions.length === 0) {
+    console.log('⚠️  No permissions found. Run RBAC seed scripts to create permissions.');
+  } else {
+    const existingRolePermissions = await prisma.rolePermission.findMany({
+      where: { roleId: adminRole.id },
+      select: { permissionId: true },
+    });
+
+    const assignedPermissionIds = new Set(
+      existingRolePermissions.map(rp => rp.permissionId)
+    );
+
+    const missingRolePermissions = allPermissions
+      .filter(p => !assignedPermissionIds.has(p.id))
+      .map(p => ({
+        roleId: adminRole.id,
+        permissionId: p.id,
+      }));
+
+    if (missingRolePermissions.length > 0) {
+      await prisma.rolePermission.createMany({
+        data: missingRolePermissions,
+        skipDuplicates: true,
+      });
+      console.log(`✅ Added ${missingRolePermissions.length} permissions to Admin role.`);
+    }
+  }
+
   // Check if admin already exists
   const existingAdmin = await prisma.user.findUnique({
     where: { email },
+    include: { userRoles: true },
   });
 
   if (existingAdmin) {
     console.log(`⚠️  Admin user with email "${email}" already exists.`);
+
+    // Check if they have the Admin role, if not, add it
+    const hasAdminRole = existingAdmin.userRoles.some(ur => ur.roleId === adminRole.id);
+    if (!hasAdminRole) {
+      await prisma.userRole.create({
+        data: {
+          userId: existingAdmin.id,
+          roleId: adminRole.id,
+        }
+      });
+      console.log('✅ Added Admin role to existing user.');
+    }
 
     // Update password if provided via env var (useful for resetting password)
     if (process.env.ADMIN_PASSWORD) {
@@ -87,7 +171,6 @@ async function seedAdmin() {
         data: {
           passwordHash: hashedPassword,
           name,
-          role: 'ADMIN',
         },
       });
       console.log('✅ Admin user password updated!');
@@ -106,14 +189,18 @@ async function seedAdmin() {
       email,
       passwordHash: hashedPassword,
       name,
-      role: 'ADMIN',
+      userRoles: {
+        create: {
+          roleId: adminRole.id,
+        },
+      },
     },
   });
 
   console.log('✅ Admin user created successfully!');
   console.log(`   User ID: ${admin.id}`);
   console.log(`   Email: ${admin.email}`);
-  console.log(`   Role: ${admin.role}`);
+  console.log(`   Role: Admin`);
 
   return admin;
 }
