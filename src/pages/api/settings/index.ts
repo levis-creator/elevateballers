@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'site_settings:read');
+    await requirePermission(request, 'site_settings:manage');
     const data = await request.json();
 
     if (!data.key || !data.value || !data.label) {
@@ -63,4 +63,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

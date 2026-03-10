@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'site_settings:read');
+    await requirePermission(request, 'site_settings:manage');
     const data = await request.json();
 
     const setting = await updateSiteSetting(params.id!, data);
@@ -60,7 +60,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'site_settings:read');
+    await requirePermission(request, 'site_settings:manage');
     const success = await deleteSiteSetting(params.id!);
 
     if (!success) {
@@ -82,4 +82,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

@@ -59,8 +59,8 @@ const endpointPermissionMap = {
   'seasons/bulk-delete.ts': { POST: 'seasons:delete' },
 
   // Settings
-  'settings/index.ts': { GET: 'site_settings:read', POST: 'site_settings:create' },
-  'settings/[id].ts': { GET: 'site_settings:read', PUT: 'site_settings:update', DELETE: 'site_settings:delete' },
+  'settings/index.ts': { GET: 'site_settings:read', POST: 'site_settings:manage' },
+  'settings/[id].ts': { GET: 'site_settings:read', PUT: 'site_settings:manage', DELETE: 'site_settings:manage' },
 
   // Staff
   'staff/index.ts': { GET: null, POST: 'staff:create', DELETE: 'staff:delete' },

@@ -37,6 +37,7 @@ export default function AdminSidebar() {
     Handshake?: ComponentType<any>;
     ShieldCheck?: ComponentType<any>;
     ChevronDown?: ComponentType<any>;
+    Settings?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -60,6 +61,7 @@ export default function AdminSidebar() {
         Handshake: mod.Handshake,
         ShieldCheck: mod.ShieldCheck,
         ChevronDown: mod.ChevronDown,
+        Settings: mod.Settings,
       });
     });
 
@@ -168,6 +170,12 @@ export default function AdminSidebar() {
       items: [
         { href: '/admin/users', icon: icons.Users, label: 'System Users', permission: 'users:read' },
         { href: '/admin/roles', icon: icons.ShieldCheck, label: 'Roles & Permissions', permission: 'roles:read' },
+        { 
+          href: '/admin/settings', 
+          icon: icons.Settings, 
+          label: 'Site Settings',
+          permissionsAny: ['site_settings:read', 'site_settings:manage'],
+        },
       ],
     },
   ]

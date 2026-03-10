@@ -31,6 +31,9 @@ export function MediaLibraryPicker({
   const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedUrl, setSelectedUrl] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -66,6 +69,52 @@ export function MediaLibraryPicker({
     }
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFilesSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('files', file));
+      formData.append('folder', 'general');
+
+      const response = await fetch('/api/media/batch-upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload images');
+      }
+
+      const data = await response.json();
+      const firstSuccess = Array.isArray(data.results)
+        ? data.results.find((r: { url?: string; error?: string }) => r.url && !r.error)
+        : null;
+
+      await fetchMedia();
+
+      if (firstSuccess?.url) {
+        setSelectedUrl(firstSuccess.url);
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col">
@@ -73,15 +122,39 @@ export function MediaLibraryPicker({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="relative my-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search images..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+        <div className="flex gap-2 my-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search images..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFilesSelected}
           />
+          <Button variant="outline" onClick={handleUploadClick} disabled={uploading}>
+            {uploading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Uploading...
+              </span>
+            ) : (
+              'Upload Images'
+            )}
+          </Button>
         </div>
+
+        {uploadError && (
+          <p className="text-sm text-red-600 mt-1">{uploadError}</p>
+        )}
 
         <div className="flex-1 overflow-y-auto pr-4">
           {loading ? (
