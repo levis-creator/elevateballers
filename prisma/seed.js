@@ -2,20 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import bcrypt from 'bcryptjs';
 import { config } from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
-// Load environment variables
 config();
 
-/**
- * Hash a password using bcrypt
- */
-async function hashPassword(password) {
-  return await bcrypt.hash(password, 10);
-}
-
-/**
- * Create Prisma client with MariaDB adapter
- */
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
 
@@ -26,7 +17,6 @@ function createPrismaClient() {
     );
   }
 
-  // Parse MySQL connection string
   let poolConfig;
 
   try {
@@ -37,7 +27,7 @@ function createPrismaClient() {
       port: parseInt(url.port) || 3306,
       user: decodeURIComponent(url.username),
       password: decodeURIComponent(url.password),
-      database: url.pathname.slice(1), // Remove leading '/'
+      database: url.pathname.slice(1),
       connectionLimit: 5,
       idleTimeout: 30000,
       connectTimeout: 15000,
@@ -59,157 +49,335 @@ function createPrismaClient() {
 
 const prisma = createPrismaClient();
 
-/**
- * Seed admin user
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function hashPassword(password) {
+  return await bcrypt.hash(password, 10);
+}
+
+function parseCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      i++;
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values.map((v) => v.trim());
+}
+
+function loadPermissionsFromCsv() {
+  const csvPath = process.env.PERMISSIONS_CSV
+    ? path.resolve(process.env.PERMISSIONS_CSV)
+    : path.resolve(process.cwd(), 'scripts/data/permissions.csv');
+
+  if (!fs.existsSync(csvPath)) {
+    return null;
+  }
+
+  const raw = fs.readFileSync(csvPath, 'utf8');
+  const lines = raw.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length < 2) return null;
+
+  const headers = parseCsvLine(lines[0]);
+  const idx = (name) => headers.indexOf(name);
+
+  const resourceIdx = idx('resource');
+  const actionIdx = idx('action');
+  const descriptionIdx = idx('description');
+  const categoryIdx = idx('category');
+
+  if (resourceIdx === -1 || actionIdx === -1) return null;
+
+  const permissions = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCsvLine(lines[i]);
+    const resource = values[resourceIdx];
+    const action = values[actionIdx];
+    if (!resource || !action) continue;
+
+    permissions.push({
+      resource,
+      action,
+      description: descriptionIdx !== -1 ? values[descriptionIdx] || null : null,
+      category: categoryIdx !== -1 ? values[categoryIdx] || null : null,
+    });
+  }
+
+  return permissions;
+}
+
+// ---------------------------------------------------------------------------
+// 1. Seed permissions
+// ---------------------------------------------------------------------------
+
+async function seedPermissions() {
+  console.log('\n[1/6] Seeding permissions...');
+
+  const csvPermissions = loadPermissionsFromCsv();
+
+  if (!csvPermissions || csvPermissions.length === 0) {
+    console.log('     Warning: permissions.csv not found or empty — skipping permission seeding.');
+    return;
+  }
+
+  let added = 0;
+  let updated = 0;
+
+  for (const perm of csvPermissions) {
+    const existing = await prisma.permission.findUnique({
+      where: { resource_action: { resource: perm.resource, action: perm.action } },
+    });
+
+    if (!existing) {
+      await prisma.permission.create({ data: perm });
+      added++;
+    } else {
+      const needsUpdate =
+        (perm.description && perm.description !== existing.description) ||
+        (perm.category && perm.category !== existing.category);
+
+      if (needsUpdate) {
+        await prisma.permission.update({
+          where: { id: existing.id },
+          data: {
+            description: perm.description ?? existing.description,
+            category: perm.category ?? existing.category,
+          },
+        });
+        updated++;
+      }
+    }
+  }
+
+  const total = await prisma.permission.count();
+  console.log(`     Added ${added}, updated ${updated}. Total: ${total} permissions.`);
+}
+
+// ---------------------------------------------------------------------------
+// 2. Seed roles
+// ---------------------------------------------------------------------------
+
+const ROLE_DEFINITIONS = [
+  {
+    name: 'Admin',
+    description: 'System Administrator — full access',
+    isSystem: true,
+    // Admin gets ALL permissions assigned after role creation
+    permissions: null,
+  },
+  {
+    name: 'Editor',
+    description: 'Edit and publish all content',
+    isSystem: true,
+    permissions: [
+      'teams:read', 'teams:create', 'teams:update', 'teams:approve',
+      'players:read', 'players:create', 'players:update', 'players:approve', 'players:view_stats',
+      'matches:read', 'matches:create', 'matches:update',
+      'news_articles:read', 'news_articles:create', 'news_articles:update', 'news_articles:publish',
+      'media:read', 'media:create', 'media:update',
+      'folders:read', 'folders:create', 'folders:update',
+      'comments:read', 'comments:update', 'comments:delete',
+      'leagues:read', 'seasons:read',
+      'staff:read', 'staff:create', 'staff:update',
+    ],
+  },
+  {
+    name: 'Statistician',
+    description: 'Track match events and statistics',
+    isSystem: true,
+    permissions: [
+      'matches:read', 'matches:track', 'matches:manage_events', 'matches:manage_players', 'matches:view_reports',
+      'teams:read', 'players:read', 'players:view_stats',
+      'leagues:read', 'seasons:read',
+      'game_rules:read',
+      'reports:read',
+    ],
+  },
+  {
+    name: 'Content Manager',
+    description: 'Manage news, media, and content',
+    isSystem: true,
+    permissions: [
+      'news_articles:create', 'news_articles:read', 'news_articles:update', 'news_articles:delete', 'news_articles:publish',
+      'media:create', 'media:read', 'media:update', 'media:delete', 'media:batch_upload',
+      'folders:create', 'folders:read', 'folders:update', 'folders:delete',
+      'page_contents:create', 'page_contents:read', 'page_contents:update', 'page_contents:delete',
+      'potw:create', 'potw:read', 'potw:update', 'potw:delete',
+      'sponsors:create', 'sponsors:read', 'sponsors:update', 'sponsors:delete',
+      'comments:read', 'comments:update', 'comments:delete',
+    ],
+  },
+  {
+    name: 'Scorekeeper',
+    description: 'Track matches and game events',
+    isSystem: true,
+    permissions: [
+      'matches:read', 'matches:track', 'matches:manage_events', 'matches:manage_players',
+      'teams:read', 'players:read', 'players:view_stats',
+      'game_rules:read',
+    ],
+  },
+  {
+    name: 'Viewer',
+    description: 'Read-only access',
+    isSystem: true,
+    permissions: [
+      'teams:read', 'players:read', 'matches:read', 'leagues:read', 'seasons:read',
+      'news_articles:read', 'media:read', 'reports:read', 'staff:read',
+    ],
+  },
+];
+
+async function seedRoles() {
+  console.log('\n[2/6] Seeding roles...');
+
+  const allPermissions = await prisma.permission.findMany({ select: { id: true, resource: true, action: true } });
+  const permissionMap = new Map(allPermissions.map((p) => [`${p.resource}:${p.action}`, p.id]));
+
+  for (const roleDef of ROLE_DEFINITIONS) {
+    let role = await prisma.role.findUnique({ where: { name: roleDef.name } });
+
+    if (!role) {
+      role = await prisma.role.create({
+        data: { name: roleDef.name, description: roleDef.description, isSystem: roleDef.isSystem },
+      });
+      console.log(`     Created role: ${roleDef.name}`);
+    } else {
+      if (!role.isSystem && roleDef.isSystem) {
+        await prisma.role.update({ where: { id: role.id }, data: { isSystem: true } });
+      }
+      console.log(`     Role exists:  ${roleDef.name}`);
+    }
+
+    // Determine which permissions to assign
+    let targetPermissionIds;
+
+    if (roleDef.permissions === null) {
+      // Admin: assign ALL permissions
+      targetPermissionIds = allPermissions.map((p) => p.id);
+    } else {
+      targetPermissionIds = roleDef.permissions
+        .map((key) => permissionMap.get(key))
+        .filter(Boolean);
+    }
+
+    // Find what's already assigned
+    const existing = await prisma.rolePermission.findMany({
+      where: { roleId: role.id },
+      select: { permissionId: true },
+    });
+    const assignedIds = new Set(existing.map((rp) => rp.permissionId));
+
+    const toAdd = targetPermissionIds.filter((id) => !assignedIds.has(id));
+
+    if (toAdd.length > 0) {
+      await prisma.rolePermission.createMany({
+        data: toAdd.map((permissionId) => ({ roleId: role.id, permissionId })),
+        skipDuplicates: true,
+      });
+      console.log(`     Assigned ${toAdd.length} permissions to ${roleDef.name}.`);
+    }
+  }
+
+  // Also ensure legacy ADMIN role is renamed to Admin
+  const legacyAdmin = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
+  if (legacyAdmin) {
+    await prisma.role.update({
+      where: { id: legacyAdmin.id },
+      data: { name: 'Admin', description: 'System Administrator — full access', isSystem: true },
+    });
+    console.log('     Migrated legacy "ADMIN" role to "Admin".');
+  }
+
+  const totalRoles = await prisma.role.count();
+  console.log(`     Total: ${totalRoles} roles.`);
+}
+
+// ---------------------------------------------------------------------------
+// 3. Seed admin user
+// ---------------------------------------------------------------------------
+
 async function seedAdmin() {
+  console.log('\n[3/6] Seeding admin user...');
+
   const email = process.env.ADMIN_EMAIL || 'admin@elevateballers.com';
   const password = process.env.ADMIN_PASSWORD || 'admin123';
   const name = process.env.ADMIN_NAME || 'Admin User';
 
-  console.log('\n🌱 Seeding admin user...');
-  console.log(`Email: ${email}`);
-  console.log(`Name: ${name}`);
-
-  // Create or get Admin role (canonical RBAC role name)
-  let adminRole = await prisma.role.findUnique({
-    where: { name: 'Admin' },
-  });
+  const adminRole = await prisma.role.findUnique({ where: { name: 'Admin' } });
 
   if (!adminRole) {
-    // Try to migrate legacy ADMIN role if it exists
-    const legacyAdminRole = await prisma.role.findUnique({
-      where: { name: 'ADMIN' },
-    });
-
-    if (legacyAdminRole) {
-      adminRole = await prisma.role.update({
-        where: { id: legacyAdminRole.id },
-        data: {
-          name: 'Admin',
-          description: legacyAdminRole.description || 'System Administrator',
-          isSystem: true,
-        },
-      });
-      console.log('✅ Migrated legacy role "ADMIN" to "Admin".');
-    } else {
-      adminRole = await prisma.role.create({
-        data: {
-          name: 'Admin',
-          description: 'System Administrator',
-          isSystem: true,
-        },
-      });
-      console.log('✅ Created Admin role.');
-    }
-  } else if (!adminRole.isSystem) {
-    adminRole = await prisma.role.update({
-      where: { id: adminRole.id },
-      data: { isSystem: true },
-    });
+    console.log('     Warning: Admin role not found — skipping admin user creation.');
+    return;
   }
 
-  // Ensure Admin role has all permissions
-  const allPermissions = await prisma.permission.findMany({
-    select: { id: true },
-  });
-
-  if (allPermissions.length === 0) {
-    console.log('⚠️  No permissions found. Run RBAC seed scripts to create permissions.');
-  } else {
-    const existingRolePermissions = await prisma.rolePermission.findMany({
-      where: { roleId: adminRole.id },
-      select: { permissionId: true },
-    });
-
-    const assignedPermissionIds = new Set(
-      existingRolePermissions.map(rp => rp.permissionId)
-    );
-
-    const missingRolePermissions = allPermissions
-      .filter(p => !assignedPermissionIds.has(p.id))
-      .map(p => ({
-        roleId: adminRole.id,
-        permissionId: p.id,
-      }));
-
-    if (missingRolePermissions.length > 0) {
-      await prisma.rolePermission.createMany({
-        data: missingRolePermissions,
-        skipDuplicates: true,
-      });
-      console.log(`✅ Added ${missingRolePermissions.length} permissions to Admin role.`);
-    }
-  }
-
-  // Check if admin already exists
-  const existingAdmin = await prisma.user.findUnique({
+  const existingUser = await prisma.user.findUnique({
     where: { email },
-    include: { userRoles: true },
+    include: { userRoles: { select: { roleId: true } } },
   });
 
-  if (existingAdmin) {
-    console.log(`⚠️  Admin user with email "${email}" already exists.`);
+  if (existingUser) {
+    console.log(`     User already exists: ${email}`);
 
-    // Check if they have the Admin role, if not, add it
-    const hasAdminRole = existingAdmin.userRoles.some(ur => ur.roleId === adminRole.id);
+    const hasAdminRole = existingUser.userRoles.some((ur) => ur.roleId === adminRole.id);
     if (!hasAdminRole) {
-      await prisma.userRole.create({
-        data: {
-          userId: existingAdmin.id,
-          roleId: adminRole.id,
-        }
-      });
-      console.log('✅ Added Admin role to existing user.');
+      await prisma.userRole.create({ data: { userId: existingUser.id, roleId: adminRole.id } });
+      console.log('     Assigned Admin role to existing user.');
     }
 
-    // Update password if provided via env var (useful for resetting password)
     if (process.env.ADMIN_PASSWORD) {
-      const hashedPassword = await hashPassword(password);
       await prisma.user.update({
         where: { email },
-        data: {
-          passwordHash: hashedPassword,
-          name,
-        },
+        data: { passwordHash: await hashPassword(password), name },
       });
-      console.log('✅ Admin user password updated!');
-    } else {
-      console.log('ℹ️  Skipping creation. Set ADMIN_PASSWORD env var to update password.');
+      console.log('     Password updated.');
     }
-
-    return existingAdmin;
-  }
-
-  // Create new admin user
-  const hashedPassword = await hashPassword(password);
-
-  const admin = await prisma.user.create({
-    data: {
-      email,
-      passwordHash: hashedPassword,
-      name,
-      userRoles: {
-        create: {
-          roleId: adminRole.id,
-        },
+  } else {
+    const admin = await prisma.user.create({
+      data: {
+        email,
+        passwordHash: await hashPassword(password),
+        name,
+        userRoles: { create: { roleId: adminRole.id } },
       },
-    },
-  });
+    });
 
-  console.log('✅ Admin user created successfully!');
-  console.log(`   User ID: ${admin.id}`);
-  console.log(`   Email: ${admin.email}`);
-  console.log(`   Role: Admin`);
-
-  return admin;
+    console.log(`     Created admin user: ${admin.email} (ID: ${admin.id})`);
+  }
 }
 
-/**
- * Seed teams
- */
+// ---------------------------------------------------------------------------
+// 4. Seed teams
+// ---------------------------------------------------------------------------
+
 async function seedTeams() {
-  console.log('\n🏀 Seeding teams...');
+  console.log('\n[4/6] Seeding teams...');
 
   const teams = [
     { name: 'Thunder Hawks', slug: 'thunder-hawks', nickname: 'Hawks', description: 'Elite basketball team known for fast-paced gameplay' },
@@ -229,71 +397,57 @@ async function seedTeams() {
   const createdTeams = [];
 
   for (const team of teams) {
-    const existing = await prisma.team.findUnique({
-      where: { slug: team.slug },
-    });
+    const existing = await prisma.team.findUnique({ where: { slug: team.slug } });
 
     if (existing) {
-      console.log(`   ⚠️  Team "${team.name}" already exists`);
       createdTeams.push(existing);
     } else {
-      const created = await prisma.team.create({
-        data: {
-          ...team,
-          approved: true,
-        },
-      });
-      console.log(`   ✅ Created team: ${team.name}`);
+      const created = await prisma.team.create({ data: { ...team, approved: true } });
       createdTeams.push(created);
     }
   }
 
-  console.log(`✅ Teams seeded: ${createdTeams.length} teams`);
+  const newCount = createdTeams.filter((_, i) => i < teams.length).length;
+  console.log(`     ${teams.length} teams ready.`);
   return createdTeams;
 }
 
-/**
- * Seed leagues
- */
+// ---------------------------------------------------------------------------
+// 5. Seed leagues
+// ---------------------------------------------------------------------------
+
 async function seedLeagues() {
-  console.log('\n🏆 Seeding leagues...');
+  console.log('\n[5/6] Seeding leagues & seasons...');
 
   const leagues = [
     { name: 'Ballers League', slug: 'ballers-league', description: 'Premier basketball league', active: true },
     { name: 'Junior Ballers', slug: 'junior-ballers', description: 'Youth basketball league', active: true },
     { name: 'Senior Ballers', slug: 'senior-ballers', description: 'Senior division league', active: true },
-    { name: 'Women\'s League', slug: 'womens-league', description: 'Women\'s basketball league', active: true },
+    { name: "Women's League", slug: 'womens-league', description: "Women's basketball league", active: true },
   ];
 
   const createdLeagues = [];
 
   for (const league of leagues) {
-    const existing = await prisma.league.findUnique({
-      where: { slug: league.slug },
-    });
+    const existing = await prisma.league.findUnique({ where: { slug: league.slug } });
 
     if (existing) {
-      console.log(`   ⚠️  League "${league.name}" already exists`);
       createdLeagues.push(existing);
     } else {
-      const created = await prisma.league.create({
-        data: league,
-      });
-      console.log(`   ✅ Created league: ${league.name}`);
+      const created = await prisma.league.create({ data: league });
       createdLeagues.push(created);
     }
   }
 
-  console.log(`✅ Leagues seeded: ${createdLeagues.length} leagues`);
+  console.log(`     ${createdLeagues.length} leagues ready.`);
   return createdLeagues;
 }
 
-/**
- * Seed seasons
- */
-async function seedSeasons(leagues) {
-  console.log('\n📅 Seeding seasons...');
+// ---------------------------------------------------------------------------
+// 6. Seed seasons
+// ---------------------------------------------------------------------------
 
+async function seedSeasons(leagues) {
   const seasons = [];
   const currentYear = new Date().getFullYear();
 
@@ -309,177 +463,132 @@ async function seedSeasons(leagues) {
     };
 
     const existing = await prisma.season.findFirst({
-      where: {
-        leagueId: league.id,
-        slug: seasonData.slug,
-      },
+      where: { leagueId: league.id, slug: seasonData.slug },
     });
 
     if (existing) {
-      console.log(`   ⚠️  Season "${seasonData.name}" for "${league.name}" already exists`);
       seasons.push(existing);
     } else {
-      const created = await prisma.season.create({
-        data: seasonData,
-      });
-      console.log(`   ✅ Created season: ${seasonData.name} for ${league.name}`);
+      const created = await prisma.season.create({ data: seasonData });
       seasons.push(created);
     }
   }
 
-  console.log(`✅ Seasons seeded: ${seasons.length} seasons`);
+  console.log(`     ${seasons.length} seasons ready.`);
   return seasons;
 }
 
-/**
- * Seed matches (fixtures)
- */
-async function seedMatches(teams, leagues, seasons) {
-  console.log('\n⚽ Seeding matches...');
+// ---------------------------------------------------------------------------
+// Seed matches
+// ---------------------------------------------------------------------------
 
-  // Helper to get random item from array
+async function seedMatches(teams, leagues, seasons) {
+  console.log('\n[6/6] Seeding matches...');
+
+  if (teams.length === 0 || leagues.length === 0 || seasons.length === 0) {
+    console.log('     No teams/leagues/seasons available — skipping match seeding.');
+    return;
+  }
+
   const random = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-  // Helper to get two different teams
   const getTwoTeams = () => {
     const team1 = random(teams);
     let team2 = random(teams);
-    while (team2.id === team1.id) {
-      team2 = random(teams);
-    }
+    while (team2.id === team1.id) team2 = random(teams);
     return [team1, team2];
   };
 
-  // Generate matches for the next 30 days
   const matches = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Create 20 upcoming matches
+  const stages = ['REGULAR_SEASON', 'PLAYOFF', 'QUARTER_FINALS', 'SEMI_FINALS', 'CHAMPIONSHIP'];
+
+  // 20 upcoming
   for (let i = 0; i < 20; i++) {
     const [team1, team2] = getTwoTeams();
     const league = random(leagues);
-    const season = seasons.find(s => s.leagueId === league.id);
-
+    const season = seasons.find((s) => s.leagueId === league.id);
     if (!season) continue;
 
-    // Spread matches over next 30 days
-    const daysAhead = Math.floor(Math.random() * 30);
     const matchDate = new Date(today);
-    matchDate.setDate(matchDate.getDate() + daysAhead);
-
-    // Random time between 10:00 and 20:00
-    const hour = 10 + Math.floor(Math.random() * 10);
-    matchDate.setHours(hour, 0, 0, 0);
+    matchDate.setDate(matchDate.getDate() + Math.floor(Math.random() * 30));
+    matchDate.setHours(10 + Math.floor(Math.random() * 10), 0, 0, 0);
 
     matches.push({
-      team1Id: team1.id,
-      team1Name: team1.name,
-      team2Id: team2.id,
-      team2Name: team2.name,
-      date: matchDate,
-      status: 'UPCOMING',
-      leagueId: league.id,
-      leagueName: league.name,
-      seasonId: season.id,
-      stage: random(['REGULAR_SEASON', 'PLAYOFF', 'QUARTER_FINALS', 'SEMI_FINALS', 'CHAMPIONSHIP']),
+      team1Id: team1.id, team1Name: team1.name,
+      team2Id: team2.id, team2Name: team2.name,
+      date: matchDate, status: 'UPCOMING',
+      leagueId: league.id, leagueName: league.name,
+      seasonId: season.id, stage: random(stages),
     });
   }
 
-  // Create 10 completed matches (past dates)
+  // 10 completed
   for (let i = 0; i < 10; i++) {
     const [team1, team2] = getTwoTeams();
     const league = random(leagues);
-    const season = seasons.find(s => s.leagueId === league.id);
-
+    const season = seasons.find((s) => s.leagueId === league.id);
     if (!season) continue;
 
-    // Past dates (last 30 days)
-    const daysAgo = Math.floor(Math.random() * 30) + 1;
     const matchDate = new Date(today);
-    matchDate.setDate(matchDate.getDate() - daysAgo);
+    matchDate.setDate(matchDate.getDate() - (Math.floor(Math.random() * 30) + 1));
+    matchDate.setHours(10 + Math.floor(Math.random() * 10), 0, 0, 0);
 
-    const hour = 10 + Math.floor(Math.random() * 10);
-    matchDate.setHours(hour, 0, 0, 0);
-
-    // Random scores
     const team1Score = Math.floor(Math.random() * 50) + 60;
     const team2Score = Math.floor(Math.random() * 50) + 60;
 
     matches.push({
-      team1Id: team1.id,
-      team1Name: team1.name,
-      team1Score,
-      team2Id: team2.id,
-      team2Name: team2.name,
-      team2Score,
-      date: matchDate,
-      status: 'COMPLETED',
-      leagueId: league.id,
-      leagueName: league.name,
-      seasonId: season.id,
-      stage: random(['REGULAR_SEASON', 'PLAYOFF', 'QUARTER_FINALS', 'SEMI_FINALS', 'CHAMPIONSHIP']),
+      team1Id: team1.id, team1Name: team1.name, team1Score,
+      team2Id: team2.id, team2Name: team2.name, team2Score,
+      date: matchDate, status: 'COMPLETED',
+      leagueId: league.id, leagueName: league.name,
+      seasonId: season.id, stage: random(stages),
       winnerId: team1Score > team2Score ? team1.id : team2.id,
     });
   }
 
-  // Insert matches
-  let createdCount = 0;
+  let created = 0;
   for (const match of matches) {
     try {
-      await prisma.match.create({
-        data: match,
-      });
-      createdCount++;
-    } catch (error) {
-      // Skip if duplicate
-      console.log(`   ⚠️  Skipped duplicate match`);
+      await prisma.match.create({ data: match });
+      created++;
+    } catch {
+      // skip duplicates
     }
   }
 
-  console.log(`✅ Matches seeded: ${createdCount} matches created`);
-  return createdCount;
+  console.log(`     ${created} matches created.`);
 }
 
-/**
- * Main seed function
- */
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
 async function main() {
-  console.log('🚀 Starting database seeding...\n');
+  console.log('Starting database seed...');
 
-  try {
-    // Seed admin user
-    await seedAdmin();
+  await seedPermissions();
+  await seedRoles();
+  await seedAdmin();
+  const teams = await seedTeams();
+  const leagues = await seedLeagues();
+  const seasons = await seedSeasons(leagues);
+  await seedMatches(teams, leagues, seasons);
 
-    // Seed teams
-    const teams = await seedTeams();
-
-    // Seed leagues
-    const leagues = await seedLeagues();
-
-    // Seed seasons
-    const seasons = await seedSeasons(leagues);
-
-    // Seed matches
-    await seedMatches(teams, leagues, seasons);
-
-    console.log('\n✅ Seeding completed successfully!');
-    console.log('\n📝 Login credentials:');
-    console.log(`   Email: ${process.env.ADMIN_EMAIL || 'admin@elevateballers.com'}`);
-    console.log(`   Password: ${process.env.ADMIN_PASSWORD || 'admin123'}`);
-    console.log('\n⚠️  Remember to change the default password after first login!');
-  } catch (error) {
-    console.error('\n❌ Error during seeding:', error);
-    throw error;
+  console.log('\nSeed complete!');
+  console.log(`\nAdmin login:`);
+  console.log(`  Email:    ${process.env.ADMIN_EMAIL || 'admin@elevateballers.com'}`);
+  console.log(`  Password: ${process.env.ADMIN_PASSWORD || 'admin123'}`);
+  if (!process.env.ADMIN_PASSWORD) {
+    console.log('\n  Set ADMIN_PASSWORD in .env to use a custom password.');
   }
 }
 
-// Run seed
 main()
   .catch((error) => {
-    console.error(error);
+    console.error('Seed failed:', error);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());

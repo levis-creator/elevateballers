@@ -5,6 +5,34 @@ import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
+import { getAllSiteSettings } from "../features/cms/lib/queries";
+
+const DEFAULT_CONTENT = `Elevate Ballers is a premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement through competitive basketball. Founded with a vision to elevate the game and the community, we have been serving basketball enthusiasts of all ages and skill levels.
+
+Our mission is to provide a platform for athletes to showcase their skills, develop their talents, and compete at the highest level while fostering a sense of community and sportsmanship. We believe that basketball is more than just a game—it's a vehicle for personal growth, teamwork, and community building.
+
+We offer multiple leagues including Ballers League, Junior Ballers, Senior Ballers, Women's League, and Veterans divisions. Each league is designed to provide competitive opportunities while maintaining a focus on skill development and fair play.
+
+Our state-of-the-art facilities at Pepo Lane, off Dagoretti Road, provide the perfect environment for training and competition. With multiple courts and professional coaching staff, we ensure that every player has the opportunity to reach their full potential.
+
+At Elevate Ballers, we are committed to creating an inclusive environment where everyone can participate, learn, and grow. Whether you're a seasoned player or just starting out, we welcome you to join our basketball family.`;
+
+let aboutTitle = "ABOUT";
+let aboutContent = DEFAULT_CONTENT;
+
+try {
+  const settings = await getAllSiteSettings("about");
+  const titleSetting = settings.find((s: any) => s.key === "about_page_title");
+  const contentSetting = settings.find((s: any) => s.key === "about_page_content");
+  if (titleSetting?.value) aboutTitle = titleSetting.value;
+  if (contentSetting?.value) aboutContent = contentSetting.value;
+} catch (e) {
+  // fall back to defaults
+}
+
+// Detect if content is HTML (from rich text editor) or plain text (legacy)
+const isHtml = aboutContent.trim().startsWith('<');
+const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => p.trim()).filter(Boolean);
 ---
 
 <Layout
@@ -29,17 +57,17 @@ import PageLoader from "../components/PageLoader";
                 <div class="wpb_wrapper">
                   <Spacing
                     id="stm-spacing-about-header"
-                    lg="50"
-                    md="50"
-                    sm="40"
-                    xs="40"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
                   />
 
                   <h1
                     class="heading-font"
                     style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                   >
-                    ABOUT
+                    {aboutTitle}
                   </h1>
 
                   <div
@@ -50,43 +78,12 @@ import PageLoader from "../components/PageLoader";
                       class="normal_font"
                       style="line-height: 1.8; color: #363f48;"
                     >
-                      <p style="margin-bottom: 20px;">
-                        Elevate Ballers is a premier basketball league dedicated
-                        to promoting excellence, sportsmanship, and community
-                        engagement through competitive basketball. Founded with
-                        a vision to elevate the game and the community, we have
-                        been serving basketball enthusiasts of all ages and
-                        skill levels.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        Our mission is to provide a platform for athletes to
-                        showcase their skills, develop their talents, and
-                        compete at the highest level while fostering a sense of
-                        community and sportsmanship. We believe that basketball
-                        is more than just a game—it's a vehicle for personal
-                        growth, teamwork, and community building.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        We offer multiple leagues including Ballers League,
-                        Junior Ballers, Senior Ballers, Women's League, and
-                        Veterans divisions. Each league is designed to provide
-                        competitive opportunities while maintaining a focus on
-                        skill development and fair play.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        Our state-of-the-art facilities at Pepo Lane, off
-                        Dagoretti Road, provide the perfect environment for
-                        training and competition. With multiple courts and
-                        professional coaching staff, we ensure that every player
-                        has the opportunity to reach their full potential.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        At Elevate Ballers, we are committed to creating an
-                        inclusive environment where everyone can participate,
-                        learn, and grow. Whether you're a seasoned player or
-                        just starting out, we welcome you to join our basketball
-                        family.
-                      </p>
+                      {isHtml
+                        ? <Fragment set:html={aboutContent} />
+                        : paragraphs.map((p: string) => (
+                            <p style="margin-bottom: 20px;">{p}</p>
+                          ))
+                      }
                     </div>
                   </div>
 
@@ -106,9 +103,6 @@ import PageLoader from "../components/PageLoader";
     </div>
     <Footer />
 
-    <div class="sp-footer-sponsors">
-      <div class="sportspress"><div class="sp-sponsors"></div></div>
-    </div>
   </div>
   <!--main-->
   <!--wrapper-->

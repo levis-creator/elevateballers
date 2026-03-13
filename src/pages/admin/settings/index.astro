@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import BannerSettingsEditorWithPermissions from '../../../features/cms/components/BannerSettingsEditorWithPermissions';
+import AboutPageEditorWithPermissions from '../../../features/cms/components/AboutPageEditorWithPermissions';
 ---
 
 <AdminLayout 
@@ -20,7 +21,6 @@ import BannerSettingsEditorWithPermissions from '../../../features/cms/component
 
   <div class="space-y-8">
     <BannerSettingsEditorWithPermissions client:load />
-    
-    {/* Other settings can be added here in the future */}
+    <AboutPageEditorWithPermissions client:load />
   </div>
 </AdminLayout>

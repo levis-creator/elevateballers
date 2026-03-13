@@ -49,6 +49,18 @@ const { title, description, image, canonicalURL, type } = Astro.props;
 			#main {
 				padding: 0 !important;
 			}
+			/* Push inner page content below the fixed header */
+			.stm-title-box-unit {
+				padding-top: 80px !important;
+			}
+			/* Space before footer */
+			.stm-footer {
+				margin-top: 60px;
+			}
+			/* Tables use Teko heading font */
+			table, th, td {
+				font-family: 'Teko', sans-serif !important;
+			}
 			.wp-block-button__link {
 				color: #fff;
 				background-color: #32373c;
@@ -283,10 +295,13 @@ const { title, description, image, canonicalURL, type } = Astro.props;
 				font-size: 14px;
 				line-height: 20px;
 				box-sizing: border-box;
-				position: relative;
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
 				z-index: 9999;
 			}
-			.stm-footer {
+				.stm-footer {
 				-webkit-text-size-adjust: 100%;
 				-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 				--wp-block-synced-color: #7a00df;
@@ -457,6 +472,7 @@ const { title, description, image, canonicalURL, type } = Astro.props;
 				font-family: Rubik;
 				font-size: 14px;
 				line-height: 20px;
+				padding-bottom: 0 !important;
 			}
 			h1,
 			.h1,
