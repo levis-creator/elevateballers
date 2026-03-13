@@ -1,5 +1,71 @@
 ---
 // Footer component - Footer with contact info, newsletter signup, and social links
+import { prisma } from "../../../lib/prisma";
+
+const DEFAULT_CONTACT = {
+  address: 'Pepo Lane, off Dagoretti Road',
+  phone: '0703913923',
+  fax: '0729259496',
+  email: 'ballers@elevateballers.com',
+  hours: 'Sat-Sun 8am - 6pm',
+};
+
+const DEFAULT_SOCIAL = {
+  facebook: 'https://www.facebook.com/Elevateballers',
+  instagram: 'https://www.instagram.com/elevateballers/',
+  twitter: 'https://twitter.com/elevateballers/',
+  youtube: 'https://www.youtube.com/@elevateballers9389/featured',
+};
+
+let contact = { ...DEFAULT_CONTACT };
+let social = { ...DEFAULT_SOCIAL };
+
+try {
+  const settings = await prisma.siteSetting.findMany({
+    where: {
+      key: {
+        in: [
+          'contact_address',
+          'contact_phone',
+          'contact_fax',
+          'contact_email',
+          'contact_hours',
+          'social_facebook',
+          'social_instagram',
+          'social_twitter',
+          'social_youtube',
+        ],
+      },
+    },
+  });
+
+  const settingsMap = settings.reduce((acc, curr) => {
+    acc[curr.key] = curr.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const getValue = (key: string, fallback: string) =>
+    Object.prototype.hasOwnProperty.call(settingsMap, key)
+      ? settingsMap[key]
+      : fallback;
+
+  contact = {
+    address: getValue('contact_address', DEFAULT_CONTACT.address),
+    phone: getValue('contact_phone', DEFAULT_CONTACT.phone),
+    fax: getValue('contact_fax', DEFAULT_CONTACT.fax),
+    email: getValue('contact_email', DEFAULT_CONTACT.email),
+    hours: getValue('contact_hours', DEFAULT_CONTACT.hours),
+  };
+
+  social = {
+    facebook: getValue('social_facebook', DEFAULT_SOCIAL.facebook),
+    instagram: getValue('social_instagram', DEFAULT_SOCIAL.instagram),
+    twitter: getValue('social_twitter', DEFAULT_SOCIAL.twitter),
+    youtube: getValue('social_youtube', DEFAULT_SOCIAL.youtube),
+  };
+} catch (error) {
+  console.error("Error fetching footer settings:", error);
+}
 ---
 
 <div
@@ -24,31 +90,33 @@
                     <tr>
                       <td class="widget_contacts_address" colspan="2">
                         <div class="icon"><i class="fa fa-map-marker"></i></div>
-                        <div class="text">Pepo Lane, off Dagoretti Road</div>
+                        <div class="text">{contact.address}</div>
                       </td>
                     </tr>
                     <tr>
                       <td class="widget_contacts_phone">
                         <div class="icon"><i class="fa fa-phone"></i></div>
-                        <div class="text">0703913923</div>
+                        <div class="text">{contact.phone}</div>
                       </td>
                       <td class="widget_contacts_fax">
                         <div class="icon"><i class="fa fa-fax"></i></div>
-                        <div class="text">0729259496</div>
+                        <div class="text">{contact.fax}</div>
                       </td>
                     </tr>
                     <tr>
                       <td class="widget_contacts_mail">
                         <div class="icon"><i class="fa fa-envelope"></i></div>
                         <div class="text">
-                          <a href="mailto:ballers@elevateballers.com"
-                            >ballers@elevateballers.com</a
-                          >
+                          {contact.email && (
+                            <a href={`mailto:${contact.email}`}>
+                              {contact.email}
+                            </a>
+                          )}
                         </div>
                       </td>
                       <td class="widget_contacts_schedule">
                         <div class="icon"><i class="fa fa-clock-o"></i></div>
-                        <div class="text">Sat-Sun 8am - 6pm</div>
+                        <div class="text">{contact.hours}</div>
                       </td>
                     </tr>
                   </tbody>
@@ -160,42 +228,50 @@
               <div class="footer-socials-unit">
                 <div class="h6 footer-socials-title">Follow Us:</div>
                 <ul class="footer-bottom-socials stm-list-duty">
-                  <li class="stm-social-facebook">
-                    <a
-                      href="https://www.facebook.com/Elevateballers"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <i class="fa fa-facebook"></i>
-                    </a>
-                  </li>
-                  <li class="stm-social-twitter">
-                    <a
-                      href="https://twitter.com/elevateballers/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <i class="fa fa-twitter"></i>
-                    </a>
-                  </li>
-                  <li class="stm-social-instagram">
-                    <a
-                      href="https://www.instagram.com/elevateballers/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <i class="fa fa-instagram"></i>
-                    </a>
-                  </li>
-                  <li class="stm-social-youtube-play">
-                    <a
-                      href="https://www.youtube.com/@elevateballers9389/featured"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <i class="fa fa-youtube-play"></i>
-                    </a>
-                  </li>
+                  {social.facebook && (
+                    <li class="stm-social-facebook">
+                      <a
+                        href={social.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <i class="fa fa-facebook"></i>
+                      </a>
+                    </li>
+                  )}
+                  {social.twitter && (
+                    <li class="stm-social-twitter">
+                      <a
+                        href={social.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <i class="fa fa-twitter"></i>
+                      </a>
+                    </li>
+                  )}
+                  {social.instagram && (
+                    <li class="stm-social-instagram">
+                      <a
+                        href={social.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <i class="fa fa-instagram"></i>
+                      </a>
+                    </li>
+                  )}
+                  {social.youtube && (
+                    <li class="stm-social-youtube-play">
+                      <a
+                        href={social.youtube}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <i class="fa fa-youtube-play"></i>
+                      </a>
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>

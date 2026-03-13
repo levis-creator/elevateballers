@@ -8,6 +8,9 @@ let bannerLink = '';
 let bannerBgColor = '#dd3333'; // Default
 let bannerTextColor = '#ffffff'; // Default
 let bannerImageUrl = ''; // User uploaded image
+let facebookUrl = 'https://www.facebook.com/Elevateballers';
+let instagramUrl = 'https://www.instagram.com/elevateballers/';
+let youtubeUrl = 'https://www.youtube.com/@elevateballers9389/featured';
 
 try {
   const settings = await prisma.siteSetting.findMany({
@@ -19,7 +22,10 @@ try {
           'topbar_banner_link',
           'topbar_banner_bg_color',
           'topbar_banner_text_color',
-          'topbar_banner_image_url'
+          'topbar_banner_image_url',
+          'social_facebook',
+          'social_instagram',
+          'social_youtube'
         ]
       }
     }
@@ -36,6 +42,9 @@ try {
   if (settingsMap['topbar_banner_bg_color']) bannerBgColor = settingsMap['topbar_banner_bg_color'];
   if (settingsMap['topbar_banner_text_color']) bannerTextColor = settingsMap['topbar_banner_text_color'];
   if (settingsMap['topbar_banner_image_url']) bannerImageUrl = settingsMap['topbar_banner_image_url'];
+  if (Object.prototype.hasOwnProperty.call(settingsMap, 'social_facebook')) facebookUrl = settingsMap['social_facebook'];
+  if (Object.prototype.hasOwnProperty.call(settingsMap, 'social_instagram')) instagramUrl = settingsMap['social_instagram'];
+  if (Object.prototype.hasOwnProperty.call(settingsMap, 'social_youtube')) youtubeUrl = settingsMap['social_youtube'];
 } catch (error) {
   console.error("Error fetching topbar settings:", error);
 }
@@ -85,30 +94,36 @@ try {
               </div>
               <div class="stm-top-socials-holder">
                 <ul class="top-bar-socials stm-list-duty">
-                  <li>
-                    <a
-                      href="https://www.facebook.com/Elevateballers"
-                      target="_blank"
-                    >
-                      <i class="fa fa-facebook"></i>
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://www.instagram.com/elevateballers/"
-                      target="_blank"
-                    >
-                      <i class="fa fa-instagram"></i>
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://www.youtube.com/@elevateballers9389/featured"
-                      target="_blank"
-                    >
-                      <i class="fa fa-youtube-play"></i>
-                    </a>
-                  </li>
+                  {facebookUrl && (
+                    <li>
+                      <a
+                        href={facebookUrl}
+                        target="_blank"
+                      >
+                        <i class="fa fa-facebook"></i>
+                      </a>
+                    </li>
+                  )}
+                  {instagramUrl && (
+                    <li>
+                      <a
+                        href={instagramUrl}
+                        target="_blank"
+                      >
+                        <i class="fa fa-instagram"></i>
+                      </a>
+                    </li>
+                  )}
+                  {youtubeUrl && (
+                    <li>
+                      <a
+                        href={youtubeUrl}
+                        target="_blank"
+                      >
+                        <i class="fa fa-youtube-play"></i>
+                      </a>
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>

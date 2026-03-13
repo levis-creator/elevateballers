@@ -5,11 +5,63 @@ import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
+import { prisma } from "../lib/prisma";
+
+const DEFAULT_CONTACT = {
+  address: 'Pepo Lane, off Dagoretti Road',
+  phone: '0703913923',
+  fax: '0729259496',
+  email: 'ballers@elevateballers.com',
+  hours: 'Sat-Sun 8am - 6pm',
+};
+
+let contact = { ...DEFAULT_CONTACT };
+let contactDescription = "Have questions or want to join the league? Contact Elevate Basketball.";
+
+try {
+  const settings = await prisma.siteSetting.findMany({
+    where: {
+      key: {
+        in: [
+          'contact_address',
+          'contact_phone',
+          'contact_fax',
+          'contact_email',
+          'contact_hours',
+        ],
+      },
+    },
+  });
+
+  const settingsMap = settings.reduce((acc, curr) => {
+    acc[curr.key] = curr.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const getValue = (key: string, fallback: string) =>
+    Object.prototype.hasOwnProperty.call(settingsMap, key)
+      ? settingsMap[key]
+      : fallback;
+
+  contact = {
+    address: getValue('contact_address', DEFAULT_CONTACT.address),
+    phone: getValue('contact_phone', DEFAULT_CONTACT.phone),
+    fax: getValue('contact_fax', DEFAULT_CONTACT.fax),
+    email: getValue('contact_email', DEFAULT_CONTACT.email),
+    hours: getValue('contact_hours', DEFAULT_CONTACT.hours),
+  };
+
+  contactDescription = contact.address
+    ? `Have questions or want to join the league? Contact Elevate Basketball. Find our location at ${contact.address}, reach us by phone, or send us a message.`
+    : contactDescription;
+} catch (error) {
+  console.error("Error fetching contact settings:", error);
+}
 ---
 
 <Layout
   title="Contact Us - Elevate Basketball"
-  description="Have questions or want to join the league? Contact Elevate Basketball. Find our location at Pepo Lane, reach us by phone, or send us a message."
+  description={contactDescription}
 >
   <PageLoader client:load />
   <div id="wrapper">
@@ -70,7 +122,7 @@ import PageLoader from "../components/PageLoader";
                                         class="fa fa-map-marker"
                                         style="margin-right: 15px; color: #dd3333; font-size: 18px;"
                                       ></i>
-                                      <span>Pepo Lane, off Dagoretti Road</span>
+                                      <span>{contact.address}</span>
                                     </div>
                                   </td>
                                 </tr>
@@ -83,7 +135,7 @@ import PageLoader from "../components/PageLoader";
                                         class="fa fa-phone"
                                         style="margin-right: 15px; color: #dd3333; font-size: 18px;"
                                       ></i>
-                                      <span>0703913923</span>
+                                      <span>{contact.phone}</span>
                                     </div>
                                   </td>
                                 </tr>
@@ -96,7 +148,7 @@ import PageLoader from "../components/PageLoader";
                                         class="fa fa-fax"
                                         style="margin-right: 15px; color: #dd3333; font-size: 18px;"
                                       ></i>
-                                      <span>0729259496</span>
+                                      <span>{contact.fax}</span>
                                     </div>
                                   </td>
                                 </tr>
@@ -109,12 +161,14 @@ import PageLoader from "../components/PageLoader";
                                         class="fa fa-envelope"
                                         style="margin-right: 15px; color: #dd3333; font-size: 18px;"
                                       ></i>
-                                      <a
-                                        href="mailto:ballers@elevateballers.com"
-                                        style="color: #595959; text-decoration: none;"
-                                      >
-                                        ballers@elevateballers.com
-                                      </a>
+                                      {contact.email && (
+                                        <a
+                                          href={`mailto:${contact.email}`}
+                                          style="color: #595959; text-decoration: none;"
+                                        >
+                                          {contact.email}
+                                        </a>
+                                      )}
                                     </div>
                                   </td>
                                 </tr>
@@ -127,7 +181,7 @@ import PageLoader from "../components/PageLoader";
                                         class="fa fa-clock-o"
                                         style="margin-right: 15px; color: #dd3333; font-size: 18px;"
                                       ></i>
-                                      <span>Sat-Sun 8am - 6pm</span>
+                                      <span>{contact.hours}</span>
                                     </div>
                                   </td>
                                 </tr>

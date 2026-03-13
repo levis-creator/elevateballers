@@ -2,6 +2,7 @@
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import BannerSettingsEditorWithPermissions from '../../../features/cms/components/BannerSettingsEditorWithPermissions';
 import AboutPageEditorWithPermissions from '../../../features/cms/components/AboutPageEditorWithPermissions';
+import ContactSettingsEditorWithPermissions from '../../../features/cms/components/ContactSettingsEditorWithPermissions';
 ---
 
 <AdminLayout 
@@ -21,6 +22,7 @@ import AboutPageEditorWithPermissions from '../../../features/cms/components/Abo
 
   <div class="space-y-8">
     <BannerSettingsEditorWithPermissions client:load />
+    <ContactSettingsEditorWithPermissions client:load />
     <AboutPageEditorWithPermissions client:load />
   </div>
 </AdminLayout>

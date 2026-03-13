@@ -10,8 +10,28 @@ interface StandingsPageProps {
 
 export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings }) => {
   const [standings, setStandings] = useState<TeamStanding[]>(initialStandings);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch all standings on initial mount (client-side) to ensure fresh data
+  useEffect(() => {
+    const fetchInitial = async () => {
+      try {
+        const response = await fetch('/api/standings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            setStandings(data);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching initial standings:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitial();
+  }, []);
 
   const handleFilterChange = async (leagueId?: string, seasonId?: string) => {
     setLoading(true);
