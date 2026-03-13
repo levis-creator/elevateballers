@@ -67,9 +67,19 @@ const allLeaders = await Promise.all(
         };
     }),
 );
+
+const pageTitle = "Stat Leaders - Elevate Ballers";
+const pageDescription =
+    "Explore top performers across points, rebounds, assists, and more in Elevate Ballers.";
+const pageUrl = `${Astro.url.origin}/stats/leaders`;
 ---
 
-<Layout>
+<Layout
+    title={pageTitle}
+    description={pageDescription}
+    canonicalURL={pageUrl}
+    type="website"
+>
     <div id="wrapper">
         {isFeatureEnabled("layout.topbar") && <TopBar />}
         {

@@ -61,46 +61,21 @@ try {
 }
 
 // SEO Meta Tags
-const pageTitle = "News - Elevate";
+const pageTitle = "News - Elevate Ballers";
 const pageDescription = "Latest news and updates from Elevate Ballers";
-const pageUrl = `${Astro.url.origin}/news/`;
+const baseNewsUrl = `${Astro.url.origin}/news/`;
+const hasFilters = Boolean(category || archive || searchQuery);
+const pageUrl = hasFilters ? baseNewsUrl : baseNewsUrl;
+const robots = hasFilters ? "noindex,follow" : undefined;
 ---
 
-<Layout>
-  <script is:inline define:vars={{ pageTitle, pageDescription, pageUrl }}>
-    // Update page title
-    document.title = pageTitle;
-
-    // Update or create meta tags
-    const updateMeta = (name, content, property = false) => {
-      const attr = property ? "property" : "name";
-      let meta = document.querySelector(`meta[${attr}="${name}"]`);
-      if (!meta) {
-        meta = document.createElement("meta");
-        meta.setAttribute(attr, name);
-        document.head.appendChild(meta);
-      }
-      meta.setAttribute("content", content);
-    };
-
-    // Update canonical link
-    let canonical = document.querySelector('link[rel="canonical"]');
-    if (!canonical) {
-      canonical = document.createElement("link");
-      canonical.setAttribute("rel", "canonical");
-      document.head.appendChild(canonical);
-    }
-    canonical.setAttribute("href", pageUrl);
-
-    // Set meta tags
-    updateMeta("og:locale", "en_US", true);
-    updateMeta("og:type", "article", true);
-    updateMeta("og:title", pageTitle, true);
-    updateMeta("og:description", pageDescription, true);
-    updateMeta("og:url", pageUrl, true);
-    updateMeta("og:site_name", "Elevate", true);
-    updateMeta("twitter:card", "summary_large_image");
-  </script>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={pageUrl}
+  type="website"
+  robots={robots}
+>
 
   <script
     type="application/ld+json"
@@ -114,8 +89,7 @@ const pageUrl = `${Astro.url.origin}/news/`;
           url: pageUrl,
           name: pageTitle,
           isPartOf: { "@id": `${Astro.url.origin}/#website` },
-          datePublished: "2016-05-03T05:04:41+00:00",
-          dateModified: "2016-05-03T05:04:41+00:00",
+          description: pageDescription,
           breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
           inLanguage: "en-US",
         },
@@ -136,8 +110,8 @@ const pageUrl = `${Astro.url.origin}/news/`;
           "@type": "WebSite",
           "@id": `${Astro.url.origin}/#website`,
           url: `${Astro.url.origin}/`,
-          name: "Elevate",
-          description: "",
+          name: "Elevate Ballers",
+          description: "Elevate Ballers official website",
           potentialAction: [
             {
               "@type": "SearchAction",

@@ -55,45 +55,22 @@ const pageTitle =
           : `Teams - Page ${currentPageRes} - Elevate Ballers`;
 const pageDescription = "View all teams in the Elevate Ballers league";
 const pageUrl = teamsPageUrl(currentPageRes, searchQuery);
+const baseTeamsUrl = `${Astro.url.origin}/teams/`;
+const hasFilters = currentPageRes > 1 || Boolean(searchQuery);
+const canonicalURL = hasFilters ? baseTeamsUrl : baseTeamsUrl;
+const robots = hasFilters ? "noindex,follow" : undefined;
+const schemaUrl = hasFilters ? canonicalURL : pageUrl;
 const startItem = totalCount === 0 ? 0 : (currentPageRes - 1) * PER_PAGE + 1;
 const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
 ---
 
-<Layout title={pageTitle} description={pageDescription}>
-    <script is:inline define:vars={{ pageTitle, pageDescription, pageUrl }}>
-        // Update page title
-        document.title = pageTitle;
-
-        // Update or create meta tags
-        const updateMeta = (name, content, property = false) => {
-            const attr = property ? "property" : "name";
-            let meta = document.querySelector(`meta[${attr}="${name}"]`);
-            if (!meta) {
-                meta = document.createElement("meta");
-                meta.setAttribute(attr, name);
-                document.head.appendChild(meta);
-            }
-            meta.setAttribute("content", content);
-        };
-
-        // Update canonical link
-        let canonical = document.querySelector('link[rel="canonical"]');
-        if (!canonical) {
-            canonical = document.createElement("link");
-            canonical.setAttribute("rel", "canonical");
-            document.head.appendChild(canonical);
-        }
-        canonical.setAttribute("href", pageUrl);
-
-        // Set meta tags
-        updateMeta("og:locale", "en_US", true);
-        updateMeta("og:type", "website", true);
-        updateMeta("og:title", pageTitle, true);
-        updateMeta("og:description", pageDescription, true);
-        updateMeta("og:url", pageUrl, true);
-        updateMeta("og:site_name", "Elevate Ballers", true);
-        updateMeta("twitter:card", "summary_large_image");
-    </script>
+<Layout
+    title={pageTitle}
+    description={pageDescription}
+    canonicalURL={canonicalURL}
+    type="website"
+    robots={robots}
+>
 
     <script
         type="application/ld+json"
@@ -103,18 +80,17 @@ const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
             "@graph": [
                 {
                     "@type": "WebPage",
-                    "@id": pageUrl,
-                    url: pageUrl,
+                    "@id": schemaUrl,
+                    url: schemaUrl,
                     name: pageTitle,
                     isPartOf: { "@id": `${Astro.url.origin}/#website` },
-                    datePublished: "2016-04-19T05:29:11+00:00",
-                    dateModified: new Date().toISOString(),
-                    breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+                    description: pageDescription,
+                    breadcrumb: { "@id": `${schemaUrl}#breadcrumb` },
                     inLanguage: "en-US",
                 },
                 {
                     "@type": "BreadcrumbList",
-                    "@id": `${pageUrl}#breadcrumb`,
+                    "@id": `${schemaUrl}#breadcrumb`,
                     itemListElement: [
                         {
                             "@type": "ListItem",

@@ -8,7 +8,7 @@ export interface Props {
 	robots?: string;
 }
 
-const siteName = "Elevate";
+const siteName = "Elevate Ballers";
 const siteUrl = Astro.site ? Astro.site.toString() : Astro.url.origin;
 
 const {
@@ -21,7 +21,9 @@ const {
 } = Astro.props;
 
 // Use the icon as the default OG image if not specified
-const ogImage = image.startsWith('http') ? image : new URL(image, siteUrl).toString();
+const ogImage = image.startsWith("http")
+	? image
+	: new URL(image, siteUrl).toString();
 ---
 
 <!-- Standard Meta Tags -->
@@ -35,42 +37,34 @@ const ogImage = image.startsWith('http') ? image : new URL(image, siteUrl).toStr
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content={type} />
-<meta property="og:url" content={Astro.url} />
+<meta property="og:url" content={canonicalURL} />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={ogImage} />
 <meta property="og:site_name" content={siteName} />
 
 <!-- Twitter -->
-<meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:url" content={Astro.url} />
-<meta property="twitter:title" content={title} />
-<meta property="twitter:description" content={description} />
-<meta property="twitter:image" content={ogImage} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content={canonicalURL} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
 
 <!-- JSON-LD -->
-<script type="application/ld+json" is:inline set:html={JSON.stringify({
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebPage",
-      "@id": canonicalURL,
-      "url": canonicalURL,
-      "name": title,
-      "description": description,
-      "isPartOf": {
-        "@id": `${siteUrl}#website`
-      },
-      "inLanguage": "en-US"
-    },
-    {
-      "@type": "WebSite",
-      "@id": `${siteUrl}#website`,
-      "url": siteUrl,
-      "name": siteName,
-      "description": description,
-      "inLanguage": "en-US"
-    }
-  ]
-})}>
-</script>
+<script
+	type="application/ld+json"
+	is:inline
+	set:html={JSON.stringify({
+		"@context": "https://schema.org",
+		"@graph": [
+			{
+				"@type": "WebSite",
+				"@id": `${siteUrl}#website`,
+				"url": siteUrl,
+				"name": siteName,
+				"description": description,
+				"inLanguage": "en-US",
+			},
+		],
+	})}
+/>

@@ -80,70 +80,25 @@ const categoryColor = getCategoryColor(category);
 const pageTitle = `${article.title} - Elevate`;
 const pageDescription = article.excerpt || article.title;
 const pageUrl = `${Astro.url.origin}/news/${slug}`;
-const pageImage =
-  article.image || `${Astro.url.origin}/images/Elevate_Icon-200x200.png`;
+const pageImageSource =
+  getDisplayImageUrl(article.image, Astro.url.origin) ||
+  "/images/Elevate_Icon-200x200.png";
+const pageImage = pageImageSource.startsWith("http")
+  ? pageImageSource
+  : new URL(pageImageSource, Astro.url.origin).toString();
 const publishedTime = article.publishedAt
   ? new Date(article.publishedAt).toISOString()
   : null;
 const modifiedTime = modifiedDate;
 ---
 
-<Layout>
-  <script
-    is:inline
-    define:vars={{
-      pageTitle,
-      pageDescription,
-      pageUrl,
-      pageImage,
-      publishedTime,
-      modifiedTime,
-      authorName: article.author.name,
-      articleTitle: article.title,
-    }}
-  >
-    // Update page title
-    document.title = pageTitle;
-
-    // Update or create meta tags
-    const updateMeta = (name, content, property = false) => {
-      const attr = property ? "property" : "name";
-      let meta = document.querySelector(`meta[${attr}="${name}"]`);
-      if (!meta) {
-        meta = document.createElement("meta");
-        meta.setAttribute(attr, name);
-        document.head.appendChild(meta);
-      }
-      meta.setAttribute("content", content);
-    };
-
-    // Update canonical link
-    let canonical = document.querySelector('link[rel="canonical"]');
-    if (!canonical) {
-      canonical = document.createElement("link");
-      canonical.setAttribute("rel", "canonical");
-      document.head.appendChild(canonical);
-    }
-    canonical.setAttribute("href", pageUrl);
-
-    // Set meta tags
-    updateMeta("og:locale", "en_US", true);
-    updateMeta("og:type", "article", true);
-    updateMeta("og:title", pageTitle, true);
-    updateMeta("og:description", pageDescription, true);
-    updateMeta("og:url", pageUrl, true);
-    updateMeta("og:site_name", "Elevate", true);
-    if (publishedTime)
-      updateMeta("article:published_time", publishedTime, true);
-    if (modifiedTime) updateMeta("article:modified_time", modifiedTime, true);
-    updateMeta("og:image", pageImage, true);
-    updateMeta("author", authorName);
-    updateMeta("twitter:card", "summary_large_image");
-    updateMeta("twitter:label1", "Written by");
-    updateMeta("twitter:data1", authorName);
-    updateMeta("twitter:label2", "Est. reading time");
-    updateMeta("twitter:data2", "3 minutes");
-  </script>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  image={pageImage}
+  canonicalURL={pageUrl}
+  type="article"
+>
 
   <script
     type="application/ld+json"

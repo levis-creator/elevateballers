@@ -38,9 +38,19 @@ try {
   console.error("Error fetching match results:", error);
   hasError = true;
 }
+
+const pageTitle = "Match Results - Elevate Ballers";
+const pageDescription =
+  "View the latest completed match results from the Elevate Ballers league.";
+const pageUrl = `${Astro.url.origin}/matches/results`;
 ---
 
-<Layout>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={pageUrl}
+  type="website"
+>
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />

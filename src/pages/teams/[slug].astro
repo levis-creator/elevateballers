@@ -109,43 +109,21 @@ const pageTitle = `${team.name} - Teams - Elevate Ballers`;
 const pageDescription =
   team.description || `View ${team.name} team information, players, and staff`;
 const pageUrl = `${Astro.url.origin}/teams/${slug}`;
+const pageImageSource =
+  getDisplayImageUrl(team.logo, Astro.url.origin) ||
+  "/images/Elevate_Icon-200x200.png";
+const pageImage = pageImageSource.startsWith("http")
+  ? pageImageSource
+  : new URL(pageImageSource, Astro.url.origin).toString();
 ---
 
-<Layout>
-  <script is:inline define:vars={{ pageTitle, pageDescription, pageUrl }}>
-    // Update page title
-    document.title = pageTitle;
-
-    // Update or create meta tags
-    const updateMeta = (name, content, property = false) => {
-      const attr = property ? "property" : "name";
-      let meta = document.querySelector(`meta[${attr}="${name}"]`);
-      if (!meta) {
-        meta = document.createElement("meta");
-        meta.setAttribute(attr, name);
-        document.head.appendChild(meta);
-      }
-      meta.setAttribute("content", content);
-    };
-
-    // Update canonical link
-    let canonical = document.querySelector('link[rel="canonical"]');
-    if (!canonical) {
-      canonical = document.createElement("link");
-      canonical.setAttribute("rel", "canonical");
-      document.head.appendChild(canonical);
-    }
-    canonical.setAttribute("href", pageUrl);
-
-    // Set meta tags
-    updateMeta("og:locale", "en_US", true);
-    updateMeta("og:type", "website", true);
-    updateMeta("og:title", pageTitle, true);
-    updateMeta("og:description", pageDescription, true);
-    updateMeta("og:url", pageUrl, true);
-    updateMeta("og:site_name", "Elevate Ballers", true);
-    updateMeta("twitter:card", "summary_large_image");
-  </script>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  image={pageImage}
+  canonicalURL={pageUrl}
+  type="website"
+>
 
   <script
     type="application/ld+json"
@@ -159,8 +137,7 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
           url: pageUrl,
           name: pageTitle,
           isPartOf: { "@id": `${Astro.url.origin}/#website` },
-          datePublished: "2016-04-19T05:29:11+00:00",
-          dateModified: new Date().toISOString(),
+          description: pageDescription,
           breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
           inLanguage: "en-US",
         },
