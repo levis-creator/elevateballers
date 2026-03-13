@@ -34,9 +34,30 @@ try {
   console.error("Error fetching match:", error);
   hasError = true;
 }
+
+const team1Name = match?.team1Name || match?.team1?.name || "TBD";
+const team2Name = match?.team2Name || match?.team2?.name || "TBD";
+const matchLeague = match?.league?.name || match?.leagueName || "Elevate Ballers";
+const matchDate = match?.date
+  ? new Date(match.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  : null;
+const pageTitle = `${team1Name} vs ${team2Name} - ${matchLeague}`;
+const pageDescription = matchDate
+  ? `Match details for ${team1Name} vs ${team2Name} on ${matchDate}.`
+  : `Match details for ${team1Name} vs ${team2Name}.`;
+const pageUrl = `${Astro.url.origin}/matches/${id}`;
 ---
 
-<Layout>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={pageUrl}
+  type="website"
+>
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
