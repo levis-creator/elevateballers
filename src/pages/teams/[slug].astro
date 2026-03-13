@@ -190,10 +190,10 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                 <div class="wpb_wrapper">
                   <Spacing
                     id="stm-spacing-team-header"
-                    lg="50"
-                    md="50"
-                    sm="40"
-                    xs="40"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
                   />
 
                   <!-- Team Header -->
@@ -560,28 +560,6 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                                       {staff.bio.length > 150 ? "..." : ""}
                                     </p>
                                   )}
-                                  {staff.email && (
-                                    <p class="staff-contact">
-                                      <i
-                                        class="fa fa-envelope"
-                                        aria-hidden="true"
-                                      />
-                                      <a href={`mailto:${staff.email}`}>
-                                        {staff.email}
-                                      </a>
-                                    </p>
-                                  )}
-                                  {staff.phone && (
-                                    <p class="staff-contact">
-                                      <i
-                                        class="fa fa-phone"
-                                        aria-hidden="true"
-                                      />
-                                      <a href={`tel:${staff.phone}`}>
-                                        {staff.phone}
-                                      </a>
-                                    </p>
-                                  )}
                                 </div>
                               </div>
                             );
@@ -620,9 +598,6 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
 
   <Footer />
 
-  <div class="sp-footer-sponsors">
-    <div class="sportspress"><div class="sp-sponsors"></div></div>
-  </div>
 
   <!-- Additional Scripts and Styles -->
   <div class="rev-close-btn" aria-hidden="true">

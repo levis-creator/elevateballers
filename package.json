@@ -27,6 +27,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.js",
+    "db:setup": "node prisma/seed.js",
+    "db:rbac": "node scripts/enhance-rbac.js",
     "create-admin": "node scripts/create-admin.js",
     "db:migrate-to-production": "tsx scripts/migrate-db-to-production.ts",
     "fix:dates": "node scripts/fix-invalid-dates.js",

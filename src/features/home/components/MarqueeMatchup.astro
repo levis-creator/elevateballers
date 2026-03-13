@@ -46,423 +46,449 @@ const team1Initials = team1Name ? getTeamInitials(team1Name) : "";
 const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
 ---
 
-<section class="marquee" aria-label="Featured match">
-  {
-    match ? (
-      <a href={matchUrl} class="marquee-link">
-        <div class="marquee-accent" aria-hidden="true" />
-
-        <div class="marquee-inner">
-          <header class="marquee-meta">
-            <span class="marquee-league">{leagueName}</span>
-            <span class="marquee-stage">{stageDisplay}</span>
-          </header>
-
-          <div class="marquee-matchup">
-            <div class="marquee-team marquee-team--home">
-              <div class="marquee-team-logo">
-                {team1Logo ? (
-                  <img src={team1Logo} alt="" width="120" height="120" />
-                ) : (
-                  <span class="marquee-initials">{team1Initials}</span>
-                )}
-              </div>
-              <span class="marquee-team-name">{team1Name}</span>
-            </div>
-
-            <div class="marquee-vs" aria-hidden="true">
-              <span class="marquee-vs-text">VS</span>
-            </div>
-
-            <div class="marquee-team marquee-team--away">
-              <div class="marquee-team-logo">
-                {team2Logo ? (
-                  <img src={team2Logo} alt="" width="120" height="120" />
-                ) : (
-                  <span class="marquee-initials">{team2Initials}</span>
-                )}
-              </div>
-              <span class="marquee-team-name">{team2Name}</span>
-            </div>
+<section class="mq" aria-label="Featured match">
+  {match ? (
+    <!-- Match state -->
+    <a href={matchUrl} class="mq-link">
+      <div class="mq-body">
+        <!-- Home team -->
+        <div class="mq-team mq-team--home">
+          <div class="mq-logo-wrap">
+            {team1Logo
+              ? <img src={team1Logo} alt={team1Name} width="120" height="120" />
+              : <span class="mq-initials">{team1Initials}</span>
+            }
           </div>
-
-          <footer class="marquee-footer">
-            <time
-              class="marquee-date"
-              datetime={
-                match?.date ? new Date(match.date).toISOString() : undefined
-              }
-            >
-              {matchDate}
-            </time>
-            <span class="marquee-cta">View match →</span>
-          </footer>
+          <span class="mq-team-name">{team1Name}</span>
+          <span class="mq-team-label">HOME</span>
         </div>
-      </a>
-    ) : (
-      <div class="marquee marquee--empty">
-        <div class="marquee-accent" aria-hidden="true" />
-        <div class="marquee-empty-bg" aria-hidden="true" />
-        <div class="marquee-inner">
-          <header class="marquee-meta">
-            <span class="marquee-league">ELEVATE BASKETBALL</span>
-            <span class="marquee-stage">{stageDisplay}</span>
-          </header>
-          <div class="marquee-empty-content">
-            <div class="empty-icon-wrap">
-              <i class="fas fa-calendar-alt" />
-            </div>
-            <h2 class="marquee-empty-title">THE NEXT CHAPTER</h2>
-            <p class="marquee-empty-desc">
-              Our athletes are prepping. The new season schedule is drafting.
-            </p>
-            <div class="empty-status">
-              <span class="pulse-dot" />
-              RECRUITMENT IN PROGRESS
-            </div>
-            <a href="/upcoming-fixtures/" class="marquee-empty-btn">
-              EXPLORE MATCH CENTER
-              <i class="fas fa-arrow-right" />
+
+        <!-- VS -->
+        <div class="mq-vs-block">
+          <span class="mq-vs-text">VS</span>
+          <time class="mq-date" datetime={match?.date ? new Date(match.date).toISOString() : undefined}>
+            {matchDate}
+          </time>
+          <span class="mq-view-btn">View Match <i class="fa fa-arrow-right"></i></span>
+        </div>
+
+        <!-- Away team -->
+        <div class="mq-team mq-team--away">
+          <div class="mq-logo-wrap">
+            {team2Logo
+              ? <img src={team2Logo} alt={team2Name} width="120" height="120" />
+              : <span class="mq-initials">{team2Initials}</span>
+            }
+          </div>
+          <span class="mq-team-name">{team2Name}</span>
+          <span class="mq-team-label">AWAY</span>
+        </div>
+      </div>
+    </a>
+  ) : (
+    <!-- Empty / off-season state -->
+    <div class="mq-empty">
+      <div class="mq-empty-glow" aria-hidden="true"></div>
+      <div class="mq-empty-body">
+        <div class="mq-empty-left">
+          <p class="mq-empty-eyebrow"><span class="mq-pulse-dot"></span> RECRUITMENT IN PROGRESS</p>
+          <h2 class="mq-empty-title">2026 SEASON<br/><span class="mq-title-accent">IS COMING</span></h2>
+          <p class="mq-empty-desc">
+            Our teams are recruiting. The schedule is being drafted.<br/>
+            Stay tuned for the next chapter of Elevate Basketball.
+          </p>
+          <div class="mq-empty-actions">
+            <a href="/upcoming-fixtures/" class="mq-btn mq-btn--primary">
+              Match Center <i class="fa fa-arrow-right"></i>
+            </a>
+            <a href="/league-registration/" class="mq-btn mq-btn--outline">
+              Register Now
             </a>
           </div>
         </div>
+        <div class="mq-empty-right" aria-hidden="true">
+          <div class="mq-badge-ring">
+            <div class="mq-badge-inner">
+              <i class="fa fa-basketball-ball mq-badge-icon"></i>
+              <span class="mq-badge-year">2026</span>
+            </div>
+          </div>
+        </div>
       </div>
-    )
-  }
+    </div>
+  )}
 </section>
 
 <style>
-  .marquee {
-    --marquee-bg: var(--color-gray-900, #111827);
-    --marquee-accent: var(--color-primary, #dd3333);
-    --marquee-text: var(--color-white, #fff);
-    --marquee-muted: var(--color-gray-400, #9ca3af);
-    --marquee-highlight: var(--color-secondary, #ffba00);
-
-    position: relative;
-    background: var(--marquee-bg);
-    border-radius: 12px;
+  /* ── Base ── */
+  .mq {
+    background: #0d0d0d;
+    font-family: "Teko", sans-serif;
+    width: 100%;
     overflow: hidden;
-    font-family: var(--font-heading, "Teko", sans-serif);
   }
 
-  .marquee-link {
+  /* ══════════════════════════════
+     MATCH STATE
+  ══════════════════════════════ */
+  .mq-link {
     display: block;
     text-decoration: none;
     color: inherit;
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
   }
 
-  .marquee-link:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  }
-
-  .marquee-link:hover .marquee-cta {
-    color: var(--marquee-accent);
-  }
-
-  .marquee-accent {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 6px;
-    height: 100%;
-    background: var(--marquee-accent);
-  }
-
-  .marquee-inner {
-    position: relative;
-    padding: 1.5rem 1.5rem 1.5rem 2rem;
-    min-height: 280px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  .marquee-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .marquee-league {
-    font-size: 0.95rem;
-    letter-spacing: 0.2em;
-    color: var(--marquee-highlight);
-    text-transform: uppercase;
-  }
-
-  .marquee-stage {
-    font-size: 0.85rem;
-    letter-spacing: 0.1em;
-    color: var(--marquee-muted);
-    padding: 0.25rem 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 999px;
-    text-transform: uppercase;
-  }
-
-  .marquee-matchup {
+  .mq-body {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 1.5rem 2rem;
-    flex: 1;
-    min-height: 140px;
+    padding: 3rem 4rem;
+    gap: 2rem;
+    min-height: 280px;
   }
 
-  .marquee-team {
+  .mq-team {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
     text-align: center;
   }
 
-  .marquee-team--home {
-    flex-direction: column;
-  }
-
-  .marquee-team--away {
-    flex-direction: column;
-  }
-
-  .marquee-team-logo {
-    width: 80px;
-    height: 80px;
+  .mq-logo-wrap {
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.12);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    flex-shrink: 0;
   }
 
-  .marquee-team-logo img {
-    width: 70%;
-    height: 70%;
+  .mq-logo-wrap img {
+    width: 75%;
+    height: 75%;
     object-fit: contain;
   }
 
-  .marquee-initials {
-    font-size: 1.75rem;
+  .mq-initials {
+    font-size: 2.5rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.25);
-    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.3);
   }
 
-  .marquee-team-name {
-    font-size: clamp(1.75rem, 4vw, 2.5rem);
-    font-weight: 600;
-    color: var(--marquee-text);
-    line-height: 1.1;
-    letter-spacing: 0.02em;
+  .mq-team-name {
+    font-size: clamp(1.8rem, 3.5vw, 3rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .mq-team-label {
+    font-family: "Rubik", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.35);
     text-transform: uppercase;
   }
 
-  .marquee-vs {
+  .mq-vs-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
+  }
+
+  .mq-vs-text {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #dd3333;
+    line-height: 1;
+    letter-spacing: 0.05em;
+  }
+
+  .mq-date {
+    font-family: "Rubik", sans-serif;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.45);
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  .mq-view-btn {
+    font-family: "Rubik", sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #ffba00;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .mq-link:hover .mq-view-btn {
+    color: #fff;
+  }
+
+  /* ══════════════════════════════
+     EMPTY / OFF-SEASON STATE
+  ══════════════════════════════ */
+  .mq-empty {
+    position: relative;
+  }
+
+  .mq-empty-glow {
+    position: absolute;
+    top: 50%;
+    right: 15%;
+    transform: translateY(-50%);
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(221,51,51,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .mq-empty-body {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 3.5rem 4rem;
+    gap: 3rem;
+    min-height: 320px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .mq-empty-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 580px;
+  }
+
+  .mq-empty-eyebrow {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
+    gap: 0.6rem;
+    font-family: "Rubik", sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #ffba00;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .mq-pulse-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #ffba00;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    animation: mq-pulse 2s infinite;
     flex-shrink: 0;
   }
 
-  .marquee-vs-text {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--marquee-highlight);
-    letter-spacing: 0.05em;
+  @keyframes mq-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,186,0,0.6); }
+    70%  { box-shadow: 0 0 0 8px rgba(255,186,0,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,186,0,0); }
   }
 
-  .marquee-footer {
+  .mq-empty-title {
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 0.95;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    margin: 0;
+  }
+
+  .mq-title-accent {
+    color: #dd3333;
+  }
+
+  .mq-empty-desc {
+    font-family: "Rubik", sans-serif;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .mq-empty-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 0.5rem;
   }
 
-  .marquee-date {
-    font-family: var(--font-body, "Rubik", sans-serif);
-    font-size: 0.95rem;
-    color: var(--marquee-muted);
-    font-weight: 500;
-  }
-
-  .marquee-cta {
+  .mq-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.75rem;
+    font-family: "Teko", sans-serif;
     font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--marquee-muted);
-    letter-spacing: 0.05em;
-    transition: color 0.2s ease;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: all 0.25s ease;
   }
 
-  /* Empty state */
-  .marquee--empty {
-    min-height: 400px;
+  .mq-btn--primary {
+    background: #dd3333;
+    color: #fff;
   }
 
-  .marquee-empty-bg {
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(to bottom, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.95)),
-      url("https://images.unsplash.com/photo-1544919982-b61976f0ba43?auto=format&fit=crop&q=80&w=1200")
-        no-repeat center center;
-    background-size: cover;
-    opacity: 0.4;
-    z-index: 0;
+  .mq-btn--primary:hover {
+    background: #bb2020;
+    transform: translateY(-2px);
   }
 
-  .marquee--empty .marquee-inner {
+  .mq-btn--outline {
+    background: transparent;
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.25);
+  }
+
+  .mq-btn--outline:hover {
+    border-color: #fff;
+    background: rgba(255,255,255,0.06);
+    transform: translateY(-2px);
+  }
+
+  /* Badge graphic */
+  .mq-empty-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mq-badge-ring {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 3px solid rgba(221,51,51,0.3);
+    display: flex;
+    align-items: center;
     justify-content: center;
     position: relative;
-    z-index: 1;
-    min-height: 400px;
   }
 
-  .marquee-empty-content {
-    text-align: center;
-    padding: 2rem 1rem;
-    max-width: 600px;
-    margin: 0 auto;
+  .mq-badge-ring::before {
+    content: "";
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,186,0,0.2);
   }
 
-  .empty-icon-wrap {
-    font-size: 3rem;
-    color: var(--marquee-accent);
-    margin-bottom: 2rem;
+  .mq-badge-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mq-badge-icon {
+    font-size: 2.5rem;
+    color: #dd3333;
     opacity: 0.8;
   }
 
-  .marquee-empty-title {
-    font-size: clamp(2.5rem, 8vw, 4.5rem);
+  .mq-badge-year {
+    font-size: 2.75rem;
     font-weight: 800;
-    color: var(--marquee-text);
-    margin: 0 0 1rem;
-    letter-spacing: -1px;
-    text-transform: uppercase;
+    color: #fff;
     line-height: 1;
-  }
-
-  .marquee-empty-desc {
-    font-family: var(--font-body, "Rubik", sans-serif);
-    font-size: 1.25rem;
-    color: var(--marquee-muted);
-    margin: 0 0 2rem;
-    line-height: 1.6;
-  }
-
-  .empty-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0.5rem 1.25rem;
-    border-radius: 999px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--marquee-highlight);
-    margin-bottom: 2.5rem;
-    border: 1px solid rgba(252, 185, 0, 0.2);
-  }
-
-  .pulse-dot {
-    width: 10px;
-    height: 10px;
-    background: var(--marquee-highlight);
-    border-radius: 50%;
-    animation: status-pulse 2s infinite;
-  }
-
-  @keyframes status-pulse {
-    0% {
-      transform: scale(1);
-      box-shadow: 0 0 0 0 rgba(252, 185, 0, 0.7);
-    }
-    70% {
-      transform: scale(1.1);
-      box-shadow: 0 0 0 10px rgba(252, 185, 0, 0);
-    }
-    100% {
-      transform: scale(1);
-      box-shadow: 0 0 0 0 rgba(252, 185, 0, 0);
-    }
-  }
-
-  .marquee-empty-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
-    font-weight: 700;
     letter-spacing: 0.05em;
-    color: white;
-    background: var(--marquee-accent);
-    border-radius: 8px;
-    text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 10px 30px rgba(221, 51, 51, 0.3);
   }
 
-  .marquee-empty-btn:hover {
-    transform: translateY(-5px);
-    background: var(--color-primary-dark, #bb2222);
-    box-shadow: 0 15px 40px rgba(221, 51, 51, 0.5);
+  /* ══════════════════════════════
+     RESPONSIVE
+  ══════════════════════════════ */
+  @media (max-width: 900px) {
+    .mq-body {
+      padding: 2.5rem 2rem;
+    }
+
+    .mq-empty-body {
+      padding: 2.5rem 2rem;
+      gap: 2rem;
+    }
+
+    .mq-badge-ring {
+      width: 160px;
+      height: 160px;
+    }
+
+    .mq-badge-year {
+      font-size: 2.25rem;
+    }
   }
 
-  .marquee-empty-btn i {
-    transition: transform 0.3s ease;
-  }
-
-  .marquee-empty-btn:hover i {
-    transform: translateX(5px);
-  }
-
-  @media (max-width: 768px) {
-    .marquee-matchup {
+  @media (max-width: 680px) {
+    /* Match state: stack vertically */
+    .mq-body {
       grid-template-columns: 1fr;
-      gap: 1rem;
+      padding: 2rem 1.25rem;
+      gap: 1.5rem;
       text-align: center;
     }
 
-    .marquee-team--home {
-      order: 1;
+    .mq-team--home { order: 1; }
+    .mq-vs-block   { order: 2; flex-direction: row; gap: 1.25rem; }
+    .mq-team--away { order: 3; }
+
+    .mq-vs-text { font-size: 2rem; }
+
+    /* Empty state: stack vertically */
+    .mq-empty-body {
+      grid-template-columns: 1fr;
+      padding: 2.5rem 1.25rem;
+      text-align: center;
     }
 
-    .marquee-vs {
-      order: 2;
-      margin: 0 auto;
+    .mq-empty-left {
+      align-items: center;
     }
 
-    .marquee-team--away {
-      order: 3;
+    .mq-empty-right {
+      display: none;
     }
 
-    .marquee-inner {
-      padding: 1.25rem 1.25rem 1.25rem 1.5rem;
-      min-height: 320px;
+    .mq-empty-actions {
+      justify-content: center;
     }
 
-    .marquee-footer {
-      flex-direction: column;
-      align-items: flex-start;
+    .mq-empty-title {
+      font-size: clamp(2.5rem, 12vw, 4rem);
+    }
+  }
+
+  @media (max-width: 420px) {
+    .mq-btn {
+      padding: 0.65rem 1.25rem;
+      font-size: 1rem;
+    }
+
+    .mq-logo-wrap {
+      width: 80px;
+      height: 80px;
+    }
+
+    .mq-empty-desc {
+      font-size: 0.9rem;
     }
   }
 </style>
