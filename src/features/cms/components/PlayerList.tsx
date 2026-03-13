@@ -17,6 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { tekoFont } from '../lib/ui-helpers';
@@ -33,6 +40,9 @@ export default function PlayerList() {
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [transferPlayer, setTransferPlayer] = useState<Player | null>(null);
+  const [transferTeamId, setTransferTeamId] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
   const [icons, setIcons] = useState<{
     Plus?: ComponentType<any>;
     Search?: ComponentType<any>;
@@ -48,6 +58,7 @@ export default function PlayerList() {
     CheckCircle2?: ComponentType<any>;
     CheckCircle?: ComponentType<any>;
     XCircle?: ComponentType<any>;
+    ArrowRightLeft?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -67,6 +78,7 @@ export default function PlayerList() {
         CheckCircle2: mod.CheckCircle2,
         CheckCircle: mod.CheckCircle,
         XCircle: mod.XCircle,
+        ArrowRightLeft: mod.ArrowRightLeft,
       });
     });
   }, []);
@@ -228,6 +240,27 @@ export default function PlayerList() {
     }
   };
 
+  const handleTransfer = async () => {
+    if (!transferPlayer) return;
+    setIsTransferring(true);
+    try {
+      const response = await fetch(`/api/players/${transferPlayer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: transferTeamId || '' }),
+      });
+      if (!response.ok) throw new Error('Failed to transfer player');
+      setTransferPlayer(null);
+      setTransferTeamId('');
+      fetchPlayers();
+    } catch (err: any) {
+      setError('Error transferring player: ' + err.message);
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
   const allSelected = paginatedPlayers.length > 0 && paginatedPlayers.every(p => selectedItems.has(p.id!));
 
   const PlusIcon = icons.Plus;
@@ -244,6 +277,7 @@ export default function PlayerList() {
   const CheckCircle2Icon = icons.CheckCircle2;
   const CheckCircleIcon = icons.CheckCircle;
   const XCircleIcon = icons.XCircle;
+  const ArrowRightLeftIcon = icons.ArrowRightLeft;
 
   const togglePlayerSelection = (playerId: string) => {
     setSelectedItems(prev =>
@@ -583,7 +617,17 @@ export default function PlayerList() {
                               Edit Player
                             </a>
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setTransferPlayer(player);
+                              setTransferTeamId((player as any).team?.id || '');
+                            }}
+                          >
+                            {ArrowRightLeftIcon ? <ArrowRightLeftIcon className="w-4 h-4 mr-2" /> : null}
+                            Transfer Player
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             className="cursor-pointer text-red-600"
                             onClick={() => handleDelete(player.id!)}
                           >
@@ -656,6 +700,49 @@ export default function PlayerList() {
           </div>
         )}
       </div>
+
+      {/* Transfer Player Dialog */}
+      <Dialog open={!!transferPlayer} onOpenChange={(open) => { if (!open) { setTransferPlayer(null); setTransferTeamId(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle style={tekoFont} className="text-2xl">Transfer Player</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <p className="text-sm text-slate-500 mb-1">Player</p>
+              <p className="font-semibold text-slate-900">{transferPlayer ? getPlayerName(transferPlayer) : ''}</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500 mb-1">Current Team</p>
+              <p className="font-semibold text-slate-900">{(transferPlayer as any)?.team?.name || 'No team'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-slate-500">Transfer to</p>
+              <Select value={transferTeamId || '__none'} onValueChange={(v) => setTransferTeamId(v === '__none' ? '' : v)}>
+                <SelectTrigger className="border-slate-300 focus:border-yellow-400 focus:ring-yellow-400">
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">No team</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id!}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setTransferPlayer(null); setTransferTeamId(''); }} disabled={isTransferring}>
+              Cancel
+            </Button>
+            <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={handleTransfer} disabled={isTransferring}>
+              {isTransferring ? 'Transferring...' : 'Confirm Transfer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

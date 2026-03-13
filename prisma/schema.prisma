@@ -244,6 +244,7 @@ model Team {
   substitutions      Substitution[]
   staff              TeamStaff[]
   timeouts           Timeout[]
+  teamHistory        PlayerTeamHistory[]
 
   @@index([name])
   @@index([slug])
@@ -278,10 +279,25 @@ model Player {
   notifications      RegistrationNotification[]
   substitutionsIn    Substitution[]             @relation("SubstitutionIn")
   substitutionsOut   Substitution[]             @relation("SubstitutionOut")
+  teamHistory        PlayerTeamHistory[]
 
   @@index([teamId])
   @@index([approved])
   @@map("players")
+}
+
+model PlayerTeamHistory {
+  id       String    @id @default(cuid())
+  playerId String    @map("player_id")
+  teamId   String?   @map("team_id")
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  leftAt   DateTime? @map("left_at")
+  player   Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team     Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([playerId])
+  @@index([teamId])
+  @@map("player_team_history")
 }
 
 model Folder {

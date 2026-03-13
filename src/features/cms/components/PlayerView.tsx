@@ -19,6 +19,12 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
   const [matches, setMatches] = useState<any[]>([]);
   const [matchStats, setMatchStats] = useState<Record<string, any>>({});
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [teamHistory, setTeamHistory] = useState<any[]>([]);
+  const [perTeamStats, setPerTeamStats] = useState<Array<{
+    teamId: string;
+    teamName: string;
+    stats: any;
+  }>>([]);
   const [playerStats, setPlayerStats] = useState({
     totalMatches: 0,
     totalPoints: 0,
@@ -39,6 +45,7 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
   useEffect(() => {
     if (player) {
       fetchPlayerMatches();
+      fetchTeamHistory();
     }
   }, [player?.id]);
 
@@ -67,7 +74,7 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
       if (response.ok) {
         const data = await response.json();
         setMatches(data);
-        
+
         // Fetch events for each completed match and calculate stats
         const statsPromises = data
           .filter((match: any) => match.status === 'COMPLETED')
@@ -84,11 +91,11 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
             }
             return { matchId: match.id, stats: null, events: [] };
           });
-        
+
         const statsResults = await Promise.all(statsPromises);
         const statsMap: Record<string, any> = {};
         const matchesWithEvents: any[] = [];
-        
+
         statsResults.forEach(({ matchId, stats, events }) => {
           if (stats) statsMap[matchId] = stats;
           const match = data.find((m: any) => m.id === matchId);
@@ -96,17 +103,46 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
             matchesWithEvents.push({ ...match, events });
           }
         });
-        
+
         setMatchStats(statsMap);
-        
+
         // Calculate aggregate player statistics
         const aggregateStats = calculatePlayerStatistics(matchesWithEvents, player.id);
         setPlayerStats(aggregateStats);
+
+        // Calculate per-team stats using playerTeamId from each match
+        const teamMatchGroups = new Map<string, { teamName: string; matches: any[] }>();
+        matchesWithEvents.forEach((match: any) => {
+          const tid = match.playerTeamId;
+          const tname = tid === match.team1Id ? match.team1?.name : match.team2?.name;
+          if (tid && tname) {
+            if (!teamMatchGroups.has(tid)) teamMatchGroups.set(tid, { teamName: tname, matches: [] });
+            teamMatchGroups.get(tid)!.matches.push(match);
+          }
+        });
+        const perTeam = Array.from(teamMatchGroups.entries()).map(([teamId, { teamName, matches: tMatches }]) => ({
+          teamId,
+          teamName,
+          stats: calculatePlayerStatistics(tMatches, player.id),
+        }));
+        setPerTeamStats(perTeam);
       }
     } catch (err) {
       console.error('Error fetching player matches:', err);
     } finally {
       setLoadingMatches(false);
+    }
+  };
+
+  const fetchTeamHistory = async () => {
+    try {
+      const response = await fetch(`/api/players/${playerId}/team-history`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeamHistory(data);
+      }
+    } catch (err) {
+      console.error('Error fetching team history:', err);
     }
   };
 
@@ -364,6 +400,104 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
                   {playerStats.freeThrowPercentage > 0 ? `${playerStats.freeThrowPercentage.toFixed(1)}%` : '-'}
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Team History Section */}
+      {teamHistory.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-6 w-6" />
+              Team History
+            </CardTitle>
+            <CardDescription>Teams this player has been a part of</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative pl-6 border-l-2 border-border space-y-6">
+              {teamHistory.map((entry, index) => (
+                <div key={entry.id} className="relative">
+                  <div className="absolute -left-[25px] w-4 h-4 rounded-full bg-primary border-2 border-background" />
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {entry.team ? (
+                          <a
+                            href={`/admin/teams/view/${entry.team.id}`}
+                            className="hover:text-primary underline"
+                            data-astro-prefetch
+                          >
+                            {entry.team.name}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">Unassigned</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(entry.joinedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        {' — '}
+                        {entry.leftAt
+                          ? new Date(entry.leftAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                          : 'Present'}
+                      </p>
+                    </div>
+                    {!entry.leftAt && (
+                      <Badge className="bg-green-100 text-green-700 shrink-0">Current</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-Team Stats Section */}
+      {perTeamStats.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-6 w-6" />
+              Stats by Team
+            </CardTitle>
+            <CardDescription>Career statistics broken down by team</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-4 font-semibold text-muted-foreground">Team</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">GP</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">PPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">RPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">APG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">SPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">BPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">FG%</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">3P%</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">FT%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perTeamStats.map(({ teamId, teamName, stats }) => (
+                    <tr key={teamId} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="py-3 pr-4 font-medium">{teamName}</td>
+                      <td className="text-center py-3 px-3">{stats.totalMatches}</td>
+                      <td className="text-center py-3 px-3">{stats.pointsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.reboundsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.assistsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.stealsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.blocksPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.fieldGoalPercentage > 0 ? `${stats.fieldGoalPercentage.toFixed(1)}%` : '-'}</td>
+                      <td className="text-center py-3 px-3">{stats.threePointPercentage > 0 ? `${stats.threePointPercentage.toFixed(1)}%` : '-'}</td>
+                      <td className="text-center py-3 px-3">{stats.freeThrowPercentage > 0 ? `${stats.freeThrowPercentage.toFixed(1)}%` : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>

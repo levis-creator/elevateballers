@@ -5,7 +5,17 @@
       "Bash(grep -n bodys*{ public/css/basketball_two.css public/css/style.css public/css/styles_1.css)",
       "Bash(sudo systemctl:*)",
       "Bash(systemctl status:*)",
-      "Bash(journalctl -u mysql.service -n 50 --no-pager)"
+      "Bash(journalctl -u mysql.service -n 50 --no-pager)",
+      "Bash(grep -n \"stats\\\\|Stats\" /home/levi/Documents/GitHub/elevateballers/src/pages/api/players/[id].ts)",
+      "Bash(grep -r \"transfer\\\\|reassign\\\\|switch.*team\\\\|change.*team\" /home/levi/Documents/GitHub/elevateballers/src --include=*.ts --include=*.tsx)",
+      "Bash(grep -r roster /home/levi/Documents/GitHub/elevateballers/src --include=*.ts --include=*.tsx)",
+      "Bash(npx tsc:*)",
+      "Bash(ls /home/levi/Documents/GitHub/elevateballers/src/pages/api/players/[id]/)",
+      "Bash(npx prisma:*)",
+      "Bash(git stash:*)",
+      "Bash(node -e \"const { PrismaClient } = require\\(''@prisma/client''\\); const p = new PrismaClient\\(\\); p.$queryRaw\\\\`SHOW TABLES LIKE ''player_team_history''\\\\`.then\\(r => { console.log\\(JSON.stringify\\(r\\)\\); p.$disconnect\\(\\); }\\).catch\\(e => { console.error\\(e.message\\); p.$disconnect\\(\\); }\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(mysql -uroot -padmin123 elevate_db_dev -e \"SHOW TABLES LIKE ''player_team_history'';\")"
     ]
   }
 }

@@ -601,6 +601,17 @@ export async function createPlayer(data: CreatePlayerInput): Promise<Player> {
     },
   });
 
+  // Create initial team history record if player is assigned to a team
+  if (player.teamId) {
+    try {
+      await prisma.playerTeamHistory.create({
+        data: { playerId: player.id, teamId: player.teamId },
+      });
+    } catch (historyError) {
+      console.warn('Failed to record initial team history:', historyError);
+    }
+  }
+
   // Track file usage if image is provided
   if (player.image) {
     try {
@@ -620,16 +631,40 @@ export async function createPlayer(data: CreatePlayerInput): Promise<Player> {
  */
 export async function updatePlayer(id: string, data: UpdatePlayerInput): Promise<Player | null> {
   try {
-    // Get existing player to check for image changes
+    // Get existing player to check for image/team changes
     const existing = await prisma.player.findUnique({
       where: { id },
-      select: { image: true },
+      select: { image: true, teamId: true },
     });
 
     const player = await prisma.player.update({
       where: { id },
       data,
     });
+
+    // Track team history if teamId changed
+    if (data.teamId !== undefined && data.teamId !== existing?.teamId) {
+      try {
+        const now = new Date();
+        // Close current history record if player had a team
+        if (existing?.teamId) {
+          await prisma.playerTeamHistory.updateMany({
+            where: { playerId: id, teamId: existing.teamId, leftAt: null },
+            data: { leftAt: now },
+          });
+        }
+        // Create new history record (even if new team is null/empty = unassigned)
+        await prisma.playerTeamHistory.create({
+          data: {
+            playerId: id,
+            teamId: data.teamId || null,
+            joinedAt: now,
+          },
+        });
+      } catch (historyError) {
+        console.warn('Failed to record team history:', historyError);
+      }
+    }
 
     // Track file usage if image changed
     if (data.image !== undefined && data.image !== existing?.image) {
@@ -639,7 +674,6 @@ export async function updatePlayer(id: string, data: UpdatePlayerInput): Promise
         const newUrl = data.image || '';
         await updateFileUsageOnChange(oldUrl, newUrl, 'PLAYER', id, 'image');
       } catch (error) {
-        // Non-critical - continue even if tracking fails
         console.warn('Failed to track file usage for player image update:', error);
       }
     }

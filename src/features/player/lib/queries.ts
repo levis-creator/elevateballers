@@ -15,11 +15,14 @@ export async function getPlayerMatches(
   // Get match IDs where player participated
   const matchPlayers = await prisma.matchPlayer.findMany({
     where: { playerId },
-    select: { matchId: true },
+    select: { matchId: true, teamId: true },
     distinct: ['matchId'],
   });
 
   const matchIds = matchPlayers.map((mp) => mp.matchId);
+
+  // Build a map of matchId -> player's teamId for that match
+  const matchTeamMap = new Map(matchPlayers.map((mp) => [mp.matchId, (mp as any).teamId]));
 
   if (matchIds.length === 0) {
     return [];
@@ -77,7 +80,36 @@ export async function getPlayerMatches(
     take: limit,
   });
 
-  return matches as MatchWithTeamsAndLeagueAndSeason[];
+  return matches.map((m) => ({
+    ...m,
+    playerTeamId: matchTeamMap.get(m.id) || null,
+  })) as any;
+}
+
+/**
+ * Get team history for a player
+ */
+export async function getPlayerTeamHistory(playerId: string): Promise<Array<{
+  id: string;
+  teamId: string | null;
+  joinedAt: Date;
+  leftAt: Date | null;
+  team: { id: string; name: string; slug: string; logo: string | null } | null;
+}>> {
+  const history = await prisma.playerTeamHistory.findMany({
+    where: { playerId },
+    select: {
+      id: true,
+      teamId: true,
+      joinedAt: true,
+      leftAt: true,
+      team: {
+        select: { id: true, name: true, slug: true, logo: true },
+      },
+    },
+    orderBy: { joinedAt: 'asc' },
+  });
+  return history;
 }
 
 /**
