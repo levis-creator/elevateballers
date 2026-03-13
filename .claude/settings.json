@@ -15,7 +15,10 @@
       "Bash(git stash:*)",
       "Bash(node -e \"const { PrismaClient } = require\\(''@prisma/client''\\); const p = new PrismaClient\\(\\); p.$queryRaw\\\\`SHOW TABLES LIKE ''player_team_history''\\\\`.then\\(r => { console.log\\(JSON.stringify\\(r\\)\\); p.$disconnect\\(\\); }\\).catch\\(e => { console.error\\(e.message\\); p.$disconnect\\(\\); }\\);\")",
       "Bash(node -e \":*)",
-      "Bash(mysql -uroot -padmin123 elevate_db_dev -e \"SHOW TABLES LIKE ''player_team_history'';\")"
+      "Bash(mysql -uroot -padmin123 elevate_db_dev -e \"SHOW TABLES LIKE ''player_team_history'';\")",
+      "Bash(npm install:*)",
+      "Read(//export async function getTeamBySlug/**)",
+      "Bash(ls -la /home/levi/Documents/GitHub/elevateballers/src/pages/api/players/[id]/)"
     ]
   }
 }

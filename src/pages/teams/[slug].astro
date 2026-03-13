@@ -6,6 +6,7 @@ import TopBar from "../../features/layout/components/TopBar.astro";
 import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
 import { getTeamBySlug, getStaffByTeam } from "../../features/cms/lib/queries";
+import { getTeamPlayerStats } from "../../features/player/lib/queries";
 import { resolveAssetUrl, getDisplayImageUrl } from "../../lib/asset-url";
 import { getFilteredMatches } from "../../features/matches/lib/queries";
 import { calculateTeamStatistics } from "../../features/team/lib/teamStats";
@@ -29,6 +30,20 @@ try {
   console.error("Error fetching team:", error);
   return Astro.redirect("/404", 302);
 }
+
+// Compute player stats from match events
+let playerStatsMap: Record<string, Record<string, number>> = {};
+try {
+  playerStatsMap = await getTeamPlayerStats(team.id);
+} catch (error) {
+  console.error("Error fetching team player stats:", error);
+}
+
+// Merge computed stats into player objects
+const playersWithStats = team.players.map((player: any) => ({
+  ...player,
+  stats: playerStatsMap[player.id] ?? player.stats ?? null,
+}));
 
 // Get staff for this team
 let teamStaff = [];
@@ -483,12 +498,12 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
 
                   <!-- Players Section -->
                   {
-                    team.players && team.players.length > 0 && (
+                    playersWithStats && playersWithStats.length > 0 && (
                       <div class="team-section">
                         <h2 class="section-title">Players</h2>
                         <div class="sp-template sp-template-player-list">
                           <TeamDetailsTable
-                            players={team.players}
+                            players={playersWithStats}
                             client:load
                           />
                         </div>
@@ -497,7 +512,7 @@ const pageUrl = `${Astro.url.origin}/teams/${slug}`;
                   }
 
                   {
-                    (!team.players || team.players.length === 0) && (
+                    (!playersWithStats || playersWithStats.length === 0) && (
                       <div class="team-section">
                         <h2 class="section-title">Players</h2>
                         <p class="no-data-message">

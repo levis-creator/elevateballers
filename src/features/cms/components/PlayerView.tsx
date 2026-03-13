@@ -5,7 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit, User, FileText, AlertCircle, CheckCircle, XCircle, Trophy, Calendar, Clock } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ArrowLeft, Edit, User, FileText, AlertCircle, CheckCircle, XCircle, Trophy, Calendar, Clock, ArrowRightLeft } from 'lucide-react';
 import { calculatePlayerStatistics, calculatePlayerMatchStats } from '../../player/lib/playerStats';
 
 interface PlayerViewProps {
@@ -37,6 +52,11 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
     threePointPercentage: 0,
     freeThrowPercentage: 0,
   });
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState('');
 
   useEffect(() => {
     fetchPlayer();
@@ -146,9 +166,47 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
     }
   };
 
+  const openTransferModal = async () => {
+    setTransferError('');
+    setSelectedTeamId('');
+    setTransferModalOpen(true);
+    try {
+      const res = await fetch('/api/teams?limit=200');
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data.teams ?? data);
+      }
+    } catch {
+      setTransferError('Failed to load teams');
+    }
+  };
+
+  const handleTransfer = async () => {
+    setTransferring(true);
+    setTransferError('');
+    try {
+      const res = await fetch(`/api/players/${playerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: selectedTeamId === 'none' ? null : selectedTeamId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Transfer failed');
+      }
+      setTransferModalOpen(false);
+      await fetchPlayer();
+      fetchTeamHistory();
+    } catch (err: any) {
+      setTransferError(err.message || 'Transfer failed');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   // Group matches by league and sort within each league
   const getMatchesByLeague = () => {
-    const leagueMap = new Map<string, any[]>();
+    const leagueMap = new Map<string, { leagueId: string; leagueName: string; matches: any[] }>();
     
     matches.forEach((match) => {
       const leagueKey = match.league?.id || match.leagueId || 'no-league';
@@ -243,12 +301,18 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
           </Button>
           <h1 className="text-3xl font-heading font-semibold text-foreground">Player Details</h1>
         </div>
-        <Button asChild>
-          <a href={`/admin/players/${player.id}`} data-astro-prefetch>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Player
-          </a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openTransferModal}>
+            <ArrowRightLeft className="mr-2 h-4 w-4" />
+            Transfer Player
+          </Button>
+          <Button asChild>
+            <a href={`/admin/players/${player.id}`} data-astro-prefetch>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Player
+            </a>
+          </Button>
+        </div>
       </div>
 
       {/* Player Header Card */}
@@ -668,6 +732,55 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Transfer Player Modal */}
+      <Dialog open={transferModalOpen} onOpenChange={setTransferModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transfer Player</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Current Team</Label>
+              <p className="text-sm text-muted-foreground">
+                {(player as any).team?.name ?? 'No team'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="transfer-team">Transfer To</Label>
+              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <SelectTrigger id="transfer-team">
+                  <SelectValue placeholder="Select a team..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Team (Free Agent)</SelectItem>
+                  {teams
+                    .filter((t) => t.id !== (player as any).teamId)
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {transferError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{transferError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferModalOpen(false)} disabled={transferring}>
+              Cancel
+            </Button>
+            <Button onClick={handleTransfer} disabled={transferring || selectedTeamId === ''}>
+              {transferring ? 'Transferring...' : 'Confirm Transfer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

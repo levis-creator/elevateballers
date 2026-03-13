@@ -1,10 +1,13 @@
 import type { APIRoute } from 'astro';
 import { getPlayerTeamHistory } from '../../../../features/player/lib/queries';
+import { requirePermission } from '../../../../features/rbac/middleware';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
+    await requirePermission(request, 'players:read');
+
     const playerId = params.id;
     if (!playerId) {
       return new Response(JSON.stringify({ error: 'Player ID is required' }), {
