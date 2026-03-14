@@ -8042,9 +8042,6 @@
 .basketball_two .product_list_widget li:hover a, .basketball_two .widget_shopping_cart li:hover a {
   color: #ffba00;
 }
-.basketball_two button:before {
-  background: #ffba00;
-}
 .basketball_two .post-info-sccr-two {
   margin-bottom: 10px;
 }

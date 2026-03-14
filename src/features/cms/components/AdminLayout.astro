@@ -68,7 +68,7 @@ if (redirectUrl) {
 <Layout title={title}>
   <div class="flex min-h-screen bg-[#f9fafb] relative w-full font-sans">
     <!-- Sidebar + Header (shared PermissionProvider) -->
-    <AdminShell client:load />
+    <AdminShell client:only="react" />
 
     <!-- Main Content Area -->
     <main class="flex-1 ml-[var(--admin-sidebar-width)] pt-[var(--admin-header-height)] min-h-screen w-[calc(100%-var(--admin-sidebar-width))] max-md:ml-0 max-md:w-full max-md:pt-14">

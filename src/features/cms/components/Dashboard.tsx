@@ -17,7 +17,7 @@ interface DashboardStats {
 
 interface RegistrationNotification {
   id: string;
-  type: 'TEAM_REGISTERED' | 'PLAYER_REGISTERED' | 'PLAYER_AUTO_LINKED';
+  type: 'TEAM_REGISTERED' | 'PLAYER_REGISTERED' | 'PLAYER_AUTO_LINKED' | 'CONTACT_MESSAGE';
   message: string;
   read: boolean;
   createdAt: string;
@@ -646,11 +646,11 @@ function DashboardContent() {
       {canAccess('notifications:read') && (
         <Card>
           <CardHeader className="pb-4 border-b">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              {BellIcon ? <BellIcon size={18} /> : null}
-              Recent Registrations
-            </CardTitle>
-            <CardDescription>New team and player registrations</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            {BellIcon ? <BellIcon size={18} /> : null}
+            Recent Notifications
+          </CardTitle>
+          <CardDescription>New registrations and contact messages</CardDescription>
           </CardHeader>
           <CardContent className="pt-5">
             {notificationsLoading ? (
@@ -677,12 +677,14 @@ function DashboardContent() {
                   const getIcon = () => {
                     if (notification.type === 'TEAM_REGISTERED') return icons.Users || null;
                     if (notification.type === 'PLAYER_REGISTERED') return icons.UserPlus || null;
+                    if (notification.type === 'CONTACT_MESSAGE') return icons.AlertCircle || null;
                     return icons.Link || null;
                   };
 
                   const getColor = () => {
                     if (notification.type === 'TEAM_REGISTERED') return '#6366f1';
                     if (notification.type === 'PLAYER_REGISTERED') return '#22c55e';
+                    if (notification.type === 'CONTACT_MESSAGE') return '#f97316';
                     return '#0ea5e9';
                   };
 
@@ -734,6 +736,18 @@ function DashboardContent() {
                                 onClick={() => markAsRead(notification.id)}
                               >
                                 View Player
+                              </a>
+                            </>
+                          )}
+                          {notification.type === 'CONTACT_MESSAGE' && (
+                            <>
+                              <span>&middot;</span>
+                              <a
+                                href={`/admin/messages${notification.metadata?.contactMessageId ? `?id=${notification.metadata.contactMessageId}` : ''}`}
+                                className="text-primary hover:underline"
+                                onClick={() => markAsRead(notification.id)}
+                              >
+                                View Message
                               </a>
                             </>
                           )}

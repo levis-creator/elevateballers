@@ -18,6 +18,7 @@ export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [unreadCount, setUnreadCount] = useState(0);
   const [icons, setIcons] = useState<{
     LayoutDashboard?: ComponentType<any>;
     Newspaper?: ComponentType<any>;
@@ -38,6 +39,7 @@ export default function AdminSidebar() {
     ShieldCheck?: ComponentType<any>;
     ChevronDown?: ComponentType<any>;
     Settings?: ComponentType<any>;
+    MessageSquare?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -62,8 +64,14 @@ export default function AdminSidebar() {
         ShieldCheck: mod.ShieldCheck,
         ChevronDown: mod.ChevronDown,
         Settings: mod.Settings,
+        MessageSquare: mod.MessageSquare,
       });
     });
+
+    fetch('/api/contact-messages?unread=true')
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: unknown[]) => setUnreadCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => {});
 
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -139,7 +147,12 @@ export default function AdminSidebar() {
             'tournaments:read',
           ],
         },
-        { href: '/admin/media', icon: icons.Images, label: 'Media Library', permission: 'media:read' },
+      ],
+    },
+    {
+      label: 'COMMUNICATION',
+      items: [
+        { href: '/admin/messages', icon: icons.MessageSquare, label: 'Messages', permission: 'contact_messages:read' },
       ],
     },
     {
@@ -166,13 +179,19 @@ export default function AdminSidebar() {
       ],
     },
     {
+      label: 'ASSETS',
+      items: [
+        { href: '/admin/media', icon: icons.Images, label: 'Media Library', permission: 'media:read' },
+      ],
+    },
+    {
       label: 'SYSTEM',
       items: [
         { href: '/admin/users', icon: icons.Users, label: 'System Users', permission: 'users:read' },
         { href: '/admin/roles', icon: icons.ShieldCheck, label: 'Roles & Permissions', permission: 'roles:read' },
-        { 
-          href: '/admin/settings', 
-          icon: icons.Settings, 
+        {
+          href: '/admin/settings',
+          icon: icons.Settings,
           label: 'Site Settings',
           permissionsAny: ['site_settings:read', 'site_settings:manage'],
         },
@@ -368,7 +387,12 @@ export default function AdminSidebar() {
                             <span className="w-4 h-4" aria-hidden="true" />
                           )}
                         </span>
-                        <span className="!text-white font-medium">{item.label}</span>
+                        <span className="!text-white font-medium flex-1">{item.label}</span>
+                        {item.href === '/admin/messages' && unreadCount > 0 && (
+                          <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[0.65rem] font-bold flex items-center justify-center leading-none flex-shrink-0">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
                       </a>
                     );
                   })}
