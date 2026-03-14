@@ -5,6 +5,7 @@ import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
+import ContactForm from "../features/contact/components/ContactForm";
 import { prisma } from "../lib/prisma";
 
 const DEFAULT_CONTACT = {
@@ -201,53 +202,7 @@ try {
                             >
                               Send us a Message
                             </h3>
-                            <form class="contact-form" method="post" action="#">
-                              <div style="margin-bottom: 20px;">
-                                <input
-                                  type="text"
-                                  name="name"
-                                  placeholder="Your Name"
-                                  required
-                                  style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                                />
-                              </div>
-                              <div style="margin-bottom: 20px;">
-                                <input
-                                  type="email"
-                                  name="email"
-                                  placeholder="Your Email"
-                                  required
-                                  style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                                />
-                              </div>
-                              <div style="margin-bottom: 20px;">
-                                <input
-                                  type="text"
-                                  name="subject"
-                                  placeholder="Subject"
-                                  required
-                                  style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px;"
-                                />
-                              </div>
-                              <div style="margin-bottom: 20px;">
-                                <textarea
-                                  name="message"
-                                  placeholder="Your Message"
-                                  rows="6"
-                                  required
-                                  style="width: 100%; padding: 12px; border: 1px solid #d8d8d8; border-radius: 3px; font-family: Rubik; font-size: 14px; resize: vertical;"
-                                ></textarea>
-                              </div>
-                              <div>
-                                <button
-                                  type="submit"
-                                  class="button btn-primary btn-lg btn-style-2"
-                                  style="background-color: #dd3333; color: #fff; border: none; padding: 12px 30px; font-family: Teko; font-size: 16px; text-transform: uppercase; cursor: pointer; border-radius: 3px;"
-                                >
-                                  Send Message
-                                </button>
-                              </div>
-                            </form>
+                            <ContactForm client:load />
                           </div>
                         </div>
                       </div>
@@ -287,6 +242,7 @@ try {
     window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};
     window.RS_MODULES.type = "compiled";
   </script>
+
   <script is:inline type="speculationrules">
     {
       "prefetch": [
@@ -344,17 +300,6 @@ try {
       color: #363f48;
     }
 
-    .contact-form input:focus,
-    .contact-form textarea:focus {
-      border-color: #dd3333;
-      outline: none;
-    }
-
-    .contact-form button:hover {
-      background-color: #c02929 !important;
-      transition: background-color 0.3s ease;
-    }
-
     @media (max-width: 767px) {
       .vc_col-sm-6 {
         margin-bottom: 30px;
@@ -362,15 +307,11 @@ try {
     }
   </style>
 
+
   <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;">
     <div class="sportspress"><div class="sp-sponsors"></div></div>
   </div>
 
-  <script is:inline type="text/javascript">
-    jQuery(document).ready(function ($) {
-      $(".sp-header").prepend($(".sp-header-sponsors"));
-    });
-  </script>
 
   <style is:inline type="text/css">
     /* Hide reCAPTCHA V3 badge */
@@ -393,10 +334,5 @@ try {
     /* ]]> */
   </script>
 
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js1/js_composer_front.min.js"
-    id="wpb_composer_front_js-js"></script>
 </Layout>
 <!-- wrapper -->

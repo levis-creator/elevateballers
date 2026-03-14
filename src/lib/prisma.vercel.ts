@@ -49,9 +49,10 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
                 user: decodeURIComponent(url.username),
                 password: decodeURIComponent(url.password),
                 database: url.pathname.slice(1),
-                connectionLimit: 5, // Lower limit for serverless
-                idleTimeout: 30000,
-                connectTimeout: 15000,
+                connectionLimit: 3, // Lower limit for serverless
+                idleTimeout: 10000,
+                connectTimeout: 30000,
+                acquireTimeout: 30000,
                 allowPublicKeyRetrieval: true,
             };
         } catch (error) {

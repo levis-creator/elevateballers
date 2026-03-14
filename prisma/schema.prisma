@@ -538,6 +538,24 @@ model RegistrationNotification {
   @@map("registration_notifications")
 }
 
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String   @db.LongText
+  read      Boolean  @default(false)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([read])
+  @@index([createdAt])
+  @@index([email])
+  @@map("contact_messages")
+}
+
 model GameRules {
   id                      String   @id @default(cuid())
   name                    String
@@ -872,6 +890,7 @@ enum RegistrationNotificationType {
   TEAM_REGISTERED
   PLAYER_REGISTERED
   PLAYER_AUTO_LINKED
+  CONTACT_MESSAGE
 }
 
 enum GameTrackingMode {

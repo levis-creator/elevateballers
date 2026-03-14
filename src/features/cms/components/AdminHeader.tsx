@@ -38,13 +38,14 @@ const PATH_LABELS: Record<string, string> = {
 
 interface NotificationItem {
   id: string;
-  type: 'TEAM_REGISTERED' | 'PLAYER_REGISTERED' | 'PLAYER_AUTO_LINKED';
+  type: 'TEAM_REGISTERED' | 'PLAYER_REGISTERED' | 'PLAYER_AUTO_LINKED' | 'CONTACT_MESSAGE';
   message: string;
   read: boolean;
   createdAt: string;
   team?: { id: string; name: string; slug: string };
   player?: { id: string; firstName: string; lastName: string };
   staff?: { id: string; firstName: string; lastName: string };
+  metadata?: any;
 }
 
 export default function AdminHeader() {
@@ -177,6 +178,9 @@ export default function AdminHeader() {
          window.location.href = `/admin/players/${notification.player.id}`;
       } else if (notification.type === 'PLAYER_AUTO_LINKED' && notification.player) {
          window.location.href = `/admin/players/${notification.player.id}`;
+      } else if (notification.type === 'CONTACT_MESSAGE') {
+         const targetId = notification.metadata?.contactMessageId;
+         window.location.href = targetId ? `/admin/messages?id=${targetId}` : '/admin/messages';
       } else {
          window.location.href = '/admin/notifications'; 
       }
@@ -294,7 +298,8 @@ export default function AdminHeader() {
                         <span className="font-medium text-sm leading-none">
                           {notification.type === 'TEAM_REGISTERED' ? 'New Team' :
                            notification.type === 'PLAYER_REGISTERED' ? 'New Player' : 
-                           notification.type === 'PLAYER_AUTO_LINKED' ? 'Player Linked' : 'Notification'}
+                           notification.type === 'PLAYER_AUTO_LINKED' ? 'Player Linked' :
+                           notification.type === 'CONTACT_MESSAGE' ? 'New Message' : 'Notification'}
                         </span>
                         <div className="flex items-center gap-1">
                           <span className="text-[10px] text-muted-foreground whitespace-nowrap">

@@ -1,0 +1,11 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import ContactMessagesList from '../../../features/cms/components/ContactMessagesList';
+---
+
+<AdminLayout title="Contact Messages - Admin" permission="contact_messages:read">
+  <ContactMessagesList client:load />
+</AdminLayout>
