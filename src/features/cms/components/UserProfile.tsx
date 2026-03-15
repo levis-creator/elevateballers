@@ -33,6 +33,7 @@ export default function UserProfile() {
     Save?: ComponentType<any>;
     Trash2?: ComponentType<any>;
     AlertTriangle?: ComponentType<any>;
+    Settings?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function UserProfile() {
         Save: mod.Save,
         Trash2: mod.Trash2,
         AlertTriangle: mod.AlertTriangle,
+        Settings: mod.Settings,
       });
     });
 
@@ -140,6 +142,7 @@ export default function UserProfile() {
   const SaveIcon = icons.Save;
   const Trash2Icon = icons.Trash2;
   const AlertTriangleIcon = icons.AlertTriangle;
+  const SettingsIcon = icons.Settings;
 
   if (loading) {
     return <div className="p-8 text-center text-muted-foreground">Loading profile...</div>;
@@ -147,7 +150,11 @@ export default function UserProfile() {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div>
+      <div className="space-y-1">
+        <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+          {SettingsIcon ? <SettingsIcon size={14} /> : null}
+          Settings
+        </div>
         <h1 className="text-3xl font-bold font-heading">My Profile</h1>
         <p className="text-muted-foreground">Manage your account settings</p>
       </div>

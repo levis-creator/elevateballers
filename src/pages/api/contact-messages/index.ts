@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
-import { sendContactNotification, sendContactAutoReply } from '../../../lib/email';
+import { sendContactNotification, sendContactAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -127,6 +127,17 @@ export const POST: APIRoute = async ({ request }) => {
           subject,
         },
       },
+    });
+
+    const adminUrl = `${process.env.SITE_URL || 'https://elevateballers.com'}/admin/messages?id=${created.id}`;
+    sendAdminNotificationEmail({
+      type: 'contact_message',
+      title: 'New Contact Message',
+      message: `${name} sent a new contact message${subject ? ` about "${subject}"` : ''}.`,
+      actionUrl: adminUrl,
+      actionText: 'View Message',
+    }).catch((err) => {
+      console.error('Failed to send admin notification email:', err);
     });
 
     return new Response(JSON.stringify({ ok: true }), {

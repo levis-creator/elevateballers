@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { usePermissions } from '@/features/rbac/usePermissions';
 
 interface SiteSetting {
@@ -48,6 +49,7 @@ export default function ContactSettingsEditor() {
   const [instagram, setInstagram] = useState(DEFAULT_SOCIAL.instagram);
   const [twitter, setTwitter] = useState(DEFAULT_SOCIAL.twitter);
   const [youtube, setYoutube] = useState(DEFAULT_SOCIAL.youtube);
+  const [adminEmailNotificationsEnabled, setAdminEmailNotificationsEnabled] = useState(true);
 
   useEffect(() => {
     fetchSettings();
@@ -55,15 +57,17 @@ export default function ContactSettingsEditor() {
 
   const fetchSettings = async () => {
     try {
-      const [contactRes, socialRes] = await Promise.all([
+      const [contactRes, socialRes, notificationRes] = await Promise.all([
         fetch('/api/settings?category=contact'),
         fetch('/api/settings?category=social'),
+        fetch('/api/settings?category=notifications'),
       ]);
 
       const contactData: SiteSetting[] = contactRes.ok ? await contactRes.json() : [];
       const socialData: SiteSetting[] = socialRes.ok ? await socialRes.json() : [];
+      const notificationData: SiteSetting[] = notificationRes.ok ? await notificationRes.json() : [];
 
-      const data = [...contactData, ...socialData];
+      const data = [...contactData, ...socialData, ...notificationData];
       const map: Record<string, SiteSetting> = {};
       data.forEach((s) => {
         map[s.key] = s;
@@ -83,6 +87,9 @@ export default function ContactSettingsEditor() {
       setInstagram(getValue('social_instagram', DEFAULT_SOCIAL.instagram));
       setTwitter(getValue('social_twitter', DEFAULT_SOCIAL.twitter));
       setYoutube(getValue('social_youtube', DEFAULT_SOCIAL.youtube));
+
+      const notificationsEnabledValue = getValue('admin_email_notifications_enabled', 'true').toLowerCase();
+      setAdminEmailNotificationsEnabled(notificationsEnabledValue !== 'false');
     } catch (error) {
       console.error('Error fetching contact settings:', error);
     } finally {
@@ -124,6 +131,13 @@ export default function ContactSettingsEditor() {
         saveSetting('social_instagram', instagram, 'Instagram URL', 'url', 'social'),
         saveSetting('social_twitter', twitter, 'Twitter/X URL', 'url', 'social'),
         saveSetting('social_youtube', youtube, 'YouTube URL', 'url', 'social'),
+        saveSetting(
+          'admin_email_notifications_enabled',
+          adminEmailNotificationsEnabled ? 'true' : 'false',
+          'Admin Email Notifications',
+          'boolean',
+          'notifications'
+        ),
       ]);
       alert('Contact settings saved successfully!');
       fetchSettings();
@@ -263,6 +277,26 @@ export default function ContactSettingsEditor() {
               onChange={(e) => setYoutube(e.target.value)}
               disabled={!canManage}
               placeholder="https://youtube.com/yourchannel"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Admin Email Notifications</h3>
+          <div className="flex items-start justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+            <div>
+              <Label htmlFor="admin-email-notifications" className="text-sm font-medium">
+                Enable admin email notifications
+              </Label>
+              <p className="text-xs text-gray-500">
+                When enabled, admins with the `notifications:email` permission will receive email alerts.
+              </p>
+            </div>
+            <Switch
+              id="admin-email-notifications"
+              checked={adminEmailNotificationsEnabled}
+              onCheckedChange={(value) => setAdminEmailNotificationsEnabled(Boolean(value))}
+              disabled={!canManage}
             />
           </div>
         </div>

@@ -1,14 +1,15 @@
-import { useState, useEffect, type ComponentType } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export default function LoginForm() {
+const MIN_PASSWORD_LENGTH = 8;
+
+export default function ResetPasswordForm() {
   const [icons, setIcons] = useState<{
     Basketball?: ComponentType<any>;
-    Mail?: ComponentType<any>;
     Lock?: ComponentType<any>;
     ArrowRight?: ComponentType<any>;
     ArrowLeft?: ComponentType<any>;
@@ -20,7 +21,6 @@ export default function LoginForm() {
     import('lucide-react').then((mod) => {
       setIcons({
         Basketball: mod.Basketball,
-        Mail: mod.Mail,
         Lock: mod.Lock,
         ArrowRight: mod.ArrowRight,
         ArrowLeft: mod.ArrowLeft,
@@ -30,42 +30,66 @@ export default function LoginForm() {
     });
   }, []);
 
-  const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get('token') || '';
+    setToken(tokenParam);
+    if (!tokenParam) {
+      setError('Reset token is missing. Please request a new link.');
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+
+    if (!token) {
+      setError('Reset token is missing. Please request a new link.');
+      return;
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Important: Include cookies in request
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ token, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Login failed:', data);
-        setError(data.error || 'Login failed');
+        setError(data.error || 'Failed to reset password');
         return;
       }
 
-      console.log('Login successful, redirecting...');
-      
-      // Small delay to ensure cookie is set before redirect
+      setSuccess('Password updated. Redirecting to login...');
       setTimeout(() => {
-        window.location.href = '/admin';
-      }, 100);
+        window.location.href = '/admin/login';
+      }, 1500);
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Reset password error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -73,7 +97,6 @@ export default function LoginForm() {
   };
 
   const BasketballIcon = icons.Basketball;
-  const MailIcon = icons.Mail;
   const LockIcon = icons.Lock;
   const ArrowRightIcon = icons.ArrowRight;
   const ArrowLeftIcon = icons.ArrowLeft;
@@ -90,44 +113,28 @@ export default function LoginForm() {
           <h1 className="text-4xl font-heading font-semibold mb-2 text-foreground tracking-wide">
             ELEVATE BALLERS
           </h1>
-          <p className="text-muted-foreground text-sm">Admin Login</p>
+          <p className="text-muted-foreground text-sm">Create a new password</p>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {error && (
+        {error ? (
           <Alert variant="destructive">
             {AlertCircleIcon ? <AlertCircleIcon className="h-4 w-4" /> : null}
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        )}
+        ) : null}
+
+        {success ? (
+          <Alert>
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-semibold">
-              Email Address
-            </Label>
-            <div className="relative">
-              {MailIcon ? (
-                <MailIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              ) : null}
-              <Input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                placeholder="admin@elevateballers.com"
-                autoComplete="email"
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="password" className="text-sm font-semibold">
-              Password
+              New Password
             </Label>
             <div className="relative">
               {LockIcon ? (
@@ -140,35 +147,49 @@ export default function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                placeholder="Enter your password"
-                autoComplete="current-password"
+                placeholder="Enter a new password"
+                autoComplete="new-password"
                 className="pl-10"
               />
             </div>
-            <div className="text-right">
-              <a
-                href="/admin/forgot-password"
-                className="text-xs text-muted-foreground hover:text-primary transition-colors"
-              >
-                Forgot password?
-              </a>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="text-sm font-semibold">
+              Confirm Password
+            </Label>
+            <div className="relative">
+              {LockIcon ? (
+                <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              ) : null}
+              <Input
+                type="password"
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={loading}
+                placeholder="Re-enter your new password"
+                autoComplete="new-password"
+                className="pl-10"
+              />
             </div>
           </div>
 
           <Button
             type="submit"
             className="w-full uppercase tracking-wide"
-            disabled={loading}
+            disabled={loading || !token}
             size="lg"
           >
             {loading ? (
               <>
                 {Loader2Icon ? <Loader2Icon className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Signing in...
+                Updating...
               </>
             ) : (
               <>
-                Sign In
+                Update password
                 {ArrowRightIcon ? <ArrowRightIcon className="ml-2 h-4 w-4" /> : null}
               </>
             )}
@@ -177,11 +198,11 @@ export default function LoginForm() {
 
         <div className="pt-6 border-t text-center">
           <a
-            href="/"
+            href="/admin/login"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             {ArrowLeftIcon ? <ArrowLeftIcon className="h-4 w-4" /> : null}
-            <span>Back to website</span>
+            <span>Back to login</span>
           </a>
         </div>
       </CardContent>

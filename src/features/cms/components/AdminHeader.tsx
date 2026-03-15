@@ -52,6 +52,7 @@ export default function AdminHeader() {
   const { user, roles, can, loading } = usePermissions();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [breadcrumbs, setBreadcrumbs] = useState<{ label: string; href: string }[]>([]);
   const [icons, setIcons] = useState<{
     Bell?: ComponentType<any>;
@@ -59,10 +60,12 @@ export default function AdminHeader() {
     ExternalLink?: ComponentType<any>;
     LogOut?: ComponentType<any>;
     User?: ComponentType<any>;
+    Settings?: ComponentType<any>;
     Home?: ComponentType<any>;
     ChevronDown?: ComponentType<any>;
     Check?: ComponentType<any>;
     X?: ComponentType<any>;
+    BellOff?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -73,10 +76,12 @@ export default function AdminHeader() {
         ExternalLink: mod.ExternalLink,
         LogOut: mod.LogOut,
         User: mod.User,
+        Settings: mod.Settings,
         Home: mod.Home,
         ChevronDown: mod.ChevronDown,
         Check: mod.Check,
         X: mod.X,
+        BellOff: mod.BellOff,
       });
     });
   }, []);
@@ -108,7 +113,25 @@ export default function AdminHeader() {
   }, []);
 
   useEffect(() => {
-    if (loading || !can('notifications:read')) return;
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/notifications/settings');
+        if (response.ok) {
+          const data = await response.json();
+          setNotificationsEnabled(Boolean(data.enabled));
+        }
+      } catch {
+        // Non-critical; default to enabled
+      }
+    };
+
+    if (!loading) {
+      fetchSettings();
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading || !can('notifications:read') || !notificationsEnabled) return;
 
     const fetchUnread = async () => {
       try {
@@ -129,7 +152,7 @@ export default function AdminHeader() {
     // Poll every minute
     const interval = setInterval(fetchUnread, 60000);
     return () => clearInterval(interval);
-  }, [loading, can]);
+  }, [loading, can, notificationsEnabled]);
 
   const handleLogout = async () => {
     clearPermissionCache();
@@ -194,10 +217,12 @@ export default function AdminHeader() {
   const ExternalLinkIcon = icons.ExternalLink;
   const LogOutIcon = icons.LogOut;
   const UserIcon = icons.User;
+  const SettingsIcon = icons.Settings;
   const HomeIcon = icons.Home;
   const ChevronDownIcon = icons.ChevronDown;
   const CheckIcon = icons.Check;
   const XIcon = icons.X;
+  const BellOffIcon = icons.BellOff;
 
   return (
     <header
@@ -257,7 +282,7 @@ export default function AdminHeader() {
       {/* Right section */}
       <div className="flex items-center gap-2">
         {/* Notification Bell */}
-        {can('notifications:read') && (
+        {can('notifications:read') && notificationsEnabled && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -333,6 +358,12 @@ export default function AdminHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        {can('notifications:read') && !notificationsEnabled && (
+          <div className="h-9 px-3 rounded-md bg-zinc-100 text-xs text-muted-foreground flex items-center gap-2">
+            {BellOffIcon ? <BellOffIcon size={14} /> : null}
+            Notifications Off
+          </div>
+        )}
 
         {/* User Dropdown */}
         <DropdownMenu>
@@ -366,6 +397,18 @@ export default function AdminHeader() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/admin/settings" className="no-underline cursor-pointer">
+                {SettingsIcon && <SettingsIcon size={14} />}
+                Settings
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href="/admin/notification-settings" className="no-underline cursor-pointer">
+                {BellIcon && <BellIcon size={14} />}
+                Notification Settings
+              </a>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a href="/admin/profile" className="no-underline cursor-pointer">
                 {UserIcon && <UserIcon size={14} />}

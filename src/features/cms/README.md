@@ -48,6 +48,8 @@ All API routes are located in `src/pages/api/`:
 - `POST /api/auth/login` - Admin login
 - `POST /api/auth/logout` - Admin logout
 - `GET /api/auth/me` - Get current user
+- `POST /api/auth/forgot-password` - Request password reset link
+- `POST /api/auth/reset-password` - Reset password with token
 
 ### News Articles
 - `GET /api/news` - List articles (public: published only, admin: all)
@@ -83,6 +85,8 @@ All admin pages are located in `src/pages/admin/`:
 
 - `/admin` - Dashboard
 - `/admin/login` - Login page
+- `/admin/forgot-password` - Request password reset
+- `/admin/reset-password` - Set a new password from reset link
 - `/admin/news` - News management
 - `/admin/news/new` - Create news article
 - `/admin/news/[id]` - Edit news article
@@ -104,6 +108,8 @@ The CMS uses JWT-based authentication:
 2. JWT token is stored in HTTP-only cookie
 3. Token is validated on each admin API request
 4. Admin routes require authentication
+
+Password reset links expire after 60 minutes by default. Configure the duration with `PASSWORD_RESET_TTL_MINUTES`.
 
 ### Creating Admin Users
 
@@ -227,4 +233,3 @@ Potential improvements:
 - Bulk operations
 - Content scheduling
 - Revision history
-
