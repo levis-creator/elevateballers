@@ -1,0 +1,801 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import TopBar from '../../features/layout/components/TopBar.astro';
+import Header from '../../features/layout/components/Header';
+import Footer from '../../features/layout/components/Footer.astro';
+import { getPlayerBySlug, getPlayerById } from '../../features/cms/lib/queries';
+import { getPlayerMatches, getPlayerMatchEvents } from '../../features/player/lib/queries';
+import { calculatePlayerStatistics, calculatePlayerMatchStats } from '../../features/player/lib/playerStats';
+import Spacing from '../../shared/components/ui/Spacing.astro';
+import PageLoader from '../../components/PageLoader';
+import { Image } from 'astro:assets';
+import { getDisplayImageUrl } from '../../lib/asset-url';
+
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect('/404', 302);
+}
+
+let player;
+try {
+  player = await getPlayerBySlug(slug);
+  if (!player) {
+    player = await getPlayerById(slug);
+    if (player?.slug) {
+      return Astro.redirect(`/players/${player.slug}`, 301);
+    }
+  }
+  if (!player) {
+    return Astro.redirect('/404', 302);
+  }
+  // Only allow public access to approved players
+  if (!player.approved) {
+    return Astro.redirect('/404', 302);
+  }
+} catch (error) {
+  console.error('Error fetching player:', error);
+  return Astro.redirect('/404', 302);
+}
+
+// Format player name
+const getPlayerName = (): string => {
+  if (player.firstName && player.lastName) {
+    return `${player.firstName} ${player.lastName}`;
+  }
+  return player.firstName || player.lastName || 'Unknown Player';
+};
+
+const playerName = getPlayerName();
+
+// Format stats from JSON
+const getStat = (stats: any, key: string): number => {
+  if (!stats || typeof stats !== 'object') return 0;
+  return stats[key] || 0;
+};
+
+// Format stat value
+const formatStat = (value: number): string => {
+  return value === 0 ? "-" : value.toFixed(1);
+};
+
+// Format percentage
+const formatPercent = (value: number): string => {
+  return value === 0 ? "-" : value.toFixed(1);
+};
+
+const stats = player.stats || {};
+
+// Fetch player matches
+let playerMatches: any[] = [];
+let playerStats = {
+  totalMatches: 0,
+  totalPoints: 0,
+  pointsPerGame: 0,
+  reboundsPerGame: 0,
+  assistsPerGame: 0,
+  stealsPerGame: 0,
+  blocksPerGame: 0,
+  fieldGoalPercentage: 0,
+  threePointPercentage: 0,
+  freeThrowPercentage: 0,
+};
+
+try {
+  // Get all matches where player participated
+  const allMatches = await getPlayerMatches(player.id);
+  
+  // Fetch events for each completed match
+  const matchesWithEvents = await Promise.all(
+    allMatches.map(async (match) => {
+      if (match.status === 'COMPLETED') {
+        try {
+          const events = await getPlayerMatchEvents(match.id, player.id);
+          return { ...match, events };
+        } catch (err) {
+          console.error(`Error fetching events for match ${match.id}:`, err);
+          return { ...match, events: [] };
+        }
+      }
+      return { ...match, events: [] };
+    })
+  );
+  
+  playerMatches = matchesWithEvents;
+  
+  // Calculate aggregate statistics
+  playerStats = calculatePlayerStatistics(matchesWithEvents, player.id);
+} catch (error) {
+  console.error('Error fetching player matches:', error);
+}
+
+// Group matches by league
+const getMatchesByLeague = (matches: any[]) => {
+  const grouped: Record<string, any[]> = {};
+  matches.forEach((match) => {
+    const leagueName = match.league?.name || 'Other';
+    if (!grouped[leagueName]) {
+      grouped[leagueName] = [];
+    }
+    grouped[leagueName].push(match);
+  });
+  return grouped;
+};
+
+const matchesByLeague = getMatchesByLeague(playerMatches);
+
+// Helper functions
+const formatDate = (date: Date): string => {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const getOpponent = (match: any, playerTeamId: string | null): string => {
+  if (!playerTeamId) return 'Unknown';
+  if (match.team1Id === playerTeamId) {
+    return match.team2?.name || match.team2Name || 'Unknown';
+  }
+  return match.team1?.name || match.team1Name || 'Unknown';
+};
+
+const getPlayerTeamId = (match: any): string | null => {
+  if (player.teamId && match.team1Id === player.teamId) {
+    return match.team1Id;
+  }
+  if (player.teamId && match.team2Id === player.teamId) {
+    return match.team2Id;
+  }
+  return null;
+};
+
+// SEO Meta Tags
+const pageTitle = `${playerName} - Players - Elevate Ballers`;
+const pageDescription =
+  player.bio || `View ${playerName}'s profile, statistics, and information`;
+const canonicalSlug = player.slug || slug;
+const pageUrl = `${Astro.url.origin}/players/${canonicalSlug}`;
+const pageImageSource =
+  getDisplayImageUrl(player.image, Astro.url.origin) ||
+  "/images/Elevate_Icon-200x200.png";
+const pageImage = pageImageSource.startsWith("http")
+  ? pageImageSource
+  : new URL(pageImageSource, Astro.url.origin).toString();
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  image={pageImage}
+  canonicalURL={pageUrl}
+  type="profile"
+>
+  
+  <script type="application/ld+json" is:inline set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": pageUrl,
+        "url": pageUrl,
+        "name": pageTitle,
+        "isPartOf": { "@id": `${Astro.url.origin}/#website` },
+        "description": pageDescription,
+        "breadcrumb": { "@id": `${pageUrl}#breadcrumb` },
+        "inLanguage": "en-US"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${pageUrl}#breadcrumb`,
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": `${Astro.url.origin}/` },
+          { "@type": "ListItem", "position": 2, "name": "Players", "item": `${Astro.url.origin}/players` },
+          { "@type": "ListItem", "position": 3, "name": playerName }
+        ]
+      }
+    ]
+  })} />
+  
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header client:load currentPath={Astro.url.pathname} />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      ></div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-player-header"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
+                  />
+
+                  <!-- Player Header -->
+                  <div class="player-header">
+                    <div class="player-header-content">
+                      {
+                        player.image ? (
+                          <div class="player-image-large">
+                            <Image
+                              src={getDisplayImageUrl(player.image, Astro.url.origin)!}
+                              alt={playerName}
+                              width={180}
+                              height={180}
+                            />
+                          </div>
+                        ) : (
+                          <div class="player-image-large-placeholder">
+                            <span class="player-image-text-large">
+                              {playerName
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')
+                                .substring(0, 2)
+                                .toUpperCase()}
+                            </span>
+                          </div>
+                        )
+                      }
+                      <div class="player-header-info">
+                        <h1 class="player-title">{playerName}</h1>
+                        {player.team && (
+                          <div class="player-team">
+                            Team:{' '}
+                            <a class="team-link" href={`/teams/${player.team.slug}`}>
+                              {player.team.name}
+                            </a>
+                          </div>
+                        )}
+                        <div class="player-details">
+                          <div class="player-detail-item">
+                            <strong>Position:</strong> {player.position || '-'}
+                          </div>
+                          <div class="player-detail-item">
+                            <strong>Height:</strong> {player.height || '-'}
+                          </div>
+                          <div class="player-detail-item">
+                            <strong>Weight:</strong> {player.weight || '-'}
+                          </div>
+                          <div class="player-detail-item">
+                            <strong>Jersey:</strong> {player.jerseyNumber || '-'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-player-info"
+                    lg="60"
+                    md="50"
+                    sm="40"
+                    xs="30"
+                  />
+
+                  <!-- Player Stats Overview -->
+                  <div class="player-section">
+                    <h3 class="section-title">Overview</h3>
+                    <div class="player-stats-grid">
+                      <div class="stat-card">
+                        <div class="stat-value">{formatStat(playerStats.pointsPerGame)}</div>
+                        <div class="stat-label">PPG</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-value">{formatStat(playerStats.reboundsPerGame)}</div>
+                        <div class="stat-label">RPG</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-value">{formatStat(playerStats.assistsPerGame)}</div>
+                        <div class="stat-label">APG</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-value">{formatStat(playerStats.stealsPerGame)}</div>
+                        <div class="stat-label">SPG</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-value">{formatStat(playerStats.blocksPerGame)}</div>
+                        <div class="stat-label">BPG</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-player-details"
+                    lg="60"
+                    md="50"
+                    sm="40"
+                    xs="30"
+                  />
+
+                  <!-- Player Details -->
+                  <div class="player-section">
+                    <h3 class="section-title">Player Details</h3>
+                    <div class="player-details">
+                      <div class="player-detail-item">
+                        <strong>Position:</strong> {player.position || '-'}
+                      </div>
+                      <div class="player-detail-item">
+                        <strong>Height:</strong> {player.height || '-'}
+                      </div>
+                      <div class="player-detail-item">
+                        <strong>Weight:</strong> {player.weight || '-'}
+                      </div>
+                      <div class="player-detail-item">
+                        <strong>Jersey:</strong> {player.jerseyNumber || '-'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-player-bio"
+                    lg="60"
+                    md="50"
+                    sm="40"
+                    xs="30"
+                  />
+
+                  <!-- Player Bio -->
+                  {player.bio && (
+                    <div class="player-section">
+                      <h3 class="section-title">Bio</h3>
+                      <div class="player-bio">
+                        <p>{player.bio}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <Spacing
+                    id="stm-spacing-player-season-stats"
+                    lg="60"
+                    md="50"
+                    sm="40"
+                    xs="30"
+                  />
+
+                  <!-- Season Stats -->
+                  <div class="player-section">
+                    <h3 class="section-title">Season Stats</h3>
+                    <div class="career-stats-grid">
+                      <div class="career-stat-card">
+                        <div class="career-stat-value">{playerStats.totalMatches}</div>
+                        <div class="career-stat-label">Games Played</div>
+                      </div>
+                      <div class="career-stat-card">
+                        <div class="career-stat-value">{playerStats.totalPoints}</div>
+                        <div class="career-stat-label">Total Points</div>
+                      </div>
+                      <div class="career-stat-card">
+                        <div class="career-stat-value">{formatPercent(playerStats.fieldGoalPercentage)}</div>
+                        <div class="career-stat-label">FG%</div>
+                      </div>
+                      <div class="career-stat-card">
+                        <div class="career-stat-value">{formatPercent(playerStats.threePointPercentage)}</div>
+                        <div class="career-stat-label">3P%</div>
+                      </div>
+                      <div class="career-stat-card">
+                        <div class="career-stat-value">{formatPercent(playerStats.freeThrowPercentage)}</div>
+                        <div class="career-stat-label">FT%</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-player-matches"
+                    lg="60"
+                    md="50"
+                    sm="40"
+                    xs="30"
+                  />
+
+                  <!-- Player Matches -->
+                  <div class="player-section">
+                    <h3 class="section-title">Matches</h3>
+                    {Object.keys(matchesByLeague).length > 0 ? (
+                      Object.entries(matchesByLeague).map(([leagueName, matches]) => (
+                        <div class="league-matches-group">
+                          <h4 class="league-matches-title">{leagueName}</h4>
+                          <div class="league-matches-list">
+                            {matches.map((match: any) => {
+                              const playerTeamId = getPlayerTeamId(match);
+                              const opponent = getOpponent(match, playerTeamId);
+                              const playerMatchStats = calculatePlayerMatchStats(
+                                player.id,
+                                Array.isArray(match.events) ? match.events : []
+                              );
+                              return (
+                                <div class="match-card">
+                                  <div class="match-date">{formatDate(match.date)}</div>
+                                  <div class="match-stats">
+                                    <div class="match-stats-primary">
+                                      <div class="match-stat-item">
+                                        <span class="match-stat-label">Opponent</span>
+                                        <span class="match-stat-value">vs {opponent}</span>
+                                      </div>
+                                      <div class="match-stat-item">
+                                        <span class="match-stat-label">PTS</span>
+                                        <span class="match-stat-value">{playerMatchStats.points}</span>
+                                      </div>
+                                      <div class="match-stat-item">
+                                        <span class="match-stat-label">REB</span>
+                                        <span class="match-stat-value">{playerMatchStats.rebounds}</span>
+                                      </div>
+                                      <div class="match-stat-item">
+                                        <span class="match-stat-label">AST</span>
+                                        <span class="match-stat-value">{playerMatchStats.assists}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div class="no-matches-message">
+                        <p>No matches found for this player.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+  </div>
+</Layout>
+
+<style>
+  .player-header {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .player-header-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .player-image-large {
+    flex-shrink: 0;
+    width: 200px;
+    height: 200px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+  }
+  .player-image-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .player-image-large-placeholder {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #d33, #b82828);
+    border-radius: 8px;
+  }
+  .player-image-text-large {
+    font-size: 72px;
+    font-weight: 700;
+    color: #fff;
+    font-family: Teko, sans-serif;
+  }
+  .player-header-info {
+    flex: 1;
+    min-width: 250px;
+  }
+  .player-title {
+    font-family: Teko, sans-serif;
+    font-size: 48px;
+    line-height: 52px;
+    color: #d33;
+    margin: 0 0 0.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .player-team {
+    font-family: Rubik, sans-serif;
+    font-size: 18px;
+    line-height: 24px;
+    color: #666;
+    margin: 0 0 1rem;
+  }
+  .team-link {
+    color: #d33;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+  }
+  .team-link:hover {
+    color: #b82828;
+    text-decoration: underline;
+  }
+  .player-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+  .player-detail-item {
+    font-family: Rubik, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .player-detail-item strong {
+    color: #333;
+    font-weight: 600;
+  }
+  .player-section {
+    margin-bottom: 3rem;
+  }
+  .section-title {
+    font-family: Teko, sans-serif;
+    font-size: 32px;
+    line-height: 36px;
+    color: #d33;
+    margin: 0 0 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .player-bio {
+    font-family: Rubik, sans-serif;
+    font-size: 16px;
+    line-height: 24px;
+    color: #666;
+  }
+  .player-bio p {
+    margin: 0 0 1rem;
+  }
+  .player-bio p:last-child {
+    margin-bottom: 0;
+  }
+  .player-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .stat-card {
+    background: #fff;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color 0.3s ease, transform 0.3s ease;
+  }
+  .stat-card:hover {
+    border-color: #d33;
+    transform: translateY(-5px);
+  }
+  .stat-label {
+    font-family: Rubik, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #666;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .stat-value {
+    font-family: Teko, sans-serif;
+    font-size: 36px;
+    line-height: 40px;
+    color: #d33;
+    font-weight: 700;
+  }
+  .no-data-message {
+    font-family: Rubik, sans-serif;
+    font-size: 16px;
+    color: #666;
+    text-align: center;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+  .career-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .career-stat-card {
+    background: #fff;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .career-stat-card:hover {
+    border-color: #d33;
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px #dd333326;
+  }
+  .career-stat-label {
+    font-family: Rubik, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #666;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .career-stat-value {
+    font-family: Teko, sans-serif;
+    font-size: 36px;
+    line-height: 40px;
+    color: #d33;
+    font-weight: 700;
+  }
+  .league-matches-group {
+    margin-bottom: 3rem;
+  }
+  .league-matches-title {
+    font-family: Teko, sans-serif;
+    font-size: 24px;
+    line-height: 28px;
+    color: #d33;
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .league-matches-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .match-card {
+    background: #fff;
+    border-left: 4px solid #cbd5e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px #0000001a;
+    transition: box-shadow 0.3s ease;
+  }
+  .match-card:hover {
+    box-shadow: 0 4px 12px #00000026;
+  }
+  .match-date {
+    font-family: Rubik, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #666;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+  .match-stats {
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  .match-stats-primary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .match-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 14px;
+    font-family: Rubik, sans-serif;
+  }
+  .match-stat-label {
+    color: #666;
+    font-weight: 600;
+  }
+  .match-stat-value {
+    color: #1f2937;
+    font-weight: 700;
+  }
+  .no-matches-message {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 2rem;
+    text-align: center;
+  }
+  .no-matches-message p {
+    font-family: Rubik, sans-serif;
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+  }
+
+  @media (min-width: 768px) {
+    .career-stats-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .career-stats-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+
+  @media (max-width: 991px) {
+    .player-header-content {
+      flex-direction: column;
+      text-align: center;
+    }
+    .player-image-large,
+    .player-image-large-placeholder {
+      margin: 0 auto;
+    }
+    .player-title {
+      font-size: 36px;
+      line-height: 40px;
+    }
+    .section-title {
+      font-size: 28px;
+      line-height: 32px;
+    }
+    .player-stats-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .career-stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .player-title {
+      font-size: 28px;
+      line-height: 32px;
+    }
+    .section-title {
+      font-size: 24px;
+      line-height: 28px;
+    }
+    .player-details {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .player-stats-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .stat-value {
+      font-size: 28px;
+      line-height: 32px;
+    }
+    .career-stats-grid {
+      grid-template-columns: 1fr;
+    }
+    .career-stat-value {
+      font-size: 28px;
+      line-height: 32px;
+    }
+    .match-stats-primary {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+</style>

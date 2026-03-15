@@ -4,6 +4,7 @@ import { DataTable } from '../../../shared/components/DataTable/DataTable';
 
 interface Player {
   id: string;
+  slug?: string | null;
   firstName?: string;
   lastName?: string;
   position?: string;
@@ -47,7 +48,7 @@ export const TeamDetailsTable: React.FC<TeamDetailsTableProps> = ({ players }) =
           header: 'Player',
           accessorFn: (row) => getPlayerName(row),
           cell: (info) => (
-            <a href={`/players/${info.row.original.id}`} className="sp-player-name">
+            <a href={`/players/${info.row.original.slug || info.row.original.id}`} className="sp-player-name">
               {info.getValue<string>()}
             </a>
           ),

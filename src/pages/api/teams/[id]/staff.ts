@@ -7,7 +7,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
   try {
-    const teamStaff = await getStaffByTeam(params.id!);
+    const teamStaff = await getStaffByTeam(params.id!, true);
 
     return new Response(JSON.stringify(teamStaff), {
       headers: { 'Content-Type': 'application/json' },
@@ -137,4 +137,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

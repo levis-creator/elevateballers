@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createTeam, createStaff, assignStaffToTeam } from '../../../features/cms/lib/mutations';
 import { prisma } from '../../../lib/prisma';
+import { sendTeamRegistrationAutoReply } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -103,6 +104,7 @@ export const POST: APIRoute = async ({ request }) => {
         phone: data.contactPhone,
         role: 'COACH',
         bio: data.additionalInfo || undefined,
+        approved: false,
       });
     }
 
@@ -201,6 +203,16 @@ export const POST: APIRoute = async ({ request }) => {
       // Don't fail the registration if notification creation fails
     }
 
+    // Send auto-reply email (fire-and-forget)
+    sendTeamRegistrationAutoReply({
+      coachName: data.coachName,
+      email: data.contactEmail,
+      teamName: team.name,
+      leagueName: leagueName || null,
+    }).catch((err) => {
+      console.error('Failed to send team registration auto-reply:', err);
+    });
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Team registration submitted successfully',
@@ -222,4 +234,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

@@ -1,0 +1,70 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import { prisma } from '../lib/prisma';
+
+const token = Astro.url.searchParams.get('token');
+
+let status: 'success' | 'invalid' | 'notfound' | 'already' = 'invalid';
+
+if (token) {
+  const subscriber = await prisma.subscriber.findUnique({ where: { token } });
+
+  if (!subscriber) {
+    status = 'notfound';
+  } else if (!subscriber.active) {
+    status = 'already';
+  } else {
+    await prisma.subscriber.update({ where: { token }, data: { active: false } });
+    status = 'success';
+  }
+}
+---
+
+<Layout title="Unsubscribe — ElevateBallers" robots="noindex">
+  <div style="min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
+    <div style="max-width: 480px; width: 100%; text-align: center;">
+
+      {status === 'success' && (
+        <div>
+          <div style="font-size: 56px; margin-bottom: 16px;">✅</div>
+          <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;">You've been unsubscribed</h1>
+          <p style="color: #666; margin-bottom: 32px;">
+            You will no longer receive email alerts from ElevateBallers. Sorry to see you go!
+          </p>
+          <a href="/" style="display: inline-block; padding: 12px 28px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            Return to site
+          </a>
+        </div>
+      )}
+
+      {status === 'already' && (
+        <div>
+          <div style="font-size: 56px; margin-bottom: 16px;">ℹ️</div>
+          <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;">Already unsubscribed</h1>
+          <p style="color: #666; margin-bottom: 32px;">
+            This email address is already unsubscribed from ElevateBallers alerts.
+          </p>
+          <a href="/" style="display: inline-block; padding: 12px 28px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            Return to site
+          </a>
+        </div>
+      )}
+
+      {(status === 'invalid' || status === 'notfound') && (
+        <div>
+          <div style="font-size: 56px; margin-bottom: 16px;">❌</div>
+          <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;">Invalid link</h1>
+          <p style="color: #666; margin-bottom: 32px;">
+            This unsubscribe link is invalid or has expired. Please use the link from your most recent email.
+          </p>
+          <a href="/" style="display: inline-block; padding: 12px 28px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            Return to site
+          </a>
+        </div>
+      )}
+
+    </div>
+  </div>
+</Layout>

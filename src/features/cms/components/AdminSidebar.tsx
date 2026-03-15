@@ -40,6 +40,7 @@ export default function AdminSidebar() {
     ChevronDown?: ComponentType<any>;
     Settings?: ComponentType<any>;
     MessageSquare?: ComponentType<any>;
+    Mail?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function AdminSidebar() {
         ChevronDown: mod.ChevronDown,
         Settings: mod.Settings,
         MessageSquare: mod.MessageSquare,
+        Mail: mod.Mail,
       });
     });
 
@@ -153,6 +155,7 @@ export default function AdminSidebar() {
       label: 'COMMUNICATION',
       items: [
         { href: '/admin/messages', icon: icons.MessageSquare, label: 'Messages', permission: 'contact_messages:read' },
+        { href: '/admin/subscribers', icon: icons.Mail, label: 'Subscribers', permission: 'subscribers:read' },
       ],
     },
     {

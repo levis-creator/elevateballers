@@ -151,7 +151,7 @@ const ROLE_DEFINITIONS = [
       'folders:read', 'folders:create', 'folders:update',
       'comments:read', 'comments:update', 'comments:delete',
       'leagues:read', 'seasons:read', 'staff:read', 'staff:create', 'staff:update',
-      'contact_messages:read',
+      'contact_messages:read', 'subscribers:read', 'subscribers:manage',
     ],
   },
   {
@@ -172,7 +172,7 @@ const ROLE_DEFINITIONS = [
       'potw:create', 'potw:read', 'potw:update', 'potw:delete',
       'sponsors:create', 'sponsors:read', 'sponsors:update', 'sponsors:delete',
       'comments:read', 'comments:update', 'comments:delete',
-      'contact_messages:read',
+      'contact_messages:read', 'subscribers:read', 'subscribers:manage',
     ],
   },
   {

@@ -515,6 +515,7 @@ const pageImage = pageImageSource.startsWith("http")
                         <div class="staff-grid">
                           {teamStaff.map((teamStaffMember: any) => {
                             const staff = teamStaffMember.staff;
+                            const staffSlug = staff.slug || staff.id;
                             return (
                               <div class="staff-card">
                                 {staff.image ? (
@@ -541,7 +542,9 @@ const pageImage = pageImageSource.startsWith("http")
                                 )}
                                 <div class="staff-info">
                                   <h3 class="staff-name">
-                                    {staff.firstName} {staff.lastName}
+                                    <a href={`/staff/${staffSlug}`}>
+                                      {staff.firstName} {staff.lastName}
+                                    </a>
                                   </h3>
                                   <p class="staff-role">
                                     {formatStaffRole(teamStaffMember.role)}

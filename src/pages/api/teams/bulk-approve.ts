@@ -16,10 +16,25 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    const shouldApprove = approved !== undefined ? approved : true;
+
     const result = await prisma.team.updateMany({
       where: { id: { in: ids } },
-      data: { approved: approved !== undefined ? approved : true },
+      data: { approved: shouldApprove },
     });
+
+    if (shouldApprove) {
+      await prisma.staff.updateMany({
+        where: {
+          teams: {
+            some: { teamId: { in: ids } },
+          },
+        },
+        data: {
+          approved: true,
+        },
+      });
+    }
 
     return new Response(JSON.stringify({ updated: result.count }), {
       status: 200,

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getNewsArticles, getTeams, getPlayers, getMatches } from '../features/cms/lib/queries';
+import { getNewsArticles, getTeams, getPlayers, getMatches, getPublicStaff } from '../features/cms/lib/queries';
 
 export const prerender = false;
 
@@ -12,11 +12,12 @@ export const GET: APIRoute = async ({ site }) => {
 
     try {
         // Fetch dynamic data
-        const [articles, teams, players, matches] = await Promise.all([
+        const [articles, teams, players, matches, staff] = await Promise.all([
             getNewsArticles(),
             getTeams(false), // Approved only
             getPlayers(undefined, false), // Approved only
             getMatches(),
+            getPublicStaff(),
         ]);
 
         const staticPages = [
@@ -29,6 +30,7 @@ export const GET: APIRoute = async ({ site }) => {
             '/contacts',
             '/players',
             '/teams',
+            '/staff',
             '/news',
             '/matches/results',
             '/stats/leaders',
@@ -79,8 +81,19 @@ export const GET: APIRoute = async ({ site }) => {
                 .map(
                     (player: any) => `
   <url>
-    <loc>${baseUrl}/players/${player.id}</loc>
+    <loc>${baseUrl}/players/${player.slug || player.id}</loc>
     <lastmod>${new Date(player.updatedAt || player.createdAt).toISOString()}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>`
+                )
+                .join('')}
+  ${staff
+                .map(
+                    (member: any) => `
+  <url>
+    <loc>${baseUrl}/staff/${member.slug}</loc>
+    <lastmod>${new Date(member.updatedAt || member.createdAt).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>`

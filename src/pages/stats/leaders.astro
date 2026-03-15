@@ -116,7 +116,7 @@ const pageUrl = `${Astro.url.origin}/stats/leaders`;
                                         {section.leaders.map(
                                             (player, index) => (
                                                 <a
-                                                    href={`/players/${player.id}`}
+                                                    href={`/players/${player.slug || player.id}`}
                                                     class="leader-row"
                                                 >
                                                     <div class="rank-badge">

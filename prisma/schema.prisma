@@ -254,6 +254,7 @@ model Team {
 
 model Player {
   id                 String                     @id @default(cuid())
+  slug               String?                    @unique
   image              String?
   bio                String?
   position           String?
@@ -282,6 +283,7 @@ model Player {
   teamHistory        PlayerTeamHistory[]
 
   @@index([teamId])
+  @@index([slug])
   @@index([approved])
   @@map("players")
 }
@@ -395,6 +397,7 @@ model SiteSetting {
 
 model Staff {
   id            String                     @id @default(cuid())
+  slug          String?                    @unique
   firstName     String
   lastName      String
   email         String?
@@ -402,11 +405,14 @@ model Staff {
   role          StaffRole
   bio           String?
   image         String?
+  approved      Boolean                    @default(false)
   createdAt     DateTime                   @default(now()) @map("created_at")
   updatedAt     DateTime                   @updatedAt @map("updated_at")
   notifications RegistrationNotification[]
   teams         TeamStaff[]
 
+  @@index([slug])
+  @@index([approved])
   @@index([role])
   @@map("staff")
 }
@@ -554,6 +560,20 @@ model ContactMessage {
   @@index([createdAt])
   @@index([email])
   @@map("contact_messages")
+}
+
+model Subscriber {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  active      Boolean  @default(true)
+  token       String   @unique @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([active])
+  @@index([createdAt])
+  @@map("subscribers")
 }
 
 model GameRules {

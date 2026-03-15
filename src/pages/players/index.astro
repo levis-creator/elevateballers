@@ -48,7 +48,7 @@ function transformPlayerToTeamPlayer(player: Player): TeamPlayer {
         ppg: getStat(stats, "ppg") || 0,
         eff: getStat(stats, "eff") || 0,
         image: player.image || undefined,
-        url: `/players/${player.id}`,
+        url: `/players/${player.slug || player.id}`,
     };
 }
 

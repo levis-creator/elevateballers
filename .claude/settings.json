@@ -18,7 +18,15 @@
       "Bash(mysql -uroot -padmin123 elevate_db_dev -e \"SHOW TABLES LIKE ''player_team_history'';\")",
       "Bash(npm install:*)",
       "Read(//export async function getTeamBySlug/**)",
-      "Bash(ls -la /home/levi/Documents/GitHub/elevateballers/src/pages/api/players/[id]/)"
+      "Bash(ls -la /home/levi/Documents/GitHub/elevateballers/src/pages/api/players/[id]/)",
+      "Bash(find /home/levi/Documents/GitHub/elevateballers -type f \\\\\\(-name *subscrib* -o -name *newslet* -o -name *email*list* \\\\\\))",
+      "Bash(grep -r \"Subscriber\\\\|Newsletter\\\\|EmailList\\\\|subscription\" /home/levi/Documents/GitHub/elevateballers/src --include=*.ts --include=*.tsx --include=*.astro)",
+      "Bash(node prisma/seed.js)",
+      "Bash(npm run:*)",
+      "Bash(ls -la /home/levi/Documents/GitHub/elevateballers/public/images/Elevate*)",
+      "Bash(node -e \"const Brevo = require\\(''@getbrevo/brevo''\\); console.log\\(Object.keys\\(Brevo\\).filter\\(k => k.toLowerCase\\(\\).includes\\(''transact''\\) || k.toLowerCase\\(\\).includes\\(''smtp''\\) || k.toLowerCase\\(\\).includes\\(''send''\\)\\)\\)\")",
+      "Bash(node -e \"const Brevo = require\\(''@getbrevo/brevo''\\); console.log\\(Object.keys\\(Brevo\\).slice\\(0, 30\\)\\)\")",
+      "Bash(node -e \"const {Brevo, BrevoClient} = require\\(''@getbrevo/brevo''\\); console.log\\(''Brevo keys:'', Object.keys\\(Brevo || {}\\).slice\\(0,20\\)\\); console.log\\(''BrevoClient:'', typeof BrevoClient\\)\")"
     ]
   }
 }

@@ -313,6 +313,8 @@ export default function NewsEditor({ articleId }: NewsEditorProps) {
     feature: false,
     publishedAt: '',
   });
+  const [notifySubscribers, setNotifySubscribers] = useState(false);
+  const [notifyStatus, setNotifyStatus] = useState<{ sent: number; failed: number } | null>(null);
 
 
 
@@ -395,10 +397,26 @@ export default function NewsEditor({ articleId }: NewsEditorProps) {
 
       const result = await response.json();
 
+      // Notify subscribers if requested
+      if (notifySubscribers && formData.published) {
+        const targetId = articleId || result.id;
+        if (targetId) {
+          const notifyRes = await fetch('/api/subscribers/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ articleId: targetId }),
+          });
+          if (notifyRes.ok) {
+            const notifyData = await notifyRes.json();
+            setNotifyStatus({ sent: notifyData.sent, failed: notifyData.failed });
+          }
+        }
+      }
+
       setSuccess(true);
       setTimeout(() => {
         window.location.href = '/admin/news';
-      }, 1500);
+      }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to save article');
     } finally {
@@ -628,6 +646,35 @@ export default function NewsEditor({ articleId }: NewsEditorProps) {
                 </p>
               </div>
             </div>
+
+            {formData.published && (
+              <div className="flex items-start space-x-3 space-y-0 rounded-md border border-blue-200 bg-blue-50 p-4">
+                <Checkbox
+                  id="notifySubscribers"
+                  checked={notifySubscribers}
+                  onCheckedChange={(checked) => setNotifySubscribers(checked === true)}
+                  disabled={saving}
+                />
+                <div className="space-y-1 leading-none">
+                  <Label
+                    htmlFor="notifySubscribers"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Notify subscribers
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Send an email alert to all active subscribers about this article
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {notifyStatus && (
+              <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                ✓ Notified {notifyStatus.sent} subscriber{notifyStatus.sent !== 1 ? 's' : ''}
+                {notifyStatus.failed > 0 && ` (${notifyStatus.failed} failed)`}
+              </div>
+            )}
 
             {formData.published && (
               <div className="space-y-2">

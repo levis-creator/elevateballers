@@ -1,0 +1,10 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import SubscribersList from '../../../features/cms/components/SubscribersList';
+---
+
+<AdminLayout title="Subscribers - Admin" permission="subscribers:read">
+  <SubscribersList client:load />
+</AdminLayout>
