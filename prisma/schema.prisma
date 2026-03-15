@@ -18,8 +18,38 @@ model User {
   uploadedMedia Media[]       @relation("MediaUploader")
   newsArticles  NewsArticle[]
   userRoles     UserRole[]
+  passwordResetTokens PasswordResetToken[]
+  notificationSettings UserNotificationSetting?
 
   @@map("users")
+}
+
+model UserNotificationSetting {
+  id         String   @id @default(cuid())
+  userId     String   @unique @map("user_id")
+  enabled    Boolean  @default(true)
+  emailEnabled Boolean @default(true) @map("email_enabled")
+  emailPreferences Json? @map("email_preferences")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_notification_settings")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  usedAt    DateTime? @map("used_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model Role {

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createTeam, createStaff, assignStaffToTeam } from '../../../features/cms/lib/mutations';
 import { prisma } from '../../../lib/prisma';
-import { sendTeamRegistrationAutoReply } from '../../../lib/email';
+import { sendTeamRegistrationAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -197,6 +197,16 @@ export const POST: APIRoute = async ({ request }) => {
             linkedPlayersCount: linkedPlayersCount,
           },
         },
+      });
+      const adminUrl = `${process.env.SITE_URL || 'https://elevateballers.com'}/admin/teams/${team.id}`;
+      sendAdminNotificationEmail({
+        type: 'team_registered',
+        title: 'New Team Registration',
+        message: `${team.name} was submitted by ${data.coachName}.`,
+        actionUrl: adminUrl,
+        actionText: 'Review Team',
+      }).catch((err) => {
+        console.error('Failed to send admin notification email:', err);
       });
     } catch (error: any) {
       console.error('Error creating team registration notification:', error);

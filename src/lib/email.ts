@@ -1,5 +1,7 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { BrevoClient } from '@getbrevo/brevo';
+import { prisma } from './prisma';
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -11,8 +13,13 @@ function getResend() {
 }
 
 const FROM = process.env.RESEND_FROM || 'ElevateBallers <info@elevateballers.com>';
+const SMTP_FROM = process.env.SMTP_FROM || FROM;
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = process.env.SMTP_PORT ? Number.parseInt(process.env.SMTP_PORT, 10) : undefined;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
 const ADMIN_TO = process.env.ADMIN_EMAIL || 'info@elevateballers.com';
-const BREVO_FROM = process.env.BREVO_FROM || 'ElevateBallers <info@elevateballers.com>';
+const BREVO_FROM = process.env.BREVO_FROM || process.env.RESEND_FROM || 'ElevateBallers <info@elevateballers.com>';
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'ElevateBallers';
 const SITE_URL = process.env.SITE_URL || 'https://elevateballers.com';
 const LOGO_URL = `${SITE_URL}/images/Elevate_Icon.png`;
@@ -24,6 +31,61 @@ function getBrevoClient() {
     return null;
   }
   return new BrevoClient({ apiKey });
+}
+
+function getSmtpTransport() {
+  if (!SMTP_HOST || !SMTP_PORT) {
+    console.warn('[email] SMTP_HOST/SMTP_PORT not set — SMTP fallback disabled.');
+    return null;
+  }
+
+  const secure = SMTP_PORT === 465;
+
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure,
+    auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+  });
+}
+
+async function sendTransactionalEmail(data: {
+  to: string | string[];
+  subject: string;
+  html: string;
+  replyTo?: string;
+  from?: string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend) {
+    try {
+      const { error } = await resend.emails.send({
+        from: data.from || FROM,
+        to: data.to,
+        replyTo: data.replyTo,
+        subject: data.subject,
+        html: data.html,
+      });
+      if (error) throw new Error(error.message);
+      return;
+    } catch (error) {
+      console.warn('[email] Resend failed, falling back to SMTP:', error);
+    }
+  }
+
+  const transport = getSmtpTransport();
+  if (!transport) {
+    console.warn('[email] No transactional email provider configured.');
+    return;
+  }
+
+  await transport.sendMail({
+    from: data.from || SMTP_FROM,
+    to: data.to,
+    subject: data.subject,
+    html: data.html,
+    replyTo: data.replyTo,
+  });
 }
 
 // Brand colors
@@ -202,7 +264,119 @@ function unsubscribeFooter(url: string): string {
   </p>`;
 }
 
+type AdminNotificationType =
+  | 'contact_message'
+  | 'team_registered'
+  | 'player_registered'
+  | 'player_auto_linked';
+
+const DEFAULT_EMAIL_PREFS: Record<AdminNotificationType, boolean> = {
+  contact_message: true,
+  team_registered: true,
+  player_registered: true,
+  player_auto_linked: true,
+};
+
+function normalizeEmailPreferences(input: any): Record<AdminNotificationType, boolean> {
+  if (!input || typeof input !== 'object') return { ...DEFAULT_EMAIL_PREFS };
+  return {
+    contact_message: input.contact_message !== undefined ? Boolean(input.contact_message) : true,
+    team_registered: input.team_registered !== undefined ? Boolean(input.team_registered) : true,
+    player_registered: input.player_registered !== undefined ? Boolean(input.player_registered) : true,
+    player_auto_linked: input.player_auto_linked !== undefined ? Boolean(input.player_auto_linked) : true,
+  };
+}
+
+async function getAdminRecipientEmails(type?: AdminNotificationType): Promise<string[]> {
+  try {
+    const toggle = await prisma.siteSetting.findUnique({
+      where: { key: 'admin_email_notifications_enabled' },
+      select: { value: true },
+    });
+
+    if (toggle && toggle.value.toLowerCase() === 'false') {
+      console.warn('[email] Admin email notifications are disabled by site settings.');
+      return [];
+    }
+
+    const admins = await prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: 'Admin',
+              permissions: {
+                some: {
+                  permission: {
+                    resource: 'notifications',
+                    action: 'email',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      select: {
+        email: true,
+        notificationSettings: {
+          select: {
+            emailEnabled: true,
+            emailPreferences: true,
+          },
+        },
+      },
+    });
+
+    const emails = admins
+      .filter((admin) => {
+        const emailEnabled = admin.notificationSettings?.emailEnabled ?? true;
+        if (!emailEnabled) return false;
+        if (!type) return true;
+        const prefs = normalizeEmailPreferences(admin.notificationSettings?.emailPreferences);
+        return prefs[type];
+      })
+      .map((admin) => admin.email?.trim())
+      .filter((email): email is string => Boolean(email));
+
+    return Array.from(new Set(emails));
+  } catch (error) {
+    console.warn('[email] Failed to read admin emails from users:', error);
+    return [];
+  }
+}
+
 // ---------------------------------------------------------------------------
+
+export async function sendAdminNotificationEmail(data: {
+  type: AdminNotificationType;
+  title: string;
+  message: string;
+  actionUrl?: string;
+  actionText?: string;
+}): Promise<void> {
+  const recipients = await getAdminRecipientEmails(data.type);
+  if (recipients.length === 0) return;
+
+  const action = data.actionUrl
+    ? btn(data.actionText || 'View in Admin', data.actionUrl)
+    : '';
+
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 12px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">${data.title}</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      ${data.message}
+    </p>
+    ${action}
+  `);
+
+  await sendTransactionalEmail({
+    to: recipients,
+    subject: data.title,
+    html,
+  });
+  console.log(`[email] Admin notification sent to ${recipients.join(', ')}`);
+}
 
 export async function sendContactNotification(data: {
   name: string;
@@ -210,9 +384,6 @@ export async function sendContactNotification(data: {
   subject: string;
   message: string;
 }): Promise<void> {
-  const resend = getResend();
-  if (!resend) return;
-
   const html = emailWrapper(`
     <h2 style="margin:0 0 4px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">New Contact Message</h2>
     <p style="margin:0 0 24px;font-size:13px;color:${C.gray};">Someone submitted the contact form on your website.</p>
@@ -230,15 +401,12 @@ export async function sendContactNotification(data: {
     ${btn('Reply to Message', `mailto:${data.email}`)}
   `);
 
-  const { error } = await resend.emails.send({
-    from: FROM,
+  await sendTransactionalEmail({
     to: ADMIN_TO,
     replyTo: data.email,
     subject: `New Contact Message: ${data.subject}`,
     html,
   });
-
-  if (error) throw new Error(error.message);
   console.log(`[email] Contact notification sent to ${ADMIN_TO}`);
 }
 
@@ -247,9 +415,6 @@ export async function sendContactAutoReply(data: {
   email: string;
   subject: string;
 }): Promise<void> {
-  const resend = getResend();
-  if (!resend) return;
-
   const html = emailWrapper(`
     <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Message Received!</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
@@ -262,15 +427,43 @@ export async function sendContactAutoReply(data: {
     ${btn('Visit Website', SITE_URL)}
   `);
 
-  const { error } = await resend.emails.send({
-    from: FROM,
+  await sendTransactionalEmail({
     to: data.email,
     subject: `We received your message: ${data.subject}`,
     html,
   });
-
-  if (error) throw new Error(error.message);
   console.log(`[email] Auto-reply sent to ${data.email}`);
+}
+
+export async function sendPasswordResetEmail(data: {
+  email: string;
+  name?: string | null;
+  resetUrl: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const greeting = data.name ? `Hi ${data.name},` : 'Hi there,';
+
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Reset Your Password</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">${greeting}</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      We received a request to reset your ElevateBallers admin password.
+    </p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      Click the button below to set a new password. This link expires in ${data.expiresInMinutes} minutes.
+    </p>
+    ${btn('Reset Password', data.resetUrl)}
+    <p style="margin:20px 0 0;font-size:13px;color:${C.gray};line-height:1.6;">
+      If you did not request this, you can safely ignore this email.
+    </p>
+  `);
+
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: 'Reset your ElevateBallers password',
+    html,
+  });
+  console.log(`[email] Password reset email sent to ${data.email}`);
 }
 
 export async function sendTeamRegistrationAutoReply(data: {
@@ -279,9 +472,6 @@ export async function sendTeamRegistrationAutoReply(data: {
   teamName: string;
   leagueName?: string | null;
 }): Promise<void> {
-  const resend = getResend();
-  if (!resend) return;
-
   const leagueLine = data.leagueName
     ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">League: <strong>${data.leagueName}</strong></p>`
     : '';
@@ -302,14 +492,11 @@ export async function sendTeamRegistrationAutoReply(data: {
     ${btn('Visit Website', SITE_URL)}
   `);
 
-  const { error } = await resend.emails.send({
-    from: FROM,
+  await sendTransactionalEmail({
     to: data.email,
     subject: `We received your team registration: ${data.teamName}`,
     html,
   });
-
-  if (error) throw new Error(error.message);
   console.log(`[email] Team registration auto-reply sent to ${data.email}`);
 }
 
@@ -322,6 +509,12 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
   const brevo = getBrevoClient();
   if (!brevo) return;
 
+  const recipients = await getAdminRecipientEmails('team_registered');
+  if (recipients.length === 0) {
+    console.warn('[email] No admin recipients found for team admin auto-reply.');
+    return;
+  }
+
   const leagueLine = data.leagueName
     ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">League: <strong>${data.leagueName}</strong></p>`
     : '';
@@ -346,11 +539,11 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
 
   await brevo.transactionalEmails.sendTransacEmail({
     sender: { name: BREVO_SENDER_NAME, email: senderEmail },
-    to: [{ email: data.email, name: data.coachName || undefined }],
-    subject: `We received your team registration: ${data.teamName}`,
+    to: recipients.map((recipient) => ({ email: recipient })),
+    subject: `New team created (admin): ${data.teamName}`,
     htmlContent: html,
   });
-  console.log(`[email] Team registration auto-reply (Brevo) sent to ${data.email}`);
+  console.log(`[email] Team admin auto-reply (Brevo) sent to ${recipients.join(', ')}`);
 }
 
 export async function sendPlayerRegistrationAutoReply(data: {
@@ -358,9 +551,6 @@ export async function sendPlayerRegistrationAutoReply(data: {
   email: string;
   teamName?: string | null;
 }): Promise<void> {
-  const resend = getResend();
-  if (!resend) return;
-
   const teamLine = data.teamName
     ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Team preference: <strong>${data.teamName}</strong></p>`
     : '';
@@ -381,14 +571,11 @@ export async function sendPlayerRegistrationAutoReply(data: {
     ${btn('Visit Website', SITE_URL)}
   `);
 
-  const { error } = await resend.emails.send({
-    from: FROM,
+  await sendTransactionalEmail({
     to: data.email,
     subject: 'We received your player registration',
     html,
   });
-
-  if (error) throw new Error(error.message);
   console.log(`[email] Player registration auto-reply sent to ${data.email}`);
 }
 
@@ -399,6 +586,12 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
 }): Promise<void> {
   const brevo = getBrevoClient();
   if (!brevo) return;
+
+  const recipients = await getAdminRecipientEmails('player_registered');
+  if (recipients.length === 0) {
+    console.warn('[email] No admin recipients found for player admin auto-reply.');
+    return;
+  }
 
   const teamLine = data.teamName
     ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Team preference: <strong>${data.teamName}</strong></p>`
@@ -424,11 +617,11 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
 
   await brevo.transactionalEmails.sendTransacEmail({
     sender: { name: BREVO_SENDER_NAME, email: senderEmail },
-    to: [{ email: data.email, name: data.name || undefined }],
-    subject: 'We received your player registration',
+    to: recipients.map((recipient) => ({ email: recipient })),
+    subject: `New player created (admin): ${data.name}`,
     htmlContent: html,
   });
-  console.log(`[email] Player registration auto-reply (Brevo) sent to ${data.email}`);
+  console.log(`[email] Player admin auto-reply (Brevo) sent to ${recipients.join(', ')}`);
 }
 
 // Article notifications use Brevo (campaign emails — no rate limits)
@@ -486,9 +679,6 @@ export async function sendSubscriberWelcome(data: {
   name?: string;
   unsubscribeToken?: string;
 }): Promise<void> {
-  const resend = getResend();
-  if (!resend) return;
-
   const unsubscribeUrl = data.unsubscribeToken
     ? `${SITE_URL}/unsubscribe?token=${data.unsubscribeToken}`
     : `${SITE_URL}/unsubscribe`;
@@ -517,13 +707,10 @@ export async function sendSubscriberWelcome(data: {
     ${unsubscribeFooter(unsubscribeUrl)}
   `);
 
-  const { error } = await resend.emails.send({
-    from: FROM,
+  await sendTransactionalEmail({
     to: data.email,
     subject: 'Welcome to ElevateBallers Email Alerts!',
     html,
   });
-
-  if (error) throw new Error(error.message);
   console.log(`[email] Welcome email sent to ${data.email}`);
 }

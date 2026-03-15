@@ -1,0 +1,18 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../features/cms/components/AdminLayout.astro';
+import NotificationSettingsCard from '../../features/cms/components/NotificationSettingsCard';
+---
+
+<AdminLayout title="Notification Settings - Admin">
+  <div class="mb-8">
+    <h1 class="text-4xl font-bold font-heading text-gray-900">Notification Settings</h1>
+    <p class="text-gray-500 mt-2 text-lg">Control which admin alerts you receive.</p>
+  </div>
+
+  <div class="max-w-2xl">
+    <NotificationSettingsCard client:load />
+  </div>
+</AdminLayout>

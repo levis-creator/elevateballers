@@ -145,6 +145,14 @@ export default function LoginForm() {
                 className="pl-10"
               />
             </div>
+            <div className="text-right">
+              <a
+                href="/admin/forgot-password"
+                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                Forgot password?
+              </a>
+            </div>
           </div>
 
           <Button
