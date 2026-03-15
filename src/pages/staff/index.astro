@@ -1,0 +1,81 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TopBar from "../../features/layout/components/TopBar.astro";
+import Header from "../../features/layout/components/Header";
+import Footer from "../../features/layout/components/Footer.astro";
+import PageLoader from "../../components/PageLoader";
+import Spacing from "../../shared/components/ui/Spacing.astro";
+import { getPublicStaff } from "../../features/cms/lib/queries";
+
+let staff: any[] = [];
+try {
+  staff = await getPublicStaff();
+} catch (error) {
+  console.error("Error fetching staff:", error);
+}
+
+const pageTitle = "Staff Directory - Elevate Ballers";
+const pageDescription = "Meet the staff and coaches of Elevate Ballers.";
+const pageUrl = `${Astro.url.origin}/staff`;
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={pageUrl}
+>
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header client:load currentPath={Astro.url.pathname} />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      ></div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-staff-header"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
+                  />
+
+                  <h1 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">
+                    STAFF
+                  </h1>
+
+                  {staff.length > 0 ? (
+                    <div class="staff-directory-grid">
+                      {staff.map((member) => (
+                        <a class="staff-card" href={`/staff/${member.slug}`}>
+                          <div class="staff-card-name">
+                            {member.firstName} {member.lastName}
+                          </div>
+                          <div class="staff-card-role">
+                            {member.role?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p class="no-data" style="text-align: center;">
+                      No staff members available yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+  </div>
+</Layout>

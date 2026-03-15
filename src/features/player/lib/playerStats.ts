@@ -81,7 +81,8 @@ export function calculatePlayerMatchStats(
   };
 
   // Filter events for this player that are not undone
-  const playerEvents = events.filter(
+  const safeEvents = Array.isArray(events) ? events : [];
+  const playerEvents = safeEvents.filter(
     (e) => e.playerId === playerId && !e.isUndone
   );
 

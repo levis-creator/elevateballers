@@ -245,6 +245,7 @@ export type UpdateSeasonInput = Partial<CreateSeasonInput>;
 export type CreatePlayerInput = {
   firstName?: string;
   lastName?: string;
+  slug?: string;
   email?: string;
   phone?: string;
   height?: string; // Height in feet format (e.g., "6'2\"")
@@ -274,11 +275,13 @@ export type UpdateTeamInput = Partial<CreateTeamInput>;
 export type CreateStaffInput = {
   firstName: string;
   lastName: string;
+  slug?: string;
   email?: string;
   phone?: string;
   role: StaffRole;
   bio?: string;
   image?: string;
+  approved?: boolean;
 };
 
 export type UpdateStaffInput = Partial<CreateStaffInput>;

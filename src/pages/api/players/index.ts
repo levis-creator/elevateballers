@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getPlayers } from '../../../features/cms/lib/queries';
 import { createPlayer } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { sendPlayerRegistrationAutoReplyBrevo } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -58,6 +59,8 @@ export const POST: APIRoute = async ({ request }) => {
     const player = await createPlayer({
       firstName: data.firstName,
       lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
       height: data.height,
       weight: data.weight,
       image: data.image,
@@ -68,6 +71,16 @@ export const POST: APIRoute = async ({ request }) => {
       stats: data.stats,
       approved: true, // Admin-created players are approved by default
     });
+
+    if (data.email) {
+      sendPlayerRegistrationAutoReplyBrevo({
+        name: `${data.firstName} ${data.lastName}`.trim(),
+        email: data.email,
+        teamName: data.teamName || null,
+      }).catch((err) => {
+        console.error('Failed to send player admin-create auto-reply (Brevo):', err);
+      });
+    }
 
     return new Response(JSON.stringify(player), {
       status: 201,
@@ -84,4 +97,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

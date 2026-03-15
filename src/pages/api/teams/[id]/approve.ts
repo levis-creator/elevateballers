@@ -17,12 +17,27 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       });
     }
 
+    const shouldApprove = data.approved ?? true;
+
     const team = await prisma.team.update({
       where: { id },
       data: {
-        approved: data.approved ?? true,
+        approved: shouldApprove,
       },
     });
+
+    if (shouldApprove) {
+      await prisma.staff.updateMany({
+        where: {
+          teams: {
+            some: { teamId: id },
+          },
+        },
+        data: {
+          approved: true,
+        },
+      });
+    }
 
     return new Response(JSON.stringify(team), {
       status: 200,
@@ -39,4 +54,3 @@ export const PATCH: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

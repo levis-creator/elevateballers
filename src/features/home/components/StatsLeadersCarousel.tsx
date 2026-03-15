@@ -81,7 +81,7 @@ export default function StatsLeadersCarousel({ category = 'points', setApi }: St
             name,
             position: player.position || 'Forward',
             image,
-            url: `/players/${player.id}`,
+            url: `/players/${player.slug || player.id}`,
             statValue: statValue.toString(),
             statLabel: labels[category] || category.toUpperCase()
           };

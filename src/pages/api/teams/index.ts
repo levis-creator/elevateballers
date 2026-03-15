@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getTeams } from '../../../features/cms/lib/queries';
 import { createTeam } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { sendTeamRegistrationAutoReplyBrevo } from '../../../lib/email';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -111,6 +112,17 @@ export const POST: APIRoute = async ({ request }) => {
       approved: true, // Admin-created teams are approved by default
     });
 
+    if (data.contactEmail) {
+      sendTeamRegistrationAutoReplyBrevo({
+        coachName: data.coachName || data.contactName || 'there',
+        email: data.contactEmail,
+        teamName: team.name,
+        leagueName: data.leagueName || null,
+      }).catch((err) => {
+        console.error('Failed to send team admin-create auto-reply (Brevo):', err);
+      });
+    }
+
     return new Response(JSON.stringify(team), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -126,4 +138,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

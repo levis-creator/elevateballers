@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { sendContactNotification, sendContactAutoReply } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -105,6 +106,14 @@ export const POST: APIRoute = async ({ request }) => {
         userAgent,
       },
     });
+
+    // Send emails (fire-and-forget, don't block the response)
+    sendContactNotification({ name, email, subject, message }).catch((err) =>
+      console.error('Failed to send contact notification email:', err)
+    );
+    sendContactAutoReply({ name, email, subject }).catch((err) =>
+      console.error('Failed to send contact auto-reply email:', err)
+    );
 
     // Create admin notification
     await prisma.registrationNotification.create({

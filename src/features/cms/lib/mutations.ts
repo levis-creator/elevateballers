@@ -282,6 +282,59 @@ async function generateUniqueSlug(baseSlug: string, excludeId?: string): Promise
 }
 
 /**
+ * Generate a unique slug for players
+ */
+async function generateUniquePlayerSlug(baseSlug: string, excludeId?: string): Promise<string> {
+  let slug = generateSlug(baseSlug);
+  let counter = 1;
+  const originalSlug = slug;
+
+  while (true) {
+    const whereClause: any = { slug };
+    if (excludeId) {
+      whereClause.id = { not: excludeId };
+    }
+
+    const existing = await prisma.player.findFirst({
+      where: whereClause,
+    });
+
+    if (!existing) {
+      return slug;
+    }
+
+    slug = `${originalSlug}-${counter}`;
+    counter++;
+  }
+}
+
+/**
+ * Generate a unique slug for staff
+ */
+async function generateUniqueStaffSlug(baseSlug: string, excludeId?: string): Promise<string> {
+  let slug = generateSlug(baseSlug);
+  let counter = 1;
+  const originalSlug = slug;
+
+  while (true) {
+    const whereClause: any = { slug };
+    if (excludeId) {
+      whereClause.id = { not: excludeId };
+    }
+
+    const existing = await prisma.staff.findFirst({
+      where: whereClause,
+    });
+
+    if (!existing) {
+      return slug;
+    }
+
+    slug = `${originalSlug}-${counter}`;
+    counter++;
+  }
+}
+/**
  * Create a new team
  */
 export async function createTeam(data: CreateTeamInput): Promise<Team> {
@@ -594,9 +647,12 @@ export async function deleteMatch(id: string): Promise<boolean> {
  * Create a new player
  */
 export async function createPlayer(data: CreatePlayerInput): Promise<Player> {
+  const baseName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'player';
+  const slug = data.slug || await generateUniquePlayerSlug(baseName);
   const player = await prisma.player.create({
     data: {
       ...data,
+      slug,
       approved: data.approved ?? true, // Default to true for admin-created players
     },
   });
@@ -634,12 +690,23 @@ export async function updatePlayer(id: string, data: UpdatePlayerInput): Promise
     // Get existing player to check for image/team changes
     const existing = await prisma.player.findUnique({
       where: { id },
-      select: { image: true, teamId: true },
+      select: { image: true, teamId: true, firstName: true, lastName: true },
     });
+
+    const updateData: any = { ...data };
+
+    if (data.slug) {
+      updateData.slug = await generateUniquePlayerSlug(data.slug, id);
+    } else if (data.firstName || data.lastName) {
+      const firstName = data.firstName ?? existing?.firstName ?? '';
+      const lastName = data.lastName ?? existing?.lastName ?? '';
+      const baseName = `${firstName} ${lastName}`.trim() || 'player';
+      updateData.slug = await generateUniquePlayerSlug(baseName, id);
+    }
 
     const player = await prisma.player.update({
       where: { id },
-      data,
+      data: updateData,
     });
 
     // Track team history if teamId changed
@@ -1209,8 +1276,14 @@ export async function rejectComment(id: string): Promise<Comment | null> {
  * Create a new staff member
  */
 export async function createStaff(data: CreateStaffInput): Promise<Staff> {
+  const baseName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'staff';
+  const slug = data.slug || await generateUniqueStaffSlug(baseName);
   const staff = await prisma.staff.create({
-    data,
+    data: {
+      ...data,
+      slug,
+      approved: data.approved ?? true, // Default to true for admin-created staff
+    },
   });
 
   // Track file usage if image is provided
@@ -1235,12 +1308,23 @@ export async function updateStaff(id: string, data: UpdateStaffInput): Promise<S
     // Get existing staff to check for image changes
     const existing = await prisma.staff.findUnique({
       where: { id },
-      select: { image: true },
+      select: { image: true, firstName: true, lastName: true },
     });
+
+    const updateData: any = { ...data };
+
+    if ((data.firstName || data.lastName) && !data.slug) {
+      const firstName = data.firstName ?? existing?.firstName ?? '';
+      const lastName = data.lastName ?? existing?.lastName ?? '';
+      const baseName = `${firstName} ${lastName}`.trim() || 'staff';
+      updateData.slug = await generateUniqueStaffSlug(baseName, id);
+    } else if (data.slug) {
+      updateData.slug = await generateUniqueStaffSlug(data.slug, id);
+    }
 
     const staff = await prisma.staff.update({
       where: { id },
-      data,
+      data: updateData,
     });
 
     // Track file usage if image changed

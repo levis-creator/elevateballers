@@ -416,6 +416,23 @@ export async function getTeamBySlug(slug: string): Promise<TeamWithPlayers | nul
             lastName: 'asc',
           },
         ],
+        select: {
+          id: true,
+          slug: true,
+          firstName: true,
+          lastName: true,
+          image: true,
+          bio: true,
+          height: true,
+          weight: true,
+          position: true,
+          jerseyNumber: true,
+          stats: true,
+          approved: true,
+          teamId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       },
     },
   }) as TeamWithPlayers | null;
@@ -435,6 +452,7 @@ export async function getPlayers(teamId?: string, isAdmin: boolean = false): Pro
 
   const select: any = {
     id: true,
+    slug: true,
     firstName: true,
     lastName: true,
     image: true,
@@ -484,6 +502,7 @@ export async function getPlayers(teamId?: string, isAdmin: boolean = false): Pro
 export async function getPlayerById(id: string, isAdmin: boolean = false): Promise<Player | null> {
   const select: any = {
     id: true,
+    slug: true,
     firstName: true,
     lastName: true,
     image: true,
@@ -508,6 +527,35 @@ export async function getPlayerById(id: string, isAdmin: boolean = false): Promi
 
   return await prisma.player.findUnique({
     where: { id },
+    select,
+  }) as unknown as Player | null;
+}
+
+/**
+ * Get a single player by slug (public access)
+ */
+export async function getPlayerBySlug(slug: string): Promise<Player | null> {
+  const select: any = {
+    id: true,
+    slug: true,
+    firstName: true,
+    lastName: true,
+    image: true,
+    bio: true,
+    height: true,
+    weight: true,
+    position: true,
+    jerseyNumber: true,
+    stats: true,
+    approved: true,
+    teamId: true,
+    createdAt: true,
+    updatedAt: true,
+    team: true,
+  };
+
+  return await prisma.player.findFirst({
+    where: { slug, approved: true },
     select,
   }) as unknown as Player | null;
 }
@@ -1146,11 +1194,46 @@ export async function getStaffById(id: string): Promise<StaffWithTeams | null> {
 }
 
 /**
+ * Get a single staff member by slug (public access)
+ */
+export async function getStaffBySlug(slug: string): Promise<StaffWithTeams | null> {
+  return await prisma.staff.findFirst({
+    where: { slug, approved: true },
+    include: {
+      teams: {
+        include: {
+          team: true,
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Get public staff members (approved only, with slug)
+ */
+export async function getPublicStaff(): Promise<Staff[]> {
+  return await prisma.staff.findMany({
+    where: {
+      approved: true,
+      slug: { not: null },
+    },
+    orderBy: [
+      { firstName: 'asc' },
+      { lastName: 'asc' },
+    ],
+  });
+}
+
+/**
  * Get staff by team ID
  */
-export async function getStaffByTeam(teamId: string): Promise<TeamStaffWithStaff[]> {
+export async function getStaffByTeam(teamId: string, includeUnapproved: boolean = false): Promise<TeamStaffWithStaff[]> {
   return await prisma.teamStaff.findMany({
-    where: { teamId },
+    where: {
+      teamId,
+      ...(includeUnapproved ? {} : { staff: { approved: true } }),
+    },
     include: {
       staff: true,
     },

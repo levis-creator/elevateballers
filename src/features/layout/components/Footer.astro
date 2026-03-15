@@ -1,6 +1,7 @@
 ---
 // Footer component - Footer with contact info, newsletter signup, and social links
 import { prisma } from "../../../lib/prisma";
+import SubscribeForm from './SubscribeForm';
 
 const DEFAULT_CONTACT = {
   address: 'Pepo Lane, off Dagoretti Road',
@@ -131,73 +132,7 @@ try {
                 <div class="widget-title">
                   <h6>SIGN UP FOR EMAIL ALERTS</h6>
                 </div>
-                <script is:inline>
-                  (function () {
-                    window.mc4wp = window.mc4wp || {
-                      listeners: [],
-                      forms: {
-                        on: function (evt, cb) {
-                          window.mc4wp.listeners.push({
-                            event: evt,
-                            callback: cb,
-                          });
-                        },
-                      },
-                    };
-                  })();
-                </script>
-                <!-- Mailchimp for WordPress v4.9.11 -->
-                <form
-                  id="mc4wp-form-1"
-                  class="mc4wp-form mc4wp-form-545"
-                  method="post"
-                  data-id="545"
-                  data-name="Subscribe"
-                >
-                  <div class="mc4wp-form-fields">
-                    <p>
-                      <label
-                        >Select topics and stay current with our latest news.</label
-                      >
-                    </p>
-                    <p></p>
-                    <div class="subscribe-wrapp">
-                      <input
-                        type="email"
-                        name="EMAIL"
-                        placeholder="E-mail address"
-                        required=""
-                      />
-                      <span class="button btn-md">
-                        <input type="submit" value="Submit" />
-                      </span>
-                    </div>
-                    <p></p>
-                  </div>
-                  <label style="display: none !important;">
-                    Leave this field empty if you're human:
-                    <input
-                      type="text"
-                      name="_mc4wp_honeypot"
-                      value=""
-                      tabindex="-1"
-                      autocomplete="off"
-                    />
-                  </label>
-                  <input
-                    type="hidden"
-                    name="_mc4wp_timestamp"
-                    value={Math.floor(Date.now() / 1000)}
-                  />
-                  <input type="hidden" name="_mc4wp_form_id" value="545" />
-                  <input
-                    type="hidden"
-                    name="_mc4wp_form_element_id"
-                    value="mc4wp-form-1"
-                  />
-                  <div class="mc4wp-response"></div>
-                </form>
-                <!-- / Mailchimp for WordPress Plugin -->
+                <SubscribeForm client:load />
               </div>
             </aside>
             <aside id="block-9" class="widget widget_block widget_media_image">
