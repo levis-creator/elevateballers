@@ -147,6 +147,8 @@ export default function AdminSidebar() {
             'potw:read',
             'sponsors:read',
             'tournaments:read',
+            'audit_logs:read',
+            'audit_logs:manage',
           ],
         },
       ],
@@ -192,6 +194,12 @@ export default function AdminSidebar() {
       items: [
         { href: '/admin/users', icon: icons.Users, label: 'System Users', permission: 'users:read' },
         { href: '/admin/roles', icon: icons.ShieldCheck, label: 'Roles & Permissions', permission: 'roles:read' },
+        {
+          href: '/admin/audit-logs',
+          icon: icons.FileText,
+          label: 'Audit Logs',
+          permissionsAny: ['audit_logs:read', 'audit_logs:manage'],
+        },
         {
           href: '/admin/settings',
           icon: icons.Settings,

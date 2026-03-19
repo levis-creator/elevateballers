@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getStaffById } from '../../../features/cms/lib/queries';
 import { updateStaff, deleteStaff } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -16,6 +17,12 @@ export const GET: APIRoute = async ({ params }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    await logAudit(request, 'STAFF_UPDATED', {
+      staffId: staff.id,
+      name: `${staff.firstName} ${staff.lastName}`.trim(),
+      role: staff.role,
+    });
 
     return new Response(JSON.stringify(staff), {
       headers: { 'Content-Type': 'application/json' },
@@ -70,6 +77,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'STAFF_DELETED', {
+      staffId: params.id,
+    });
+
     return new Response(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting staff:', error);
@@ -82,4 +93,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

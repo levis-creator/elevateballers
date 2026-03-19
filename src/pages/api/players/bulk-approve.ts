@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -19,6 +20,11 @@ export const POST: APIRoute = async ({ request }) => {
     const result = await prisma.player.updateMany({
       where: { id: { in: ids } },
       data: { approved: approved !== undefined ? approved : true },
+    });
+
+    await logAudit(request, (approved !== undefined ? approved : true) ? 'PLAYER_BULK_APPROVED' : 'PLAYER_BULK_UNAPPROVED', {
+      playerIds: ids,
+      updated: result.count,
     });
 
     return new Response(JSON.stringify({ updated: result.count }), {

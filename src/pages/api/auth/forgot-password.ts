@@ -3,6 +3,8 @@ import crypto from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
 import { findUserByEmail } from '../../../features/cms/lib/auth';
 import { sendPasswordResetEmail } from '../../../lib/email';
+import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -20,6 +22,20 @@ function isValidEmail(email: string): boolean {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    request.headers.get('x-real-ip') ??
+    'unknown';
+
+  // Rate limit: 5 requests per 15 minutes per IP
+  if (!checkRateLimit(`forgot:${ip}`, 5, 15 * 60 * 1000)) {
+    const retryAfter = getRateLimitRetryAfter(`forgot:${ip}`);
+    return new Response(
+      JSON.stringify({ error: `Too many requests. Please try again in ${retryAfter} seconds.` }),
+      { status: 429, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     let body: any;
     try {
@@ -73,6 +89,11 @@ export const POST: APIRoute = async ({ request }) => {
         console.error('Password reset email failed:', emailError);
       }
 
+      await logAudit(request, 'AUTH_PASSWORD_RESET_REQUESTED', {
+        userId: user.id,
+        email: user.email,
+        ip,
+      }, user.id);
     }
 
     return new Response(

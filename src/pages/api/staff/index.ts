@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getStaff } from '../../../features/cms/lib/queries';
 import { createStaff } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -45,6 +46,12 @@ export const POST: APIRoute = async ({ request }) => {
       image: data.image,
     });
 
+    await logAudit(request, 'STAFF_CREATED', {
+      staffId: staff.id,
+      name: `${staff.firstName} ${staff.lastName}`.trim(),
+      role: staff.role,
+    });
+
     return new Response(JSON.stringify(staff), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -60,4 +67,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

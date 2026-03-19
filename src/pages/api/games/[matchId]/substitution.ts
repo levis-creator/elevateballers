@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createSubstitution } from '../../../../features/game-tracking/lib/mutations';
 import { getMatchSubstitutions } from '../../../../features/game-tracking/lib/queries';
 import { requireAuth } from '../../../../features/cms/lib/auth';
+import { logAudit } from '../../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -56,6 +57,15 @@ export const POST: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    await logAudit(request, 'GAME_SUBSTITUTION_RECORDED', {
+      matchId,
+      substitutionId: substitution.id,
+      teamId: substitution.teamId,
+      playerInId: substitution.playerInId,
+      playerOutId: substitution.playerOutId,
+      period: substitution.period,
+    });
 
     const substitutions = await getMatchSubstitutions(matchId);
     return new Response(JSON.stringify({ substitution, substitutions }), {

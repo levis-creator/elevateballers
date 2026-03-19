@@ -3,6 +3,7 @@ import { getTeams } from '../../../features/cms/lib/queries';
 import { createTeam } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendTeamRegistrationAutoReplyBrevo } from '../../../lib/email';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -122,6 +123,11 @@ export const POST: APIRoute = async ({ request }) => {
         console.error('Failed to send team admin-create auto-reply (Brevo):', err);
       });
     }
+
+    await logAudit(request, 'TEAM_CREATED', {
+      teamId: team.id,
+      name: team.name,
+    });
 
     return new Response(JSON.stringify(team), {
       status: 201,

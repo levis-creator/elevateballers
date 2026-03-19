@@ -3,6 +3,7 @@ import { getNewsArticleById } from '../../../features/cms/lib/queries';
 import { updateNewsArticle, deleteNewsArticle, generateSlug } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap } from '../../../features/cms/types';
+import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -76,6 +77,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'NEWS_ARTICLE_UPDATED', adminId, {
+      articleId: article.id,
+      title: article.title,
+      published: article.published,
+    }).catch(() => {});
+
     return new Response(JSON.stringify(article), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -103,6 +111,11 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'NEWS_ARTICLE_DELETED', adminId, {
+      articleId: params.id,
+    }).catch(() => {});
+
     return new Response(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting news article:', error);
@@ -115,4 +128,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

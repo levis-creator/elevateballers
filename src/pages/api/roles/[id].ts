@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
+import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
 export const prerender = false;
 
@@ -162,6 +163,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
       data: updateData,
     });
 
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'ROLE_UPDATED', adminId, {
+      roleId: role.id,
+      name: role.name,
+      description: role.description,
+    }).catch(() => {});
+
     return new Response(
       JSON.stringify({
         role: {
@@ -265,6 +273,12 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     await prisma.role.delete({
       where: { id },
     });
+
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'ROLE_DELETED', adminId, {
+      roleId: role.id,
+      name: role.name,
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify({ message: 'Role deleted successfully' }),

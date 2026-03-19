@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getMatchEventById } from '@/features/cms/lib/queries';
 import { updateMatchEvent, deleteMatchEvent } from '@/features/cms/lib/mutations';
 import { requireAuth } from '@/features/cms/lib/auth';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const GET: APIRoute = async ({ params }) => {
   const id = params.id;
@@ -79,6 +80,12 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_EVENT_UPDATED', {
+      matchId: updatedEvent.matchId,
+      eventId: updatedEvent.id,
+      eventType: updatedEvent.type,
+    });
+
     return new Response(JSON.stringify(updatedEvent), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -135,6 +142,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_EVENT_DELETED', {
+      eventId: id,
+    });
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -147,4 +158,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
   }
 };
-

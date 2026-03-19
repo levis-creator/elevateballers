@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createTeam, createStaff, assignStaffToTeam } from '../../../features/cms/lib/mutations';
 import { prisma } from '../../../lib/prisma';
 import { sendTeamRegistrationAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -221,6 +222,15 @@ export const POST: APIRoute = async ({ request }) => {
       leagueName: leagueName || null,
     }).catch((err) => {
       console.error('Failed to send team registration auto-reply:', err);
+    });
+
+    await logAudit(request, 'TEAM_REGISTRATION_SUBMITTED', {
+      teamId: team.id,
+      teamName: team.name,
+      coachName: data.coachName,
+      contactEmail: data.contactEmail,
+      leagueName: leagueName || null,
+      linkedPlayersCount,
     });
 
     return new Response(JSON.stringify({

@@ -1,11 +1,10 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
-import { hashPassword } from '../../../features/cms/lib/auth';
+import { hashPassword, validatePasswordStrength, invalidateSessions } from '../../../features/cms/lib/auth';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
-
-const MIN_PASSWORD_LENGTH = 8;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -29,9 +28,10 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
+    const strengthError = validatePasswordStrength(password);
+    if (strengthError) {
       return new Response(
-        JSON.stringify({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }),
+        JSON.stringify({ error: strengthError }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -80,6 +80,13 @@ export const POST: APIRoute = async ({ request }) => {
         },
       }),
     ]);
+
+    // Invalidate all existing sessions so the new password takes effect immediately
+    await invalidateSessions(resetToken.userId);
+
+    await logAudit(request, 'AUTH_PASSWORD_RESET_COMPLETED', {
+      userId: resetToken.userId,
+    }, resetToken.userId);
 
     return new Response(
       JSON.stringify({ ok: true, message: 'Password has been reset' }),

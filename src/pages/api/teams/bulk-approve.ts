@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -35,6 +36,11 @@ export const POST: APIRoute = async ({ request }) => {
         },
       });
     }
+
+    await logAudit(request, shouldApprove ? 'TEAM_BULK_APPROVED' : 'TEAM_BULK_UNAPPROVED', {
+      teamIds: ids,
+      updated: result.count,
+    });
 
     return new Response(JSON.stringify({ updated: result.count }), {
       status: 200,

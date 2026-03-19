@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
+import { logAudit } from '../../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -38,6 +39,10 @@ export const PATCH: APIRoute = async ({ params, request }) => {
         },
       });
     }
+
+    await logAudit(request, shouldApprove ? 'TEAM_APPROVED' : 'TEAM_UNAPPROVED', {
+      teamId: id,
+    });
 
     return new Response(JSON.stringify(team), {
       status: 200,

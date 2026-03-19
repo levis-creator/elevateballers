@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getLeagues } from '../../../features/cms/lib/queries';
 import { createLeague } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -51,6 +52,11 @@ export const POST: APIRoute = async ({ request }) => {
       active: data.active !== undefined ? data.active : true,
     });
 
+    await logAudit(request, 'LEAGUE_CREATED', {
+      leagueId: league.id,
+      name: league.name,
+    });
+
     return new Response(JSON.stringify(league), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -66,4 +72,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

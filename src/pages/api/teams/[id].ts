@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getTeamById } from '../../../features/cms/lib/queries';
 import { updateTeam, deleteTeam } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -74,6 +75,11 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'TEAM_UPDATED', {
+      teamId: team.id,
+      name: team.name,
+    });
+
     return new Response(JSON.stringify(team), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -101,6 +107,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'TEAM_DELETED', {
+      teamId: params.id,
+    });
+
     return new Response(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting team:', error);
@@ -113,4 +123,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

@@ -3,6 +3,7 @@ import { createTimeout } from '../../../../features/game-tracking/lib/mutations'
 import { getMatchTimeouts, getFilteredTimeouts } from '../../../../features/game-tracking/lib/queries';
 import { requireAuth } from '../../../../features/cms/lib/auth';
 import type { TimeoutType } from '@prisma/client';
+import { logAudit } from '../../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -139,6 +140,14 @@ export const POST: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    await logAudit(request, 'GAME_TIMEOUT_RECORDED', {
+      matchId,
+      timeoutId: timeout.id,
+      teamId: timeout.teamId,
+      period: timeout.period,
+      timeoutType: timeout.timeoutType,
+    });
 
     const timeouts = await getMatchTimeouts(matchId);
     return new Response(JSON.stringify({ timeout, timeouts }), {

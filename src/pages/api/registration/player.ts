@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createPlayer } from '../../../features/cms/lib/mutations';
 import { prisma } from '../../../lib/prisma';
 import { sendPlayerRegistrationAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -90,6 +91,13 @@ export const POST: APIRoute = async ({ request }) => {
       teamName: data.teamName || null,
     }).catch((err) => {
       console.error('Failed to send player registration auto-reply:', err);
+    });
+
+    await logAudit(request, 'PLAYER_REGISTRATION_SUBMITTED', {
+      playerId: player.id,
+      name: `${data.firstName} ${data.lastName}`.trim(),
+      email: data.email,
+      teamName: data.teamName || null,
     });
 
     return new Response(JSON.stringify({

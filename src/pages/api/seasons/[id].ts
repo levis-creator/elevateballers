@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getSeasonById } from '../../../features/cms/lib/queries';
 import { updateSeason, deleteSeason } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -14,6 +15,11 @@ export const GET: APIRoute = async ({ params }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    await logAudit(request, 'SEASON_UPDATED', {
+      seasonId: season.id,
+      name: season.name,
+      leagueId: season.leagueId,
+    });
     return new Response(JSON.stringify(season), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -62,6 +68,9 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    await logAudit(request, 'SEASON_DELETED', {
+      seasonId: params.id,
+    });
     return new Response(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting season:', error);
@@ -74,4 +83,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

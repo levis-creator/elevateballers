@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getMatchEvents, getMatchEventsByTeam, getMatchEventsByType } from '../../../../../features/cms/lib/queries';
 import { createMatchEvent } from '../../../../../features/cms/lib/mutations';
 import { requireAuth } from '../../../../../features/cms/lib/auth';
+import { logAudit } from '../../../../../features/cms/lib/audit';
 
 export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
@@ -83,6 +84,12 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_EVENT_CREATED', {
+      matchId,
+      eventId: matchEvent.id,
+      eventType: matchEvent.type,
+    });
+
     return new Response(JSON.stringify(matchEvent), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -95,4 +102,3 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   }
 };
-

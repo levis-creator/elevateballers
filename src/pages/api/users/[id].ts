@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
-import { getUserIdFromRequest } from '../../../features/cms/lib/auth';
+import { getUserIdFromRequest, invalidateSessions, writeAuditLog } from '../../../features/cms/lib/auth';
 import { sendEmailChangedAlert } from '../../../lib/email';
 
 export const prerender = false;
@@ -118,6 +118,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
             email: data.email,
         };
 
+        const deactivating = typeof data.active === 'boolean' && !data.active && existing.active;
         if (typeof data.active === 'boolean') {
             updateData.active = data.active;
         }
@@ -145,6 +146,22 @@ export const PUT: APIRoute = async ({ request, params }) => {
                     }
                 },
             }
+        });
+
+        // Invalidate all sessions if user was deactivated
+        if (deactivating) {
+            await invalidateSessions(id);
+        }
+
+        // Audit log
+        await writeAuditLog(id, 'USER_UPDATED', adminId, {
+            changes: {
+                ...(data.name !== existing.name ? { name: { from: existing.name, to: data.name } } : {}),
+                ...(emailChanged ? { email: { from: existing.email, to: data.email } } : {}),
+                ...(typeof data.active === 'boolean' && data.active !== existing.active
+                    ? { active: { from: existing.active, to: data.active } }
+                    : {}),
+            },
         });
 
         // Log and notify on email change
@@ -201,7 +218,15 @@ export const DELETE: APIRoute = async ({ request, params }) => {
             });
         }
 
+        const adminId = getUserIdFromRequest(request) ?? 'unknown';
+        const target = await prisma.user.findUnique({ where: { id }, select: { email: true, name: true } });
+
         await prisma.user.delete({ where: { id } });
+
+        if (target) {
+            // Best-effort audit log — user row is gone so we write to a generic entry
+            await writeAuditLog(id, 'USER_DELETED', adminId, { email: target.email, name: target.name }).catch(() => {});
+        }
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,

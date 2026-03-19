@@ -3,6 +3,7 @@ import { getNewsArticles, getAllNewsArticles, getFeaturedNewsArticles, getArticl
 import { createNewsArticle, generateSlug } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap, type NewsArticleDTO } from '../../../features/cms/types';
+import { writeAuditLog } from '../../../features/cms/lib/auth';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -151,6 +152,12 @@ export const POST: APIRoute = async ({ request }) => {
       authorId: user.id,
     });
 
+    await writeAuditLog(user.id, 'NEWS_ARTICLE_CREATED', user.id, {
+      articleId: article.id,
+      title: article.title,
+      published: article.published,
+    }).catch(() => {});
+
     // Verify content was stored
     console.log('Article created successfully:', {
       id: article.id,
@@ -173,4 +180,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

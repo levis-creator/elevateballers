@@ -12,9 +12,12 @@ model User {
   email         String        @unique
   passwordHash  String        @map("password_hash")
   name          String
-  active        Boolean       @default(true)
-  activatedAt   DateTime?     @map("activated_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
+  active               Boolean   @default(true)
+  activatedAt          DateTime? @map("activated_at")
+  tokenVersion         Int       @default(0) @map("token_version")
+  failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime? @map("locked_until")
+  createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
   comments      Comment[]
   uploadedMedia Media[]       @relation("MediaUploader")
@@ -39,6 +42,38 @@ model UserNotificationSetting {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_notification_settings")
+}
+
+model LoginEvent {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  email      String
+  success    Boolean
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  failReason String?  @map("fail_reason")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([email])
+  @@index([success])
+  @@index([createdAt])
+  @@map("login_events")
+}
+
+model UserAuditLog {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  action      String
+  performedBy String   @map("performed_by")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([performedBy])
+  @@index([action])
+  @@index([createdAt])
+  @@map("user_audit_logs")
 }
 
 model UserEmailHistory {

@@ -3,6 +3,7 @@ import { getFilteredMatches } from '../../../features/matches/lib/queries';
 import { createMatch } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import type { MatchFilter, MatchSortOption, MatchDTO, MatchStage } from '../../../features/matches/types';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -185,6 +186,14 @@ export const POST: APIRoute = async ({ request }) => {
       duration: data.duration,
     });
 
+    await logAudit(request, 'MATCH_CREATED', {
+      matchId: match.id,
+      team1Id: match.team1Id,
+      team2Id: match.team2Id,
+      leagueId: match.leagueId,
+      date: match.date,
+    });
+
     return new Response(JSON.stringify(match), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -200,4 +209,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

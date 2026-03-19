@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getGameState, getMatchWithGameState } from '../../../../features/game-tracking/lib/queries';
 import { updateGameState } from '../../../../features/game-tracking/lib/mutations';
 import { requireAuth } from '../../../../features/cms/lib/auth';
+import { logAudit } from '../../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -74,6 +75,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     }
 
     const updatedState = await getGameState(matchId);
+    await logAudit(request, 'GAME_STATE_UPDATED', { matchId });
     return new Response(JSON.stringify(updatedState), {
       headers: { 'Content-Type': 'application/json' },
     });

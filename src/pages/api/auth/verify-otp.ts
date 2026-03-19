@@ -4,8 +4,18 @@ import {
   verifyOtpForUser,
   createToken,
 } from '../../../features/cms/lib/auth';
+import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
+import { prisma } from '../../../lib/prisma';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
+
+function json(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -13,66 +23,75 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     try {
       body = await request.json();
     } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return json({ error: 'Invalid JSON in request body' }, 400);
     }
 
     const { code } = body;
 
     if (!code || typeof code !== 'string' || !/^\d{6}$/.test(code.trim())) {
-      return new Response(
-        JSON.stringify({ error: 'A 6-digit verification code is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return json({ error: 'A 6-digit verification code is required' }, 400);
     }
 
-    // Read the short-lived OTP session cookie set by login
     const otpSessionToken = cookies.get('otp-session')?.value;
     if (!otpSessionToken) {
-      return new Response(
-        JSON.stringify({ error: 'Session expired. Please sign in again.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return json({ error: 'Session expired. Please sign in again.' }, 401);
     }
 
     const session = verifyOtpSessionToken(otpSessionToken);
     if (!session) {
       cookies.delete('otp-session', { path: '/' });
-      return new Response(
-        JSON.stringify({ error: 'Session expired. Please sign in again.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      return json({ error: 'Session expired. Please sign in again.' }, 401);
+    }
+
+    // Rate limit OTP attempts per user: 5 per 15 minutes
+    if (!checkRateLimit(`otp:${session.userId}`, 5, 15 * 60 * 1000)) {
+      const retryAfter = getRateLimitRetryAfter(`otp:${session.userId}`);
+      return json(
+        { error: `Too many attempts. Please try again in ${retryAfter} seconds.` },
+        429
       );
     }
 
     const valid = await verifyOtpForUser(session.userId, code.trim());
     if (!valid) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired verification code.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return json({ error: 'Invalid or expired verification code.' }, 401);
     }
 
-    // OTP verified — issue the full auth token and clear the OTP session cookie
-    const { prisma } = await import('../../../lib/prisma');
     const userWithRoles = await prisma.user.findUnique({
       where: { id: session.userId },
-      include: {
-        userRoles: {
-          include: { role: true },
-        },
-      },
+      include: { userRoles: { include: { role: true } } },
     });
 
     if (!userWithRoles) {
-      return new Response(
-        JSON.stringify({ error: 'User not found.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return json({ error: 'User not found.' }, 401);
     }
 
-    const authToken = createToken({ id: userWithRoles.id, email: userWithRoles.email });
+    // Re-check active status at the point of issuing the full token
+    if (!userWithRoles.active) {
+      return json({ error: 'Invalid credentials' }, 401);
+    }
+
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+      request.headers.get('x-real-ip') ??
+      'unknown';
+
+    await prisma.loginEvent.create({
+      data: {
+        userId: userWithRoles.id,
+        email: userWithRoles.email,
+        success: true,
+        ipAddress: ip,
+        userAgent: request.headers.get('user-agent') ?? undefined,
+      },
+    });
+
+    // Include tokenVersion so existing sessions can be invalidated
+    const authToken = createToken({
+      id: userWithRoles.id,
+      email: userWithRoles.email,
+      tokenVersion: userWithRoles.tokenVersion,
+    });
 
     const forwardedProto = request.headers.get('x-forwarded-proto');
     const forwardedSsl = request.headers.get('x-forwarded-ssl');
@@ -90,8 +109,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.set('auth-token', authToken, { ...cookieOptions, maxAge: 60 * 60 * 24 * 7 });
     cookies.delete('otp-session', { path: '/' });
 
-    return new Response(
-      JSON.stringify({
+    await logAudit(request, 'AUTH_LOGIN_SUCCESS', {
+      userId: userWithRoles.id,
+      email: userWithRoles.email,
+      ip,
+    }, userWithRoles.id);
+
+    return json(
+      {
         user: {
           id: userWithRoles.id,
           email: userWithRoles.email,
@@ -102,18 +127,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             description: ur.role.description,
           })),
         },
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      },
+      200
     );
   } catch (error) {
     console.error('Verify OTP error:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return new Response(
-      JSON.stringify({
-        error: 'Verification failed',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    const msg = error instanceof Error ? error.message : String(error);
+    return json(
+      { error: 'Verification failed', details: process.env.NODE_ENV === 'development' ? msg : undefined },
+      500
     );
   }
 };

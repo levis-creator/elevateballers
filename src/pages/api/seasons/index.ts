@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getSeasons } from '../../../features/cms/lib/queries';
 import { createSeason } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -38,6 +39,11 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const season = await createSeason(data);
+    await logAudit(request, 'SEASON_CREATED', {
+      seasonId: season.id,
+      name: season.name,
+      leagueId: season.leagueId,
+    });
     return new Response(JSON.stringify(season), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -53,4 +59,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-
