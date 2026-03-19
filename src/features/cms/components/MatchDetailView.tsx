@@ -1234,6 +1234,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
     X?: ComponentType<any>;
     MoreVertical?: ComponentType<any>;
     Trash2?: ComponentType<any>;
+    Download?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -1257,6 +1258,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         X: mod.X,
         MoreVertical: mod.MoreVertical,
         Trash2: mod.Trash2,
+        Download: mod.Download,
       });
     });
   }, []);
@@ -1543,6 +1545,14 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                 size="default"
               >
                 {isEndingGame ? 'Ending...' : 'End Game'}
+              </Button>
+            )}
+            {match.status === 'COMPLETED' && (
+              <Button asChild variant="outline">
+                <a href={`/api/matches/${matchId}/stat-sheet`}>
+                  {icons.Download ? <icons.Download className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
+                  Download Stat Sheet
+                </a>
               </Button>
             )}
             <Button asChild disabled={match?.status === 'COMPLETED'}>
