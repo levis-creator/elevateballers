@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { getUserIdFromRequest } from '../../../features/cms/lib/auth';
+import { sendEmailChangedAlert } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -98,6 +100,19 @@ export const PUT: APIRoute = async ({ request, params }) => {
             });
         }
 
+        const emailChanged = data.email && data.email !== existing.email;
+
+        // Validate new email is not already taken by another user
+        if (emailChanged) {
+            const conflict = await prisma.user.findUnique({ where: { email: data.email } });
+            if (conflict) {
+                return new Response(
+                    JSON.stringify({ error: 'This email address is already in use.' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+        }
+
         const updateData: any = {
             name: data.name,
             email: data.email,
@@ -106,6 +121,8 @@ export const PUT: APIRoute = async ({ request, params }) => {
         if (typeof data.active === 'boolean') {
             updateData.active = data.active;
         }
+
+        const adminId = getUserIdFromRequest(request) ?? 'unknown';
 
         const updatedUser = await prisma.user.update({
             where: { id },
@@ -129,6 +146,24 @@ export const PUT: APIRoute = async ({ request, params }) => {
                 },
             }
         });
+
+        // Log and notify on email change
+        if (emailChanged) {
+            await prisma.userEmailHistory.create({
+                data: {
+                    userId: id,
+                    oldEmail: existing.email,
+                    newEmail: data.email,
+                    changedBy: adminId,
+                },
+            });
+
+            sendEmailChangedAlert({
+                name: updatedUser.name,
+                oldEmail: existing.email,
+                newEmail: data.email,
+            }).catch((err) => console.error('[users] Email change alert failed:', err));
+        }
 
         const response = {
             ...updatedUser,

@@ -22,7 +22,8 @@ model User {
   userRoles     UserRole[]
   passwordResetTokens PasswordResetToken[]
   notificationSettings UserNotificationSetting?
-  twoFactorOtps TwoFactorOtp[]
+  twoFactorOtps    TwoFactorOtp[]
+  emailHistory     UserEmailHistory[]
 
   @@map("users")
 }
@@ -38,6 +39,19 @@ model UserNotificationSetting {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_notification_settings")
+}
+
+model UserEmailHistory {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  oldEmail   String   @map("old_email")
+  newEmail   String   @map("new_email")
+  changedBy  String   @map("changed_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_email_history")
 }
 
 model TwoFactorOtp {
