@@ -83,75 +83,80 @@ export default function BannerSettingsEditor() {
     }
   };
 
-  if (loading) return <div>Loading settings...</div>;
+  if (loading) return <div className="p-6 text-sm text-gray-500">Loading settings...</div>;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 className="text-2xl font-bold mb-6 font-heading text-gray-900 border-b pb-4">Header Settings</h2>
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div>
+          <h2 className="text-xl font-bold font-heading text-gray-900">Header Settings</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Configure the banner image shown on public pages.</p>
+        </div>
+        <Button onClick={handleSave} disabled={saving || !canManageSettings}>
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </div>
 
       {!canManageSettings && (
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="mx-6 mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           You have read-only access to site settings. Contact an admin to make changes.
         </div>
       )}
 
-      <div className="space-y-6 max-w-2xl">
-        <div className="space-y-2">
-          <Label>Header Background Image</Label>
-          <div className="flex flex-col gap-4">
-            {headerImageUrl ? (
-              <div className="relative w-full max-w-sm aspect-video rounded-lg border overflow-hidden group">
-                <img src={headerImageUrl} alt="Header Background" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => { if (!canManageSettings) return; setIsMediaPickerOpen(true); }}
-                    disabled={!canManageSettings}
-                  >
-                    Change
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setHeaderImageUrl('')}
-                    disabled={!canManageSettings}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full max-w-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
+        {/* Left: Controls */}
+        <div className="p-6 space-y-5">
+          <div className="space-y-3">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400 block">Background Image</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { if (!canManageSettings) return; setIsMediaPickerOpen(true); }}
+                disabled={!canManageSettings}
+              >
+                <ImageIcon className="h-4 w-4 mr-2" />
+                {headerImageUrl ? 'Change Image' : 'Select Image'}
+              </Button>
+              {headerImageUrl && (
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-24 border-dashed"
-                  onClick={() => { if (!canManageSettings) return; setIsMediaPickerOpen(true); }}
+                  onClick={() => setHeaderImageUrl('')}
                   disabled={!canManageSettings}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
                 >
-                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                    <ImageIcon className="h-6 w-6" />
-                    <span>Select Image</span>
-                  </div>
+                  <X className="h-4 w-4 mr-2" />
+                  Remove
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  If no image is selected, the header will use <code>/images/Elevate_Patreon_Banner.png</code> as a fallback.
-                </p>
+              )}
+            </div>
+            {headerImageUrl ? (
+              <div className="space-y-1">
+                <span className="text-xs text-gray-500">Current path</span>
+                <p className="text-xs font-mono bg-gray-50 border rounded px-2 py-1.5 break-all text-gray-600">{headerImageUrl}</p>
               </div>
+            ) : (
+              <p className="text-xs text-gray-400">No image selected — the default banner will be used as a fallback.</p>
             )}
           </div>
         </div>
 
-        <Button
-          onClick={handleSave}
-          disabled={saving || !canManageSettings}
-          className="w-full mt-6"
-        >
-          {saving ? 'Saving...' : 'Save Settings'}
-        </Button>
+        {/* Right: Preview */}
+        <div className="p-6 space-y-3">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400 block">Preview</Label>
+          {headerImageUrl ? (
+            <div className="aspect-video w-full rounded-lg border overflow-hidden bg-gray-100">
+              <img src={headerImageUrl} alt="Header Background" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="aspect-video w-full rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 text-gray-400">
+              <ImageIcon className="h-10 w-10 opacity-25" />
+              <p className="text-sm">No image selected</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <MediaLibraryPicker

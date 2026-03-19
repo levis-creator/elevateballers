@@ -888,6 +888,7 @@ enum MediaType {
   IMAGE
   VIDEO
   AUDIO
+  DOCUMENT
 }
 
 enum FileUsageEntityType {

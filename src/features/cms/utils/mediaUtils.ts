@@ -6,6 +6,7 @@ export function getMediaTypeColor(type: MediaType): string {
     IMAGE: 'bg-primary',
     VIDEO: 'bg-red-500',
     AUDIO: 'bg-green-500',
+    DOCUMENT: 'bg-amber-500',
   };
   return colors[type] || 'bg-slate-500';
 }
@@ -16,11 +17,13 @@ export function getMediaIcon(
     Image?: ComponentType<any>;
     Video?: ComponentType<any>;
     Music?: ComponentType<any>;
+    FileText?: ComponentType<any>;
   }
 ): ComponentType<any> | null {
   if (type === 'IMAGE') return icons.Image || null;
   if (type === 'VIDEO') return icons.Video || null;
   if (type === 'AUDIO') return icons.Music || null;
+  if (type === 'DOCUMENT') return icons.FileText || null;
   return null;
 }
 

@@ -72,6 +72,7 @@ export default function MediaPreviewPanel({ media, onClose, onEdit, onDelete }: 
       IMAGE: 'bg-primary',
       VIDEO: 'bg-red-500',
       AUDIO: 'bg-green-500',
+      DOCUMENT: 'bg-amber-500',
     };
     return colors[type] || 'bg-slate-500';
   };
@@ -127,6 +128,15 @@ export default function MediaPreviewPanel({ media, onClose, onEdit, onDelete }: 
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
+            />
+          </div>
+        )}
+        {media.type === 'DOCUMENT' && media.mimeType === 'application/pdf' && (
+          <div className="w-full aspect-video rounded-lg overflow-hidden border bg-muted">
+            <iframe
+              src={`${media.url}${media.url.includes('#') ? '&' : '#'}toolbar=1&navpanes=0`}
+              title={media.title}
+              className="h-full w-full"
             />
           </div>
         )}

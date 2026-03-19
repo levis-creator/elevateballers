@@ -149,165 +149,99 @@ export default function ContactSettingsEditor() {
     }
   };
 
-  if (loading) return <div>Loading settings...</div>;
+  if (loading) return <div className="p-6 text-sm text-gray-500">Loading settings...</div>;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 className="text-2xl font-bold mb-2 font-heading text-gray-900">Contact & Social</h2>
-      <p className="text-sm text-gray-500 mb-6 border-b pb-4">
-        Update the public contact info and social links used across the site.
-      </p>
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div>
+          <h2 className="text-xl font-bold font-heading text-gray-900">Contact & Social</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Public contact info and social links used across the site.</p>
+        </div>
+        <Button onClick={handleSave} disabled={saving || !canManage}>
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </div>
 
       {!canManage && (
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="mx-6 mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           You have read-only access to site settings. Contact an admin to make changes.
         </div>
       )}
 
-      <div className="space-y-8 max-w-2xl">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Contact Info</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
+        {/* Left: Contact Info */}
+        <div className="p-6 space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Contact Info</h3>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="contact-address">Address</Label>
-            <Textarea
-              id="contact-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              disabled={!canManage}
-              rows={3}
-            />
+            <Textarea id="contact-address" value={address} onChange={(e) => setAddress(e.target.value)} disabled={!canManage} rows={3} />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
               <Label htmlFor="contact-phone">Phone</Label>
-              <Input
-                id="contact-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={!canManage}
-                placeholder="e.g. +1 (555) 000-0000"
-              />
+              <Input id="contact-phone" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!canManage} placeholder="+1 (555) 000-0000" />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contact-fax">Fax / Secondary Phone</Label>
-              <Input
-                id="contact-fax"
-                value={fax}
-                onChange={(e) => setFax(e.target.value)}
-                disabled={!canManage}
-                placeholder="e.g. +1 (555) 000-0001"
-              />
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-fax">Fax / Secondary</Label>
+              <Input id="contact-fax" value={fax} onChange={(e) => setFax(e.target.value)} disabled={!canManage} placeholder="+1 (555) 000-0001" />
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
               <Label htmlFor="contact-email">Email</Label>
-              <Input
-                id="contact-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={!canManage}
-                placeholder="info@example.com"
-              />
+              <Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!canManage} placeholder="info@example.com" />
             </div>
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="contact-hours">Hours</Label>
-              <Input
-                id="contact-hours"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
+              <Input id="contact-hours" value={hours} onChange={(e) => setHours(e.target.value)} disabled={!canManage} placeholder="Mon–Fri 9am–5pm" />
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Social Links + Notifications */}
+        <div className="p-6 space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Social Links</h3>
+
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-3">
+              <Label htmlFor="social-facebook" className="w-20 shrink-0 text-sm text-gray-600">Facebook</Label>
+              <Input id="social-facebook" type="url" value={facebook} onChange={(e) => setFacebook(e.target.value)} disabled={!canManage} placeholder="https://facebook.com/yourpage" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Label htmlFor="social-instagram" className="w-20 shrink-0 text-sm text-gray-600">Instagram</Label>
+              <Input id="social-instagram" type="url" value={instagram} onChange={(e) => setInstagram(e.target.value)} disabled={!canManage} placeholder="https://instagram.com/yourhandle" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Label htmlFor="social-twitter" className="w-20 shrink-0 text-sm text-gray-600">Twitter / X</Label>
+              <Input id="social-twitter" type="url" value={twitter} onChange={(e) => setTwitter(e.target.value)} disabled={!canManage} placeholder="https://twitter.com/yourhandle" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Label htmlFor="social-youtube" className="w-20 shrink-0 text-sm text-gray-600">YouTube</Label>
+              <Input id="social-youtube" type="url" value={youtube} onChange={(e) => setYoutube(e.target.value)} disabled={!canManage} placeholder="https://youtube.com/yourchannel" />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100 space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Notifications</h3>
+            <div className="flex items-start justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+              <div>
+                <Label htmlFor="admin-email-notifications" className="text-sm font-medium">Admin email notifications</Label>
+                <p className="text-xs text-gray-500 mt-0.5">Admins with the <code>notifications:email</code> permission receive email alerts.</p>
+              </div>
+              <Switch
+                id="admin-email-notifications"
+                checked={adminEmailNotificationsEnabled}
+                onCheckedChange={(value) => setAdminEmailNotificationsEnabled(Boolean(value))}
                 disabled={!canManage}
-                placeholder="e.g. Mon-Fri 9am - 5pm"
               />
             </div>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Social Links</h3>
-
-          <div className="space-y-2">
-            <Label htmlFor="social-facebook">Facebook</Label>
-            <Input
-              id="social-facebook"
-              type="url"
-              value={facebook}
-              onChange={(e) => setFacebook(e.target.value)}
-              disabled={!canManage}
-              placeholder="https://facebook.com/yourpage"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="social-instagram">Instagram</Label>
-            <Input
-              id="social-instagram"
-              type="url"
-              value={instagram}
-              onChange={(e) => setInstagram(e.target.value)}
-              disabled={!canManage}
-              placeholder="https://instagram.com/yourhandle"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="social-twitter">Twitter/X</Label>
-            <Input
-              id="social-twitter"
-              type="url"
-              value={twitter}
-              onChange={(e) => setTwitter(e.target.value)}
-              disabled={!canManage}
-              placeholder="https://twitter.com/yourhandle"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="social-youtube">YouTube</Label>
-            <Input
-              id="social-youtube"
-              type="url"
-              value={youtube}
-              onChange={(e) => setYoutube(e.target.value)}
-              disabled={!canManage}
-              placeholder="https://youtube.com/yourchannel"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Admin Email Notifications</h3>
-          <div className="flex items-start justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
-            <div>
-              <Label htmlFor="admin-email-notifications" className="text-sm font-medium">
-                Enable admin email notifications
-              </Label>
-              <p className="text-xs text-gray-500">
-                When enabled, admins with the `notifications:email` permission will receive email alerts.
-              </p>
-            </div>
-            <Switch
-              id="admin-email-notifications"
-              checked={adminEmailNotificationsEnabled}
-              onCheckedChange={(value) => setAdminEmailNotificationsEnabled(Boolean(value))}
-              disabled={!canManage}
-            />
-          </div>
-        </div>
-
-        <Button
-          onClick={handleSave}
-          disabled={saving || !canManage}
-          className="w-full"
-        >
-          {saving ? 'Saving...' : 'Save Contact Settings'}
-        </Button>
       </div>
     </div>
   );

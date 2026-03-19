@@ -1,11 +1,9 @@
 ---
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import BannerSettingsEditorWithPermissions from '../../../features/cms/components/BannerSettingsEditorWithPermissions';
-import AboutPageEditorWithPermissions from '../../../features/cms/components/AboutPageEditorWithPermissions';
-import ContactSettingsEditorWithPermissions from '../../../features/cms/components/ContactSettingsEditorWithPermissions';
+import SettingsTabs from '../../../features/cms/components/SettingsTabs';
 ---
 
-<AdminLayout 
+<AdminLayout
   title="Settings - Elevate Ballers CMS"
   permissionsAny={['site_settings:manage', 'site_settings:read']}
 >
@@ -20,9 +18,5 @@ import ContactSettingsEditorWithPermissions from '../../../features/cms/componen
     <p class="text-gray-500 mt-2 text-lg">Manage configuration and appearance settings for the site.</p>
   </div>
 
-  <div class="space-y-8">
-    <BannerSettingsEditorWithPermissions client:load />
-    <ContactSettingsEditorWithPermissions client:load />
-    <AboutPageEditorWithPermissions client:load />
-  </div>
+  <SettingsTabs client:load />
 </AdminLayout>

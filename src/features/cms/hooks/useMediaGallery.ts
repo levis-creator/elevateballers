@@ -84,7 +84,7 @@ export function useMediaGallery() {
 
       // Type filter
       if (filterType !== 'all') {
-        const typeMap: Record<string, string> = { image: 'IMAGE', video: 'VIDEO', audio: 'AUDIO' };
+        const typeMap: Record<string, string> = { image: 'IMAGE', video: 'VIDEO', audio: 'AUDIO', document: 'DOCUMENT' };
         if (item.type !== typeMap[filterType]) return false;
       }
 
