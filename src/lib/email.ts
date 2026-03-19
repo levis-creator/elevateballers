@@ -466,6 +466,38 @@ export async function sendPasswordResetEmail(data: {
   console.log(`[email] Password reset email sent to ${data.email}`);
 }
 
+export async function sendEmailChangedAlert(data: {
+  name: string;
+  newEmail: string;
+  oldEmail: string;
+}): Promise<void> {
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Login Email Updated</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      The login email address for your ElevateBallers admin account has been updated by an administrator.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:${C.lightGray};border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+      <tr><td style="padding:6px 0;font-size:14px;color:${C.text};"><strong>Previous email:</strong> ${data.oldEmail}</td></tr>
+      <tr><td style="padding:6px 0;font-size:14px;color:${C.text};"><strong>New email:</strong> ${data.newEmail}</td></tr>
+    </table>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      You will now use <strong>${data.newEmail}</strong> to sign in. If you did not expect this change,
+      contact your system administrator immediately.
+    </p>
+    <p style="margin:0;font-size:13px;color:${C.gray};line-height:1.6;">
+      This is an automated security notification. Please do not reply to this email.
+    </p>
+  `);
+
+  await sendTransactionalEmail({
+    to: data.newEmail,
+    subject: 'Your ElevateBallers login email has been updated',
+    html,
+  });
+  console.log(`[email] Email change alert sent to ${data.newEmail} (was ${data.oldEmail})`);
+}
+
 export async function sendWelcomeSetPasswordEmail(data: {
   email: string;
   name: string;
