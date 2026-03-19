@@ -58,12 +58,8 @@ export default function LoginForm() {
         return;
       }
 
-      console.log('Login successful, redirecting...');
-      
-      // Small delay to ensure cookie is set before redirect
-      setTimeout(() => {
-        window.location.href = '/admin';
-      }, 100);
+      // Credentials accepted — redirect to OTP verification page
+      window.location.href = '/admin/verify-otp';
     } catch (err) {
       console.error('Login error:', err);
       setError('An error occurred. Please try again.');

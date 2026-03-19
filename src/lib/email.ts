@@ -466,6 +466,36 @@ export async function sendPasswordResetEmail(data: {
   console.log(`[email] Password reset email sent to ${data.email}`);
 }
 
+export async function sendLoginOtpEmail(data: {
+  email: string;
+  name?: string | null;
+  code: string;
+}): Promise<void> {
+  const greeting = data.name ? `Hi ${data.name},` : 'Hi there,';
+
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Your Login Code</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">${greeting}</p>
+    <p style="margin:0 0 24px;font-size:15px;color:${C.text};line-height:1.7;">
+      Use the verification code below to complete your sign-in to the ElevateBallers admin panel.
+      This code expires in <strong>10 minutes</strong>.
+    </p>
+    <div style="text-align:center;margin:0 0 24px;padding:24px;background:${C.lightGray};border-radius:8px;border:2px dashed ${C.border};">
+      <span style="font-family:'Teko',Arial,sans-serif;font-size:48px;font-weight:700;letter-spacing:12px;color:${C.primary};">${data.code}</span>
+    </div>
+    <p style="margin:0;font-size:13px;color:${C.gray};line-height:1.6;">
+      If you did not attempt to sign in, please ignore this email. Your account remains secure.
+    </p>
+  `);
+
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: 'Your ElevateBallers login code',
+    html,
+  });
+  console.log(`[email] Login OTP sent to ${data.email}`);
+}
+
 export async function sendTeamRegistrationAutoReply(data: {
   coachName: string;
   email: string;
