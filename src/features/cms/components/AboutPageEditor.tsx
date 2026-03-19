@@ -203,49 +203,44 @@ export default function AboutPageEditor() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="p-6 text-sm text-gray-500">Loading...</div>;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 className="text-2xl font-bold mb-2 font-heading text-gray-900">About Page</h2>
-      <p className="text-sm text-gray-500 mb-6 border-b pb-4">
-        Edit the content shown on the public About page.
-      </p>
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div>
+          <h2 className="text-xl font-bold font-heading text-gray-900">About Page</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Edit the content shown on the public About page.</p>
+        </div>
+        <Button onClick={handleSave} disabled={saving || !canManage}>
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </div>
 
       {!canManage && (
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="mx-6 mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           You have read-only access. Contact an admin to make changes.
         </div>
       )}
 
-      <div className="space-y-6 max-w-2xl">
-        <div className="space-y-2">
-          <Label htmlFor="about-title">Page Title</Label>
+      <div className="p-6 space-y-5">
+        <div className="flex items-center gap-4">
+          <Label htmlFor="about-title" className="w-24 shrink-0 text-sm font-medium text-gray-700">Page Title</Label>
           <Input
             id="about-title"
             value={title}
             onChange={e => setTitle(e.target.value)}
             disabled={!canManage}
             placeholder="e.g. ABOUT"
+            className="max-w-xs"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Page Content</Label>
-          <RichTextEditor
-            content={content}
-            onChange={setContent}
-            disabled={!canManage}
-          />
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium text-gray-700">Page Content</Label>
+          <RichTextEditor content={content} onChange={setContent} disabled={!canManage} />
         </div>
-
-        <Button
-          onClick={handleSave}
-          disabled={saving || !canManage}
-          className="w-full"
-        >
-          {saving ? 'Saving...' : 'Save About Page'}
-        </Button>
       </div>
     </div>
   );

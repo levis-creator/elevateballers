@@ -50,6 +50,7 @@ export default function MediaListItem({
     Image?: ComponentType<any>;
     Video?: ComponentType<any>;
     Music?: ComponentType<any>;
+    FileText?: ComponentType<any>;
     ExternalLink?: ComponentType<any>;
     Edit?: ComponentType<any>;
     Trash2?: ComponentType<any>;
@@ -62,6 +63,7 @@ export default function MediaListItem({
         Image: mod.Image,
         Video: mod.Video,
         Music: mod.Music,
+        FileText: mod.FileText,
         ExternalLink: mod.ExternalLink,
         Edit: mod.Edit,
         Trash2: mod.Trash2,

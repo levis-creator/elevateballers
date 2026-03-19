@@ -570,6 +570,7 @@ export async function getMedia(type?: string): Promise<MediaWithFolderAndUploade
     'image': 'IMAGE',
     'video': 'VIDEO',
     'audio': 'AUDIO',
+    'document': 'DOCUMENT',
   };
   const typeParam = type && typeMap[type.toLowerCase()] ? [typeMap[type.toLowerCase()]] : [];
 

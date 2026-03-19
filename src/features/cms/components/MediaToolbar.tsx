@@ -16,6 +16,7 @@ export default function MediaToolbar({ searchInputRef }: MediaToolbarProps) {
     Image?: ComponentType<any>;
     Video?: ComponentType<any>;
     Music?: ComponentType<any>;
+    FileText?: ComponentType<any>;
     Filter?: ComponentType<any>;
     Star?: ComponentType<any>;
   }>({});
@@ -50,6 +51,7 @@ export default function MediaToolbar({ searchInputRef }: MediaToolbarProps) {
         Image: mod.Image,
         Video: mod.Video,
         Music: mod.Music,
+        FileText: mod.FileText,
         Filter: mod.Filter,
         Star: mod.Star,
       });
@@ -62,6 +64,7 @@ export default function MediaToolbar({ searchInputRef }: MediaToolbarProps) {
   const ImageIcon = icons.Image;
   const VideoIcon = icons.Video;
   const MusicIcon = icons.Music;
+  const FileTextIcon = icons.FileText;
   const FilterIcon = icons.Filter;
   const StarIcon = icons.Star;
 
@@ -123,6 +126,16 @@ export default function MediaToolbar({ searchInputRef }: MediaToolbarProps) {
           >
             {MusicIcon ? <MusicIcon size={16} className="mr-2" /> : null}
             Audio
+          </Button>
+          <Button
+            variant={filterType === 'document' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setFilterType('document')}
+            aria-label="Filter documents"
+            aria-pressed={filterType === 'document'}
+          >
+            {FileTextIcon ? <FileTextIcon size={16} className="mr-2" /> : null}
+            Documents
           </Button>
         </div>
         <div className="flex gap-1 bg-background p-1 rounded-lg border">

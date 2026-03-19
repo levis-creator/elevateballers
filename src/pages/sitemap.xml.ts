@@ -23,6 +23,7 @@ export const GET: APIRoute = async ({ site }) => {
         const staticPages = [
             '',
             '/about-club',
+            '/rules',
             '/standings',
             '/upcoming-fixtures',
             '/league-registration',

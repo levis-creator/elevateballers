@@ -1,0 +1,2 @@
+ALTER TABLE `media`
+    MODIFY `type` ENUM('IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT') NOT NULL;
