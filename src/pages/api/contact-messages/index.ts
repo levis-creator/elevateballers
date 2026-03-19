@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendContactNotification, sendContactAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -140,6 +141,13 @@ export const POST: APIRoute = async ({ request }) => {
       console.error('Failed to send admin notification email:', err);
     });
 
+    await logAudit(request, 'CONTACT_MESSAGE_SUBMITTED', {
+      contactMessageId: created.id,
+      name,
+      email,
+      subject,
+    });
+
     return new Response(JSON.stringify({ ok: true }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -176,6 +184,11 @@ export const PATCH: APIRoute = async ({ request }) => {
       data: {
         read: data.read !== undefined ? Boolean(data.read) : undefined,
       },
+    });
+
+    await logAudit(request, 'CONTACT_MESSAGE_UPDATED', {
+      contactMessageId: message.id,
+      read: message.read,
     });
 
     return new Response(JSON.stringify(message), {

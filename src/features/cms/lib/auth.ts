@@ -4,34 +4,44 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import type { User } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const DEFAULT_SECRET = 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_SECRET;
 
-/**
- * Hash a password using bcrypt
- */
+// Hard-fail on startup if JWT_SECRET is the default value in any environment
+if (JWT_SECRET === DEFAULT_SECRET) {
+  throw new Error(
+    '[auth] JWT_SECRET is not configured. Set a strong secret in your environment variables.'
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Password
+// ---------------------------------------------------------------------------
+
+export function validatePasswordStrength(password: string): string | null {
+  if (password.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+  if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+  if (!/[^A-Za-z0-9]/.test(password)) return 'Password must contain at least one special character.';
+  return null;
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return await bcrypt.hash(password, 10);
 }
 
-/**
- * Verify a password against a hash
- */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return await bcrypt.compare(password, hash);
 }
 
-/**
- * Find a user by email
- */
+// ---------------------------------------------------------------------------
+// User finders
+// ---------------------------------------------------------------------------
+
 export async function findUserByEmail(email: string): Promise<User | null> {
-  return await prisma.user.findUnique({
-    where: { email },
-  });
+  return await prisma.user.findUnique({ where: { email } });
 }
 
-/**
- * Find a user by ID
- */
 export async function findUserById(id: string): Promise<User | null> {
   return await prisma.user.findUnique({
     where: { id },
@@ -39,27 +49,25 @@ export async function findUserById(id: string): Promise<User | null> {
       id: true,
       email: true,
       name: true,
+      active: true,
+      tokenVersion: true,
       createdAt: true,
       updatedAt: true,
       userRoles: {
         select: {
           role: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-            }
-          }
-        }
-      }
+            select: { id: true, name: true, description: true },
+          },
+        },
+      },
     },
-  }) as any; // Type assertion to handle schema mismatch
+  }) as any;
 }
 
-/**
- * Create a new user
- * @param roleName - Optional role name (defaults to 'Editor')
- */
+// ---------------------------------------------------------------------------
+// User creation
+// ---------------------------------------------------------------------------
+
 export async function createUser(
   email: string,
   password: string,
@@ -68,113 +76,138 @@ export async function createUser(
 ): Promise<User> {
   const passwordHash = await hashPassword(password);
 
-  // Find the role by name
-  const role = await prisma.role.findUnique({
-    where: { name: roleName }
-  });
+  const role = await prisma.role.findUnique({ where: { name: roleName } });
+  if (!role) throw new Error(`Role "${roleName}" not found`);
 
-  if (!role) {
-    throw new Error(`Role "${roleName}" not found`);
-  }
-
-  // Create user and assign role
   const user = await prisma.user.create({
     data: {
       email,
       passwordHash,
       name,
-      userRoles: {
-        create: {
-          roleId: role.id
-        }
-      }
+      userRoles: { create: { roleId: role.id } },
     },
     include: {
-      userRoles: {
-        include: {
-          role: true
-        }
-      }
-    }
+      userRoles: { include: { role: true } },
+    },
   });
 
-  return user as any; // Type assertion to handle schema mismatch
+  return user as any;
 }
 
-/**
- * Create a JWT token for a user
- */
-export function createToken(user: { id: string; email: string }): string {
+// ---------------------------------------------------------------------------
+// JWT
+// ---------------------------------------------------------------------------
+
+export function createToken(user: { id: string; email: string; tokenVersion: number }): string {
   return jwt.sign(
-    { userId: user.id, email: user.email },
+    { userId: user.id, email: user.email, tokenVersion: user.tokenVersion },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
 }
 
-/**
- * Verify and decode a JWT token
- */
-export function verifyToken(token: string): { userId: string; email: string } | null {
+export function verifyToken(
+  token: string
+): { userId: string; email: string; tokenVersion: number } | null {
   try {
-    if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
-      console.error('JWT_SECRET is not properly configured!');
-      return null;
-    }
-    return jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Token verification failed:', error instanceof Error ? error.message : error);
-    }
+    return jwt.verify(token, JWT_SECRET) as {
+      userId: string;
+      email: string;
+      tokenVersion: number;
+    };
+  } catch {
     return null;
   }
 }
 
-/**
- * Get the current user ID from request cookies without a database check
- */
-export function getUserIdFromRequest(request: Request): string | null {
+// ---------------------------------------------------------------------------
+// Request helpers
+// ---------------------------------------------------------------------------
+
+function getTokenFromRequest(request: Request): string | null {
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) return null;
-
   const cookies = Object.fromEntries(
     cookieHeader.split('; ').map((c) => {
       const [key, ...values] = c.split('=');
       return [key, values.join('=')];
     })
   );
+  return cookies['auth-token'] ?? null;
+}
 
-  const token = cookies['auth-token'];
+export function getUserIdFromRequest(request: Request): string | null {
+  const token = getTokenFromRequest(request);
   if (!token) return null;
-
-  const payload = verifyToken(token);
-  return payload?.userId || null;
+  return verifyToken(token)?.userId ?? null;
 }
 
 /**
- * Get the current user from request cookies
+ * Get the current authenticated user.
+ * Validates token signature AND tokenVersion against the database.
+ * Returns null if the user is inactive or the token has been invalidated.
  */
 export async function getCurrentUser(request: Request): Promise<User | null> {
-  const userId = getUserIdFromRequest(request);
-  if (!userId) return null;
+  const token = getTokenFromRequest(request);
+  if (!token) return null;
+
+  const payload = verifyToken(token);
+  if (!payload) return null;
 
   try {
-    return await findUserById(userId);
-  } catch (error) {
-    console.error('Error finding user by ID:', error);
+    const user = await findUserById(payload.userId);
+    if (!user) return null;
+    if (!(user as any).active) return null;
+    if ((user as any).tokenVersion !== payload.tokenVersion) return null;
+    return user;
+  } catch {
     return null;
   }
 }
 
-/**
- * Require authentication - throws error if user is not authenticated
- */
 export async function requireAuth(request: Request): Promise<User> {
   const user = await getCurrentUser(request);
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
+  if (!user) throw new Error('Unauthorized');
   return user;
+}
+
+// ---------------------------------------------------------------------------
+// Account lockout
+// ---------------------------------------------------------------------------
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+
+export async function recordFailedLogin(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { failedLoginAttempts: true },
+  });
+  if (!user) return;
+
+  const attempts = (user.failedLoginAttempts ?? 0) + 1;
+  const data: any = { failedLoginAttempts: attempts };
+
+  if (attempts >= MAX_FAILED_ATTEMPTS) {
+    data.lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000);
+  }
+
+  await prisma.user.update({ where: { id: userId }, data });
+}
+
+export async function resetFailedLogin(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { failedLoginAttempts: 0, lockedUntil: null },
+  });
+}
+
+/** Increment tokenVersion to invalidate all existing sessions for a user. */
+export async function invalidateSessions(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { tokenVersion: { increment: 1 } },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -187,10 +220,6 @@ function hashOtpCode(code: string): string {
   return crypto.createHash('sha256').update(code).digest('hex');
 }
 
-/**
- * Generate a 6-digit OTP, store its hash, and return the plaintext code.
- * Deletes any previous OTPs for the user before creating the new one.
- */
 export async function createOtpForUser(userId: string): Promise<string> {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const codeHash = hashOtpCode(code);
@@ -202,30 +231,16 @@ export async function createOtpForUser(userId: string): Promise<string> {
   return code;
 }
 
-/**
- * Verify an OTP code for a user.
- * Deletes the OTP record on success (single-use).
- */
 export async function verifyOtpForUser(userId: string, code: string): Promise<boolean> {
   const codeHash = hashOtpCode(code);
   const otp = await prisma.twoFactorOtp.findFirst({
-    where: {
-      userId,
-      codeHash,
-      expiresAt: { gt: new Date() },
-    },
+    where: { userId, codeHash, expiresAt: { gt: new Date() } },
   });
-
   if (!otp) return false;
-
   await prisma.twoFactorOtp.delete({ where: { id: otp.id } });
   return true;
 }
 
-/**
- * Create a short-lived JWT used to carry the user identity between the login
- * step and the OTP verification step. Expires in 15 minutes.
- */
 export function createOtpSessionToken(user: { id: string; email: string }): string {
   return jwt.sign(
     { userId: user.id, email: user.email, purpose: 'otp-session' },
@@ -234,10 +249,9 @@ export function createOtpSessionToken(user: { id: string; email: string }): stri
   );
 }
 
-/**
- * Verify an OTP session token. Returns the payload or null.
- */
-export function verifyOtpSessionToken(token: string): { userId: string; email: string } | null {
+export function verifyOtpSessionToken(
+  token: string
+): { userId: string; email: string } | null {
   try {
     const payload = jwt.verify(token, JWT_SECRET) as any;
     if (payload.purpose !== 'otp-session') return null;
@@ -247,33 +261,39 @@ export function verifyOtpSessionToken(token: string): { userId: string; email: s
   }
 }
 
-/**
- * Require admin role - throws error if user is not admin
- * @deprecated Use requirePermission from rbac/middleware instead
- */
+// ---------------------------------------------------------------------------
+// Audit log helper
+// ---------------------------------------------------------------------------
+
+export async function writeAuditLog(
+  userId: string,
+  action: string,
+  performedBy: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  const nextMetadata = {
+    ...(metadata ?? {}),
+    source: metadata && 'source' in metadata ? metadata.source : 'legacy',
+  };
+  await prisma.userAuditLog.create({
+    data: { userId, action, performedBy, metadata: nextMetadata },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// @deprecated — use requirePermission from rbac/middleware instead
+// ---------------------------------------------------------------------------
+
 export async function requireAdmin(request: Request): Promise<User> {
   const user = await requireAuth(request);
 
-  // Check if user has Admin role
   const userWithRoles = await prisma.user.findUnique({
     where: { id: user.id },
-    include: {
-      userRoles: {
-        include: {
-          role: true
-        }
-      }
-    }
+    include: { userRoles: { include: { role: true } } },
   });
 
-  const hasAdminRole = userWithRoles?.userRoles.some(
-    ur => ur.role.name === 'Admin'
-  );
-
-  if (!hasAdminRole) {
-    throw new Error('Forbidden: Admin access required');
-  }
+  const hasAdminRole = userWithRoles?.userRoles.some((ur) => ur.role.name === 'Admin');
+  if (!hasAdminRole) throw new Error('Forbidden: Admin access required');
 
   return user;
 }
-

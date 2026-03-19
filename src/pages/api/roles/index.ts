@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
+import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
 export const prerender = false;
 
@@ -106,6 +107,12 @@ export const POST: APIRoute = async ({ request }) => {
         isSystem: false,
       },
     });
+
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'ROLE_CREATED', adminId, {
+      roleId: role.id,
+      name: role.name,
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify({

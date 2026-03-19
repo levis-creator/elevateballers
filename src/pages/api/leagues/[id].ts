@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getLeagueById } from '../../../features/cms/lib/queries';
 import { updateLeague, deleteLeague } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -15,6 +16,11 @@ export const GET: APIRoute = async ({ params }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    await logAudit(request, 'LEAGUE_UPDATED', {
+      leagueId: league.id,
+      name: league.name,
+    });
 
     return new Response(JSON.stringify(league), {
       headers: { 'Content-Type': 'application/json' },
@@ -77,6 +83,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'LEAGUE_DELETED', {
+      leagueId: params.id,
+    });
+
     return new Response(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting league:', error);
@@ -89,4 +99,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

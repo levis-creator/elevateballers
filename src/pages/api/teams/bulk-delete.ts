@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -18,6 +19,11 @@ export const POST: APIRoute = async ({ request }) => {
 
     const result = await prisma.team.deleteMany({
       where: { id: { in: ids } },
+    });
+
+    await logAudit(request, 'TEAM_BULK_DELETED', {
+      teamIds: ids,
+      deleted: result.count,
     });
 
     return new Response(JSON.stringify({ deleted: result.count }), {

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getStaffByTeam, getTeamById } from '../../../../features/cms/lib/queries';
 import { assignStaffToTeam, removeStaffFromTeam, updateTeamStaff } from '../../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../../features/rbac/middleware';
+import { logAudit } from '../../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -49,6 +50,12 @@ export const POST: APIRoute = async ({ params, request }) => {
       role: data.role,
     });
 
+    await logAudit(request, 'TEAM_STAFF_ASSIGNED', {
+      teamId: params.id,
+      staffId: data.staffId,
+      role: data.role,
+    });
+
     return new Response(JSON.stringify(teamStaff), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
@@ -88,6 +95,11 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'TEAM_STAFF_UPDATED', {
+      teamStaffId: data.teamStaffId,
+      role: data.role,
+    });
+
     return new Response(JSON.stringify(teamStaff), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -124,6 +136,11 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    await logAudit(request, 'TEAM_STAFF_REMOVED', {
+      teamStaffId,
+      teamId: params.id,
+    });
 
     return new Response(null, { status: 204 });
   } catch (error: any) {

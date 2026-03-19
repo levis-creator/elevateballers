@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
-import { createUser } from '../../../features/cms/lib/auth';
+import { createUser, getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendWelcomeSetPasswordEmail } from '../../../lib/email';
 import type { UserRole } from '../../../features/cms/types';
@@ -121,6 +121,9 @@ export const POST: APIRoute = async ({ request }) => {
             console.error('[users] Failed to send welcome email:', emailError);
             // Non-fatal: user is created, admin can send a reset email manually
         }
+
+        const adminId = getUserIdFromRequest(request) ?? 'unknown';
+        await writeAuditLog(newUser.id, 'USER_CREATED', adminId, { email: newUser.email, name: newUser.name }).catch(() => {});
 
         const { passwordHash: _, ...userResponse } = newUser as any;
 

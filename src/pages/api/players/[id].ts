@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getPlayerById } from '../../../features/cms/lib/queries';
 import { updatePlayer, deletePlayer } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -24,6 +25,11 @@ export const GET: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    await logAudit(request, 'PLAYER_UPDATED', {
+      playerId: player.id,
+      name: `${player.firstName} ${player.lastName}`.trim(),
+    });
 
     return new Response(JSON.stringify(player), {
       headers: { 'Content-Type': 'application/json' },
@@ -88,6 +94,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'PLAYER_DELETED', {
+      playerId: params.id,
+    });
+
     return new Response(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting player:', error);
@@ -100,4 +110,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

@@ -108,3 +108,5 @@
 "cmmessages0000000000000001","contact_messages","read","View contact messages","Communication","2026-03-14 00:00:00.000","2026-03-14 00:00:00.000"
 "cmsubscribers000000000001","subscribers","read","View subscribers list","Communication","2026-03-15 00:00:00.000","2026-03-15 00:00:00.000"
 "cmsubscribers000000000002","subscribers","manage","Manage subscribers (activate/deactivate)","Communication","2026-03-15 00:00:00.000","2026-03-15 00:00:00.000"
+"cmauditlogs000000000001","audit_logs","read","View audit logs","Audit Logs","2026-03-20 00:00:00.000","2026-03-20 00:00:00.000"
+"cmauditlogs000000000002","audit_logs","manage","Manage audit logs","Audit Logs","2026-03-20 00:00:00.000","2026-03-20 00:00:00.000"

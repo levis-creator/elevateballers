@@ -46,6 +46,10 @@ const PERMISSIONS = [
   { resource: 'permissions', action: 'read', description: 'View permissions', category: 'Roles & Permissions' },
   { resource: 'permissions', action: 'manage', description: 'Manage permissions', category: 'Roles & Permissions' },
 
+  // Audit Logs
+  { resource: 'audit_logs', action: 'read', description: 'View audit logs', category: 'Audit Logs' },
+  { resource: 'audit_logs', action: 'manage', description: 'Manage audit logs', category: 'Audit Logs' },
+
   // Teams
   { resource: 'teams', action: 'create', description: 'Create teams', category: 'Teams' },
   { resource: 'teams', action: 'read', description: 'View teams', category: 'Teams' },

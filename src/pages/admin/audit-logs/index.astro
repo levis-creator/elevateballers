@@ -1,0 +1,21 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import AuditLogTable from '../../../features/cms/components/AuditLogTable';
+---
+
+<AdminLayout
+  title="Audit Logs - Admin"
+  permissionsAny={['audit_logs:read', 'audit_logs:manage']}
+>
+  <div class="space-y-6">
+    <div class="pb-6 border-b">
+      <h1 class="text-3xl font-heading font-semibold mb-2">Audit Logs</h1>
+      <p class="text-muted-foreground">Review user and system actions recorded for compliance and security.</p>
+    </div>
+
+    <AuditLogTable client:load />
+  </div>
+</AdminLayout>

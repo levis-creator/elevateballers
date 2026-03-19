@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createJumpBall } from '../../../../features/game-tracking/lib/mutations';
 import { getMatchJumpBalls, getPeriodJumpBalls } from '../../../../features/game-tracking/lib/queries';
 import { requireAuth } from '../../../../features/cms/lib/auth';
+import { logAudit } from '../../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -101,6 +102,12 @@ export const POST: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    await logAudit(request, 'GAME_JUMP_BALL_RECORDED', {
+      matchId,
+      jumpBallId: jumpBall.id,
+      period: jumpBall.period,
+    });
 
     return new Response(JSON.stringify(jumpBall), {
       status: 201,

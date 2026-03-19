@@ -3,6 +3,7 @@ import { getPlayers } from '../../../features/cms/lib/queries';
 import { createPlayer } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendPlayerRegistrationAutoReplyBrevo } from '../../../lib/email';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -81,6 +82,12 @@ export const POST: APIRoute = async ({ request }) => {
         console.error('Failed to send player admin-create auto-reply (Brevo):', err);
       });
     }
+
+    await logAudit(request, 'PLAYER_CREATED', {
+      playerId: player.id,
+      name: `${player.firstName} ${player.lastName}`.trim(),
+      teamId: player.teamId || null,
+    });
 
     return new Response(JSON.stringify(player), {
       status: 201,

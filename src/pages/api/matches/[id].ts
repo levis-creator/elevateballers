@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getMatchById, getMatchWithFullDetails } from '../../../features/cms/lib/queries';
 import { updateMatch, deleteMatch } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -83,6 +84,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_UPDATED', {
+      matchId: match.id,
+      leagueId: match.leagueId,
+      date: match.date,
+      status: match.status,
+    });
+
     return new Response(JSON.stringify(match), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -110,6 +118,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_DELETED', {
+      matchId: params.id,
+    });
+
     return new Response(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting match:', error);
@@ -122,4 +134,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-

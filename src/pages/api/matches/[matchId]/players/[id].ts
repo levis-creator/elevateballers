@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getMatchPlayerById } from '../../../../../features/cms/lib/queries';
 import { updateMatchPlayer, deleteMatchPlayer } from '../../../../../features/cms/lib/mutations';
 import { requireAuth } from '../../../../../features/cms/lib/auth';
+import { logAudit } from '../../../../../features/cms/lib/audit';
 
 export const GET: APIRoute = async ({ params }) => {
   const id = params.id;
@@ -63,6 +64,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_PLAYER_UPDATED', {
+      matchPlayerId: matchPlayer.id,
+      matchId: matchPlayer.matchId,
+      playerId: matchPlayer.playerId,
+      teamId: matchPlayer.teamId,
+    });
+
     return new Response(JSON.stringify(matchPlayer), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -103,6 +111,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_PLAYER_REMOVED', {
+      matchPlayerId: id,
+    });
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -115,4 +127,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
   }
 };
-

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getCurrentUser, hashPassword } from '../../../features/cms/lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { getUserWithPermissions } from '../../../features/rbac/permissions';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -70,6 +71,11 @@ export const PUT: APIRoute = async ({ request }) => {
       data: updateData,
     });
 
+    await logAudit(request, 'AUTH_PROFILE_UPDATED', {
+      userId: user.id,
+      updatedFields: Object.keys(updateData),
+    }, user.id);
+
     // Get updated user with roles and permissions
     const updatedUserWithPermissions = await getUserWithPermissions(user.id);
 
@@ -106,6 +112,10 @@ export const DELETE: APIRoute = async ({ request }) => {
       where: { id: user.id },
     });
 
+    await logAudit(request, 'AUTH_ACCOUNT_DELETED', {
+      userId: user.id,
+    }, user.id);
+
     return new Response(JSON.stringify({ message: 'User deleted successfully' }), {
       status: 200,
       headers: {
@@ -121,4 +131,3 @@ export const DELETE: APIRoute = async ({ request }) => {
     });
   }
 };
-

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getSiteSettingByKey } from '../../../features/cms/lib/queries';
 import { updateSiteSetting, deleteSiteSetting } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
 export const prerender = false;
 
@@ -43,6 +44,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'SETTING_UPDATED', adminId, {
+      settingId: setting.id,
+      key: setting.key,
+      category: setting.category,
+    }).catch(() => {});
+
     return new Response(JSON.stringify(setting), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -69,6 +77,11 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'SETTING_DELETED', adminId, {
+      settingId: params.id,
+    }).catch(() => {});
 
     return new Response(null, { status: 204 });
   } catch (error: any) {

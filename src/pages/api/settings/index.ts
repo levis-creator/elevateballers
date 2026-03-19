@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getAllSiteSettings } from '../../../features/cms/lib/queries';
 import { createSiteSetting } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
 export const prerender = false;
 
@@ -47,6 +48,13 @@ export const POST: APIRoute = async ({ request }) => {
       description: data.description,
       category: data.category,
     });
+
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'SETTING_CREATED', adminId, {
+      settingId: setting.id,
+      key: setting.key,
+      category: setting.category,
+    }).catch(() => {});
 
     return new Response(JSON.stringify(setting), {
       status: 201,
