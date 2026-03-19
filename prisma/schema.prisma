@@ -20,6 +20,7 @@ model User {
   userRoles     UserRole[]
   passwordResetTokens PasswordResetToken[]
   notificationSettings UserNotificationSetting?
+  twoFactorOtps TwoFactorOtp[]
 
   @@map("users")
 }
@@ -35,6 +36,18 @@ model UserNotificationSetting {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_notification_settings")
+}
+
+model TwoFactorOtp {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  codeHash  String   @map("code_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("two_factor_otps")
 }
 
 model PasswordResetToken {

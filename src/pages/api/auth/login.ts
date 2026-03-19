@@ -1,5 +1,11 @@
 import type { APIRoute } from 'astro';
-import { findUserByEmail, verifyPassword, createToken } from '../../../features/cms/lib/auth';
+import {
+  findUserByEmail,
+  verifyPassword,
+  createOtpForUser,
+  createOtpSessionToken,
+} from '../../../features/cms/lib/auth';
+import { sendLoginOtpEmail } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -8,13 +14,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     let body;
     try {
       body = await request.json();
-    } catch (jsonError) {
+    } catch {
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -23,124 +26,70 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!email || !password) {
       return new Response(
         JSON.stringify({ error: 'Email and password are required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     const user = await findUserByEmail(email);
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: 'Invalid credentials' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const isValid = await verifyPassword(password, user.passwordHash);
     if (!isValid) {
-      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: 'Invalid credentials' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Fetch user with roles for response
-    const { prisma } = await import('../../../lib/prisma');
-    const userWithRoles = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: {
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
-      }
-    });
+    // Credentials valid — generate OTP and issue a short-lived session cookie
+    const code = await createOtpForUser(user.id);
 
-    const token = createToken({
-      id: user.id,
-      email: user.email,
-    });
+    // Send OTP email (non-blocking failure: log but don't expose error to client)
+    try {
+      await sendLoginOtpEmail({ email: user.email, name: user.name, code });
+    } catch (emailError) {
+      console.error('[login] Failed to send OTP email:', emailError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to send verification code. Please try again.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Detect if we're in production and using HTTPS
-    // For cPanel: Only set secure flag if we're CERTAIN it's HTTPS
-    // This prevents cookie issues when site is accessed via HTTP
-    const isProduction = import.meta.env.PROD || 
-                        import.meta.env.MODE === 'production' || 
-                        process.env.NODE_ENV === 'production';
-    
-    // Check if request is over HTTPS (be conservative - only set secure if definitely HTTPS)
-    // cPanel may proxy requests, so check multiple headers
+    // Short-lived token to identify the pending session on the verify-otp step
+    const otpSessionToken = createOtpSessionToken({ id: user.id, email: user.email });
+
     const forwardedProto = request.headers.get('x-forwarded-proto');
     const forwardedSsl = request.headers.get('x-forwarded-ssl');
     const urlProtocol = new URL(request.url).protocol;
-    
-    // Only set secure flag if we have clear evidence of HTTPS
-    const isSecure = forwardedProto === 'https' ||
-                     forwardedSsl === 'on' ||
-                     urlProtocol === 'https:';
+    const isSecure =
+      forwardedProto === 'https' || forwardedSsl === 'on' || urlProtocol === 'https:';
 
-    console.log('Login successful (cPanel):', {
-      userId: user.id,
-      email: user.email,
-      isProduction,
-      isSecure,
-      url: request.url,
-      forwardedProto,
-      forwardedSsl,
-      urlProtocol,
-      headers: {
-        'x-forwarded-proto': forwardedProto,
-        'x-forwarded-ssl': forwardedSsl,
-        'host': request.headers.get('host'),
-      },
-    });
-
-    cookies.set('auth-token', token, {
+    cookies.set('otp-session', otpSessionToken, {
       httpOnly: true,
-      secure: isSecure, // Only set secure flag if actually using HTTPS
-      sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      secure: isSecure,
+      sameSite: 'lax',
+      maxAge: 60 * 15, // 15 minutes
       path: '/',
     });
 
     return new Response(
-      JSON.stringify({
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          roles: userWithRoles?.userRoles.map(ur => ({
-            id: ur.role.id,
-            name: ur.role.name,
-            description: ur.role.description,
-          })) || [],
-        },
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ status: 'otp_required' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Login error:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Login error details:', {
-      message: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Login failed',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
-      }), 
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
-

@@ -1,6 +1,7 @@
 import { prisma } from '../../../lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import type { User } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -174,6 +175,76 @@ export async function requireAuth(request: Request): Promise<User> {
     throw new Error('Unauthorized');
   }
   return user;
+}
+
+// ---------------------------------------------------------------------------
+// Email OTP helpers
+// ---------------------------------------------------------------------------
+
+const OTP_TTL_MINUTES = 10;
+
+function hashOtpCode(code: string): string {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+/**
+ * Generate a 6-digit OTP, store its hash, and return the plaintext code.
+ * Deletes any previous OTPs for the user before creating the new one.
+ */
+export async function createOtpForUser(userId: string): Promise<string> {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const codeHash = hashOtpCode(code);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+
+  await prisma.twoFactorOtp.deleteMany({ where: { userId } });
+  await prisma.twoFactorOtp.create({ data: { userId, codeHash, expiresAt } });
+
+  return code;
+}
+
+/**
+ * Verify an OTP code for a user.
+ * Deletes the OTP record on success (single-use).
+ */
+export async function verifyOtpForUser(userId: string, code: string): Promise<boolean> {
+  const codeHash = hashOtpCode(code);
+  const otp = await prisma.twoFactorOtp.findFirst({
+    where: {
+      userId,
+      codeHash,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!otp) return false;
+
+  await prisma.twoFactorOtp.delete({ where: { id: otp.id } });
+  return true;
+}
+
+/**
+ * Create a short-lived JWT used to carry the user identity between the login
+ * step and the OTP verification step. Expires in 15 minutes.
+ */
+export function createOtpSessionToken(user: { id: string; email: string }): string {
+  return jwt.sign(
+    { userId: user.id, email: user.email, purpose: 'otp-session' },
+    JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+}
+
+/**
+ * Verify an OTP session token. Returns the payload or null.
+ */
+export function verifyOtpSessionToken(token: string): { userId: string; email: string } | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    if (payload.purpose !== 'otp-session') return null;
+    return { userId: payload.userId, email: payload.email };
+  } catch {
+    return null;
+  }
 }
 
 /**
