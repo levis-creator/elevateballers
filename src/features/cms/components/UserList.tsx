@@ -263,6 +263,7 @@ export default function UserList() {
                     Role
                   </div>
                 </TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -302,6 +303,21 @@ export default function UserList() {
                         </Badge>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {!(user as any).active ? (
+                      <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+                        Inactive
+                      </Badge>
+                    ) : !(user as any).activatedAt ? (
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                        Pending
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                        Active
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

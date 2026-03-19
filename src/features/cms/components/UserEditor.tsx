@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { ToastProvider, useToast } from '@/components/ui/toast';
 
 interface UserEditorProps {
   userId?: string;
@@ -19,24 +20,35 @@ interface Role {
 }
 
 export default function UserEditor({ userId }: UserEditorProps) {
+  return (
+    <ToastProvider>
+      <UserEditorForm userId={userId} />
+    </ToastProvider>
+  );
+}
+
+function UserEditorForm({ userId }: UserEditorProps) {
   const isNew = !userId;
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
+    active: true,
   });
+  const [activatedAt, setActivatedAt] = useState<string | null>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
+  const [resetSending, setResetSending] = useState(false);
   const [icons, setIcons] = useState<{
     ArrowLeft?: ComponentType<any>;
     Save?: ComponentType<any>;
     User?: ComponentType<any>;
     Mail?: ComponentType<any>;
     Shield?: ComponentType<any>;
-    Key?: ComponentType<any>;
+    KeyRound?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -47,7 +59,7 @@ export default function UserEditor({ userId }: UserEditorProps) {
         User: mod.User,
         Mail: mod.Mail,
         Shield: mod.Shield,
-        Key: mod.Key,
+        KeyRound: mod.KeyRound,
       });
     });
   }, []);
@@ -79,10 +91,10 @@ export default function UserEditor({ userId }: UserEditorProps) {
       setFormData({
         name: data.name,
         email: data.email,
-        password: '', // Password is not returned
+        active: data.active ?? true,
       });
+      setActivatedAt(data.activatedAt ?? null);
 
-      // Fetch user roles
       const rolesResponse = await fetch(`/api/users/${id}/role`);
       if (rolesResponse.ok) {
         const rolesData = await rolesResponse.json();
@@ -95,16 +107,41 @@ export default function UserEditor({ userId }: UserEditorProps) {
     }
   };
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const toggleRole = (roleId: string) => {
-    setSelectedRoleIds(prev =>
-      prev.includes(roleId)
-        ? prev.filter(id => id !== roleId)
-        : [...prev, roleId]
+    setSelectedRoleIds((prev) =>
+      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
     );
+  };
+
+  const handleResetPassword = async () => {
+    setResetSending(true);
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      if (!response.ok) throw new Error();
+      addToast({
+        variant: 'success',
+        title: activatedAt ? 'Reset Email Sent' : 'Invitation Sent',
+        description: activatedAt
+          ? `A password reset link has been sent to ${formData.email}.`
+          : `An invitation email has been resent to ${formData.email}.`,
+      });
+    } catch {
+      addToast({
+        variant: 'error',
+        title: 'Failed to Send',
+        description: 'Could not send the reset email. Please try again.',
+      });
+    } finally {
+      setResetSending(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,10 +159,16 @@ export default function UserEditor({ userId }: UserEditorProps) {
       const url = isNew ? '/api/users' : `/api/users/${userId}`;
       const method = isNew ? 'POST' : 'PUT';
 
+      const payload: any = {
+        name: formData.name,
+        email: formData.email,
+        active: formData.active,
+      };
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -136,7 +179,6 @@ export default function UserEditor({ userId }: UserEditorProps) {
       const userData = await response.json();
       const savedUserId = isNew ? userData.user.id : userId;
 
-      // Assign roles
       const rolesResponse = await fetch(`/api/users/${savedUserId}/role`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -147,7 +189,6 @@ export default function UserEditor({ userId }: UserEditorProps) {
         throw new Error('Failed to assign roles');
       }
 
-      // Redirect back to list
       window.location.href = '/admin/users';
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -161,7 +202,7 @@ export default function UserEditor({ userId }: UserEditorProps) {
   const UserIcon = icons.User;
   const MailIcon = icons.Mail;
   const ShieldIcon = icons.Shield;
-  const KeyIcon = icons.Key;
+  const KeyRoundIcon = icons.KeyRound;
 
   if (loading) {
     return <div className="p-8 text-center text-muted-foreground">Loading user...</div>;
@@ -226,6 +267,22 @@ export default function UserEditor({ userId }: UserEditorProps) {
               />
             </div>
 
+            {/* Active toggle — edit mode only */}
+            {!isNew && (
+              <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                  <p className="text-sm font-medium">Active</p>
+                  <p className="text-xs text-muted-foreground">
+                    Inactive users cannot log in to the system.
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.active}
+                  onCheckedChange={(checked) => handleChange('active', checked)}
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 {ShieldIcon ? <ShieldIcon size={16} /> : null}
@@ -235,17 +292,14 @@ export default function UserEditor({ userId }: UserEditorProps) {
                 {availableRoles.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Loading roles...</p>
                 ) : (
-                  availableRoles.map(role => (
+                  availableRoles.map((role) => (
                     <div key={role.id} className="flex items-start gap-3">
                       <Checkbox
                         id={`role-${role.id}`}
                         checked={selectedRoleIds.includes(role.id)}
                         onCheckedChange={() => toggleRole(role.id)}
                       />
-                      <label
-                        htmlFor={`role-${role.id}`}
-                        className="flex-1 cursor-pointer"
-                      >
+                      <label htmlFor={`role-${role.id}`} className="flex-1 cursor-pointer">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">{role.name}</span>
                           {role.isSystem && (
@@ -267,28 +321,38 @@ export default function UserEditor({ userId }: UserEditorProps) {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                {KeyIcon ? <KeyIcon size={16} /> : null}
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                placeholder={isNew ? 'Enter password' : 'Leave blank to keep unchanged'}
-                required={isNew}
-              />
-              {!isNew && (
-                <p className="text-xs text-muted-foreground">
-                  Only enter a value if you want to change the password.
-                </p>
-              )}
-            </div>
+            {/* Reset Password / Resend Invite — edit mode only */}
+            {!isNew && (
+              <div className="rounded-md border p-4 space-y-3">
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    {KeyRoundIcon ? <KeyRoundIcon size={16} /> : null}
+                    {activatedAt ? 'Password Reset' : 'Invitation'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {activatedAt
+                      ? 'Send a password reset link to this user\'s email address.'
+                      : 'This user has not accepted their invitation yet. Resend the invite email.'}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={resetSending}
+                  onClick={handleResetPassword}
+                >
+                  {resetSending
+                    ? 'Sending...'
+                    : activatedAt
+                    ? 'Send Password Reset Email'
+                    : 'Resend Invitation'}
+                </Button>
+              </div>
+            )}
 
             <div className="pt-4 flex justify-end gap-3">
-               <Button type="button" variant="outline" asChild>
+              <Button type="button" variant="outline" asChild>
                 <a href="/admin/users">Cancel</a>
               </Button>
               <Button type="submit" disabled={saving}>

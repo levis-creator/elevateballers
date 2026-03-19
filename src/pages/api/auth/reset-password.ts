@@ -57,10 +57,17 @@ export const POST: APIRoute = async ({ request }) => {
 
     const passwordHash = await hashPassword(password);
 
+    // Activate the account on first password set (activatedAt is null for new invites)
+    const user = await prisma.user.findUnique({
+      where: { id: resetToken.userId },
+      select: { activatedAt: true },
+    });
+    const activationData = user?.activatedAt ? {} : { activatedAt: new Date() };
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: resetToken.userId },
-        data: { passwordHash },
+        data: { passwordHash, ...activationData },
       }),
       prisma.passwordResetToken.update({
         where: { id: resetToken.id },

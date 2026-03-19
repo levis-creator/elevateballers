@@ -466,6 +466,35 @@ export async function sendPasswordResetEmail(data: {
   console.log(`[email] Password reset email sent to ${data.email}`);
 }
 
+export async function sendWelcomeSetPasswordEmail(data: {
+  email: string;
+  name: string;
+  setPasswordUrl: string;
+}): Promise<void> {
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Welcome to ElevateBallers!</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      An admin account has been created for you on the ElevateBallers admin panel.
+      Click the button below to set your password and activate your account.
+    </p>
+    <p style="margin:0 0 24px;font-size:15px;color:${C.text};line-height:1.7;">
+      This link expires in <strong>60 minutes</strong>.
+    </p>
+    ${btn('Set Your Password', data.setPasswordUrl)}
+    <p style="margin:20px 0 0;font-size:13px;color:${C.gray};line-height:1.6;">
+      If you were not expecting this, please ignore this email.
+    </p>
+  `);
+
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: 'Welcome to ElevateBallers — Set your password',
+    html,
+  });
+  console.log(`[email] Welcome set-password email sent to ${data.email}`);
+}
+
 export async function sendLoginOtpEmail(data: {
   email: string;
   name?: string | null;

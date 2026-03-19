@@ -1,8 +1,6 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
-import { requireAdmin, hashPassword } from '../../../features/cms/lib/auth';
 import { requirePermission } from '../../../features/rbac/middleware';
-import type { UserRole } from '../../../features/cms/types';
 
 export const prerender = false;
 
@@ -25,6 +23,8 @@ export const GET: APIRoute = async ({ request, params }) => {
                 id: true,
                 name: true,
                 email: true,
+                active: true,
+                activatedAt: true,
                 createdAt: true,
                 updatedAt: true,
                 userRoles: {
@@ -54,7 +54,6 @@ export const GET: APIRoute = async ({ request, params }) => {
             });
         }
 
-        // Transform to include roles array
         const transformedUser = {
             ...user,
             roles: user.userRoles.map(ur => ur.role),
@@ -77,7 +76,7 @@ export const GET: APIRoute = async ({ request, params }) => {
     }
 };
 
-// PUT /api/users/[id] - Update user
+// PUT /api/users/[id] - Update user (name, email, active status)
 export const PUT: APIRoute = async ({ request, params }) => {
     try {
         await requirePermission(request, 'users:update');
@@ -91,11 +90,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
             });
         }
 
-        // Check if user exists
-        const existing = await prisma.user.findUnique({
-            where: { id },
-        });
-
+        const existing = await prisma.user.findUnique({ where: { id } });
         if (!existing) {
             return new Response(JSON.stringify({ error: 'User not found' }), {
                 status: 404,
@@ -103,15 +98,13 @@ export const PUT: APIRoute = async ({ request, params }) => {
             });
         }
 
-        // Prepare update data
         const updateData: any = {
             name: data.name,
             email: data.email,
         };
 
-        // If password is provided, hash it
-        if (data.password && data.password.trim() !== '') {
-            updateData.passwordHash = await hashPassword(data.password);
+        if (typeof data.active === 'boolean') {
+            updateData.active = data.active;
         }
 
         const updatedUser = await prisma.user.update({
@@ -121,6 +114,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
                 id: true,
                 name: true,
                 email: true,
+                active: true,
                 updatedAt: true,
                 userRoles: {
                     select: {
@@ -136,7 +130,6 @@ export const PUT: APIRoute = async ({ request, params }) => {
             }
         });
 
-        // Transform response
         const response = {
             ...updatedUser,
             roles: updatedUser.userRoles.map(ur => ur.role),
@@ -173,12 +166,7 @@ export const DELETE: APIRoute = async ({ request, params }) => {
             });
         }
 
-        // TODO: Prevent deleting yourself (need to get current user)
-        // For now, allowing deletion
-
-        await prisma.user.delete({
-            where: { id },
-        });
+        await prisma.user.delete({ where: { id } });
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
