@@ -4,6 +4,11 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import AuditLogTable from '../../../features/cms/components/AuditLogTable';
+import { checkAuth } from '../../../features/cms/lib/auth-astro';
+import { hasPermission } from '../../../features/rbac/permissions';
+
+const user = await checkAuth(Astro.request);
+const canManageAudit = user ? await hasPermission(user.id, 'audit_logs:manage') : false;
 ---
 
 <AdminLayout
@@ -16,6 +21,6 @@ import AuditLogTable from '../../../features/cms/components/AuditLogTable';
       <p class="text-muted-foreground">Review user and system actions recorded for compliance and security.</p>
     </div>
 
-    <AuditLogTable client:load />
+    <AuditLogTable client:load canManage={canManageAudit} />
   </div>
 </AdminLayout>

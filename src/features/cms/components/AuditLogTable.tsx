@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { usePermissions } from '@/features/rbac/usePermissions';
 
 interface AuditUserRef {
   id: string;
@@ -46,9 +45,7 @@ interface AuditLogResponse {
   nextCursor?: { createdAt: string; id: string } | null;
 }
 
-export default function AuditLogTable() {
-  const { can } = usePermissions();
-  const canManage = can('audit_logs:manage');
+export default function AuditLogTable({ canManage = true }: { canManage?: boolean }) {
 
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);

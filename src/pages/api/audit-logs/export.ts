@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     const andFilters: any[] = [];
     if (action) {
-      andFilters.push({ action: { contains: action, mode: 'insensitive' } });
+      andFilters.push({ action: { contains: action } });
     }
     if (userId) {
       andFilters.push({ userId });
@@ -79,8 +79,8 @@ export const GET: APIRoute = async ({ request }) => {
       const userMatches = await prisma.user.findMany({
         where: {
           OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { email: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search } },
+            { email: { contains: search } },
           ],
         },
         select: { id: true },
@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ request }) => {
       const matchedIds = userMatches.map((u) => u.id);
 
       const orFilters: any[] = [
-        { action: { contains: search, mode: 'insensitive' } },
+        { action: { contains: search } },
         { userId: { contains: search } },
         { performedBy: { contains: search } },
       ];
