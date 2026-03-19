@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Match } from '@prisma/client';
 import { formatMatchDate } from '@/features/matches/lib/utils';
 import { getLeagueName } from '@/features/matches/lib/league-helpers';
+import { getTeam1Logo, getTeam1Name, getTeam2Logo, getTeam2Name } from '@/features/matches/lib/team-helpers';
 
 export default function NextMatchCarousel() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -59,55 +60,62 @@ export default function NextMatchCarousel() {
         </div>
       ) : (
         <div className="matches-grid">
-          {matches.map((match) => (
-            <a key={match.id} href={`/matches/${match.id}`} className="match-card-modern">
-              <div className="match-card-header">
-                <span className="league-tag">{getLeagueName(match) || match.leagueName || 'ELEVATE LEAGUE'}</span>
-                <span className="match-time">{formatMatchDate(match.date)}</span>
-              </div>
-              
-              <div className="match-card-body">
-                <div className="team-entry team-home">
-                  <div className="logo-wrap">
-                    {match.team1Logo ? (
-                      <img src={match.team1Logo} alt={match.team1Name ?? ''} />
-                    ) : (
-                      <div className="initials">{match.team1Name?.substring(0, 2).toUpperCase()}</div>
-                    )}
+          {matches.map((match) => {
+            const team1Name = getTeam1Name(match);
+            const team1Logo = getTeam1Logo(match);
+            const team2Name = getTeam2Name(match);
+            const team2Logo = getTeam2Logo(match);
+
+            return (
+              <a key={match.id} href={`/matches/${match.id}`} className="match-card-modern">
+                <div className="match-card-header">
+                  <span className="league-tag">{getLeagueName(match) || match.leagueName || 'ELEVATE LEAGUE'}</span>
+                  <span className="match-time">{formatMatchDate(match.date)}</span>
+                </div>
+                
+                <div className="match-card-body">
+                  <div className="team-entry team-home">
+                    <div className="logo-wrap">
+                      {team1Logo ? (
+                        <img src={team1Logo} alt={team1Name} />
+                      ) : (
+                        <div className="initials">{team1Name.substring(0, 2).toUpperCase()}</div>
+                      )}
+                    </div>
+                    <span className="name">{team1Name}</span>
                   </div>
-                  <span className="name">{match.team1Name}</span>
-                </div>
 
-                <div className="vs-divider">
-                  <span className="vs-pill">VS</span>
-                </div>
+                  <div className="vs-divider">
+                    <span className="vs-pill">VS</span>
+                  </div>
 
-                <div className="team-entry team-away">
-                  <span className="name">{match.team2Name}</span>
-                  <div className="logo-wrap">
-                    {match.team2Logo ? (
-                      <img src={match.team2Logo} alt={match.team2Name ?? ''} />
-                    ) : (
-                      <div className="initials">{match.team2Name?.substring(0, 2).toUpperCase()}</div>
-                    )}
+                  <div className="team-entry team-away">
+                    <span className="name">{team2Name}</span>
+                    <div className="logo-wrap">
+                      {team2Logo ? (
+                        <img src={team2Logo} alt={team2Name} />
+                      ) : (
+                        <div className="initials">{team2Name.substring(0, 2).toUpperCase()}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="match-card-footer">
-                <span className="venue-info">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  MAIN ARENA
-                </span>
-                <span className="view-details">
-                  DETAILS <i className="fas fa-arrow-right"></i>
-                </span>
-              </div>
-            </a>
-          ))}
+                <div className="match-card-footer">
+                  <span className="venue-info">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    MAIN ARENA
+                  </span>
+                  <span className="view-details">
+                    DETAILS <i className="fas fa-arrow-right"></i>
+                  </span>
+                </div>
+              </a>
+            );
+          })}
         </div>
       )}
 
@@ -223,7 +231,7 @@ export default function NextMatchCarousel() {
 
         .match-time {
           font-size: 0.8rem;
-          opacity: 0.7;
+          color: rgba(255, 255, 255, 0.88);
           font-weight: 500;
         }
 
@@ -268,12 +276,14 @@ export default function NextMatchCarousel() {
         .initials {
           font-weight: 700;
           font-size: 0.8rem;
-          color: var(--color-gray-400);
+          color: rgba(255, 255, 255, 0.9);
         }
 
         .name {
           font-family: var(--font-heading);
           font-size: 1.4rem;
+          color: #ffffff;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -308,12 +318,12 @@ export default function NextMatchCarousel() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          opacity: 0.6;
+          color: rgba(255, 255, 255, 0.82);
         }
 
         .view-details {
           font-weight: 700;
-          color: var(--color-primary, #dd3333);
+          color: #ff6b6b;
           display: flex;
           align-items: center;
           gap: 0.5rem;
@@ -407,5 +417,3 @@ export default function NextMatchCarousel() {
     </div>
   );
 }
-
-
