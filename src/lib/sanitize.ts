@@ -1,25 +1,13 @@
-import DOMPurify from 'isomorphic-dompurify';
+import sanitize from 'sanitize-html';
+import type { IOptions } from 'sanitize-html';
 
-/**
- * Only allow iframes from trusted video hosts (YouTube / Vimeo).
- * Registered once at module load; DOMPurify hooks are global so this runs
- * for every sanitize() call automatically.
- */
-DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'IFRAME') {
-    const src = node.getAttribute('src') ?? '';
-    const trusted = [
-      'https://www.youtube.com/embed/',
-      'https://player.vimeo.com/video/',
-    ];
-    if (!trusted.some((prefix) => src.startsWith(prefix))) {
-      node.parentNode?.removeChild(node);
-    }
-  }
-});
+const TRUSTED_IFRAME_PREFIXES = [
+  'https://www.youtube.com/embed/',
+  'https://player.vimeo.com/video/',
+];
 
-const SANITIZE_CONFIG = {
-  ALLOWED_TAGS: [
+const SANITIZE_CONFIG: IOptions = {
+  allowedTags: [
     // Text structure
     'p', 'br', 'div', 'span', 'hr',
     // Headings
@@ -34,19 +22,44 @@ const SANITIZE_CONFIG = {
     'a', 'img',
     // Tables
     'table', 'thead', 'tbody', 'tr', 'td', 'th',
-    // Video embeds (src validated by the hook above)
+    // Video embeds (validated below)
     'iframe',
   ],
-  ALLOWED_ATTR: [
-    'href', 'target', 'rel',
-    'src', 'alt', 'width', 'height',
-    'class', 'style',
-    'colspan', 'rowspan',
-    // iframe attrs for video embeds
-    'frameborder', 'allow', 'allowfullscreen',
-    // Quill video embed data attrs
-    'data-video-id', 'data-platform', 'data-video-url',
-  ],
+  allowedAttributes: {
+    a: ['href', 'target', 'rel'],
+    img: ['src', 'alt', 'width', 'height'],
+    iframe: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen'],
+    '*': [
+      'class',
+      'style',
+      'colspan',
+      'rowspan',
+      'data-video-id',
+      'data-platform',
+      'data-video-url',
+    ],
+  },
+  allowedSchemes: ['http', 'https', 'data', 'mailto', 'tel'],
+  allowProtocolRelative: false,
+  exclusiveFilter: (frame) => {
+    if (frame.tag !== 'iframe') return false;
+    const src = frame.attribs?.src || '';
+    return !TRUSTED_IFRAME_PREFIXES.some((prefix) => src.startsWith(prefix));
+  },
+  transformTags: {
+    a: (tagName, attribs) => {
+      if (attribs.target === '_blank') {
+        return {
+          tagName,
+          attribs: {
+            ...attribs,
+            rel: attribs.rel || 'noopener noreferrer',
+          },
+        };
+      }
+      return { tagName, attribs };
+    },
+  },
 };
 
 /**
@@ -55,5 +68,5 @@ const SANITIZE_CONFIG = {
  * all formatting, tables, images, and YouTube/Vimeo embeds.
  */
 export function sanitizeHtml(dirty: string): string {
-  return DOMPurify.sanitize(dirty, SANITIZE_CONFIG) as string;
+  return sanitize(dirty, SANITIZE_CONFIG);
 }

@@ -5,8 +5,9 @@ import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
+    await requirePermission(request, 'page_contents:read');
     const page = await getPageContentById(params.id!);
 
     if (!page) {
@@ -81,4 +82,3 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     );
   }
 };
-
