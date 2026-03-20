@@ -6,6 +6,18 @@ export default {
     './src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: '15px',
+      // Match Bootstrap 5's container max-widths at Tailwind's breakpoints
+      screens: {
+        sm: '540px',
+        md: '720px',
+        lg: '960px',
+        xl: '1140px',
+        '2xl': '1140px',
+      },
+    },
     extend: {
       fontFamily: {
         sans: ['Rubik', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],

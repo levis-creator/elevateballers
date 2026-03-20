@@ -178,7 +178,6 @@ export default function RecentResultsCarousel() {
           color: white;
           transition: all 0.3s ease;
           position: relative;
-          overflow: hidden;
         }
 
         .match-card-modern::before {
@@ -188,6 +187,7 @@ export default function RecentResultsCarousel() {
           top: 0;
           height: 100%;
           width: 4px;
+          border-radius: 12px 0 0 12px;
           opacity: 0;
           transition: opacity 0.3s ease;
         }

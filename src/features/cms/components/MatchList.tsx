@@ -157,7 +157,7 @@ export default function MatchList() {
   const filteredMatches = matches.filter((match) => {
     const team1Name = getTeam1Name(match);
     const team2Name = getTeam2Name(match);
-    const leagueName = getLeagueName(match);
+    const leagueName = getLeagueName(match) ?? '';
     const matchesSearch =
       team1Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       team2Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -404,7 +404,7 @@ export default function MatchList() {
       ) : viewMode === 'table' ? (
         /* Table View */
         <Card>
-          <Table>
+          <Table className="[&_td]:py-5">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
