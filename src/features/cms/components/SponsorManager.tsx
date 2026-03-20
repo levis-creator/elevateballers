@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import ImageUpload from '@/components/ImageUpload';
 
 export default function SponsorManager() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
@@ -84,6 +85,10 @@ export default function SponsorManager() {
     setSuccess('');
 
     try {
+      if (!image.trim()) {
+        throw new Error('Please upload or enter a sponsor logo.');
+      }
+
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId ? `/api/highlights/sponsors/${editingId}` : '/api/highlights/sponsors';
       
@@ -213,13 +218,14 @@ export default function SponsorManager() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="spon-image">Logo URL</Label>
-                    <Input 
-                      id="spon-image" 
-                      value={image} 
-                      onChange={(e) => setImage(e.target.value)} 
-                      placeholder="/images/sponsors/nike.png" 
-                      required 
+                    <ImageUpload
+                      value={image}
+                      onChange={setImage}
+                      label="Sponsor Logo"
+                      helperText="Upload a logo or paste a URL. Recommended: transparent PNG, ~600px wide."
+                      folder="sponsors"
+                      maxWidthOrHeight={1200}
+                      quality={0.85}
                     />
                   </div>
                   <div className="space-y-2">
