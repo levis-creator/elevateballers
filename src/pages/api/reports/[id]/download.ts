@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getReportGeneration } from '../../../../features/reports/lib/queries';
+import { requirePermission } from '../../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -7,8 +8,9 @@ export const prerender = false;
  * GET /api/reports/[id]/download
  * Download a generated report
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
+    await requirePermission(request, 'reports:download');
     const id = params.id;
     if (!id) {
       return new Response(JSON.stringify({ error: 'Report ID is required' }), {

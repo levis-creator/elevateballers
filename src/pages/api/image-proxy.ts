@@ -4,23 +4,27 @@
  */
 
 import type { APIRoute } from 'astro';
+import { isProduction } from '../../lib/env';
 
 export const prerender = false;
 
 const ALLOWED_HOSTS = [
   'elevateballers.com',
   'www.elevateballers.com',
+];
+
+const DEV_HOSTS = [
   'localhost',
   '127.0.0.1',
 ];
 
-function isAllowedUrl(urlString: string, requestHost: string): boolean {
+function isAllowedUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
     const host = url.hostname.toLowerCase();
     if (ALLOWED_HOSTS.includes(host)) return true;
-    if (host === requestHost?.toLowerCase()) return true;
+    if (!isProduction() && DEV_HOSTS.includes(host)) return true;
     return false;
   } catch {
     return false;
@@ -40,8 +44,7 @@ export const GET: APIRoute = async ({ request, url: requestUrl }) => {
     return new Response('Invalid url parameter', { status: 400 });
   }
 
-  const requestHost = requestUrl.hostname || '';
-  if (!isAllowedUrl(targetUrl, requestHost)) {
+  if (!isAllowedUrl(targetUrl)) {
     return new Response('URL not allowed', { status: 403 });
   }
 

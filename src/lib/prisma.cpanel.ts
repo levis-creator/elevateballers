@@ -23,6 +23,9 @@ function getAdapter() {
         if (!connectionString) throw new Error('DATABASE_URL is not set');
 
         const url = new URL(connectionString);
+        const allowPublicKeyRetrieval =
+            process.env.DB_ALLOW_PUBLIC_KEY_RETRIEVAL === 'true' ||
+            process.env.NODE_ENV !== 'production';
         const poolConfig = {
             host: url.hostname,
             port: parseInt(url.port) || 3306,
@@ -33,7 +36,7 @@ function getAdapter() {
             idleTimeout: 10000,
             connectTimeout: 30000,
             acquireTimeout: 30000,
-            allowPublicKeyRetrieval: true,
+            allowPublicKeyRetrieval,
         };
 
         adapter = new PrismaMariaDb(poolConfig);

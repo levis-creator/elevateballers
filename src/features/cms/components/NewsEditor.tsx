@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { ArrowLeft, Save, X, AlertCircle, CheckCircle, Info, Loader2, FileText } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 // Quill-based rich text editor component
 function RichTextEditor({ 
@@ -223,7 +224,7 @@ function RichTextEditor({
         // Set initial content
         if (content) {
           isUpdatingRef.current = true;
-          quill.root.innerHTML = content;
+          quill.root.innerHTML = sanitizeHtml(content);
           isUpdatingRef.current = false;
         }
 
@@ -254,7 +255,7 @@ function RichTextEditor({
   useEffect(() => {
     if (quillRef.current && content !== quillRef.current.root.innerHTML) {
       isUpdatingRef.current = true;
-      quillRef.current.root.innerHTML = content || '';
+      quillRef.current.root.innerHTML = sanitizeHtml(content || '');
       isUpdatingRef.current = false;
     }
   }, [content]);

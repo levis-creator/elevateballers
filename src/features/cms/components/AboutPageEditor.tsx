@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/features/rbac/usePermissions';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface SiteSetting {
   id: string;
@@ -69,7 +70,7 @@ function RichTextEditor({
       quillRef.current = quill;
 
       if (content) {
-        quill.root.innerHTML = content;
+        quill.root.innerHTML = sanitizeHtml(content);
       }
 
       quill.on('text-change', () => {
@@ -94,7 +95,7 @@ function RichTextEditor({
   useEffect(() => {
     if (quillRef.current && content !== quillRef.current.root.innerHTML) {
       isUpdatingRef.current = true;
-      quillRef.current.root.innerHTML = content || '';
+      quillRef.current.root.innerHTML = sanitizeHtml(content || '');
       isUpdatingRef.current = false;
     }
   }, [content]);

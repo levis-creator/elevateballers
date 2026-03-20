@@ -42,6 +42,9 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
 
         try {
             const url = new URL(connectionString);
+            const allowPublicKeyRetrieval =
+                process.env.DB_ALLOW_PUBLIC_KEY_RETRIEVAL === 'true' ||
+                process.env.NODE_ENV !== 'production';
 
             poolConfig = {
                 host: url.hostname,
@@ -53,7 +56,7 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
                 idleTimeout: 10000,
                 connectTimeout: 30000,
                 acquireTimeout: 30000,
-                allowPublicKeyRetrieval: true,
+                allowPublicKeyRetrieval,
             };
         } catch (error) {
             throw new Error(

@@ -6,8 +6,9 @@ import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/a
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
+    await requirePermission(request, 'site_settings:read');
     // Try to get by ID first, then by key
     const setting = await getSiteSettingByKey(params.id!);
 

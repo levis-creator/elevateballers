@@ -10,7 +10,9 @@ export async function logAudit(
   const actorId = getUserIdFromRequest(request) ?? 'anonymous';
   const userId = targetUserId ?? actorId;
   const nextMetadata = { ...(metadata ?? {}), source };
-  await writeAuditLog(userId, action, actorId, nextMetadata).catch(() => {});
+  await writeAuditLog(userId, action, actorId, nextMetadata).catch((err: unknown) => {
+    console.error('[audit] Failed to write audit log:', { action, userId, actorId, err });
+  });
 }
 
 export async function logAuditSystem(
@@ -19,5 +21,7 @@ export async function logAuditSystem(
   targetUserId: string = 'system'
 ): Promise<void> {
   const nextMetadata = { ...(metadata ?? {}), source: 'system' };
-  await writeAuditLog(targetUserId, action, 'system', nextMetadata).catch(() => {});
+  await writeAuditLog(targetUserId, action, 'system', nextMetadata).catch((err: unknown) => {
+    console.error('[audit] Failed to write system audit log:', { action, targetUserId, err });
+  });
 }

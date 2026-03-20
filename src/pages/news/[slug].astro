@@ -17,6 +17,7 @@ import NewsBreadcrumbs from "../../features/news/components/NewsBreadcrumbs.astr
 import PageLoader from "../../components/PageLoader";
 import { Image } from "astro:assets";
 import { getDisplayImageUrl } from "../../lib/asset-url";
+import { sanitizeHtml } from "../../lib/sanitize";
 
 const { slug } = Astro.params;
 if (!slug) {
@@ -241,7 +242,7 @@ const modifiedTime = modifiedDate;
 
                 <!-- Post Content -->
                 <div class="post-content">
-                  <div class="article-body" set:html={article.content} />
+                  <div class="article-body" set:html={sanitizeHtml(article.content)} />
                   <div class="clearfix"></div>
                 </div>
 

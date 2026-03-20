@@ -8,6 +8,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
   try {
+    await requirePermission(request, 'site_settings:read');
     const url = new URL(request.url);
     const category = url.searchParams.get('category') || undefined;
 
