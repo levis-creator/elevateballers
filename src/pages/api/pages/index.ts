@@ -11,6 +11,11 @@ export const GET: APIRoute = async ({ request }) => {
     const slug = url.searchParams.get('slug');
     const admin = url.searchParams.get('admin') === 'true';
 
+    // Admin access requires authentication and permission
+    if (admin) {
+      await requirePermission(request, 'page_contents:read');
+    }
+
     if (slug) {
       const page = await getPageContentBySlug(slug);
       if (!page) {
@@ -91,4 +96,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-

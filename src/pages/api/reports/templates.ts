@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getAllReportTemplates, getReportTemplatesByType } from '../../../features/reports/lib/queries';
-import { requireAuth } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/middleware';
 
 export const prerender = false;
 
@@ -12,6 +12,7 @@ export const prerender = false;
  */
 export const GET: APIRoute = async ({ request }) => {
   try {
+    await requirePermission(request, 'reports:read');
     const url = new URL(request.url);
     const typeParam = url.searchParams.get('type');
 

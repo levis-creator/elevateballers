@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCurrentUser, hashPassword } from '../../../features/cms/lib/auth';
+import { getCurrentUser, hashPassword, verifyPassword, validatePasswordStrength, invalidateSessions } from '../../../features/cms/lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { getUserWithPermissions } from '../../../features/rbac/permissions';
 import { logAudit } from '../../../features/cms/lib/audit';
@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async ({ request, cookies }) => {
   try {
     const user = await getCurrentUser(request);
 
@@ -56,14 +56,86 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
-    const data = await request.json();
-    const { name, email, password } = data;
+    let data: any;
+    try {
+      data = await request.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { name, email, password, currentPassword } = data;
 
     const updateData: any = {};
     if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (password) {
-      updateData.passwordHash = await hashPassword(password);
+
+    const isEmailChange = Boolean(email);
+    const isPasswordChange = Boolean(password);
+    const requiresReauth = isEmailChange || isPasswordChange;
+
+    if (isEmailChange) {
+      const emailValue = String(email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+        return new Response(JSON.stringify({ error: 'Invalid email address' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const existing = await prisma.user.findUnique({
+        where: { email: emailValue },
+        select: { id: true },
+      });
+      if (existing && existing.id !== user.id) {
+        return new Response(JSON.stringify({ error: 'Email already in use' }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      updateData.email = emailValue;
+    }
+
+    if (isPasswordChange) {
+      const strengthError = validatePasswordStrength(String(password));
+      if (strengthError) {
+        return new Response(JSON.stringify({ error: strengthError }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      updateData.passwordHash = await hashPassword(String(password));
+    }
+
+    if (requiresReauth) {
+      const current = String(currentPassword || '');
+      if (!current) {
+        return new Response(JSON.stringify({ error: 'Current password is required' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { passwordHash: true },
+      });
+      if (!dbUser || !dbUser.passwordHash) {
+        return new Response(JSON.stringify({ error: 'User not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const ok = await verifyPassword(current, dbUser.passwordHash);
+      if (!ok) {
+        return new Response(JSON.stringify({ error: 'Invalid current password' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     await prisma.user.update({
@@ -76,12 +148,19 @@ export const PUT: APIRoute = async ({ request }) => {
       updatedFields: Object.keys(updateData),
     }, user.id);
 
+    if (requiresReauth) {
+      // Invalidate all existing sessions after sensitive changes
+      await invalidateSessions(user.id);
+      cookies.delete('auth-token', { path: '/' });
+    }
+
     // Get updated user with roles and permissions
     const updatedUserWithPermissions = await getUserWithPermissions(user.id);
 
     return new Response(
       JSON.stringify({
         user: updatedUserWithPermissions,
+        reloginRequired: requiresReauth,
       }),
       {
         status: 200,
