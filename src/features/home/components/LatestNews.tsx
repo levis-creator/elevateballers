@@ -101,11 +101,21 @@ const styles = `
     transform: scale(1.06);
   }
 
-  /* Secondary grid — responsive */
+  /* Secondary grid — explicit breakpoints so 4 cards never produce 3+1 */
   .ln-secondary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+    grid-template-columns: 1fr;
     gap: 1.25rem;
+  }
+  @media (min-width: 480px) {
+    .ln-secondary-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 900px) {
+    .ln-secondary-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
   }
 
   /* Featured card content — responsive padding & font */
@@ -124,8 +134,30 @@ const styles = `
     line-height: var(--line-height-tight);
     text-transform: uppercase;
   }
+  .ln-featured-excerpt {
+    color: rgba(255,255,255,0.8);
+    font-size: var(--font-size-sm);
+    margin: 0 0 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-  @media (max-width: 640px) {
+  /* On small screens: tighter overlay, smaller title, hide excerpt */
+  @media (max-width: 480px) {
+    .ln-featured-content {
+      padding: 0.85rem 1rem;
+    }
+    .ln-featured-title {
+      font-size: var(--font-size-lg);
+      margin: 0.25rem 0;
+    }
+    .ln-featured-excerpt {
+      display: none;
+    }
+  }
+  @media (min-width: 481px) and (max-width: 640px) {
     .ln-featured-content {
       padding: 1rem 1.25rem;
     }
@@ -223,7 +255,7 @@ export default function LatestNews() {
   const [featured, ...secondary] = newsItems;
 
   return (
-    <div>
+    <div style={{ paddingTop: '1rem' }}>
       <style>{styles}</style>
 
       {/* Header */}
@@ -313,9 +345,7 @@ function FeaturedCard({ item }: { item: NewsItem }) {
             <CategoryBadge label={item.category} />
             <h3 className="ln-featured-title">{item.title}</h3>
             {item.excerpt && (
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'var(--font-size-sm)', margin: '0 0 0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                {item.excerpt}
-              </p>
+              <p className="ln-featured-excerpt">{item.excerpt}</p>
             )}
             <Meta date={item.date} isoDate={item.isoDate} comments={item.commentsCount} light />
           </div>
