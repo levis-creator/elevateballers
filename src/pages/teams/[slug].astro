@@ -40,10 +40,18 @@ try {
 }
 
 // Merge computed stats into player objects
-const playersWithStats = team.players.map((player: any) => ({
-  ...player,
-  stats: playerStatsMap[player.id] ?? player.stats ?? null,
-}));
+const playersWithStats = team.players.map((player: any) => {
+  const computed = playerStatsMap[player.id] ?? null;
+  const overrides = player.stats && typeof player.stats === 'object' ? player.stats : null;
+  const merged = computed
+    ? { ...(computed || {}), ...(overrides || {}) }
+    : overrides;
+
+  return {
+    ...player,
+    stats: merged ?? null,
+  };
+});
 
 // Get staff for this team
 let teamStaff = [];

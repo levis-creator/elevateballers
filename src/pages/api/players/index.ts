@@ -7,6 +7,39 @@ import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
+const ALLOWED_STAT_KEYS = new Set([
+  'ppg',
+  'rpg',
+  'apg',
+  'spg',
+  'bpg',
+  'fgPercent',
+  'ftPercent',
+  'threePointPercent',
+  'eff',
+]);
+
+function sanitizeStats(input: any): Record<string, number> | null {
+  if (input === null || input === undefined) return null;
+  if (typeof input !== 'object') {
+    throw new Error('Invalid stats format');
+  }
+
+  const result: Record<string, number> = {};
+  for (const key of Object.keys(input)) {
+    if (!ALLOWED_STAT_KEYS.has(key)) continue;
+    const raw = input[key];
+    if (raw === '' || raw === null || raw === undefined) continue;
+    const num = Number(raw);
+    if (!Number.isFinite(num)) {
+      throw new Error(`Invalid value for ${key}`);
+    }
+    result[key] = num;
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
@@ -57,6 +90,16 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    let stats: Record<string, number> | null = null;
+    try {
+      stats = sanitizeStats(data.stats);
+    } catch (err: any) {
+      return new Response(JSON.stringify({ error: err.message || 'Invalid stats' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const player = await createPlayer({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -69,7 +112,7 @@ export const POST: APIRoute = async ({ request }) => {
       teamId: data.teamId || undefined,
       position: data.position,
       jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : undefined,
-      stats: data.stats,
+      stats,
       approved: true, // Admin-created players are approved by default
     });
 

@@ -128,7 +128,19 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
 
         // Calculate aggregate player statistics
         const aggregateStats = calculatePlayerStatistics(matchesWithEvents, player.id);
-        setPlayerStats(aggregateStats);
+        const overrides = player.stats && typeof player.stats === 'object' ? player.stats : null;
+        const mergedStats = overrides ? {
+          ...aggregateStats,
+          ...(overrides.ppg !== undefined ? { pointsPerGame: overrides.ppg } : {}),
+          ...(overrides.rpg !== undefined ? { reboundsPerGame: overrides.rpg } : {}),
+          ...(overrides.apg !== undefined ? { assistsPerGame: overrides.apg } : {}),
+          ...(overrides.spg !== undefined ? { stealsPerGame: overrides.spg } : {}),
+          ...(overrides.bpg !== undefined ? { blocksPerGame: overrides.bpg } : {}),
+          ...(overrides.fgPercent !== undefined ? { fieldGoalPercentage: overrides.fgPercent } : {}),
+          ...(overrides.ftPercent !== undefined ? { freeThrowPercentage: overrides.ftPercent } : {}),
+          ...(overrides.threePointPercent !== undefined ? { threePointPercentage: overrides.threePointPercent } : {}),
+        } : aggregateStats;
+        setPlayerStats(mergedStats);
 
         // Calculate per-team stats using playerTeamId from each match
         const teamMatchGroups = new Map<string, { teamName: string; matches: any[] }>();

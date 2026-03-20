@@ -44,7 +44,17 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
     teamId: '',
     position: '',
     jerseyNumber: '',
-    stats: '',
+    statsOverrides: {
+      ppg: '',
+      rpg: '',
+      apg: '',
+      spg: '',
+      bpg: '',
+      fgPercent: '',
+      ftPercent: '',
+      threePointPercent: '',
+      eff: '',
+    },
   });
 
   useEffect(() => {
@@ -78,6 +88,9 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
       const response = await fetch(`/api/players/${playerId}`);
       if (!response.ok) throw new Error('Failed to fetch player');
       const player: Player = await response.json();
+      const rawStats = (player as any).stats && typeof (player as any).stats === 'object'
+        ? (player as any).stats
+        : {};
 
       setFormData({
         firstName: (player as any).firstName || '',
@@ -91,7 +104,17 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
         teamId: (player as any).teamId || (player as any).team?.id || '',
         position: player.position || '',
         jerseyNumber: player.jerseyNumber?.toString() || '',
-        stats: player.stats ? JSON.stringify(player.stats, null, 2) : '',
+        statsOverrides: {
+          ppg: rawStats.ppg?.toString() || '',
+          rpg: rawStats.rpg?.toString() || '',
+          apg: rawStats.apg?.toString() || '',
+          spg: rawStats.spg?.toString() || '',
+          bpg: rawStats.bpg?.toString() || '',
+          fgPercent: rawStats.fgPercent?.toString() || '',
+          ftPercent: rawStats.ftPercent?.toString() || '',
+          threePointPercent: rawStats.threePointPercent?.toString() || '',
+          eff: rawStats.eff?.toString() || '',
+        },
       });
       setPlayerApproved((player as any).approved ?? false);
     } catch (err: any) {
@@ -111,14 +134,19 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
       const url = playerId ? `/api/players/${playerId}` : '/api/players';
       const method = playerId ? 'PUT' : 'POST';
 
-      let stats = null;
-      if (formData.stats.trim()) {
-        try {
-          stats = JSON.parse(formData.stats);
-        } catch {
-          throw new Error('Invalid JSON in stats field');
+      const stats = (() => {
+        const result: Record<string, number> = {};
+        const entries = Object.entries(formData.statsOverrides);
+        for (const [key, rawValue] of entries) {
+          if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
+          const num = Number(rawValue);
+          if (!Number.isFinite(num)) {
+            throw new Error(`Invalid value for ${key.toUpperCase()}`);
+          }
+          result[key] = num;
         }
-      }
+        return Object.keys(result).length > 0 ? result : null;
+      })();
 
       const payload = {
         firstName: formData.firstName.trim(),
@@ -181,6 +209,33 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
     } finally {
       setApproving(false);
     }
+  };
+
+  const updateStatOverride = (key: keyof typeof formData.statsOverrides, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      statsOverrides: {
+        ...prev.statsOverrides,
+        [key]: value,
+      },
+    }));
+  };
+
+  const clearStatOverrides = () => {
+    setFormData((prev) => ({
+      ...prev,
+      statsOverrides: {
+        ppg: '',
+        rpg: '',
+        apg: '',
+        spg: '',
+        bpg: '',
+        fgPercent: '',
+        ftPercent: '',
+        threePointPercent: '',
+        eff: '',
+      },
+    }));
   };
 
   if (loading) {
@@ -500,19 +555,153 @@ export default function PlayerEditor({ playerId }: PlayerEditorProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="stats" className={cn(formLabel)}>Stats (JSON)</Label>
-              <Textarea
-                id="stats"
-                rows={8}
-                value={formData.stats}
-                onChange={(e) => setFormData((prev) => ({ ...prev, stats: e.target.value }))}
-                disabled={saving}
-                placeholder='{"points": 25.5, "rebounds": 8.2, "assists": 6.1}'
-                className={cn(formInput, "resize-none font-mono text-sm")}
-              />
+              <div className="flex items-center justify-between">
+                <Label className={cn(formLabel)}>Stats Overrides (Optional)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearStatOverrides}
+                  disabled={saving}
+                  className="border-slate-300"
+                >
+                  Clear Overrides
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ppg" className={cn(formLabel)}>PPG</Label>
+                  <Input
+                    id="ppg"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.statsOverrides.ppg}
+                    onChange={(e) => updateStatOverride('ppg', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rpg" className={cn(formLabel)}>RPG</Label>
+                  <Input
+                    id="rpg"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.statsOverrides.rpg}
+                    onChange={(e) => updateStatOverride('rpg', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="apg" className={cn(formLabel)}>APG</Label>
+                  <Input
+                    id="apg"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.statsOverrides.apg}
+                    onChange={(e) => updateStatOverride('apg', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="spg" className={cn(formLabel)}>SPG</Label>
+                  <Input
+                    id="spg"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.statsOverrides.spg}
+                    onChange={(e) => updateStatOverride('spg', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bpg" className={cn(formLabel)}>BPG</Label>
+                  <Input
+                    id="bpg"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.statsOverrides.bpg}
+                    onChange={(e) => updateStatOverride('bpg', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fgPercent" className={cn(formLabel)}>FG%</Label>
+                  <Input
+                    id="fgPercent"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={formData.statsOverrides.fgPercent}
+                    onChange={(e) => updateStatOverride('fgPercent', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ftPercent" className={cn(formLabel)}>FT%</Label>
+                  <Input
+                    id="ftPercent"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={formData.statsOverrides.ftPercent}
+                    onChange={(e) => updateStatOverride('ftPercent', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="threePointPercent" className={cn(formLabel)}>3P%</Label>
+                  <Input
+                    id="threePointPercent"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={formData.statsOverrides.threePointPercent}
+                    onChange={(e) => updateStatOverride('threePointPercent', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="eff" className={cn(formLabel)}>EFF</Label>
+                  <Input
+                    id="eff"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.statsOverrides.eff}
+                    onChange={(e) => updateStatOverride('eff', e.target.value)}
+                    disabled={saving}
+                    placeholder="0.0"
+                    className={cn(formInput)}
+                  />
+                </div>
+              </div>
               <p className={cn(formHelperText, "flex items-center gap-2")}>
                 <Info className="h-4 w-4" />
-                Enter player statistics as valid JSON format
+                Player stats are system-generated from match events. Use overrides only to correct specific values.
               </p>
             </div>
           </CardContent>

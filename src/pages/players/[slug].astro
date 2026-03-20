@@ -65,7 +65,7 @@ const formatPercent = (value: number): string => {
   return value === 0 ? "-" : value.toFixed(1);
 };
 
-const stats = player.stats || {};
+const stats = player.stats && typeof player.stats === 'object' ? player.stats : {};
 
 // Fetch player matches
 let playerMatches: any[] = [];
@@ -109,6 +109,23 @@ try {
 } catch (error) {
   console.error('Error fetching player matches:', error);
 }
+
+// Apply manual overrides (if provided)
+const applyStatOverrides = (base: any, overrides: any) => {
+  if (!overrides || typeof overrides !== 'object') return base;
+  const merged = { ...base };
+  if (overrides.ppg !== undefined) merged.pointsPerGame = overrides.ppg;
+  if (overrides.rpg !== undefined) merged.reboundsPerGame = overrides.rpg;
+  if (overrides.apg !== undefined) merged.assistsPerGame = overrides.apg;
+  if (overrides.spg !== undefined) merged.stealsPerGame = overrides.spg;
+  if (overrides.bpg !== undefined) merged.blocksPerGame = overrides.bpg;
+  if (overrides.fgPercent !== undefined) merged.fieldGoalPercentage = overrides.fgPercent;
+  if (overrides.ftPercent !== undefined) merged.freeThrowPercentage = overrides.ftPercent;
+  if (overrides.threePointPercent !== undefined) merged.threePointPercentage = overrides.threePointPercent;
+  return merged;
+};
+
+playerStats = applyStatOverrides(playerStats, stats);
 
 // Group matches by league
 const getMatchesByLeague = (matches: any[]) => {
