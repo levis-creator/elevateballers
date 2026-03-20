@@ -22,6 +22,13 @@ function getIp(request: Request): string {
   );
 }
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!local || !domain) return '***';
+  if (local.length <= 2) return `${local[0] ?? '*'}***@${domain}`;
+  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+}
+
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
@@ -31,10 +38,15 @@ function json(body: unknown, status: number) {
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const ip = getIp(request);
+  const userAgent = request.headers.get('user-agent') ?? undefined;
 
   // Rate limit: 10 attempts per 15 minutes per IP
   if (!checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000)) {
     const retryAfter = getRateLimitRetryAfter(`login:${ip}`);
+    await logAudit(request, 'AUTH_LOGIN_RATE_LIMITED', {
+      ip,
+      userAgent,
+    });
     return json(
       { error: `Too many login attempts. Please try again in ${retryAfter} seconds.` },
       429
@@ -64,9 +76,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           email,
           success: false,
           ipAddress: ip,
-          userAgent: request.headers.get('user-agent') ?? undefined,
+          userAgent,
           failReason: 'USER_NOT_FOUND',
         },
+      });
+      await logAudit(request, 'AUTH_LOGIN_FAILED', {
+        reason: 'USER_NOT_FOUND',
+        email: maskEmail(email),
+        ip,
+        userAgent,
       });
       return json({ error: 'Invalid credentials' }, 401);
     }
@@ -82,10 +100,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           email,
           success: false,
           ipAddress: ip,
-          userAgent: request.headers.get('user-agent') ?? undefined,
+          userAgent,
           failReason: 'ACCOUNT_LOCKED',
         },
       });
+      await logAudit(
+        request,
+        'AUTH_LOGIN_FAILED',
+        {
+          reason: 'ACCOUNT_LOCKED',
+          email: maskEmail(email),
+          ip,
+          userAgent,
+        },
+        user.id
+      );
       return json(
         { error: `Account locked. Try again in ${Math.ceil(secondsLeft / 60)} minutes.` },
         423
@@ -100,10 +129,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           email,
           success: false,
           ipAddress: ip,
-          userAgent: request.headers.get('user-agent') ?? undefined,
+          userAgent,
           failReason: 'ACCOUNT_INACTIVE',
         },
       });
+      await logAudit(
+        request,
+        'AUTH_LOGIN_FAILED',
+        {
+          reason: 'ACCOUNT_INACTIVE',
+          email: maskEmail(email),
+          ip,
+          userAgent,
+        },
+        user.id
+      );
       return json({ error: 'Invalid credentials' }, 401);
     }
 
@@ -117,10 +157,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           email,
           success: false,
           ipAddress: ip,
-          userAgent: request.headers.get('user-agent') ?? undefined,
+          userAgent,
           failReason: 'INVALID_PASSWORD',
         },
       });
+      await logAudit(
+        request,
+        'AUTH_LOGIN_FAILED',
+        {
+          reason: 'INVALID_PASSWORD',
+          email: maskEmail(email),
+          ip,
+          userAgent,
+        },
+        user.id
+      );
       return json({ error: 'Invalid credentials' }, 401);
     }
 

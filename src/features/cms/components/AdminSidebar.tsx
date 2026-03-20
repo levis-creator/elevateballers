@@ -1,7 +1,5 @@
 import { useState, useEffect, type ComponentType } from 'react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { tekoFont } from '../lib/ui-helpers';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
 
 interface NavItem {
@@ -13,12 +11,222 @@ interface NavItem {
   permissionsAll?: string[];
 }
 
+const styles = `
+  .sb {
+    position: fixed;
+    left: 0; top: 0;
+    width: 260px;
+    height: 100vh;
+    background: #111;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    transition: transform 280ms ease;
+  }
+  .sb.hidden { transform: translateX(-100%); }
+
+  /* Logo */
+  .sb-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 1.25rem 1rem;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+  }
+  .sb-logo-icon {
+    width: 2rem; height: 2rem;
+    border-radius: 50%;
+    background: rgba(221,51,51,0.15);
+    border: 1px solid rgba(221,51,51,0.3);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .sb-logo-text {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* Nav */
+  .sb-nav {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.75rem 0;
+    scrollbar-width: none;
+  }
+  .sb-nav::-webkit-scrollbar { display: none; }
+
+  /* Group label */
+  .sb-group-label {
+    padding: 0.75rem 1rem 0.25rem;
+    font-family: var(--font-heading);
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* Nav link */
+  .sb-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.5rem 1rem;
+    margin: 0.05rem 0.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: rgba(255,255,255,0.5) !important;
+    font-size: 0.875rem;
+    font-weight: 400;
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .sb-link:hover {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.9) !important;
+  }
+  .sb-link.active {
+    background: var(--color-primary);
+    color: #fff !important;
+    font-weight: 500;
+  }
+  .sb-link.active:hover {
+    background: var(--color-primary-dark);
+  }
+  .sb-link-icon {
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .sb-link.active .sb-link-icon,
+  .sb-link:hover .sb-link-icon { opacity: 1; }
+
+  /* Badge */
+  .sb-badge {
+    margin-left: auto;
+    background: #fff;
+    color: var(--color-primary);
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    line-height: 1.4;
+  }
+  .sb-link:not(.active) .sb-badge {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  /* Footer */
+  .sb-footer {
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  /* User row */
+  .sb-user-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.25rem;
+  }
+  .sb-avatar {
+    width: 2rem; height: 2rem;
+    border-radius: 50%;
+    background: rgba(221,51,51,0.15);
+    border: 1px solid rgba(221,51,51,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 700;
+    color: var(--color-primary);
+    flex-shrink: 0;
+  }
+  .sb-user { flex: 1; min-width: 0; }
+  .sb-user-name {
+    font-size: 0.82rem; font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 0.05rem;
+  }
+
+  /* Action buttons row */
+  .sb-footer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+  .sb-icon-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    cursor: pointer;
+    color: rgba(255,255,255,0.55) !important;
+    padding: 0.45rem 0;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    text-decoration: none !important;
+    outline: none !important;
+    width: 100%;
+  }
+  .sb-icon-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff !important;
+    border-color: rgba(255,255,255,0.15);
+    outline: none !important;
+  }
+  .sb-icon-btn.danger:hover {
+    background: rgba(221,51,51,0.12);
+    color: var(--color-primary) !important;
+    border-color: rgba(221,51,51,0.25);
+  }
+
+  /* Mobile toggle */
+  .sb-toggle {
+    position: fixed;
+    top: 0.75rem; left: 0.75rem;
+    z-index: 1001;
+    width: 2.25rem; height: 2.25rem;
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.7);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .sb-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+  }
+
+  @media (min-width: 769px) {
+    .sb-toggle { display: none; }
+    .sb { transform: translateX(0) !important; }
+  }
+`;
+
 export default function AdminSidebar() {
   const { can, canAny, canAll, user, roles } = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activePath, setActivePath] = useState('');
   const [icons, setIcons] = useState<{
     LayoutDashboard?: ComponentType<any>;
     Newspaper?: ComponentType<any>;
@@ -28,8 +236,8 @@ export default function AdminSidebar() {
     Briefcase?: ComponentType<any>;
     Images?: ComponentType<any>;
     FileText?: ComponentType<any>;
-    ExternalLink?: ComponentType<any>;
     LogOut?: ComponentType<any>;
+    ExternalLink?: ComponentType<any>;
     Dribbble?: ComponentType<any>;
     Trophy?: ComponentType<any>;
     Menu?: ComponentType<any>;
@@ -37,7 +245,6 @@ export default function AdminSidebar() {
     Star?: ComponentType<any>;
     Handshake?: ComponentType<any>;
     ShieldCheck?: ComponentType<any>;
-    ChevronDown?: ComponentType<any>;
     Settings?: ComponentType<any>;
     MessageSquare?: ComponentType<any>;
     Mail?: ComponentType<any>;
@@ -54,8 +261,8 @@ export default function AdminSidebar() {
         Briefcase: mod.Briefcase,
         Images: mod.Images,
         FileText: mod.FileText,
-        ExternalLink: mod.ExternalLink,
         LogOut: mod.LogOut,
+        ExternalLink: mod.ExternalLink,
         Dribbble: mod.Dribbble,
         Trophy: mod.Trophy,
         Menu: mod.Menu,
@@ -63,7 +270,6 @@ export default function AdminSidebar() {
         Star: mod.Star,
         Handshake: mod.Handshake,
         ShieldCheck: mod.ShieldCheck,
-        ChevronDown: mod.ChevronDown,
         Settings: mod.Settings,
         MessageSquare: mod.MessageSquare,
         Mail: mod.Mail,
@@ -75,393 +281,185 @@ export default function AdminSidebar() {
       .then((data: unknown[]) => setUnreadCount(Array.isArray(data) ? data.length : 0))
       .catch(() => {});
 
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    if (typeof window !== 'undefined') setActivePath(window.location.pathname);
 
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (isMobile) {
-        const target = e.target as HTMLElement;
-        if (!target.closest('.admin-sidebar') && !target.closest('.mobile-menu-toggle')) {
-          setIsOpen(false);
-        }
-      }
+    const handleOutside = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (isMobile && !t.closest('.sb') && !t.closest('.sb-toggle')) setIsOpen(false);
     };
+    const handleRoute = () => { if (isMobile) setIsOpen(false); };
 
-    const handleRouteChange = () => {
-      if (isMobile) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    window.addEventListener('popstate', handleRouteChange);
-
+    document.addEventListener('click', handleOutside);
+    window.addEventListener('popstate', handleRoute);
     return () => {
       window.removeEventListener('resize', checkMobile);
-      document.removeEventListener('click', handleClickOutside);
-      window.removeEventListener('popstate', handleRouteChange);
+      document.removeEventListener('click', handleOutside);
+      window.removeEventListener('popstate', handleRoute);
     };
   }, [isMobile]);
 
-  const canAccess = (permission?: string) => {
-    if (!permission) return true;
-    return can(permission);
+  const canAccess = (p?: string) => !p || can(p);
+  const getActive = (href: string) => {
+    if (!activePath) return false;
+    if (href === '/admin') return activePath === '/admin';
+    return activePath.startsWith(href);
   };
+  const handleNavClick = () => { if (isMobile) setIsOpen(false); };
 
-  const toggleGroup = (label: string) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      return next;
-    });
+  const handleLogout = async () => {
+    if (!confirm('Are you sure you want to logout?')) return;
+    clearPermissionCache();
+    try {
+      const r = await fetch('/api/auth/logout', { method: 'POST' });
+      if (r.ok) window.location.href = '/admin/login';
+    } catch { window.location.href = '/admin/login'; }
   };
 
   const navGroups: { label: string; items: NavItem[] }[] = [
     {
-      label: 'GENERAL',
+      label: 'General',
       items: [
-        {
-          href: '/admin',
-          icon: icons.LayoutDashboard,
-          label: 'Dashboard',
-          permissionsAny: [
-            'news_articles:read',
-            'matches:read',
-            'players:read',
-            'media:read',
-            'page_contents:read',
-            'teams:read',
-            'leagues:read',
-            'seasons:read',
-            'staff:read',
-            'roles:read',
-            'users:read',
-            'reports:read',
-            'notifications:read',
-            'game_rules:read',
-            'potw:read',
-            'sponsors:read',
-            'tournaments:read',
-            'audit_logs:read',
-            'audit_logs:manage',
-          ],
-        },
+        { href: '/admin', icon: icons.LayoutDashboard, label: 'Dashboard', permissionsAny: ['news_articles:read','matches:read','players:read','media:read','teams:read','leagues:read','staff:read','roles:read','users:read','audit_logs:read'] },
       ],
     },
     {
-      label: 'COMMUNICATION',
+      label: 'Communication',
       items: [
-        { href: '/admin/messages', icon: icons.MessageSquare, label: 'Messages', permission: 'contact_messages:read' },
-        { href: '/admin/subscribers', icon: icons.Mail, label: 'Subscribers', permission: 'subscribers:read' },
+        { href: '/admin/messages',    icon: icons.MessageSquare, label: 'Messages',    permission: 'contact_messages:read' },
+        { href: '/admin/subscribers', icon: icons.Mail,          label: 'Subscribers', permission: 'subscribers:read' },
       ],
     },
     {
-      label: 'COMPETITION',
+      label: 'Competition',
       items: [
-        { href: '/admin/leagues', icon: icons.Trophy, label: 'Leagues', permission: 'leagues:read' },
-        { href: '/admin/matches', icon: icons.Calendar, label: 'Matches', permission: 'matches:read' },
-        { href: '/admin/teams', icon: icons.Shield, label: 'Teams', permission: 'teams:read' },
+        { href: '/admin/leagues', icon: icons.Trophy,    label: 'Leagues', permission: 'leagues:read' },
+        { href: '/admin/matches', icon: icons.Calendar,  label: 'Matches', permission: 'matches:read' },
+        { href: '/admin/teams',   icon: icons.Shield,    label: 'Teams',   permission: 'teams:read' },
       ],
     },
     {
-      label: 'PERSONNEL',
+      label: 'Personnel',
       items: [
-        { href: '/admin/players', icon: icons.Users, label: 'Players', permission: 'players:read' },
-        { href: '/admin/staff', icon: icons.Briefcase, label: 'Staff', permission: 'staff:read' },
+        { href: '/admin/players', icon: icons.Users,     label: 'Players', permission: 'players:read' },
+        { href: '/admin/staff',   icon: icons.Briefcase, label: 'Staff',   permission: 'staff:read' },
       ],
     },
     {
-      label: 'EDITORIAL',
+      label: 'Editorial',
       items: [
-        { href: '/admin/news', icon: icons.Newspaper, label: 'News Articles', permission: 'news_articles:read' },
-        { href: '/admin/highlights/potw', icon: icons.Star, label: 'Player of the Week', permission: 'potw:read' },
-        { href: '/admin/highlights/sponsors', icon: icons.Handshake, label: 'Sponsors', permission: 'sponsors:read' },
+        { href: '/admin/news',                icon: icons.Newspaper, label: 'News Articles',      permission: 'news_articles:read' },
+        { href: '/admin/highlights/potw',     icon: icons.Star,      label: 'Player of the Week', permission: 'potw:read' },
+        { href: '/admin/highlights/sponsors', icon: icons.Handshake, label: 'Sponsors',           permission: 'sponsors:read' },
       ],
     },
     {
-      label: 'ASSETS',
+      label: 'Assets',
       items: [
         { href: '/admin/media', icon: icons.Images, label: 'Media Library', permission: 'media:read' },
       ],
     },
     {
-      label: 'SYSTEM',
+      label: 'System',
       items: [
-        { href: '/admin/users', icon: icons.Users, label: 'System Users', permission: 'users:read' },
-        { href: '/admin/roles', icon: icons.ShieldCheck, label: 'Roles & Permissions', permission: 'roles:read' },
-        {
-          href: '/admin/audit-logs',
-          icon: icons.FileText,
-          label: 'Audit Logs',
-          permissionsAny: ['audit_logs:read', 'audit_logs:manage'],
-        },
-        {
-          href: '/admin/settings',
-          icon: icons.Settings,
-          label: 'Site Settings',
-          permissionsAny: ['site_settings:read', 'site_settings:manage'],
-        },
+        { href: '/admin/users',      icon: icons.Users,       label: 'Users',               permission: 'users:read' },
+        { href: '/admin/roles',      icon: icons.ShieldCheck, label: 'Roles & Permissions', permission: 'roles:read' },
+        { href: '/admin/audit-logs', icon: icons.FileText,    label: 'Audit Logs',          permissionsAny: ['audit_logs:read','audit_logs:manage'] },
+        { href: '/admin/settings',   icon: icons.Settings,    label: 'Settings',            permissionsAny: ['site_settings:read','site_settings:manage'] },
       ],
     },
   ]
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => {
         if (item.permission && !canAccess(item.permission)) return false;
         if (item.permissionsAny?.length && !canAny(item.permissionsAny)) return false;
         if (item.permissionsAll?.length && !canAll(item.permissionsAll)) return false;
         return true;
       }),
     }))
-    .filter((group) => group.items.length > 0);
+    .filter((g) => g.items.length > 0);
 
-  const BasketballIcon = icons.Dribbble;
-  const ExternalLinkIcon = icons.ExternalLink;
-  const LogOutIcon = icons.LogOut;
-  const MenuIcon = icons.Menu;
-  const XIcon = icons.X;
-  const ChevronDownIcon = icons.ChevronDown;
-
-  const [activePath, setActivePath] = useState<string>('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setActivePath(window.location.pathname);
-    }
-  }, []);
-
-  const getActiveClass = (href: string) => {
-    if (!activePath) return false;
-    if (href === '/admin' && activePath === '/admin') return true;
-    if (href !== '/admin' && activePath.startsWith(href)) return true;
-    return false;
-  };
-
-  const handleLogout = async () => {
-    if (!confirm('Are you sure you want to logout?')) return;
-    clearPermissionCache();
-    try {
-      const response = await fetch('/api/auth/logout', { method: 'POST' });
-      if (response.ok) {
-        window.location.href = '/admin/login';
-      }
-    } catch {
-      window.location.href = '/admin/login';
-    }
-  };
-
-  const handleNavClick = () => {
-    if (isMobile) {
-      setIsOpen(false);
-    }
-  };
+  const { Dribbble: Ball, LogOut: LogOutIcon, ExternalLink: ExternalLinkIcon, Menu: MenuIcon, X: XIcon } = icons;
 
   return (
     <>
-      {/* Mobile Menu Toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          'mobile-menu-toggle',
-          'fixed top-4 left-4 z-[1001]',
-          'bg-[#1e293b] text-white hover:bg-[#1e293b]/90',
-          'md:hidden',
-          'shadow-lg'
-        )}
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="Toggle menu"
-        aria-expanded={isOpen}
-      >
-        {isOpen && XIcon ? <XIcon size={24} /> : MenuIcon ? <MenuIcon size={24} /> : '\u2630'}
-      </Button>
+      <style>{styles}</style>
 
-      {/* Mobile Overlay */}
-      {isOpen && isMobile && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[999] md:hidden"
-          onClick={() => setIsOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      {/* Mobile toggle */}
+      <button className="sb-toggle" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu" aria-expanded={isOpen}>
+        {isOpen && XIcon ? <XIcon size={18} /> : MenuIcon ? <MenuIcon size={18} /> : '☰'}
+      </button>
+
+      {/* Overlay */}
+      {isOpen && isMobile && <div className="sb-overlay" onClick={() => setIsOpen(false)} aria-hidden="true" />}
 
       {/* Sidebar */}
-      <aside
-        className={cn(
-          'admin-sidebar',
-          'fixed left-0 top-0 h-screen w-[260px]',
-          'bg-gradient-to-b from-[#0b1220] via-[#0f172a] to-[#111827]',
-          'flex flex-col',
-          'overflow-x-hidden',
-          'z-[1000] shadow-[0_24px_60px_rgba(2,6,23,0.45)] border-r border-white/10',
-          'transition-transform duration-300 ease-in-out',
-          'md:translate-x-0',
-          isMobile && !isOpen && '-translate-x-full',
-          isMobile && isOpen && 'translate-x-0'
-        )}
-      >
-        {/* Sidebar Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-white/10">
-          <a
-            href="/admin"
-            className="flex items-center !text-white no-underline hover:opacity-90 transition-opacity"
-            data-astro-prefetch
-          >
-            <span className="w-10 h-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center mr-3">
-              {BasketballIcon ? (
-                <BasketballIcon size={20} className="!text-primary" />
-              ) : (
-                <span className="w-5 h-5" />
-              )}
-            </span>
-            <span className="text-xl font-bold !text-white leading-none" style={tekoFont}>
-              Elevate CMS
-              <span className="block text-[0.6rem] tracking-[0.35em] text-white/40 mt-1">ADMIN</span>
-            </span>
-          </a>
-        </div>
+      <aside className={cn('sb', isMobile && !isOpen && 'hidden')} aria-label="Admin navigation">
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 scrollbar-hide" aria-label="Main navigation">
-          {navGroups.map((group) => {
-            const isCollapsed = collapsedGroups.has(group.label);
-            return (
-              <div key={group.label} className="mb-2 last:mb-0">
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.label)}
-                  className={cn(
-                    'w-full flex items-center justify-between px-4 py-2 mx-3 rounded-lg',
-                    'text-[0.65rem] font-semibold text-white/60 tracking-[0.35em] uppercase',
-                    'bg-white/5 border border-white/5',
-                    'hover:bg-white/10 hover:text-white/80 transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30',
-                    'bg-transparent border-0 cursor-pointer'
-                  )}
-                  aria-expanded={!isCollapsed}
-                  aria-controls={`nav-group-${group.label}`}
-                >
-                  <span>{group.label}</span>
-                  {ChevronDownIcon && (
-                    <ChevronDownIcon
-                      size={14}
-                      className={cn(
-                        'transition-transform duration-200 text-white/40',
-                        isCollapsed && '-rotate-90'
-                      )}
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
+        {/* Logo */}
+        <a href="/admin" className="sb-logo" data-astro-prefetch>
+          <span className="sb-logo-icon" aria-hidden="true">
+            {Ball ? <Ball size={16} style={{ color: 'var(--color-primary)' }} /> : null}
+          </span>
+          <span className="sb-logo-text">Elevate CMS</span>
+        </a>
 
-                <div
-                  id={`nav-group-${group.label}`}
-                  className={cn(
-                    'space-y-0.5 overflow-hidden transition-all duration-200',
-                    isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
-                  )}
-                >
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = getActiveClass(item.href);
-                    return (
-                      <a
-                        key={item.href}
-                        href={item.href}
-                        className={cn(
-                          'flex items-center px-4 py-2.5 !text-white no-underline mx-3 rounded-xl',
-                          'transition-all duration-200',
-                          'border border-transparent',
-                          'hover:bg-white/10 hover:border-white/10',
-                          isActive
-                            ? 'bg-white/10 border-white/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]'
-                            : '',
-                          'text-[0.9rem]'
-                        )}
-                        {...(isActive && { 'aria-current': 'page' as const })}
-                        aria-label={item.label}
-                        data-astro-prefetch
-                        onClick={handleNavClick}
-                      >
-                        <span className={cn(
-                          'w-9 h-9 rounded-lg flex items-center justify-center mr-3 flex-shrink-0',
-                          isActive ? 'bg-white/10' : 'bg-white/5'
-                        )}>
-                          {Icon ? (
-                            <Icon size={16} className="!text-white" aria-hidden="true" />
-                          ) : (
-                            <span className="w-4 h-4" aria-hidden="true" />
-                          )}
-                        </span>
-                        <span className="!text-white font-medium flex-1">{item.label}</span>
-                        {item.href === '/admin/messages' && unreadCount > 0 && (
-                          <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[0.65rem] font-bold flex items-center justify-center leading-none flex-shrink-0">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </span>
-                        )}
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+        {/* Nav */}
+        <nav className="sb-nav" aria-label="Main navigation">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <div className="sb-group-label">{group.label}</div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = getActive(item.href);
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={cn('sb-link', isActive && 'active')}
+                    {...(isActive && { 'aria-current': 'page' as const })}
+                    data-astro-prefetch
+                    onClick={handleNavClick}
+                  >
+                    <span className="sb-link-icon" aria-hidden="true">
+                      {Icon ? <Icon size={15} /> : <span style={{ width: 15, display: 'block' }} />}
+                    </span>
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {item.href === '/admin/messages' && unreadCount > 0 && (
+                      <span className="sb-badge" aria-label={`${unreadCount} unread`}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+                    )}
+                  </a>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="border-t border-white/10 py-4">
+        {/* Footer */}
+        <div className="sb-footer">
           {/* User info */}
-          <div className="px-5 py-3 mx-1 flex items-center gap-3 mb-2 rounded-xl bg-white/5 border border-white/10">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-sm font-semibold text-white flex-shrink-0">
-              {user?.name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-white/40 truncate">{roles[0] || 'Member'}</p>
+          <div className="sb-user-row">
+            <div className="sb-avatar" aria-hidden="true">{user?.name?.charAt(0)?.toUpperCase() || '?'}</div>
+            <div className="sb-user">
+              <div className="sb-user-name">{user?.name || 'User'}</div>
+              <div className="sb-user-role">{roles[0] || 'Member'}</div>
             </div>
           </div>
-
-          <a
-            href="/"
-            className={cn(
-              'flex items-center px-4 py-2.5 !text-white no-underline mx-3 rounded-xl',
-              'transition-all duration-200',
-              'border border-transparent hover:bg-white/10 hover:border-white/10',
-              'text-[0.85rem] font-medium'
-            )}
-            onClick={handleNavClick}
-          >
-            {ExternalLinkIcon ? (
-              <ExternalLinkIcon size={18} className="mr-3 flex-shrink-0 !text-white" />
-            ) : (
-              <span className="w-5 h-5 mr-3 flex-shrink-0" />
-            )}
-            <span className="!text-white">View Site</span>
-          </a>
-          <button
-            type="button"
-            onClick={handleLogout}
-            aria-label="Logout from admin panel"
-            className={cn(
-              'flex items-center px-4 py-2.5 !text-white w-full text-left mx-3 rounded-xl',
-              'transition-all duration-200',
-              'border border-transparent hover:bg-red-500/20 hover:border-red-500/30',
-              'text-[0.85rem] font-medium',
-              'bg-transparent border-0 cursor-pointer'
-            )}
-          >
-            {LogOutIcon ? (
-              <LogOutIcon size={18} className="mr-3 flex-shrink-0 !text-white" aria-hidden="true" />
-            ) : (
-              <span className="w-5 h-5 mr-3 flex-shrink-0" aria-hidden="true" />
-            )}
-            <span className="!text-white">Logout</span>
-          </button>
+          {/* Actions */}
+          <div className="sb-footer-actions">
+            <a href="/" className="sb-icon-btn" target="_blank" rel="noopener noreferrer" aria-label="View public site">
+              {ExternalLinkIcon && <ExternalLinkIcon size={13} />}
+              View Site
+            </a>
+            <button className="sb-icon-btn danger" onClick={handleLogout} aria-label="Logout">
+              {LogOutIcon && <LogOutIcon size={13} />}
+              Logout
+            </button>
+          </div>
         </div>
       </aside>
     </>
