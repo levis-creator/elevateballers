@@ -116,6 +116,7 @@ export const POST: APIRoute = async ({ request }) => {
                 email: newUser.email,
                 name: newUser.name,
                 setPasswordUrl,
+                expiresInMinutes: ttlMinutes,
             });
         } catch (emailError) {
             console.error('[users] Failed to send welcome email:', emailError);

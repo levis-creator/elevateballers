@@ -2,18 +2,26 @@ import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
 import { findUserByEmail } from '../../../features/cms/lib/auth';
-import { sendPasswordResetEmail } from '../../../lib/email';
+import { sendPasswordResetEmail, sendWelcomeSetPasswordEmail } from '../../../lib/email';
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
-const DEFAULT_TTL_MINUTES = 60;
+const DEFAULT_RESET_TTL_MINUTES = 60;
+const DEFAULT_INVITE_TTL_MINUTES = 1440;
 
-function getTtlMinutes(): number {
+function getResetTtlMinutes(): number {
   const raw = process.env.PASSWORD_RESET_TTL_MINUTES;
-  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_TTL_MINUTES;
-  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_TTL_MINUTES;
+  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_RESET_TTL_MINUTES;
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_RESET_TTL_MINUTES;
+  return parsed;
+}
+
+function getInviteTtlMinutes(): number {
+  const raw = process.env.INVITE_TTL_MINUTES;
+  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_INVITE_TTL_MINUTES;
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_INVITE_TTL_MINUTES;
   return parsed;
 }
 
@@ -60,7 +68,8 @@ export const POST: APIRoute = async ({ request }) => {
     if (user) {
       const token = crypto.randomBytes(32).toString('hex');
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-      const ttlMinutes = getTtlMinutes();
+      const isInvite = !user.activatedAt;
+      const ttlMinutes = isInvite ? getInviteTtlMinutes() : getResetTtlMinutes();
       const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
       await prisma.passwordResetToken.deleteMany({
@@ -78,18 +87,23 @@ export const POST: APIRoute = async ({ request }) => {
       const origin = new URL(request.url).origin;
       const resetUrl = `${origin}/admin/reset-password?token=${token}`;
 
-      try {
+      if (isInvite) {
+        await sendWelcomeSetPasswordEmail({
+          email: user.email,
+          name: user.name ?? user.email,
+          setPasswordUrl: resetUrl,
+          expiresInMinutes: ttlMinutes,
+        });
+      } else {
         await sendPasswordResetEmail({
           email: user.email,
           name: user.name,
           resetUrl,
           expiresInMinutes: ttlMinutes,
         });
-      } catch (emailError) {
-        console.error('Password reset email failed:', emailError);
       }
 
-      await logAudit(request, 'AUTH_PASSWORD_RESET_REQUESTED', {
+      await logAudit(request, isInvite ? 'AUTH_INVITATION_RESENT' : 'AUTH_PASSWORD_RESET_REQUESTED', {
         userId: user.id,
         email: user.email,
         ip,
@@ -106,7 +120,7 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (error) {
     console.error('Forgot password error:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to start password reset' }),
+      JSON.stringify({ error: 'Failed to process request' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
