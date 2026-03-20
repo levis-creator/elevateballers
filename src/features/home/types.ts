@@ -49,6 +49,7 @@ export interface NewsItem {
   id: number;
   title: string;
   date: string;
+  isoDate?: string;
   category: string;
   image: string;
   excerpt?: string;

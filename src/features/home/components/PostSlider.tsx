@@ -131,6 +131,7 @@ export default function PostSlider() {
       <div className="stm-post__slider container">
         <div className="stm-post__slides">
           <div className="stm-slide active">
+            <div className="stm-post__slider__image" style={{ backgroundImage: 'url(/images/default-slide.jpg)' }} />
             <div className="stm-post__slider__data container">
               <div className="row">
                 <div className="col-md-7 col-sm-6">

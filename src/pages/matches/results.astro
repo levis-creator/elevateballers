@@ -86,7 +86,7 @@ const pageUrl = `${Astro.url.origin}/matches/results`;
                     class="view-toggle"
                     style="text-align: center; margin-bottom: 40px;"
                   >
-                    <a href="/upcoming-fixtures" class="toggle-btn"
+                    <a href="/upcoming-fixtures" class="btn btn-dark"
                       >VIEW UPCOMING FIXTURES</a
                     >
                   </div>
@@ -123,76 +123,17 @@ const pageUrl = `${Astro.url.origin}/matches/results`;
 </Layout>
 
 <style is:inline type="text/css">
-  .heading-font {
-    font-size: 40px;
-    line-height: 44px;
-    margin-bottom: 20px;
+  /* Dark section background to complement the dark match cards */
+  #main {
+    background: #0f0e1a;
+  }
+
+  h2.heading-font {
     color: #dd3333 !important;
-  }
-
-  .view-toggle .toggle-btn {
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #333;
-    color: #fff;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: bold;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-  }
-
-  .view-toggle .toggle-btn:hover {
-    background-color: #dd3333;
   }
 
   .sp-template-event-list {
     margin-top: 20px;
     margin-bottom: 20px;
-  }
-
-  .sp-template-event-list table.sp-event-list.sp-data-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 5px;
-  }
-
-  .sp-template-event-list table.sp-event-list.sp-data-table thead {
-    background-color: #e21e22;
-    color: #fff;
-  }
-
-  .sp-template-event-list table.sp-event-list.sp-data-table thead th {
-    background-color: #e21e22;
-    color: #fff;
-    padding: 13px 7px;
-    text-align: center;
-    text-transform: uppercase;
-    font-weight: normal;
-  }
-
-  .sp-template-event-list table.sp-event-list.sp-data-table tbody tr td {
-    background-color: #fff;
-    padding: 15px 7px;
-    text-align: center;
-    vertical-align: middle;
-    border-bottom: 1px solid #eee;
-  }
-
-  .sp-template-event-list
-    table.sp-event-list.sp-data-table
-    tbody
-    tr:nth-child(odd)
-    td {
-    background-color: #f9f9f9;
-  }
-
-  .data-score div {
-    display: inline-block;
-    min-width: 80px;
-  }
-
-  .data-winner {
-    font-style: italic;
   }
 </style>

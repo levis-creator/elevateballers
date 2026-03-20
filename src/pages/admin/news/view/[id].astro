@@ -156,20 +156,24 @@ const categoryColor = getCategoryColor(category);
       align-items: center;
       gap: 0.5rem;
       padding: 0.75rem 1.5rem;
-      background: #667eea;
+      background: #dd3333;
       color: white;
       text-decoration: none;
       border-radius: 8px;
       font-weight: 600;
-      transition: all 0.2s;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .btn-primary-action:hover {
-      background: #5568d3;
+      background: #bb2222;
       color: white;
       text-decoration: none;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 10px 15px -3px rgba(221, 51, 51, 0.35);
+    }
+
+    .btn-primary-action:active {
+      transform: translateY(0);
     }
 
     .btn-secondary-action {
@@ -178,18 +182,18 @@ const categoryColor = getCategoryColor(category);
       gap: 0.5rem;
       padding: 0.75rem 1.5rem;
       background: white;
-      color: #64748b;
+      color: #374151;
       text-decoration: none;
       border-radius: 8px;
       font-weight: 600;
-      transition: all 0.2s;
-      border: 1px solid #e2e8f0;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid #d1d5db;
     }
 
     .btn-secondary-action:hover {
-      background: #f8fafc;
-      border-color: #cbd5e1;
-      color: #1e293b;
+      background: #f9fafb;
+      border-color: #9ca3af;
+      color: #111827;
       text-decoration: none;
     }
 
