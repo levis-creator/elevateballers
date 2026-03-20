@@ -6,12 +6,15 @@
 import type { Match, MatchStatus } from '@prisma/client';
 import type { MatchDisplay } from '../types';
 
+const MATCH_TIMEZONE = import.meta.env.PUBLIC_MATCH_TIMEZONE || 'Africa/Nairobi';
+
 /**
  * Format date for display
  */
 export function formatMatchDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', {
+    timeZone: MATCH_TIMEZONE,
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -24,6 +27,7 @@ export function formatMatchDate(date: Date | string): string {
 export function formatMatchTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleTimeString('en-US', {
+    timeZone: MATCH_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
@@ -36,6 +40,7 @@ export function formatMatchTime(date: Date | string): string {
 export function formatMatchDateTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString('en-US', {
+    timeZone: MATCH_TIMEZONE,
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -107,8 +112,23 @@ export function enhanceMatchForDisplay(match: Match): MatchDisplay {
 export function getRelativeTimeDescription(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
-  const diffMs = d.getTime() - now.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  const toDateInTz = (value: Date) => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: MATCH_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(value);
+    const year = Number(parts.find((p) => p.type === 'year')?.value ?? '0');
+    const month = Number(parts.find((p) => p.type === 'month')?.value ?? '1');
+    const day = Number(parts.find((p) => p.type === 'day')?.value ?? '1');
+    return new Date(year, month - 1, day);
+  };
+
+  const dTz = toDateInTz(d);
+  const nowTz = toDateInTz(now);
+  const diffDays = Math.round((dTz.getTime() - nowTz.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
     return 'Today';
@@ -122,4 +142,3 @@ export function getRelativeTimeDescription(date: Date | string): string {
     return `${Math.abs(diffDays)} days ago`;
   }
 }
-
