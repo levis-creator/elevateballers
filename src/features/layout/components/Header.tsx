@@ -56,7 +56,7 @@ export default function Header({
 
     const loadHeaderBackground = async () => {
       try {
-        const res = await fetch('/api/settings?category=appearance');
+        const res = await fetch('/api/settings/public?category=appearance');
         if (!res.ok) return;
 
         const settings = await res.json();
