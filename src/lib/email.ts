@@ -1,7 +1,9 @@
 import { Resend } from 'resend';
+import crypto from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { BrevoClient } from '@getbrevo/brevo';
 import { prisma } from './prisma';
+import { logAuditSystem } from '../features/cms/lib/audit';
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -23,6 +25,14 @@ const BREVO_FROM = process.env.BREVO_FROM || process.env.RESEND_FROM || 'Elevate
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'ElevateBallers';
 const SITE_URL = process.env.SITE_URL || 'https://elevateballers.com';
 const LOGO_URL = `${SITE_URL}/images/Elevate_Icon.png`;
+
+function hashValue(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function hashRecipients(recipients: string[]): string[] {
+  return recipients.map((recipient) => hashValue(recipient.toLowerCase().trim()));
+}
 
 function getBrevoClient() {
   const apiKey = process.env.BREVO_API_KEY;
@@ -55,11 +65,19 @@ async function sendTransactionalEmail(data: {
   html: string;
   replyTo?: string;
   from?: string;
+  audit?: {
+    type?: string;
+    template?: string;
+  };
 }): Promise<void> {
+  const recipients = Array.isArray(data.to) ? data.to : [data.to];
+  const traceId = crypto.randomUUID();
+  const eventId = crypto.randomUUID();
+  const startedAt = Date.now();
   const resend = getResend();
   if (resend) {
     try {
-      const { error } = await resend.emails.send({
+      const { error, data: resendData } = await resend.emails.send({
         from: data.from || FROM,
         to: data.to,
         replyTo: data.replyTo,
@@ -67,8 +85,30 @@ async function sendTransactionalEmail(data: {
         html: data.html,
       });
       if (error) throw new Error(error.message);
+      const durationMs = Date.now() - startedAt;
+      await logAuditSystem(data.audit?.type || 'EMAIL_SENT', {
+        provider: 'resend',
+        template: data.audit?.template ?? null,
+        toHash: hashRecipients(recipients),
+        subjectHash: hashValue(data.subject),
+        eventId,
+        traceId,
+        durationMs,
+        responseId: (resendData as any)?.id ?? null,
+      });
       return;
     } catch (error) {
+      const durationMs = Date.now() - startedAt;
+      await logAuditSystem('EMAIL_FAILED', {
+        provider: 'resend',
+        template: data.audit?.template ?? null,
+        toHash: hashRecipients(recipients),
+        subjectHash: hashValue(data.subject),
+        eventId,
+        traceId,
+        durationMs,
+        error: error instanceof Error ? error.message : String(error),
+      });
       console.warn('[email] Resend failed, falling back to SMTP:', error);
     }
   }
@@ -76,16 +116,53 @@ async function sendTransactionalEmail(data: {
   const transport = getSmtpTransport();
   if (!transport) {
     console.warn('[email] No transactional email provider configured.');
+    const durationMs = Date.now() - startedAt;
+    await logAuditSystem('EMAIL_FAILED', {
+      provider: 'smtp',
+      template: data.audit?.template ?? null,
+      toHash: hashRecipients(recipients),
+      subjectHash: hashValue(data.subject),
+      eventId,
+      traceId,
+      durationMs,
+      error: 'SMTP not configured',
+    });
     return;
   }
 
-  await transport.sendMail({
-    from: data.from || SMTP_FROM,
-    to: data.to,
-    subject: data.subject,
-    html: data.html,
-    replyTo: data.replyTo,
-  });
+  try {
+    const info = await transport.sendMail({
+      from: data.from || SMTP_FROM,
+      to: data.to,
+      subject: data.subject,
+      html: data.html,
+      replyTo: data.replyTo,
+    });
+    const durationMs = Date.now() - startedAt;
+    await logAuditSystem(data.audit?.type || 'EMAIL_SENT', {
+      provider: 'smtp',
+      template: data.audit?.template ?? null,
+      toHash: hashRecipients(recipients),
+      subjectHash: hashValue(data.subject),
+      eventId,
+      traceId,
+      durationMs,
+      responseId: info?.messageId ?? null,
+    });
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    await logAuditSystem('EMAIL_FAILED', {
+      provider: 'smtp',
+      template: data.audit?.template ?? null,
+      toHash: hashRecipients(recipients),
+      subjectHash: hashValue(data.subject),
+      eventId,
+      traceId,
+      durationMs,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }
 
 // Brand colors
@@ -374,6 +451,7 @@ export async function sendAdminNotificationEmail(data: {
     to: recipients,
     subject: data.title,
     html,
+    audit: { template: 'admin_notification', type: 'EMAIL_SENT' },
   });
   console.log(`[email] Admin notification sent to ${recipients.join(', ')}`);
 }
@@ -406,6 +484,7 @@ export async function sendContactNotification(data: {
     replyTo: data.email,
     subject: `New Contact Message: ${data.subject}`,
     html,
+    audit: { template: 'contact_notification' },
   });
   console.log(`[email] Contact notification sent to ${ADMIN_TO}`);
 }
@@ -431,6 +510,7 @@ export async function sendContactAutoReply(data: {
     to: data.email,
     subject: `We received your message: ${data.subject}`,
     html,
+    audit: { template: 'contact_auto_reply' },
   });
   console.log(`[email] Auto-reply sent to ${data.email}`);
 }
@@ -462,6 +542,7 @@ export async function sendPasswordResetEmail(data: {
     to: data.email,
     subject: 'Reset your ElevateBallers password',
     html,
+    audit: { template: 'password_reset' },
   });
   console.log(`[email] Password reset email sent to ${data.email}`);
 }
@@ -494,6 +575,7 @@ export async function sendEmailChangedAlert(data: {
     to: data.newEmail,
     subject: 'Your ElevateBallers login email has been updated',
     html,
+    audit: { template: 'email_changed_alert' },
   });
   console.log(`[email] Email change alert sent to ${data.newEmail} (was ${data.oldEmail})`);
 }
@@ -523,6 +605,7 @@ export async function sendWelcomeSetPasswordEmail(data: {
     to: data.email,
     subject: 'Welcome to ElevateBallers — Set your password',
     html,
+    audit: { template: 'welcome_set_password' },
   });
   console.log(`[email] Welcome set-password email sent to ${data.email}`);
 }
@@ -553,6 +636,7 @@ export async function sendLoginOtpEmail(data: {
     to: data.email,
     subject: 'Your ElevateBallers login code',
     html,
+    audit: { template: 'login_otp' },
   });
   console.log(`[email] Login OTP sent to ${data.email}`);
 }
@@ -587,6 +671,7 @@ export async function sendTeamRegistrationAutoReply(data: {
     to: data.email,
     subject: `We received your team registration: ${data.teamName}`,
     html,
+    audit: { template: 'team_registration_auto_reply' },
   });
   console.log(`[email] Team registration auto-reply sent to ${data.email}`);
 }
@@ -628,13 +713,40 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
 
   const senderEmail = BREVO_FROM?.match(/<(.+)>/)?.[1] || BREVO_FROM || 'info@elevateballers.com';
 
-  await brevo.transactionalEmails.sendTransacEmail({
-    sender: { name: BREVO_SENDER_NAME, email: senderEmail },
-    to: recipients.map((recipient) => ({ email: recipient })),
-    subject: `New team created (admin): ${data.teamName}`,
-    htmlContent: html,
-  });
-  console.log(`[email] Team admin auto-reply (Brevo) sent to ${recipients.join(', ')}`);
+  const traceId = crypto.randomUUID();
+  const eventId = crypto.randomUUID();
+  const startedAt = Date.now();
+  try {
+    await brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: BREVO_SENDER_NAME, email: senderEmail },
+      to: recipients.map((recipient) => ({ email: recipient })),
+      subject: `New team created (admin): ${data.teamName}`,
+      htmlContent: html,
+    });
+    const durationMs = Date.now() - startedAt;
+    await logAuditSystem('EMAIL_SENT', {
+      provider: 'brevo',
+      template: 'team_registration_admin_notify',
+      toHash: hashRecipients(recipients),
+      subjectHash: hashValue(`New team created (admin): ${data.teamName}`),
+      eventId,
+      traceId,
+      durationMs,
+    });
+    console.log(`[email] Team admin auto-reply (Brevo) sent to ${recipients.join(', ')}`);
+  } catch (error: any) {
+    await logAuditSystem('EMAIL_FAILED', {
+      provider: 'brevo',
+      template: 'team_registration_admin_notify',
+      toHash: hashRecipients(recipients),
+      subjectHash: hashValue(`New team created (admin): ${data.teamName}`),
+      eventId,
+      traceId,
+      durationMs: Date.now() - startedAt,
+      error: error?.message || String(error),
+    });
+    throw error;
+  }
 }
 
 export async function sendPlayerRegistrationAutoReply(data: {
@@ -666,6 +778,7 @@ export async function sendPlayerRegistrationAutoReply(data: {
     to: data.email,
     subject: 'We received your player registration',
     html,
+    audit: { template: 'player_registration_auto_reply' },
   });
   console.log(`[email] Player registration auto-reply sent to ${data.email}`);
 }
@@ -706,13 +819,40 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
 
   const senderEmail = BREVO_FROM?.match(/<(.+)>/)?.[1] || BREVO_FROM || 'info@elevateballers.com';
 
-  await brevo.transactionalEmails.sendTransacEmail({
-    sender: { name: BREVO_SENDER_NAME, email: senderEmail },
-    to: recipients.map((recipient) => ({ email: recipient })),
-    subject: `New player created (admin): ${data.name}`,
-    htmlContent: html,
-  });
-  console.log(`[email] Player admin auto-reply (Brevo) sent to ${recipients.join(', ')}`);
+  const traceId = crypto.randomUUID();
+  const eventId = crypto.randomUUID();
+  const startedAt = Date.now();
+  try {
+    await brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: BREVO_SENDER_NAME, email: senderEmail },
+      to: recipients.map((recipient) => ({ email: recipient })),
+      subject: `New player created (admin): ${data.name}`,
+      htmlContent: html,
+    });
+    const durationMs = Date.now() - startedAt;
+    await logAuditSystem('EMAIL_SENT', {
+      provider: 'brevo',
+      template: 'player_registration_admin_notify',
+      toHash: hashRecipients(recipients),
+      subjectHash: hashValue(`New player created (admin): ${data.name}`),
+      eventId,
+      traceId,
+      durationMs,
+    });
+    console.log(`[email] Player admin auto-reply (Brevo) sent to ${recipients.join(', ')}`);
+  } catch (error: any) {
+    await logAuditSystem('EMAIL_FAILED', {
+      provider: 'brevo',
+      template: 'player_registration_admin_notify',
+      toHash: hashRecipients(recipients),
+      subjectHash: hashValue(`New player created (admin): ${data.name}`),
+      eventId,
+      traceId,
+      durationMs: Date.now() - startedAt,
+      error: error?.message || String(error),
+    });
+    throw error;
+  }
 }
 
 // Article notifications use Brevo (campaign emails — no rate limits)
@@ -728,6 +868,8 @@ export async function sendArticleNotification(data: {
 
   let sent = 0, failed = 0;
 
+  const traceId = crypto.randomUUID();
+  const startedAt = Date.now();
   for (const subscriber of data.subscribers) {
     const unsubscribeUrl = `${SITE_URL}/unsubscribe?token=${subscriber.token}`;
     const greeting = subscriber.name ? `Hi ${subscriber.name},` : 'Hi there,';
@@ -757,10 +899,28 @@ export async function sendArticleNotification(data: {
       sent++;
     } catch (err: any) {
       console.error(`[email] Brevo failed for ${subscriber.email}:`, err.message);
+      await logAuditSystem('EMAIL_FAILED', {
+        provider: 'brevo',
+        template: 'article_notification',
+        toHash: hashRecipients([subscriber.email]),
+        subjectHash: hashValue(`New Article: ${data.article.title}`),
+        traceId,
+        error: err?.message || String(err),
+      });
       failed++;
     }
   }
 
+  const durationMs = Date.now() - startedAt;
+  await logAuditSystem('EMAIL_BULK_SENT', {
+    provider: 'brevo',
+    template: 'article_notification',
+    subjectHash: hashValue(`New Article: ${data.article.title}`),
+    traceId,
+    durationMs,
+    sent,
+    failed,
+  });
   console.log(`[email] Article notification via Brevo: ${sent} sent, ${failed} failed.`);
   return { sent, failed };
 }
@@ -802,6 +962,7 @@ export async function sendSubscriberWelcome(data: {
     to: data.email,
     subject: 'Welcome to ElevateBallers Email Alerts!',
     html,
+    audit: { template: 'subscriber_welcome' },
   });
   console.log(`[email] Welcome email sent to ${data.email}`);
 }
