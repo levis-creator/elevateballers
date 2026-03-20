@@ -125,7 +125,10 @@ function UserEditorForm({ userId }: UserEditorProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),
       });
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || 'Could not send the email. Please try again.');
+      }
       addToast({
         variant: 'success',
         title: activatedAt ? 'Reset Email Sent' : 'Invitation Sent',
@@ -133,11 +136,11 @@ function UserEditorForm({ userId }: UserEditorProps) {
           ? `A password reset link has been sent to ${formData.email}.`
           : `An invitation email has been resent to ${formData.email}.`,
       });
-    } catch {
+    } catch (err: any) {
       addToast({
         variant: 'error',
         title: 'Failed to Send',
-        description: 'Could not send the reset email. Please try again.',
+        description: err.message || 'Could not send the email. Please try again.',
       });
     } finally {
       setResetSending(false);
