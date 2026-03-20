@@ -44,6 +44,61 @@ const isDev = typeof window !== 'undefined' &&
 const log = isDev ? console.log : () => {};
 const logError = isDev ? console.error : () => {};
 const logWarn = isDev ? console.warn : () => {};
+const MATCH_TIMEZONE = import.meta.env.PUBLIC_MATCH_TIMEZONE || 'Africa/Nairobi';
+
+const getTimeZoneOffsetMinutes = (date: Date, timeZone: string): number => {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const parts = dtf.formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+  const asUTC = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour'),
+    get('minute'),
+    get('second')
+  );
+  return (asUTC - date.getTime()) / 60000;
+};
+
+const parseLocalDateTimeToUTC = (dateTimeLocal: string, timeZone: string): string => {
+  const [datePart, timePart = '00:00'] = dateTimeLocal.split('T');
+  const [year, month, day] = datePart.split('-').map((v) => Number(v));
+  const [hour, minute] = timePart.split(':').map((v) => Number(v));
+  const utcBaseMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const offsetMinutes = getTimeZoneOffsetMinutes(new Date(utcBaseMs), timeZone);
+  return new Date(utcBaseMs - offsetMinutes * 60000).toISOString();
+};
+
+const formatUTCToLocalInput = (value: Date | string, timeZone: string): string => {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const parts = dtf.formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00';
+  const year = get('year');
+  const month = get('month');
+  const day = get('day');
+  const hour = get('hour');
+  const minute = get('minute');
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+};
 
 interface MatchEditorProps {
   matchId?: string;
@@ -129,7 +184,7 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
         leagueId: leagueId,
         league: '',
         seasonId: seasonId,
-        date: new Date(match.date).toISOString().slice(0, 16),
+        date: formatUTCToLocalInput(match.date, MATCH_TIMEZONE),
         team1Score: match.team1Score?.toString() || '',
         team2Score: match.team2Score?.toString() || '',
         status: match.status,
@@ -368,7 +423,7 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
     if (!formData.date) {
       errors.push('Date & Time is required');
     } else {
-      const matchDate = new Date(formData.date);
+      const matchDate = new Date(parseLocalDateTimeToUTC(formData.date, MATCH_TIMEZONE));
       const now = new Date();
       if (matchDate < now && formData.status === 'UPCOMING') {
         errors.push('Upcoming matches must be scheduled in the future');
@@ -431,7 +486,7 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
         team2Name?: string;
         team2Logo?: string;
       } = {
-        date: formData.date,
+        date: parseLocalDateTimeToUTC(formData.date, MATCH_TIMEZONE),
         status: formData.status,
         stage: (formData.stage as MatchStage) || null,
         team1Score: formData.team1Score ? Number.parseInt(formData.team1Score, 10) : null,
