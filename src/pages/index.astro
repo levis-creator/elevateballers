@@ -22,7 +22,52 @@ import PageLoader from "../components/PageLoader";
 <Layout
   title="Elevate Basketball - Premier Basketball League & Community"
   description="Experience the thrill of elite basketball with Elevate. Join our premier league, track live standings, discover rising stars, and be part of the most dynamic basketball community."
+  canonicalURL={`${Astro.url.origin}/`}
+  type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${Astro.url.origin}/`,
+          url: `${Astro.url.origin}/`,
+          name: "Elevate Basketball - Premier Basketball League & Community",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Experience the thrill of elite basketball with Elevate. Join our premier league, track live standings, discover rising stars, and be part of the most dynamic basketball community.",
+          breadcrumb: { "@id": `${Astro.url.origin}/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/#breadcrumb`,
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: `${Astro.url.origin}/` },
+          ],
+        },
+        {
+          "@type": "SportsOrganization",
+          "@id": `${Astro.url.origin}/#organization`,
+          name: "Elevate Ballers",
+          url: `${Astro.url.origin}/`,
+          sport: "Basketball",
+          description:
+            "Premier basketball league providing high-quality competition, player development, and community engagement.",
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "Pepo Lane, off Dagoretti Road",
+            addressCountry: "KE",
+          },
+          email: "ballers@elevateballers.com",
+          logo: `${Astro.url.origin}/images/Elevate_Icon-200x200.png`,
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <a href="#main-content" class="skip-link">Skip to main content</a>
 

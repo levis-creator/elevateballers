@@ -52,6 +52,50 @@ const pageUrl = `${Astro.url.origin}/matches/${id}/images`;
   canonicalURL={pageUrl}
   type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "ImageGallery",
+          "@id": pageUrl,
+          url: pageUrl,
+          name: pageTitle,
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description: pageDescription,
+          breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Results",
+              item: `${Astro.url.origin}/matches/results`,
+            },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: `${team1Name} vs ${team2Name}`,
+              item: `${Astro.url.origin}/matches/${id}`,
+            },
+            { "@type": "ListItem", position: 4, name: "Photos" },
+          ],
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />

@@ -62,6 +62,13 @@ const robots = hasFilters ? "noindex,follow" : undefined;
 const schemaUrl = hasFilters ? canonicalURL : pageUrl;
 const startItem = totalCount === 0 ? 0 : (currentPageRes - 1) * PER_PAGE + 1;
 const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
+// Pagination rel links (only for pure page navigation, not search)
+const prevURL = !searchQuery && currentPageRes > 1
+    ? teamsPageUrl(currentPageRes - 1, "")
+    : undefined;
+const nextURL = !searchQuery && currentPageRes < totalPages
+    ? teamsPageUrl(currentPageRes + 1, "")
+    : undefined;
 ---
 
 <Layout
@@ -70,6 +77,8 @@ const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
     canonicalURL={canonicalURL}
     type="website"
     robots={robots}
+    prevURL={prevURL}
+    nextURL={nextURL}
 >
 
     <script

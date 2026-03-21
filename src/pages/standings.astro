@@ -28,7 +28,42 @@ try {
 <Layout
   title="League Standings - Elevate Basketball"
   description="Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions."
+  canonicalURL={`${Astro.url.origin}/standings/`}
+  type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${Astro.url.origin}/standings/`,
+          url: `${Astro.url.origin}/standings/`,
+          name: "League Standings - Elevate Basketball",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions.",
+          breadcrumb: { "@id": `${Astro.url.origin}/standings/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/standings/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "Standings" },
+          ],
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />

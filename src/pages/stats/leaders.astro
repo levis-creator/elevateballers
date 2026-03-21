@@ -80,6 +80,38 @@ const pageUrl = `${Astro.url.origin}/stats/leaders`;
     canonicalURL={pageUrl}
     type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": pageUrl,
+          url: pageUrl,
+          name: pageTitle,
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description: pageDescription,
+          breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "Stat Leaders" },
+          ],
+        },
+      ],
+    })}
+  />
     <div id="wrapper">
         {isFeatureEnabled("layout.topbar") && <TopBar />}
         {

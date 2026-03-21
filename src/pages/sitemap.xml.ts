@@ -20,21 +20,22 @@ export const GET: APIRoute = async ({ site }) => {
             getPublicStaff(),
         ]);
 
+        const now = new Date().toISOString();
         const staticPages = [
-            '',
-            '/about-club',
-            '/rules',
-            '/standings',
-            '/upcoming-fixtures',
-            '/league-registration',
-            '/tournaments',
-            '/contacts',
-            '/players',
-            '/teams',
-            '/staff',
-            '/news',
-            '/matches/results',
-            '/stats/leaders',
+            { path: '',                  priority: '1.0', freq: 'daily'   },
+            { path: '/news',             priority: '0.9', freq: 'daily'   },
+            { path: '/standings',        priority: '0.8', freq: 'daily'   },
+            { path: '/upcoming-fixtures',priority: '0.8', freq: 'daily'   },
+            { path: '/matches/results',  priority: '0.8', freq: 'weekly'  },
+            { path: '/players',          priority: '0.7', freq: 'weekly'  },
+            { path: '/teams',            priority: '0.7', freq: 'weekly'  },
+            { path: '/stats/leaders',    priority: '0.7', freq: 'weekly'  },
+            { path: '/tournaments',      priority: '0.6', freq: 'weekly'  },
+            { path: '/about-club',       priority: '0.5', freq: 'monthly' },
+            { path: '/contacts',         priority: '0.5', freq: 'monthly' },
+            { path: '/rules',            priority: '0.5', freq: 'monthly' },
+            { path: '/league-registration', priority: '0.5', freq: 'monthly' },
+            { path: '/staff',            priority: '0.4', freq: 'monthly' },
         ];
 
         // This sitemap is dynamic because:
@@ -48,11 +49,12 @@ export const GET: APIRoute = async ({ site }) => {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${staticPages
                 .map(
-                    (page) => `
+                    ({ path, priority, freq }) => `
   <url>
-    <loc>${baseUrl}${page}</loc>
-    <changefreq>weekly</changefreq>
-    <priority>${page === '' ? '1.0' : '0.8'}</priority>
+    <loc>${baseUrl}${path}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>${freq}</changefreq>
+    <priority>${priority}</priority>
   </url>`
                 )
                 .join('')}

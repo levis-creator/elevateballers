@@ -15,15 +15,49 @@ try {
 }
 
 const pageTitle = "Staff Directory - Elevate Ballers";
-const pageDescription = "Meet the staff and coaches of Elevate Ballers.";
-const pageUrl = `${Astro.url.origin}/staff`;
+const pageDescription =
+  "Meet the coaches and staff powering Elevate Ballers — the dedicated team driving player development and league operations.";
+const pageUrl = `${Astro.url.origin}/staff/`;
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
   canonicalURL={pageUrl}
+  type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": ["WebPage", "CollectionPage"],
+          "@id": pageUrl,
+          url: pageUrl,
+          name: pageTitle,
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description: pageDescription,
+          breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "Staff" },
+          ],
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />

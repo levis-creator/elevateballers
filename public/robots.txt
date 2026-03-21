@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /unauthorized
+Disallow: /unsubscribe
 
 Sitemap: https://elevateballers.com/sitemap.xml

@@ -38,7 +38,58 @@ const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => 
 <Layout
   title="About Elevate - Our Mission, Vision & Basketball Community"
   description="Learn about Elevate Ballers, our mission to elevate the game of basketball, and the inclusive community we've built for players of all skill levels."
+  canonicalURL={`${Astro.url.origin}/about-club/`}
+  type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "AboutPage",
+          "@id": `${Astro.url.origin}/about-club/`,
+          url: `${Astro.url.origin}/about-club/`,
+          name: "About Elevate - Our Mission, Vision & Basketball Community",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Learn about Elevate Ballers, our mission to elevate the game of basketball, and the inclusive community we've built for players of all skill levels.",
+          about: { "@id": `${Astro.url.origin}/#organization` },
+          breadcrumb: { "@id": `${Astro.url.origin}/about-club/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/about-club/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "About" },
+          ],
+        },
+        {
+          "@type": "SportsOrganization",
+          "@id": `${Astro.url.origin}/#organization`,
+          name: "Elevate Ballers",
+          url: `${Astro.url.origin}/`,
+          sport: "Basketball",
+          description:
+            "Premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement.",
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "Pepo Lane, off Dagoretti Road",
+            addressCountry: "KE",
+          },
+          email: "ballers@elevateballers.com",
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
