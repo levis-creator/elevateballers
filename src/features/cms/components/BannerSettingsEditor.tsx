@@ -15,6 +15,33 @@ interface SiteSetting {
   category: string | null;
 }
 
+/** Appends/replaces a ?v=<timestamp> query param to bust the browser cache. */
+function withCacheBuster(url: string): string {
+  if (!url) return url;
+  try {
+    const isAbsolute = /^https?:\/\//.test(url);
+    const u = new URL(url, isAbsolute ? undefined : 'http://x');
+    u.searchParams.set('v', String(Date.now()));
+    return isAbsolute ? u.toString() : u.pathname + u.search;
+  } catch {
+    return url;
+  }
+}
+
+/** Strips the ?v= cache-buster for display purposes. */
+function stripCacheBuster(url: string): string {
+  if (!url) return url;
+  try {
+    const isAbsolute = /^https?:\/\//.test(url);
+    const u = new URL(url, isAbsolute ? undefined : 'http://x');
+    u.searchParams.delete('v');
+    const search = u.search; // empty string if no params remain
+    return isAbsolute ? u.toString() : u.pathname + search;
+  } catch {
+    return url;
+  }
+}
+
 export default function BannerSettingsEditor() {
   const { can } = usePermissions();
   const canManageSettings = can('site_settings:manage');
@@ -72,7 +99,7 @@ export default function BannerSettingsEditor() {
     }
     setSaving(true);
     try {
-      await saveSetting('header_banner_image_url', headerImageUrl, 'Header Background Image URL', 'text');
+      await saveSetting('header_banner_image_url', withCacheBuster(headerImageUrl), 'Header Background Image URL', 'text');
       alert('Settings saved successfully!');
       fetchSettings();
     } catch (error) {
@@ -135,7 +162,7 @@ export default function BannerSettingsEditor() {
             {headerImageUrl ? (
               <div className="space-y-1">
                 <span className="text-xs text-gray-500">Current path</span>
-                <p className="text-xs font-mono bg-gray-50 border rounded px-2 py-1.5 break-all text-gray-600">{headerImageUrl}</p>
+                <p className="text-xs font-mono bg-gray-50 border rounded px-2 py-1.5 break-all text-gray-600">{stripCacheBuster(headerImageUrl)}</p>
               </div>
             ) : (
               <p className="text-xs text-gray-400">No image selected — the default banner will be used as a fallback.</p>
@@ -148,7 +175,7 @@ export default function BannerSettingsEditor() {
           <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400 block">Preview</Label>
           {headerImageUrl ? (
             <div className="aspect-video w-full rounded-lg border overflow-hidden bg-gray-100">
-              <img src={headerImageUrl} alt="Header Background" className="w-full h-full object-cover" />
+              <img src={stripCacheBuster(headerImageUrl)} alt="Header Background" className="w-full h-full object-cover" />
             </div>
           ) : (
             <div className="aspect-video w-full rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 text-gray-400">
