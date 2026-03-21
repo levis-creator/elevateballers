@@ -86,7 +86,42 @@ const mockMatches = [
 <Layout
     title="Tournament Brackets - Elevate Basketball Playoffs"
     description="Follow the path to the championship! View live tournament brackets, match results, and playoff schedules for Elevate Basketball."
+    canonicalURL={`${Astro.url.origin}/tournaments/`}
+    type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${Astro.url.origin}/tournaments/`,
+          url: `${Astro.url.origin}/tournaments/`,
+          name: "Tournament Brackets - Elevate Basketball Playoffs",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Follow the path to the championship! View live tournament brackets, match results, and playoff schedules for Elevate Basketball.",
+          breadcrumb: { "@id": `${Astro.url.origin}/tournaments/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/tournaments/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "Tournaments" },
+          ],
+        },
+      ],
+    })}
+  />
     <PageLoader client:load />
     <div id="wrapper">
         <TopBar />

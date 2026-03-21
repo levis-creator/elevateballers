@@ -6,6 +6,10 @@ export interface Props {
 	canonicalURL?: string;
 	type?: string;
 	robots?: string;
+	publishedTime?: string;
+	modifiedTime?: string;
+	prevURL?: string;
+	nextURL?: string;
 }
 
 const siteName = "Elevate Ballers";
@@ -18,6 +22,10 @@ const {
 	canonicalURL = Astro.props.canonicalURL || new URL(Astro.url.pathname, siteUrl).toString(),
 	type = "website",
 	robots = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+	publishedTime,
+	modifiedTime,
+	prevURL,
+	nextURL,
 } = Astro.props;
 
 // Use the icon as the default OG image if not specified
@@ -34,14 +42,24 @@ const ogImage = image.startsWith("http")
 <meta name="title" content={title} />
 <meta name="description" content={description} />
 <link rel="canonical" href={canonicalURL} />
+{prevURL && <link rel="prev" href={prevURL} />}
+{nextURL && <link rel="next" href={nextURL} />}
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content={type} />
+<meta property="og:locale" content="en_US" />
 <meta property="og:url" content={canonicalURL} />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={ogImage} />
+<meta property="og:image:alt" content={title} />
 <meta property="og:site_name" content={siteName} />
+{type === "article" && publishedTime && (
+	<meta property="article:published_time" content={publishedTime} />
+)}
+{type === "article" && modifiedTime && (
+	<meta property="article:modified_time" content={modifiedTime} />
+)}
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
@@ -49,6 +67,7 @@ const ogImage = image.startsWith("http")
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={ogImage} />
+<meta name="twitter:image:alt" content={title} />
 
 <!-- JSON-LD -->
 <script

@@ -43,7 +43,41 @@ const pdfEmbedUrl = normalizedPdfUrl
 <Layout
   title={`${rulesTitle} | Elevate Ballers`}
   description={rulesIntro}
+  canonicalURL={`${Astro.url.origin}/rules/`}
+  type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${Astro.url.origin}/rules/`,
+          url: `${Astro.url.origin}/rules/`,
+          name: `${rulesTitle} | Elevate Ballers`,
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description: rulesIntro,
+          breadcrumb: { "@id": `${Astro.url.origin}/rules/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/rules/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "Rules" },
+          ],
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
 
   <div id="wrapper">

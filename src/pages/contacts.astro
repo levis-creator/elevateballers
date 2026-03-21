@@ -63,7 +63,58 @@ try {
 <Layout
   title="Contact Us - Elevate Basketball"
   description={contactDescription}
+  canonicalURL={`${Astro.url.origin}/contacts/`}
+  type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "ContactPage",
+          "@id": `${Astro.url.origin}/contacts/`,
+          url: `${Astro.url.origin}/contacts/`,
+          name: "Contact Us - Elevate Basketball",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description: contactDescription,
+          breadcrumb: { "@id": `${Astro.url.origin}/contacts/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/contacts/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "Contact" },
+          ],
+        },
+        {
+          "@type": "SportsOrganization",
+          "@id": `${Astro.url.origin}/#organization`,
+          name: "Elevate Ballers",
+          url: `${Astro.url.origin}/`,
+          sport: "Basketball",
+          ...(contact.address && {
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: contact.address,
+              addressCountry: "KE",
+            },
+          }),
+          ...(contact.phone && { telephone: contact.phone }),
+          ...(contact.email && { email: contact.email }),
+          ...(contact.hours && { openingHours: contact.hours }),
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />

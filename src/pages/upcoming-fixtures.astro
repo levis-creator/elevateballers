@@ -35,7 +35,48 @@ try {
 <Layout
   title="Upcoming Fixtures - Elevate Basketball Schedule"
   description="Never miss a game! View the complete schedule of upcoming basketball matches, venues, and tip-off times for the Elevate Basketball league."
+  canonicalURL={`${Astro.url.origin}/upcoming-fixtures/`}
+  type="website"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${Astro.url.origin}/upcoming-fixtures/`,
+          url: `${Astro.url.origin}/upcoming-fixtures/`,
+          name: "Upcoming Fixtures - Elevate Basketball Schedule",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Never miss a game! View the complete schedule of upcoming basketball matches, venues, and tip-off times for the Elevate Basketball league.",
+          breadcrumb: {
+            "@id": `${Astro.url.origin}/upcoming-fixtures/#breadcrumb`,
+          },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/upcoming-fixtures/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Upcoming Fixtures",
+            },
+          ],
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
