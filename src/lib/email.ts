@@ -856,6 +856,69 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
   }
 }
 
+export async function sendTeamApprovedEmail(data: {
+  coachName: string;
+  email: string;
+  teamName: string;
+}): Promise<void> {
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Approved!</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.coachName},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      Great news! Your team <strong>${data.teamName}</strong> has been approved and is now officially registered with ElevateBallers.
+    </p>
+    <p style="margin:0;font-size:15px;color:${C.text};line-height:1.7;">
+      You can now access your team dashboard and manage your roster.
+    </p>
+    <p style="margin:16px 0 0;font-size:15px;color:${C.text};line-height:1.7;">
+      Best regards,<br /><strong>ElevateBallers Team</strong>
+    </p>
+    ${btn('Visit Website', SITE_URL)}
+  `);
+
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: `Your team ${data.teamName} has been approved!`,
+    html,
+    audit: { template: 'team_approved' },
+  });
+  console.log(`[email] Team approved email sent to ${data.email}`);
+}
+
+export async function sendPlayerApprovedEmail(data: {
+  name: string;
+  email: string;
+  teamName?: string | null;
+}): Promise<void> {
+  const teamLine = data.teamName
+    ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Team: <strong>${data.teamName}</strong></p>`
+    : '';
+
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Player Registration Approved!</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      Congratulations! Your player registration has been approved and you are now officially part of ElevateBallers.
+    </p>
+    ${teamLine}
+    <p style="margin:0;font-size:15px;color:${C.text};line-height:1.7;">
+      Welcome to the league — we look forward to seeing you on the court!
+    </p>
+    <p style="margin:16px 0 0;font-size:15px;color:${C.text};line-height:1.7;">
+      Best regards,<br /><strong>ElevateBallers Team</strong>
+    </p>
+    ${btn('Visit Website', SITE_URL)}
+  `);
+
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: 'Your player registration has been approved!',
+    html,
+    audit: { template: 'player_approved' },
+  });
+  console.log(`[email] Player approved email sent to ${data.email}`);
+}
+
 // Article notifications use Brevo (campaign emails — no rate limits)
 export async function sendArticleNotification(data: {
   subscribers: { email: string; name: string | null; token: string }[];
