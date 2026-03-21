@@ -4,6 +4,7 @@ import { assignStaffToTeam, removeStaffFromTeam, updateTeamStaff } from '../../.
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
@@ -15,10 +16,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error) {
     console.error('Error fetching team staff:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch team staff' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch team staff");
   }
 };
 
@@ -60,15 +58,8 @@ export const POST: APIRoute = async ({ params, request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error assigning staff to team:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to assign staff to team' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'assign staff to team', request);
   }
 };
 
@@ -103,15 +94,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(teamStaff), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating team staff:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update team staff' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update team staff', request);
   }
 };
 
@@ -131,8 +115,8 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     const success = await removeStaffFromTeam(teamStaffId);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to remove staff from team' }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: 'Team staff assignment not found' }), {
+        status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -143,14 +127,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error removing staff from team:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to remove staff from team' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'remove staff from team', request);
   }
 };

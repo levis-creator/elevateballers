@@ -3,6 +3,7 @@ import { getLeagueById } from '../../../features/cms/lib/queries';
 import { updateLeague, deleteLeague } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -17,20 +18,11 @@ export const GET: APIRoute = async ({ params }) => {
       });
     }
 
-    await logAudit(request, 'LEAGUE_UPDATED', {
-      leagueId: league.id,
-      name: league.name,
-    });
-
     return new Response(JSON.stringify(league), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching league:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch league' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch league');
   }
 };
 
@@ -59,15 +51,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(league), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating league:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update league' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update league', request);
   }
 };
 
@@ -88,14 +73,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting league:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete league' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete league', request);
   }
 };

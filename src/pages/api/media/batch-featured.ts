@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -144,18 +145,7 @@ export const PUT: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error updating featured status:', error);
-    return new Response(
-      JSON.stringify({
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden')
-          ? 'Unauthorized'
-          : error.message || 'Failed to update featured status',
-      }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update featured status', request);
   }
 };

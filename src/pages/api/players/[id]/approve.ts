@@ -3,6 +3,7 @@ import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
 import { logAudit } from '../../../../features/cms/lib/audit';
 import { sendPlayerApprovedEmail } from '../../../../lib/email';
+import { handleApiError } from '../../../../lib/apiError';
 
 export const prerender = false;
 
@@ -53,14 +54,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error approving player:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to approve player' }),
-      {
-        status: error.message === 'Unauthorized' || error.message === 'Forbidden: Admin access required' ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'approve player', request);
   }
 };

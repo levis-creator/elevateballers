@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '../types';
+import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 
 export default function UserProfile() {
   const [loading, setLoading] = useState(true);
@@ -240,6 +241,7 @@ export default function UserProfile() {
                 onChange={handleChange}
                 placeholder="Leave blank to keep current password"
               />
+              <PasswordStrengthMeter password={formData.password} />
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 p-6 flex justify-end">

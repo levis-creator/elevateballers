@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requireAuth } from '../../../../features/cms/lib/auth';
 import { generateMatchStatSheetPDF } from '../../../../features/reports/lib/matchStatSheet';
+import { handleApiError } from '../../../../lib/apiError';
 
 export const prerender = false;
 
@@ -28,18 +29,18 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     const message = error?.message || 'Failed to generate stat sheet';
-    const status =
-      message === 'Match not found'
-        ? 404
-        : message === 'Unauthorized'
-          ? 401
-          : message === 'Stat sheet is only available for completed matches'
-            ? 400
-            : 500;
-
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    if (message === 'Match not found') {
+      return new Response(JSON.stringify({ error: message }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (message === 'Stat sheet is only available for completed matches') {
+      return new Response(JSON.stringify({ error: message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return handleApiError(error, 'generate stat sheet', request);
   }
 };

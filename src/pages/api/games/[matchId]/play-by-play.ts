@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getPlayByPlay } from '../../../../features/game-tracking/lib/queries';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -24,9 +25,6 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching play-by-play:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch play-by-play' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch play-by-play");
   }
 };

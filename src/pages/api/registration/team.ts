@@ -3,6 +3,7 @@ import { createTeam, createStaff, assignStaffToTeam } from '../../../features/cm
 import { prisma } from '../../../lib/prisma';
 import { sendTeamRegistrationAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -243,14 +244,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating team registration:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to submit team registration' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'submit team registration', request);
   }
 };

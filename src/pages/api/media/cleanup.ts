@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { fileExists } from '../../../lib/file-storage';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -67,18 +68,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error cleaning up orphaned media:', error);
-    return new Response(
-      JSON.stringify({
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden')
-          ? 'Unauthorized'
-          : error.message || 'Failed to cleanup orphaned media',
-      }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'cleanup orphaned media', request);
   }
 };

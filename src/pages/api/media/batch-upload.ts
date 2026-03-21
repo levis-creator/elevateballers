@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { saveFile, sanitizeFolderName } from '../../../lib/file-storage';
 import { compressImage, shouldCompress } from '../../../lib/image-compression';
 import { getFolderByName } from '../../../lib/folder-access';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -213,18 +214,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error in batch upload:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden') 
-          ? 'Unauthorized' 
-          : error.message || 'Failed to upload files' 
-      }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'batch upload files', request);
   }
 };

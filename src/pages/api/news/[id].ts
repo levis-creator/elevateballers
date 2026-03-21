@@ -4,6 +4,7 @@ import { updateNewsArticle, deleteNewsArticle, generateSlug } from '../../../fea
 import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap } from '../../../features/cms/types';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -23,11 +24,7 @@ export const GET: APIRoute = async ({ params }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching news article:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch article' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch article', request);
   }
 };
 
@@ -87,15 +84,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(article), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating news article:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update article' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update article', request);
   }
 };
 
@@ -117,14 +107,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }).catch(() => {});
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting news article:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete article' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete article', request);
   }
 };

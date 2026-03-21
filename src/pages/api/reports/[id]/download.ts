@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getReportGeneration } from '../../../../features/reports/lib/queries';
 import { requirePermission } from '../../../../features/rbac/middleware';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -58,9 +59,6 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error downloading report:', error);
-    return new Response(JSON.stringify({ error: 'Failed to download report' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "download report");
   }
 };

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getPlayerTeamHistory } from '../../../../features/player/lib/queries';
 import { requirePermission } from '../../../../features/rbac/middleware';
+import { handleApiError } from '../../../../lib/apiError';
 
 export const prerender = false;
 
@@ -22,11 +23,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error fetching player team history:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch team history' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch player team history', request);
   }
 };

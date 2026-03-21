@@ -7,15 +7,9 @@ import {
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError, json } from '../../../lib/apiError';
 
 export const prerender = false;
-
-function json(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -31,6 +25,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!code || typeof code !== 'string' || !/^\d{6}$/.test(code.trim())) {
       return json({ error: 'A 6-digit verification code is required' }, 400);
     }
+
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+      request.headers.get('x-real-ip') ??
+      'unknown';
 
     const otpSessionToken = cookies.get('otp-session')?.value;
     if (!otpSessionToken) {
@@ -54,6 +53,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const valid = await verifyOtpForUser(session.userId, code.trim());
     if (!valid) {
+      await prisma.loginEvent.create({
+        data: {
+          userId: session.userId,
+          email: '',
+          success: false,
+          ipAddress: ip,
+          userAgent: request.headers.get('user-agent') ?? undefined,
+        },
+      });
       return json({ error: 'Invalid or expired verification code.' }, 401);
     }
 
@@ -70,11 +78,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!userWithRoles.active) {
       return json({ error: 'Invalid credentials' }, 401);
     }
-
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-      request.headers.get('x-real-ip') ??
-      'unknown';
 
     await prisma.loginEvent.create({
       data: {
@@ -102,7 +105,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const cookieOptions = {
       httpOnly: true,
       secure: isSecure,
-      sameSite: 'lax' as const,
+      sameSite: 'strict' as const,
       path: '/',
     };
 
@@ -131,11 +134,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       200
     );
   } catch (error) {
-    console.error('Verify OTP error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return json(
-      { error: 'Verification failed', details: process.env.NODE_ENV === 'development' ? msg : undefined },
-      500
-    );
+    return handleApiError(error, 'verify OTP', request);
   }
 };

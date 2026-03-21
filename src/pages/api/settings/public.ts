@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getAllSiteSettings } from '../../../features/cms/lib/queries';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 const PUBLIC_CATEGORIES = new Set(['appearance']);
@@ -27,9 +28,6 @@ export const GET: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     console.error('Error fetching public settings:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch settings' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch settings");
   }
 };

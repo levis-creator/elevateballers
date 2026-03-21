@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getPlayerPlayingTime, getTotalPlayingTime } from '../../../../features/game-tracking/lib/playingTime';
+import { handleApiError } from '../../../../lib/apiError';
 
 export const prerender = false;
 
@@ -43,12 +44,8 @@ export const GET: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error fetching playing time:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch playing time' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch playing time', request);
   }
 };
 

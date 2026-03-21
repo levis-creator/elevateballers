@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
+import { invalidatePermissionCache } from '../../../../features/rbac/permissions';
 import { prisma } from '../../../../lib/prisma';
 import { getUserIdFromRequest, writeAuditLog } from '../../../../features/cms/lib/auth';
+import { json, handleApiError } from '../../../../lib/apiError';
 
 export const prerender = false;
 
@@ -56,27 +58,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       }
     );
   } catch (error) {
-    console.error('Get role permissions error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to fetch permissions' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch role permissions', request);
   }
 };
 
@@ -168,6 +150,16 @@ export const PUT: APIRoute = async ({ params, request }) => {
       },
     });
 
+    // Invalidate the permission cache for every user that holds this role,
+    // so the updated permissions take effect on their next request.
+    const affectedUserRoles = await prisma.userRole.findMany({
+      where: { roleId: id },
+      select: { userId: true },
+    });
+    for (const { userId } of affectedUserRoles) {
+      invalidatePermissionCache(userId);
+    }
+
     const adminId = getUserIdFromRequest(request) ?? 'unknown';
     await writeAuditLog(adminId, 'ROLE_PERMISSIONS_UPDATED', adminId, {
       roleId: id,
@@ -194,26 +186,6 @@ export const PUT: APIRoute = async ({ params, request }) => {
       }
     );
   } catch (error) {
-    console.error('Assign permissions error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to assign permissions' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'assign role permissions', request);
   }
 };

@@ -3,6 +3,8 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
+import { handleApiError } from '../../../lib/apiError';
+
 export const prerender = false;
 
 /**
@@ -70,27 +72,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       }
     );
   } catch (error) {
-    console.error('Get role error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to fetch role' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch role', request);
   }
 };
 
@@ -187,27 +169,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       }
     );
   } catch (error) {
-    console.error('Update role error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to update role' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'update role', request);
   }
 };
 
@@ -288,26 +250,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       }
     );
   } catch (error) {
-    console.error('Delete role error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to delete role' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'delete role', request);
   }
 };

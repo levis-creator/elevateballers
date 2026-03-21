@@ -3,6 +3,7 @@ import { getSponsors } from '../../../../features/cms/lib/editorial-queries';
 import { createSponsor, reorderSponsors } from '../../../../features/cms/lib/editorial-mutations';
 import { requirePermission } from '../../../../features/rbac/middleware';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
@@ -16,10 +17,7 @@ export const GET: APIRoute = async ({ request }) => {
         });
     } catch (error: any) {
         console.error('Error fetching sponsors:', error);
-        return new Response(JSON.stringify({ error: 'Failed to fetch sponsors' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return handleApiError(error, "fetch sponsors");
     }
 };
 
@@ -49,11 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
             status: 201,
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch (error: any) {
-        console.error('Error creating sponsor:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to create sponsor' }), {
-            status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    } catch (error) {
+        return handleApiError(error, 'create sponsor', request);
     }
 };

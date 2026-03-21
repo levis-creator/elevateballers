@@ -4,6 +4,7 @@ import { updateMatchEvent, deleteMatchEvent } from '@/features/cms/lib/mutations
 import { requireAuth } from '@/features/cms/lib/auth';
 import { logAudit } from '@/features/cms/lib/audit';
 
+import { handleApiError } from '../../../../../lib/apiError';
 export const GET: APIRoute = async ({ params }) => {
   const id = params.id;
   if (!id) {
@@ -28,10 +29,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match event:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch match event' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch match event");
   }
 };
 
@@ -74,10 +72,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const updatedEvent = await updateMatchEvent(id, body);
 
     if (!updatedEvent) {
-      return new Response(JSON.stringify({ error: 'Failed to update match event' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "update match event");
     }
 
     await logAudit(request, 'MATCH_EVENT_UPDATED', {
@@ -92,10 +87,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error updating match event:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to update match event' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "update match event");
   }
 };
 
@@ -136,10 +128,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     
     const success = await deleteMatchEvent(id);
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to delete match event' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "delete match event");
     }
 
     await logAudit(request, 'MATCH_EVENT_DELETED', {
@@ -152,9 +141,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error deleting match event:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete match event' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "delete match event");
   }
 };

@@ -3,6 +3,7 @@ import { getCurrentUser, hashPassword, verifyPassword, validatePasswordStrength,
 import { prisma } from '../../../lib/prisma';
 import { getUserWithPermissions } from '../../../features/rbac/permissions';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -37,11 +38,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
     );
   } catch (error) {
-    console.error('Get current user error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to get user' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'get current user', request);
   }
 };
 
@@ -168,11 +165,7 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
       }
     );
   } catch (error) {
-    console.error('Update user error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update user' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'update user', request);
   }
 };
 
@@ -203,10 +196,6 @@ export const DELETE: APIRoute = async ({ request }) => {
       },
     });
   } catch (error) {
-    console.error('Delete user error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete user' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'delete user', request);
   }
 };

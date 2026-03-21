@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
 import { hashPassword, validatePasswordStrength, invalidateSessions } from '../../../features/cms/lib/auth';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -93,10 +94,6 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Reset password error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to reset password' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return handleApiError(error, 'reset password', request);
   }
 };

@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendSubscriberWelcome } from '../../../lib/email';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
@@ -48,10 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error: any) {
     console.error('Subscribe error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to subscribe' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "subscribe");
   }
 };
 
@@ -71,10 +69,7 @@ export const GET: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message || 'Failed to fetch subscribers' }), {
-      status: error.message?.includes('Forbidden') || error.message === 'Unauthorized' ? 401 : 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch subscribers', request);
   }
 };

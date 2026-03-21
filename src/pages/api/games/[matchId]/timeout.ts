@@ -5,6 +5,7 @@ import { requireAuth } from '../../../../features/cms/lib/auth';
 import type { TimeoutType } from '@prisma/client';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -80,13 +81,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching timeouts:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to fetch timeouts' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, "fetch timeouts");
   }
 };
 
@@ -135,10 +130,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!timeout) {
-      return new Response(JSON.stringify({ error: 'Failed to create timeout' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "create timeout");
     }
 
     await logAudit(request, 'GAME_TIMEOUT_RECORDED', {
@@ -156,12 +148,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating timeout:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create timeout' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, "create timeout");
   }
 };

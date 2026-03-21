@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 
+import { handleApiError } from '../../../lib/apiError';
 /**
  * GET /api/standings
  * Fetches team standings for a league/season
@@ -120,14 +121,6 @@ export const GET: APIRoute = async ({ request }) => {
         });
     } catch (error) {
         console.error('Error fetching standings:', error);
-        return new Response(
-            JSON.stringify({ error: 'Failed to fetch standings' }),
-            {
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
+        return handleApiError(error, "fetch standings");
     }
 };

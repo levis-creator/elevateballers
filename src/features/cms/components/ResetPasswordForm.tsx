@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 
-const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 10;
 
 export default function ResetPasswordForm() {
   const [icons, setIcons] = useState<{
@@ -60,6 +61,10 @@ export default function ResetPasswordForm() {
       setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
+    if (!/[A-Z]/.test(password)) { setError('Password must contain at least one uppercase letter.'); return; }
+    if (!/[a-z]/.test(password)) { setError('Password must contain at least one lowercase letter.'); return; }
+    if (!/\d/.test(password))    { setError('Password must contain at least one number.'); return; }
+    if (!/[^A-Za-z0-9]/.test(password)) { setError('Password must contain at least one special character.'); return; }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
@@ -152,6 +157,7 @@ export default function ResetPasswordForm() {
                 className="pl-10"
               />
             </div>
+            <PasswordStrengthMeter password={password} />
           </div>
 
           <div className="space-y-2">

@@ -1,3 +1,4 @@
+import { handleApiError } from '../../lib/apiError';
 /**
  * Feature Flags API Endpoint
  * 
@@ -22,15 +23,7 @@ export const GET: APIRoute = async () => {
   } catch (error) {
     console.error('Error fetching feature flags:', error);
     
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch feature flags' }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    return handleApiError(error, "fetch feature flags");
   }
 };
 

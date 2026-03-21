@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -46,27 +47,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
     );
   } catch (error) {
-    console.error('Get roles error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to fetch roles' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch roles', request);
   }
 };
 
@@ -131,26 +112,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     );
   } catch (error) {
-    console.error('Create role error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to create role' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'create role', request);
   }
 };

@@ -4,6 +4,7 @@ import { createMatch } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import type { MatchFilter, MatchSortOption, MatchDTO, MatchStage } from '../../../features/matches/types';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -141,14 +142,7 @@ export const GET: APIRoute = async ({ request }) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching matches:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch matches' }), {
-      status: 500,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+    return handleApiError(error, 'fetch matches', request);
   }
 };
 
@@ -198,14 +192,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating match:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create match' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create match', request);
   }
 };

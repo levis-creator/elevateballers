@@ -4,6 +4,7 @@ import { getGameState } from '../../../../features/game-tracking/lib/queries';
 import { requireAuth } from '../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -35,10 +36,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     const success = await startGame(matchId, gameRulesId);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to start game' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "start game");
     }
 
     const state = await getGameState(matchId);
@@ -49,9 +47,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error starting game:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to start game' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "start game");
   }
 };

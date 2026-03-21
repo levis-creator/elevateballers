@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { getFileUrl, fileExists } from '../../../lib/file-storage';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -43,15 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
       JSON.stringify({ files }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
-    console.error('Error exporting ZIP info:', error);
-    return new Response(
-      JSON.stringify({
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden')
-          ? 'Unauthorized'
-          : error.message || 'Failed to export files',
-      }),
-      { status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  } catch (error) {
+    return handleApiError(error, 'export files', request);
   }
 };

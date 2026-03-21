@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getPlayerMatches } from '../../../../features/player/lib/queries';
+import { handleApiError } from '../../../../lib/apiError';
 
 export const prerender = false;
 
@@ -29,11 +30,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error fetching player matches:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch player matches' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch player matches', request);
   }
 };

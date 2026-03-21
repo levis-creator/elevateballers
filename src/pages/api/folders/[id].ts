@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { getFolderById } from '../../../features/cms/lib/queries';
 import { updateFolder, deleteFolder } from '../../../features/cms/lib/mutations';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -24,11 +25,7 @@ export const GET: APIRoute = async ({ params }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching folder:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch folder' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch folder', request);
   }
 };
 
@@ -53,31 +50,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(folder), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating folder:', error);
-    
-    // Handle unique constraint violation
-    if (error.code === 'P2002' || error.message?.includes('Unique constraint')) {
-      return new Response(
-        JSON.stringify({ error: 'A folder with this name already exists' }),
-        {
-          status: 409,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-    
-    return new Response(
-      JSON.stringify({ 
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden') 
-          ? 'Unauthorized' 
-          : error.message || 'Failed to update folder' 
-      }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update folder', request);
   }
 };
 
@@ -99,14 +73,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting folder:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete folder' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete folder', request);
   }
 };

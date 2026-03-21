@@ -34,7 +34,12 @@
     "create-admin": "node scripts/create-admin.js",
     "db:migrate-to-production": "tsx scripts/migrate-db-to-production.ts",
     "fix:dates": "node scripts/fix-invalid-dates.js",
-    "cleanup:private": "tsx scripts/cleanup-private-info.ts"
+    "cleanup:private": "tsx scripts/cleanup-private-info.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts,.tsx,.astro",
+    "lint:fix": "eslint src --ext .ts,.tsx,.astro --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,astro}\""
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -105,6 +110,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.3.0",
     "@ngrok/ngrok": "^1.2.0",
     "@types/bcryptjs": "^2.4.6",
@@ -114,6 +120,12 @@
     "@types/react-lazy-load-image-component": "^1.6.5",
     "cross-env": "^7.0.3",
     "esbuild": "^0.27.2",
-    "tsx": "^4.21.0"
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-astro": "^1.6.0",
+    "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
+    "typescript-eslint": "^8.57.1",
+    "vitest": "^4.1.0"
   }
 }

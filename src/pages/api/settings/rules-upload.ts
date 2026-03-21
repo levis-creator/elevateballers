@@ -3,6 +3,7 @@ import { requirePermission } from '@/features/rbac/middleware';
 import { saveFile } from '@/lib/file-storage';
 import { prisma } from '@/lib/prisma';
 import { getFolderByName } from '@/lib/folder-access';
+import { handleApiError } from '@/lib/apiError';
 
 export const prerender = false;
 
@@ -92,19 +93,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error uploading rules PDF:', error);
-
-    return new Response(
-      JSON.stringify({
-        error:
-          error.message === 'Unauthorized' || error.message?.includes('Forbidden')
-            ? 'Unauthorized'
-            : error.message || 'Failed to upload rules PDF',
-      }),
-      {
-        status:
-          error.message === 'Unauthorized' || error.message?.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, 'upload rules PDF', request);
   }
 };

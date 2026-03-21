@@ -5,6 +5,7 @@ import { findUserByEmail } from '../../../features/cms/lib/auth';
 import { sendPasswordResetEmail, sendWelcomeSetPasswordEmail } from '../../../lib/email';
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -118,10 +119,6 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Forgot password error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to process request' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return handleApiError(error, 'process forgot password request', request);
   }
 };

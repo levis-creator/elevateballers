@@ -4,6 +4,7 @@ import { updateMatchPlayer, deleteMatchPlayer } from '../../../../../features/cm
 import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../../lib/apiError';
 export const GET: APIRoute = async ({ params }) => {
   const id = params.id;
   if (!id) {
@@ -28,10 +29,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match player:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch match player' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch match player");
   }
 };
 
@@ -58,10 +56,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const matchPlayer = await updateMatchPlayer(id, body);
 
     if (!matchPlayer) {
-      return new Response(JSON.stringify({ error: 'Failed to update match player' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "update match player");
     }
 
     await logAudit(request, 'MATCH_PLAYER_UPDATED', {
@@ -77,10 +72,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error updating match player:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to update match player' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "update match player");
   }
 };
 
@@ -105,10 +97,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     const success = await deleteMatchPlayer(id);
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to delete match player' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "delete match player");
     }
 
     await logAudit(request, 'MATCH_PLAYER_REMOVED', {
@@ -121,9 +110,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error deleting match player:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete match player' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "delete match player");
   }
 };
