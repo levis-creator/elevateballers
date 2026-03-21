@@ -48,24 +48,23 @@ const descriptionHtml = player.description
       />
     </div>
     <div class="stm-excerption-wrapp">
-      <span class="stm-excerption" set:html={descriptionHtml}>
-        <div class="stm-name-sign-wrapp">
-          <span class="stm-coach-name heading-font">{player.name}</span>
-          {
-            signatureImageUrl && (
-              <div class="stm-img-wrapp">
-                <img
-                  src={signatureImageUrl}
-                  alt={`${player.name} signature`}
-                  width="200"
-                  height="50"
-                  loading="lazy"
-                />
-              </div>
-            )
-          }
-        </div>
-      </span>
+      <span class="stm-excerption" set:html={descriptionHtml}></span>
+      <div class="stm-name-sign-wrapp">
+        <span class="stm-coach-name heading-font">{player.name}</span>
+        {
+          signatureImageUrl && (
+            <div class="stm-img-wrapp">
+              <img
+                src={signatureImageUrl}
+                alt={`${player.name} signature`}
+                width="200"
+                height="50"
+                loading="lazy"
+              />
+            </div>
+          )
+        }
+      </div>
     </div>
   </div>
 </div>
