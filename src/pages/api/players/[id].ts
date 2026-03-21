@@ -3,6 +3,7 @@ import { getPlayerById } from '../../../features/cms/lib/queries';
 import { updatePlayer, deletePlayer } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -68,11 +69,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching player:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch player' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch player', request);
   }
 };
 
@@ -114,15 +111,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(player), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating player:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update player' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update player', request);
   }
 };
 
@@ -143,14 +133,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting player:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete player' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete player', request);
   }
 };

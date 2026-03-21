@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createBracketMatches, validateBracketOptions, type GeneratedMatch } from '@/features/tournaments/lib/bracket-generator';
 import { calculateBracketStats } from '@/features/tournaments/lib/bracket-stats';
 import { requirePermission } from '@/features/rbac/middleware';
+import { handleApiError } from '@/lib/apiError';
 
 export const prerender = false;
 
@@ -70,15 +71,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error generating bracket:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Failed to generate bracket',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, 'generate bracket', request);
   }
 };

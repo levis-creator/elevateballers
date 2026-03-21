@@ -11,6 +11,7 @@ import { sendLoginOtpEmail } from '../../../lib/email';
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -198,7 +199,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.set('otp-session', otpSessionToken, {
       httpOnly: true,
       secure: isSecure,
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: 60 * 15,
       path: '/',
     });
@@ -211,11 +212,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return json({ status: 'otp_required' }, 200);
   } catch (error) {
-    console.error('Login error:', error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return json(
-      { error: 'Login failed', details: process.env.NODE_ENV === 'development' ? msg : undefined },
-      500
-    );
+    return handleApiError(error, 'login', request);
   }
 };

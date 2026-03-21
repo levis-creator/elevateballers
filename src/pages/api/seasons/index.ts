@@ -4,6 +4,7 @@ import { createSeason } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
@@ -16,10 +17,7 @@ export const GET: APIRoute = async ({ url }) => {
     });
   } catch (error) {
     console.error('Error fetching seasons:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch seasons' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch seasons");
   }
 };
 
@@ -48,14 +46,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating season:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create season' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create season', request);
   }
 };

@@ -4,6 +4,7 @@ import { createTeam } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendTeamRegistrationAutoReplyBrevo } from '../../../lib/email';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -62,17 +63,10 @@ export const GET: APIRoute = async ({ request, url }) => {
       meta: error?.meta,
       stack: error?.stack,
     });
-    
-    return new Response(JSON.stringify({ 
-      error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
-    }), {
-      status: 500,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-      },
-    });
+
+    const response = handleApiError(error, 'fetch teams', request);
+    response.headers.set('Cache-Control', 'no-cache');
+    return response;
   }
 };
 
@@ -135,12 +129,6 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error: any) {
     console.error('Error creating team:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create team' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, 'create team', request);
   }
 };

@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
+import { invalidatePermissionCache } from '../../../../features/rbac/permissions';
 import { prisma } from '../../../../lib/prisma';
+import { json, handleApiError } from '../../../../lib/apiError';
 
 export const prerender = false;
 
@@ -73,12 +75,12 @@ export const PUT: APIRoute = async ({ params, request }) => {
     // Add new roles
     if (roleIds.length > 0) {
       await prisma.userRole.createMany({
-        data: roleIds.map((roleId: string) => ({
-          userId,
-          roleId,
-        })),
+        data: roleIds.map((roleId: string) => ({ userId, roleId })),
       });
     }
+
+    // Expire the cached permission set so the change takes effect immediately
+    invalidatePermissionCache(userId);
 
     // Fetch updated user with roles
     const updatedUser = await prisma.user.findUnique({
@@ -111,27 +113,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       }
     );
   } catch (error) {
-    console.error('Assign roles error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to assign roles' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'assign user roles', request);
   }
 };
 
@@ -185,26 +167,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       }
     );
   } catch (error) {
-    console.error('Get user roles error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to fetch user roles' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch user roles', request);
   }
 };

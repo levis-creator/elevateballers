@@ -3,6 +3,7 @@ import { generateReport } from '../../../features/reports/lib/reportGenerator';
 import { requireAuth } from '../../../features/cms/lib/auth';
 import { getCurrentUser } from '../../../features/cms/lib/auth';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -55,9 +56,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error generating report:', error);
-    return new Response(JSON.stringify({ error: 'Failed to generate report' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "generate report");
   }
 };

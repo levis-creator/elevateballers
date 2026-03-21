@@ -4,6 +4,7 @@ import { getMatchJumpBalls, getPeriodJumpBalls } from '../../../../features/game
 import { requireAuth } from '../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -44,10 +45,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching jump balls:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch jump balls' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch jump balls");
   }
 };
 
@@ -97,10 +95,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!jumpBall) {
-      return new Response(JSON.stringify({ error: 'Failed to create jump ball' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "create jump ball");
     }
 
     await logAudit(request, 'GAME_JUMP_BALL_RECORDED', {
@@ -115,9 +110,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating jump ball:', error);
-    return new Response(JSON.stringify({ error: 'Failed to create jump ball' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "create jump ball");
   }
 };

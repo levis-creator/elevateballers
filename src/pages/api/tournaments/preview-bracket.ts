@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { previewBracketMatches, validateBracketOptions } from '@/features/tournaments/lib/bracket-generator';
 import { requirePermission } from '@/features/rbac/middleware';
+import { handleApiError } from '@/lib/apiError';
 
 export const prerender = false;
 
@@ -54,15 +55,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error previewing bracket:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Failed to preview bracket',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, 'preview bracket', request);
   }
 };

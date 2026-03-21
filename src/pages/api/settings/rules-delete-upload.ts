@@ -3,6 +3,7 @@ import { requirePermission } from '@/features/rbac/middleware';
 import { deleteFile } from '@/lib/file-storage';
 import { prisma } from '@/lib/prisma';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
@@ -35,8 +36,8 @@ export const POST: APIRoute = async ({ request }) => {
     const deleted = await deleteFile(filePath);
 
     if (!deleted) {
-      return new Response(JSON.stringify({ error: 'Failed to delete file' }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: 'File not found or could not be deleted' }), {
+        status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -44,21 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error deleting old rules PDF:', error);
-
-    return new Response(
-      JSON.stringify({
-        error:
-          error.message === 'Unauthorized' || error.message?.includes('Forbidden')
-            ? 'Unauthorized'
-            : error.message || 'Failed to delete old rules PDF',
-      }),
-      {
-        status:
-          error.message === 'Unauthorized' || error.message?.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete rules PDF', request);
   }
 };

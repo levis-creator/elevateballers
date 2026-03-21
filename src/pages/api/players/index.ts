@@ -4,6 +4,7 @@ import { createPlayer } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendPlayerRegistrationAutoReplyBrevo } from '../../../lib/email';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -61,24 +62,13 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching players:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch players' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch players', request);
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    try {
-      await requirePermission(request, 'players:create');
-    } catch (authError: any) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    await requirePermission(request, 'players:create');
 
     const data = await request.json();
 
@@ -136,14 +126,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating player:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create player' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create player', request);
   }
 };

@@ -5,6 +5,7 @@ import { createUser, getUserIdFromRequest, writeAuditLog } from '../../../featur
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendWelcomeSetPasswordEmail } from '../../../lib/email';
 import type { UserRole } from '../../../features/cms/types';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -64,10 +65,7 @@ export const GET: APIRoute = async ({ request }) => {
         });
     } catch (error: any) {
         console.error('Error fetching users:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to fetch users' }), {
-            status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return handleApiError(error, 'fetch users', request);
     }
 };
 
@@ -134,12 +132,6 @@ export const POST: APIRoute = async ({ request }) => {
         });
     } catch (error: any) {
         console.error('Error creating user:', error);
-        return new Response(
-            JSON.stringify({ error: error.message || 'Failed to create user' }),
-            {
-                status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-                headers: { 'Content-Type': 'application/json' },
-            }
-        );
+        return handleApiError(error, 'create user', request);
     }
 };

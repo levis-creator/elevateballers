@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { getUserIdFromRequest, invalidateSessions, writeAuditLog } from '../../../features/cms/lib/auth';
 import { sendEmailChangedAlert } from '../../../lib/email';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -68,13 +69,7 @@ export const GET: APIRoute = async ({ request, params }) => {
         });
     } catch (error: any) {
         console.error('Error fetching user:', error);
-        return new Response(
-            JSON.stringify({ error: error.message || 'Failed to fetch user' }),
-            {
-                status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-                headers: { 'Content-Type': 'application/json' },
-            }
-        );
+        return handleApiError(error, 'fetch user', request);
     }
 };
 
@@ -195,13 +190,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
     } catch (error: any) {
         console.error('Error updating user:', error);
-        return new Response(
-            JSON.stringify({ error: error.message || 'Failed to update user' }),
-            {
-                status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-                headers: { 'Content-Type': 'application/json' },
-            }
-        );
+        return handleApiError(error, 'update user', request);
     }
 };
 
@@ -234,12 +223,6 @@ export const DELETE: APIRoute = async ({ request, params }) => {
         });
     } catch (error: any) {
         console.error('Error deleting user:', error);
-        return new Response(
-            JSON.stringify({ error: error.message || 'Failed to delete user' }),
-            {
-                status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-                headers: { 'Content-Type': 'application/json' },
-            }
-        );
+        return handleApiError(error, 'delete user', request);
     }
 };

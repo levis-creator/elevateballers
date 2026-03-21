@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getMatchWithGameState } from '../../../../features/game-tracking/lib/queries';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -31,9 +32,6 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching game rules:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch game rules' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch game rules");
   }
 };

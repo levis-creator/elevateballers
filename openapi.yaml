@@ -1,0 +1,2850 @@
+openapi: 3.1.0
+info:
+  title: Elevate Ballers API
+  version: 1.0.0
+  description: |
+    REST API for the Elevate Ballers basketball league management platform.
+
+    **Authentication:** Most write endpoints and admin-only read endpoints require a JWT stored in the `auth-token` cookie.
+    Obtain a token via `POST /api/auth/login` or `POST /api/auth/verify-otp`.
+
+    **Permissions:** Protected endpoints are annotated with the required permission string (e.g. `users:read`).
+    The RBAC system uses the format `resource:action`.
+
+servers:
+  - url: http://localhost:4321
+    description: Local development
+  - url: https://elevateballers.com
+    description: Production
+
+tags:
+  - name: Auth
+    description: Authentication — login, logout, OTP, password reset
+  - name: Users
+    description: User account management
+  - name: Teams
+    description: Team CRUD and bulk operations
+  - name: Players
+    description: Player profiles and statistics
+  - name: Matches
+    description: Match scheduling and results
+  - name: Games
+    description: Live game state management
+  - name: News
+    description: News articles and publishing
+  - name: Media
+    description: Media gallery and file management
+  - name: Upload
+    description: File upload
+  - name: Roles
+    description: Role management
+  - name: Permissions
+    description: Permission listing
+  - name: Audit Logs
+    description: Audit trail
+  - name: Contact
+    description: Contact form messages
+  - name: Leagues
+    description: League management
+  - name: Seasons
+    description: Season management
+  - name: Staff
+    description: Staff member management
+  - name: Comments
+    description: Article comment management
+  - name: Standings
+    description: League standings
+  - name: Subscribers
+    description: Email subscriber management
+  - name: Reports
+    description: Report generation and download
+  - name: Tournaments
+    description: Tournament bracket generation
+  - name: Settings
+    description: Global site settings
+  - name: Folders
+    description: Media folder management
+  - name: Highlights
+    description: Highlights and sponsors
+  - name: Feature Flags
+    description: Feature flag configuration
+  - name: Misc
+    description: Image proxy, file downloads
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: auth-token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+          description: Stack trace (development only)
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        isSystem:
+          type: boolean
+
+    Permission:
+      type: object
+      properties:
+        id:
+          type: string
+        resource:
+          type: string
+        action:
+          type: string
+        description:
+          type: string
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        logo:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        approved:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Player:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        slug:
+          type: string
+        image:
+          type: string
+          nullable: true
+        position:
+          type: string
+          nullable: true
+        jerseyNumber:
+          type: integer
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        height:
+          type: string
+          nullable: true
+        weight:
+          type: string
+          nullable: true
+        approved:
+          type: boolean
+        teamId:
+          type: string
+          nullable: true
+        stats:
+          type: object
+          nullable: true
+
+    Match:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [UPCOMING, LIVE, COMPLETED]
+        stage:
+          type: string
+          nullable: true
+          enum: [REGULAR_SEASON, PLAYOFF, QUARTER_FINALS, SEMI_FINALS, CHAMPIONSHIP, null]
+        team1Score:
+          type: integer
+          nullable: true
+        team2Score:
+          type: integer
+          nullable: true
+        leagueId:
+          type: string
+          nullable: true
+        seasonId:
+          type: string
+          nullable: true
+        team1:
+          $ref: '#/components/schemas/Team'
+        team2:
+          $ref: '#/components/schemas/Team'
+
+    NewsArticle:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+        published:
+          type: boolean
+        feature:
+          type: boolean
+        image:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        author:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+          enum: [IMAGE, VIDEO, AUDIO, DOCUMENT]
+        thumbnail:
+          type: string
+          nullable: true
+        size:
+          type: integer
+          nullable: true
+        featured:
+          type: boolean
+        isPrivate:
+          type: boolean
+        folderId:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+
+    League:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        logo:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+
+    Season:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        leagueId:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        bracketType:
+          type: string
+          nullable: true
+
+    Staff:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        slug:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        image:
+          type: string
+          nullable: true
+        approved:
+          type: boolean
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        authorName:
+          type: string
+          nullable: true
+        authorEmail:
+          type: string
+          nullable: true
+        approved:
+          type: boolean
+        articleId:
+          type: string
+        parentId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        userId:
+          type: string
+          nullable: true
+        performedBy:
+          type: string
+          nullable: true
+        source:
+          type: string
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    GameState:
+      type: object
+      properties:
+        matchId:
+          type: string
+        status:
+          type: string
+          enum: [UPCOMING, LIVE, COMPLETED]
+        currentPeriod:
+          type: integer
+        clockSeconds:
+          type: integer
+          nullable: true
+        clockRunning:
+          type: boolean
+        team1Score:
+          type: integer
+        team2Score:
+          type: integer
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+
+paths:
+  # ─────────────────────────────────────────
+  # AUTH
+  # ─────────────────────────────────────────
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out current user
+      description: Clears the `auth-token` cookie.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+
+  /api/auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify a 6-digit OTP
+      description: Rate limited to 5 attempts per 15 minutes per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, otp]
+              properties:
+                userId:
+                  type: string
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+      responses:
+        '200':
+          description: OTP verified — returns user and sets auth-token cookie
+        '400':
+          description: Invalid or expired OTP
+        '429':
+          description: Rate limit exceeded
+
+  /api/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset email
+      description: Rate limited to 5 requests per 15 minutes per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent (always returns 200 to prevent user enumeration)
+        '429':
+          description: Rate limit exceeded
+
+  /api/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using a token
+      description: Validates the token, updates password, and invalidates all existing sessions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password reset successfully
+        '400':
+          description: Invalid or expired token
+
+  # ─────────────────────────────────────────
+  # USERS
+  # ─────────────────────────────────────────
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List all users
+      description: Requires `users:read`. Optional role filter.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+          description: Filter by role name
+      responses:
+        '200':
+          description: Array of users with roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Users]
+      summary: Create a new user
+      description: Requires `users:create`. Sends a welcome / set-password email.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                roleIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: User created
+        '409':
+          description: Email already in use
+
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: Get a single user
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: User object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Users]
+      summary: Update a user
+      description: Requires `users:update`. Invalidates sessions if user is deactivated.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                active:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated user
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      description: Requires `users:delete`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/users/{id}/role:
+    get:
+      tags: [Users]
+      summary: Get user roles
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Array of roles
+    put:
+      tags: [Users]
+      summary: Assign roles to a user
+      description: Requires `users:manage_roles`. Replaces all existing roles.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleIds]
+              properties:
+                roleIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Roles updated
+
+  # ─────────────────────────────────────────
+  # TEAMS
+  # ─────────────────────────────────────────
+  /api/teams:
+    get:
+      tags: [Teams]
+      summary: List teams
+      description: Public shows approved teams only. Admin (with auth) sees all.
+      parameters:
+        - name: approved
+          in: query
+          schema:
+            type: boolean
+          description: Force approved-only filter
+      responses:
+        '200':
+          description: Array of teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Team'
+    post:
+      tags: [Teams]
+      summary: Create a team
+      description: Requires `teams:create`. Admin-created teams are auto-approved.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                logo:
+                  type: string
+                description:
+                  type: string
+                approved:
+                  type: boolean
+      responses:
+        '201':
+          description: Team created
+
+  /api/teams/{id}:
+    get:
+      tags: [Teams]
+      summary: Get a single team
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Team object
+    put:
+      tags: [Teams]
+      summary: Update a team
+      description: Requires `teams:update`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Team'
+      responses:
+        '200':
+          description: Updated team
+    delete:
+      tags: [Teams]
+      summary: Delete a team
+      description: Requires `teams:update`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/teams/{id}/staff:
+    get:
+      tags: [Teams]
+      summary: Get team staff members
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Array of staff assignments
+
+  /api/teams/bulk-approve:
+    post:
+      tags: [Teams]
+      summary: Bulk approve teams
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Teams approved
+
+  /api/teams/bulk-delete:
+    post:
+      tags: [Teams]
+      summary: Bulk delete teams
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Teams deleted
+
+  # ─────────────────────────────────────────
+  # PLAYERS
+  # ─────────────────────────────────────────
+  /api/players/leaders:
+    get:
+      tags: [Players]
+      summary: Get stats leaders
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [points, assists, rebounds]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: Array of player stats leaders
+
+  /api/players/{id}/events:
+    get:
+      tags: [Players]
+      summary: Get player match events
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Array of match events for this player
+
+  /api/players/{id}/matches:
+    get:
+      tags: [Players]
+      summary: Get player matches
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Array of matches the player participated in
+
+  /api/players/{id}/playing-time:
+    get:
+      tags: [Players]
+      summary: Get player playing time statistics
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Playing time stats
+
+  /api/players/{id}/team-history:
+    get:
+      tags: [Players]
+      summary: Get player team history
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Array of team history records
+
+  /api/players/bulk-approve:
+    post:
+      tags: [Players]
+      summary: Bulk approve players
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Players approved
+
+  /api/players/bulk-delete:
+    post:
+      tags: [Players]
+      summary: Bulk delete players
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Players deleted
+
+  # ─────────────────────────────────────────
+  # MATCHES
+  # ─────────────────────────────────────────
+  /api/matches:
+    get:
+      tags: [Matches]
+      summary: List matches
+      description: CORS enabled. Supports extensive filtering.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [UPCOMING, LIVE, COMPLETED]
+        - name: stage
+          in: query
+          schema:
+            type: string
+            enum: [REGULAR_SEASON, PLAYOFF, QUARTER_FINALS, SEMI_FINALS, CHAMPIONSHIP]
+        - name: leagueId
+          in: query
+          schema:
+            type: string
+        - name: teamId
+          in: query
+          schema:
+            type: string
+        - name: seasonId
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [date-asc, date-desc, league-asc, league-desc]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Array of matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+    post:
+      tags: [Matches]
+      summary: Create a match
+      description: Requires `matches:create`.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, leagueId]
+              properties:
+                date:
+                  type: string
+                  format: date-time
+                team1Id:
+                  type: string
+                team2Id:
+                  type: string
+                team1Name:
+                  type: string
+                team2Name:
+                  type: string
+                leagueId:
+                  type: string
+                seasonId:
+                  type: string
+                stage:
+                  type: string
+                status:
+                  type: string
+                  enum: [UPCOMING, LIVE, COMPLETED]
+      responses:
+        '201':
+          description: Match created
+
+  /api/matches/{id}:
+    get:
+      tags: [Matches]
+      summary: Get a single match
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Match object
+    put:
+      tags: [Matches]
+      summary: Update a match
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Match'
+      responses:
+        '200':
+          description: Updated match
+    delete:
+      tags: [Matches]
+      summary: Delete a match
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/matches/{matchId}/events/{id}:
+    get:
+      tags: [Matches]
+      summary: Get a match event
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Match event object
+
+  /api/matches/{matchId}/players/{id}:
+    get:
+      tags: [Matches]
+      summary: Get match player stats
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Match player object
+
+  /api/matches/{matchId}/stat-sheet:
+    get:
+      tags: [Matches]
+      summary: Get stat sheet for a match
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stat sheet data
+
+  /api/matches/{matchId}/images:
+    get:
+      tags: [Matches]
+      summary: Get images associated with a match
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Array of media items
+
+  /api/matches/bulk-delete:
+    post:
+      tags: [Matches]
+      summary: Bulk delete matches
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Matches deleted
+
+  # ─────────────────────────────────────────
+  # GAMES (Live game tracking)
+  # ─────────────────────────────────────────
+  /api/games/{matchId}/state:
+    get:
+      tags: [Games]
+      summary: Get current game state
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game state object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameState'
+
+  /api/games/{matchId}/play-by-play:
+    get:
+      tags: [Games]
+      summary: Get play-by-play log
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Array of game events in order
+
+  /api/games/{matchId}/rules:
+    get:
+      tags: [Games]
+      summary: Get game rules
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game rules configuration
+
+  /api/games/{matchId}/start:
+    post:
+      tags: [Games]
+      summary: Start a game
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game started
+
+  /api/games/{matchId}/end:
+    post:
+      tags: [Games]
+      summary: End a game
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game ended
+
+  /api/games/{matchId}/pause:
+    post:
+      tags: [Games]
+      summary: Pause a game clock
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game paused
+
+  /api/games/{matchId}/resume:
+    post:
+      tags: [Games]
+      summary: Resume a paused game
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game resumed
+
+  /api/games/{matchId}/jump-ball:
+    post:
+      tags: [Games]
+      summary: Record a jump ball
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                winnerId:
+                  type: string
+                  description: Team ID that won the jump ball
+      responses:
+        '200':
+          description: Jump ball recorded
+
+  /api/games/{matchId}/timeout:
+    post:
+      tags: [Games]
+      summary: Record a team timeout
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [teamId]
+              properties:
+                teamId:
+                  type: string
+      responses:
+        '200':
+          description: Timeout recorded
+
+  /api/games/{matchId}/substitution:
+    post:
+      tags: [Games]
+      summary: Record a player substitution
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerInId, playerOutId, teamId]
+              properties:
+                playerInId:
+                  type: string
+                playerOutId:
+                  type: string
+                teamId:
+                  type: string
+      responses:
+        '200':
+          description: Substitution recorded
+
+  # ─────────────────────────────────────────
+  # NEWS
+  # ─────────────────────────────────────────
+  /api/news:
+    get:
+      tags: [News]
+      summary: List news articles
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: admin
+          in: query
+          schema:
+            type: boolean
+          description: Include unpublished (requires auth)
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Array of news articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsArticle'
+    post:
+      tags: [News]
+      summary: Create a news article
+      description: Requires `news_articles:create`. Auto-generates slug if not provided.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                category:
+                  type: string
+                published:
+                  type: boolean
+                feature:
+                  type: boolean
+                image:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '201':
+          description: Article created
+
+  /api/news/{id}:
+    get:
+      tags: [News]
+      summary: Get a news article
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: News article object
+    put:
+      tags: [News]
+      summary: Update a news article
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsArticle'
+      responses:
+        '200':
+          description: Updated article
+    delete:
+      tags: [News]
+      summary: Delete a news article
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/news/bulk-delete:
+    post:
+      tags: [News]
+      summary: Bulk delete articles
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Articles deleted
+
+  # ─────────────────────────────────────────
+  # MEDIA
+  # ─────────────────────────────────────────
+  /api/media:
+    get:
+      tags: [Media]
+      summary: List media items
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [image, video, audio, document]
+        - name: folderId
+          in: query
+          schema:
+            type: string
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Array of media items
+    post:
+      tags: [Media]
+      summary: Create a media record
+      description: Requires `media:create`.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Media'
+      responses:
+        '201':
+          description: Media created
+
+  /api/media/{id}:
+    get:
+      tags: [Media]
+      summary: Get a media item
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Media object
+    put:
+      tags: [Media]
+      summary: Update a media item
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Media'
+      responses:
+        '200':
+          description: Updated media
+    delete:
+      tags: [Media]
+      summary: Delete a media item (also deletes file from disk)
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/media/batch-move:
+    post:
+      tags: [Media]
+      summary: Move media items to a folder
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, folderId]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                folderId:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Media moved
+
+  /api/media/batch-featured:
+    post:
+      tags: [Media]
+      summary: Mark media items as featured
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, featured]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                featured:
+                  type: boolean
+      responses:
+        '200':
+          description: Featured status updated
+
+  /api/media/batch-upload:
+    post:
+      tags: [Media]
+      summary: Batch upload media
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Media uploaded
+
+  /api/media/duplicate:
+    post:
+      tags: [Media]
+      summary: Duplicate a media item
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        '201':
+          description: Duplicate created
+
+  /api/media/cleanup:
+    post:
+      tags: [Media]
+      summary: Clean up orphaned media records
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Cleanup report
+
+  /api/media/export-zip:
+    post:
+      tags: [Media]
+      summary: Export selected media as a ZIP file
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: ZIP file download
+
+  # ─────────────────────────────────────────
+  # UPLOAD
+  # ─────────────────────────────────────────
+  /api/upload/image:
+    post:
+      tags: [Upload]
+      summary: Upload an image
+      description: |
+        Requires `media:create`. Accepts JPEG, PNG, GIF, WebP.
+        Auto-compresses if file exceeds threshold.
+        Creates folder if it doesn't exist.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                folder:
+                  type: string
+                  description: Target folder name
+      responses:
+        '201':
+          description: Upload successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  url:
+                    type: string
+                  thumbnail:
+                    type: string
+                    nullable: true
+                  filePath:
+                    type: string
+                  size:
+                    type: integer
+                  compressionRatio:
+                    type: number
+                    nullable: true
+
+  # ─────────────────────────────────────────
+  # ROLES
+  # ─────────────────────────────────────────
+  /api/roles:
+    get:
+      tags: [Roles]
+      summary: List all roles
+      description: Requires `roles:read`.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Array of roles with permission and user counts
+    post:
+      tags: [Roles]
+      summary: Create a role
+      description: Requires `roles:create`.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Role created
+        '409':
+          description: Role name already exists
+
+  /api/roles/{id}:
+    get:
+      tags: [Roles]
+      summary: Get a role
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Role object
+    put:
+      tags: [Roles]
+      summary: Update a role
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+      responses:
+        '200':
+          description: Updated role
+    delete:
+      tags: [Roles]
+      summary: Delete a role
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/roles/{id}/permissions:
+    get:
+      tags: [Roles]
+      summary: Get permissions for a role
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Array of permissions
+    post:
+      tags: [Roles]
+      summary: Assign permissions to a role
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissionIds]
+              properties:
+                permissionIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Permissions updated
+
+  # ─────────────────────────────────────────
+  # PERMISSIONS
+  # ─────────────────────────────────────────
+  /api/permissions:
+    get:
+      tags: [Permissions]
+      summary: List all permissions
+      description: Requires `roles:read` or `roles:manage_permissions`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [category]
+          description: Group permissions by category
+      responses:
+        '200':
+          description: Array of permissions or grouped object
+
+  # ─────────────────────────────────────────
+  # AUDIT LOGS
+  # ─────────────────────────────────────────
+  /api/audit-logs:
+    get:
+      tags: [Audit Logs]
+      summary: List audit logs
+      description: Requires `audit_logs:read` or `audit_logs:manage`. Cursor-based pagination.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 200
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: metadataSearch
+          in: query
+          schema:
+            type: string
+          description: Full-text search on metadata (MySQL MATCH)
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: performedBy
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: cursorCreatedAt
+          in: query
+          schema:
+            type: string
+        - name: cursorId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated audit logs
+
+  /api/audit-logs/actions:
+    get:
+      tags: [Audit Logs]
+      summary: List available audit action types
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Array of action strings
+
+  /api/audit-logs/export:
+    post:
+      tags: [Audit Logs]
+      summary: Export audit logs
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format:
+                  type: string
+                  enum: [csv, json]
+                filters:
+                  type: object
+      responses:
+        '200':
+          description: Export file download
+
+  # ─────────────────────────────────────────
+  # CONTACT MESSAGES
+  # ─────────────────────────────────────────
+  /api/contact-messages:
+    get:
+      tags: [Contact]
+      summary: List contact messages
+      description: Requires `contact_messages:read`.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: unread
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Array of contact messages
+    post:
+      tags: [Contact]
+      summary: Submit a contact message
+      description: |
+        Public endpoint. Includes honeypot field `website` for spam prevention.
+        Sends notification and auto-reply emails.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, message]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                  maxLength: 200
+                message:
+                  type: string
+                  maxLength: 5000
+                subject:
+                  type: string
+                website:
+                  type: string
+                  description: Honeypot — must be empty
+      responses:
+        '201':
+          description: Message submitted
+    patch:
+      tags: [Contact]
+      summary: Mark messages as read
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Messages marked as read
+
+  # ─────────────────────────────────────────
+  # LEAGUES
+  # ─────────────────────────────────────────
+  /api/leagues:
+    get:
+      tags: [Leagues]
+      summary: List leagues
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Array of leagues
+    post:
+      tags: [Leagues]
+      summary: Create a league
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/League'
+      responses:
+        '201':
+          description: League created
+
+  /api/leagues/{id}:
+    get:
+      tags: [Leagues]
+      summary: Get a league
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: League object
+    put:
+      tags: [Leagues]
+      summary: Update a league
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/League'
+      responses:
+        '200':
+          description: Updated league
+    delete:
+      tags: [Leagues]
+      summary: Delete a league
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/leagues/bulk-delete:
+    post:
+      tags: [Leagues]
+      summary: Bulk delete leagues
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ─────────────────────────────────────────
+  # SEASONS
+  # ─────────────────────────────────────────
+  /api/seasons:
+    get:
+      tags: [Seasons]
+      summary: List seasons
+      parameters:
+        - name: leagueId
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Array of seasons
+    post:
+      tags: [Seasons]
+      summary: Create a season
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Season'
+      responses:
+        '201':
+          description: Season created
+
+  /api/seasons/{id}:
+    get:
+      tags: [Seasons]
+      summary: Get a season
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Season object
+    put:
+      tags: [Seasons]
+      summary: Update a season
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Season'
+      responses:
+        '200':
+          description: Updated season
+    delete:
+      tags: [Seasons]
+      summary: Delete a season
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  # ─────────────────────────────────────────
+  # STAFF
+  # ─────────────────────────────────────────
+  /api/staff:
+    get:
+      tags: [Staff]
+      summary: List staff members
+      responses:
+        '200':
+          description: Array of staff
+    post:
+      tags: [Staff]
+      summary: Create a staff member
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Staff'
+      responses:
+        '201':
+          description: Staff created
+
+  /api/staff/{id}:
+    get:
+      tags: [Staff]
+      summary: Get a staff member
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Staff object
+    put:
+      tags: [Staff]
+      summary: Update a staff member
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Staff'
+      responses:
+        '200':
+          description: Updated staff member
+    delete:
+      tags: [Staff]
+      summary: Delete a staff member
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  /api/staff/bulk-delete:
+    post:
+      tags: [Staff]
+      summary: Bulk delete staff
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ─────────────────────────────────────────
+  # COMMENTS
+  # ─────────────────────────────────────────
+  /api/comments:
+    get:
+      tags: [Comments]
+      summary: List comments
+      parameters:
+        - name: articleId
+          in: query
+          schema:
+            type: string
+        - name: admin
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Array of comments
+    post:
+      tags: [Comments]
+      summary: Create a comment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, articleId]
+              properties:
+                content:
+                  type: string
+                articleId:
+                  type: string
+                authorName:
+                  type: string
+                authorEmail:
+                  type: string
+                  format: email
+                parentId:
+                  type: string
+      responses:
+        '201':
+          description: Comment created
+
+  /api/comments/{id}:
+    get:
+      tags: [Comments]
+      summary: Get a comment
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Comment object
+    put:
+      tags: [Comments]
+      summary: Update / moderate a comment
+      description: Admin only.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                approved:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated comment
+    delete:
+      tags: [Comments]
+      summary: Delete a comment (and replies)
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted
+
+  # ─────────────────────────────────────────
+  # STANDINGS
+  # ─────────────────────────────────────────
+  /api/standings:
+    get:
+      tags: [Standings]
+      summary: Get league standings
+      parameters:
+        - name: leagueId
+          in: query
+          schema:
+            type: string
+        - name: seasonId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Standings data with team win/loss records
+
+  # ─────────────────────────────────────────
+  # SUBSCRIBERS
+  # ─────────────────────────────────────────
+  /api/subscribers:
+    get:
+      tags: [Subscribers]
+      summary: List subscribers
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Array of subscribers
+    post:
+      tags: [Subscribers]
+      summary: Subscribe an email address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Subscribed
+
+  /api/subscribers/notify:
+    post:
+      tags: [Subscribers]
+      summary: Send notification to subscribers
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, content]
+              properties:
+                subject:
+                  type: string
+                content:
+                  type: string
+                articleId:
+                  type: string
+      responses:
+        '200':
+          description: Notification sent
+
+  /api/subscribers/unsubscribe:
+    post:
+      tags: [Subscribers]
+      summary: Unsubscribe an email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Unsubscribed
+
+  # ─────────────────────────────────────────
+  # REPORTS
+  # ─────────────────────────────────────────
+  /api/reports/generate:
+    post:
+      tags: [Reports]
+      summary: Generate a report
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  enum: [standings, players, matches, season-summary]
+                leagueId:
+                  type: string
+                seasonId:
+                  type: string
+                format:
+                  type: string
+                  enum: [pdf, csv, json]
+      responses:
+        '200':
+          description: Report generated — returns report ID
+
+  /api/reports/{id}/download:
+    get:
+      tags: [Reports]
+      summary: Download a generated report
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Report file
+
+  /api/reports/email:
+    post:
+      tags: [Reports]
+      summary: Email a report to specified recipients
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reportId, recipients]
+              properties:
+                reportId:
+                  type: string
+                recipients:
+                  type: array
+                  items:
+                    type: string
+                    format: email
+      responses:
+        '200':
+          description: Email sent
+
+  # ─────────────────────────────────────────
+  # TOURNAMENTS
+  # ─────────────────────────────────────────
+  /api/tournaments/generate-bracket:
+    post:
+      tags: [Tournaments]
+      summary: Generate a tournament bracket
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [seasonId, bracketType]
+              properties:
+                seasonId:
+                  type: string
+                bracketType:
+                  type: string
+                  enum: [SINGLE_ELIMINATION, DOUBLE_ELIMINATION]
+                teamIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Bracket generated
+
+  /api/tournaments/preview-bracket:
+    post:
+      tags: [Tournaments]
+      summary: Preview bracket without persisting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [seasonId, bracketType]
+              properties:
+                seasonId:
+                  type: string
+                bracketType:
+                  type: string
+                teamIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Bracket preview
+
+  # ─────────────────────────────────────────
+  # SETTINGS
+  # ─────────────────────────────────────────
+  /api/settings:
+    get:
+      tags: [Settings]
+      summary: Get all site settings (admin)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Array of settings
+    post:
+      tags: [Settings]
+      summary: Update multiple settings
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Key-value pairs of settings
+      responses:
+        '200':
+          description: Settings updated
+
+  /api/settings/public:
+    get:
+      tags: [Settings]
+      summary: Get public site settings (no auth)
+      responses:
+        '200':
+          description: Public settings object
+
+  /api/settings/{id}:
+    get:
+      tags: [Settings]
+      summary: Get a single setting
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Setting object
+    put:
+      tags: [Settings]
+      summary: Update a setting
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+      responses:
+        '200':
+          description: Updated setting
+
+  /api/settings/rules-upload:
+    post:
+      tags: [Settings]
+      summary: Upload a rules document
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Rules file uploaded
+
+  /api/settings/rules-delete-upload:
+    post:
+      tags: [Settings]
+      summary: Delete the rules document
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Rules file deleted
+
+  # ─────────────────────────────────────────
+  # FOLDERS
+  # ─────────────────────────────────────────
+  /api/folders:
+    get:
+      tags: [Folders]
+      summary: List media folders
+      parameters:
+        - name: includePrivate
+          in: query
+          schema:
+            type: boolean
+          description: Include private folders (requires auth)
+      responses:
+        '200':
+          description: Array of folders with media counts
+
+  /api/folders/{id}:
+    get:
+      tags: [Folders]
+      summary: Get a folder
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Folder object with media count
+
+  # ─────────────────────────────────────────
+  # HIGHLIGHTS
+  # ─────────────────────────────────────────
+  /api/highlights/potw:
+    get:
+      tags: [Highlights]
+      summary: Get player of the week
+      responses:
+        '200':
+          description: Player of the week record
+
+  /api/highlights/sponsors:
+    get:
+      tags: [Highlights]
+      summary: List sponsors
+      responses:
+        '200':
+          description: Array of sponsors
+    post:
+      tags: [Highlights]
+      summary: Create a sponsor
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                logo:
+                  type: string
+                url:
+                  type: string
+      responses:
+        '201':
+          description: Sponsor created
+
+  /api/highlights/sponsors/{id}:
+    get:
+      tags: [Highlights]
+      summary: Get a sponsor
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Sponsor object
+    put:
+      tags: [Highlights]
+      summary: Update a sponsor
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                logo:
+                  type: string
+                url:
+                  type: string
+      responses:
+        '200':
+          description: Updated sponsor
+
+  # ─────────────────────────────────────────
+  # FEATURE FLAGS
+  # ─────────────────────────────────────────
+  /api/feature-flags:
+    get:
+      tags: [Feature Flags]
+      summary: Get all feature flags and their current state
+      responses:
+        '200':
+          description: Object of flag name to boolean value
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+
+  # ─────────────────────────────────────────
+  # MISC
+  # ─────────────────────────────────────────
+  /api/image-proxy:
+    get:
+      tags: [Misc]
+      summary: Proxy and cache a remote image
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+      responses:
+        '200':
+          description: Image binary
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+
+  /api/uploads/{path}:
+    get:
+      tags: [Misc]
+      summary: Serve an uploaded file
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: File path relative to uploads directory
+      responses:
+        '200':
+          description: File content
+        '404':
+          description: File not found
+
+  /api/openapi.json:
+    get:
+      tags: [Misc]
+      summary: OpenAPI specification (this document)
+      responses:
+        '200':
+          description: OpenAPI 3.1 JSON spec
+
+  # ─────────────────────────────────────────
+  # Reusable responses
+  # ─────────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Resource ID

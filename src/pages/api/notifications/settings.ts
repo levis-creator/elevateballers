@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requireAuth } from '../../../features/cms/lib/auth';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -21,11 +22,8 @@ export const GET: APIRoute = async ({ request }) => {
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to fetch notification settings' }),
-      { status: error.message === 'Unauthorized' ? 401 : 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  } catch (error) {
+    return handleApiError(error, 'fetch notification settings', request);
   }
 };
 
@@ -71,10 +69,7 @@ export const PUT: APIRoute = async ({ request }) => {
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update notification settings' }),
-      { status: error.message === 'Unauthorized' ? 401 : 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update notification settings', request);
   }
 };

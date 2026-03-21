@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getMedia, getFeaturedMedia } from '../../../features/cms/lib/queries';
 import { createMedia } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -328,11 +329,7 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching media:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch media' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch media', request);
   }
 };
 
@@ -364,15 +361,8 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating media:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create media' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create media', request);
   }
 };
 

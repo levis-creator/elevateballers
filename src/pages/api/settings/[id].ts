@@ -4,6 +4,7 @@ import { updateSiteSetting, deleteSiteSetting } from '../../../features/cms/lib/
 import { requirePermission } from '../../../features/rbac/middleware';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params, request }) => {
@@ -24,10 +25,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error) {
     console.error('Error fetching setting:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch setting' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch setting");
   }
 };
 
@@ -55,15 +53,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(setting), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating setting:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update setting' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update setting', request);
   }
 };
 
@@ -73,8 +64,8 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     const success = await deleteSiteSetting(params.id!);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to delete setting' }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: 'Setting not found' }), {
+        status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -85,14 +76,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }).catch(() => {});
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting setting:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete setting' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete setting', request);
   }
 };

@@ -3,6 +3,7 @@ import { updateSponsor, deleteSponsor } from '../../../../features/cms/lib/edito
 import { getSponsorById } from '../../../../features/cms/lib/editorial-queries';
 import { requirePermission } from '../../../../features/rbac/middleware';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
@@ -28,10 +29,7 @@ export const GET: APIRoute = async ({ params }) => {
         });
     } catch (error: any) {
         console.error('Error fetching sponsor:', error);
-        return new Response(JSON.stringify({ error: 'Failed to fetch sponsor' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return handleApiError(error, "fetch sponsor");
     }
 };
 
@@ -52,12 +50,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
         return new Response(JSON.stringify(sponsor), {
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch (error: any) {
-        console.error('Error updating sponsor:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to update sponsor' }), {
-            status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    } catch (error) {
+        return handleApiError(error, 'update sponsor', request);
     }
 };
 
@@ -77,11 +71,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         return new Response(JSON.stringify({ success: true }), {
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch (error: any) {
-        console.error('Error deleting sponsor:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to delete sponsor' }), {
-            status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    } catch (error) {
+        return handleApiError(error, 'delete sponsor', request);
     }
 };

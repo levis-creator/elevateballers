@@ -4,6 +4,7 @@ import { getFolders } from '../../../features/cms/lib/queries';
 import { createFolder } from '../../../features/cms/lib/mutations';
 import { initializeDefaultFolders } from '../../../lib/folder-init';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -35,12 +36,8 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify(folders), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error fetching folders:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch folders' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch folders', request);
   }
 };
 
@@ -77,30 +74,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating folder:', error);
-    
-    // Handle unique constraint violation
-    if (error.code === 'P2002' || error.message?.includes('Unique constraint')) {
-      return new Response(
-        JSON.stringify({ error: 'A folder with this name already exists' }),
-        {
-          status: 409,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-    
-    return new Response(
-      JSON.stringify({ 
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden') 
-          ? 'Unauthorized' 
-          : error.message || 'Failed to create folder' 
-      }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create folder', request);
   }
 };

@@ -4,6 +4,7 @@ import { createMatchEvent } from '../../../../../features/cms/lib/mutations';
 import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../../lib/apiError';
 export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
   if (!matchId) {
@@ -32,10 +33,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match events:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch match events' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch match events");
   }
 };
 
@@ -78,10 +76,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!matchEvent) {
-      return new Response(JSON.stringify({ error: 'Failed to create match event' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "create match event");
     }
 
     await logAudit(request, 'MATCH_EVENT_CREATED', {
@@ -96,9 +91,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating match event:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to create match event' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "create match event");
   }
 };

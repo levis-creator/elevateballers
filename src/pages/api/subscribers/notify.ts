@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendArticleNotification } from '../../../lib/email';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -57,12 +58,6 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error: any) {
     console.error('Notify subscribers error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to notify subscribers' }),
-      {
-        status: error.message?.includes('Forbidden') || error.message === 'Unauthorized' ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, 'notify subscribers', request);
   }
 };

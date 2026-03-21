@@ -4,6 +4,7 @@ import { createMatchPlayer } from '../../../../../features/cms/lib/mutations';
 import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../../lib/apiError';
 export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
   if (!matchId) {
@@ -29,10 +30,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match players:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch match players' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch match players");
   }
 };
 
@@ -62,10 +60,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!matchPlayer) {
-      return new Response(JSON.stringify({ error: 'Failed to create match player' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "create match player");
     }
 
     await logAudit(request, 'MATCH_PLAYER_ADDED', {
@@ -81,9 +76,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating match player:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to create match player' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "create match player");
   }
 };

@@ -4,6 +4,7 @@ import { getMatchSubstitutions } from '../../../../features/game-tracking/lib/qu
 import { requireAuth } from '../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -52,10 +53,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!substitution) {
-      return new Response(JSON.stringify({ error: 'Failed to create substitution' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "create substitution");
     }
 
     await logAudit(request, 'GAME_SUBSTITUTION_RECORDED', {
@@ -74,13 +72,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating substitution:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create substitution' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, "create substitution");
   }
 };
 
@@ -106,12 +98,6 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching substitutions:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to fetch substitutions' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, "fetch substitutions");
   }
 };

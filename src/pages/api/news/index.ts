@@ -4,6 +4,7 @@ import { createNewsArticle, generateSlug } from '../../../features/cms/lib/mutat
 import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap, type NewsArticleDTO } from '../../../features/cms/types';
 import { writeAuditLog } from '../../../features/cms/lib/auth';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -69,32 +70,18 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify(articlesWithComments), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    // Handle authentication errors
-    if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Handle invalid date errors specifically
+  } catch (error) {
+    // Handle invalid date errors specifically — return empty array instead of crashing
     if (error instanceof Error &&
       (error.message.includes('Invalid time value') ||
         error.message.includes('RangeError'))) {
       console.error('⚠️  Invalid dates detected in database. Run: npm run fix:dates');
-      // Return empty array instead of error to prevent site crash
       return new Response(JSON.stringify([]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    console.error('Error fetching news articles:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch articles' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch articles', request);
   }
 };
 
@@ -169,14 +156,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating news article:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create article' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create article', request);
   }
 };

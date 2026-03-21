@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { getActivePlayerOfTheWeek, getPlayerOfTheWeekHistory } from '../../../features/cms/lib/editorial-queries';
 import { setActivePlayerOfTheWeek, updatePlayerOfTheWeek, deletePlayerOfTheWeek } from '../../../features/cms/lib/editorial-mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -21,12 +23,8 @@ export const GET: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify(activePotw), {
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch (error: any) {
-        console.error('Error fetching POTW:', error);
-        return new Response(JSON.stringify({ error: 'Failed to fetch POTW' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    } catch (error) {
+        return handleApiError(error, 'fetch POTW', request);
     }
 };
 
@@ -43,17 +41,18 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         const potw = await setActivePlayerOfTheWeek(data);
+        await logAudit(
+            request,
+            'POTW_CREATED',
+            { playerId: data.playerId, hasDescription: Boolean(data.description) }
+        );
 
         return new Response(JSON.stringify(potw), {
             status: 201,
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch (error: any) {
-        console.error('Error setting POTW:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to set POTW' }), {
-            status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    } catch (error) {
+        return handleApiError(error, 'set POTW', request);
     }
 };
 
@@ -71,16 +70,17 @@ export const PUT: APIRoute = async ({ request }) => {
         }
 
         const potw = await updatePlayerOfTheWeek(id, updateData);
+        await logAudit(
+            request,
+            'POTW_UPDATED',
+            { id, fields: Object.keys(updateData ?? {}) }
+        );
 
         return new Response(JSON.stringify(potw), {
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch (error: any) {
-        console.error('Error updating POTW:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to update POTW' }), {
-            status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    } catch (error) {
+        return handleApiError(error, 'update POTW', request);
     }
 };
 
@@ -97,15 +97,12 @@ export const DELETE: APIRoute = async ({ request, url }) => {
         }
 
         await deletePlayerOfTheWeek(id);
+        await logAudit(request, 'POTW_DELETED', { id });
 
         return new Response(JSON.stringify({ success: true }), {
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch (error: any) {
-        console.error('Error deleting POTW:', error);
-        return new Response(JSON.stringify({ error: error.message || 'Failed to delete POTW' }), {
-            status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    } catch (error) {
+        return handleApiError(error, 'delete POTW', request);
     }
 };

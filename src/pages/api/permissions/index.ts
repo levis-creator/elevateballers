@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requireAnyPermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -70,26 +71,6 @@ export const GET: APIRoute = async ({ request, url }) => {
       }
     );
   } catch (error) {
-    console.error('Get permissions error:', error);
-
-    if (error instanceof Error) {
-      if (error.message.includes('Unauthorized')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (error.message.includes('Forbidden')) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: 'Failed to fetch permissions' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch permissions', request);
   }
 };

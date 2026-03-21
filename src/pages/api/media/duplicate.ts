@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { saveFile, readFile, getStorageType } from '../../../lib/file-storage';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -120,18 +121,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error duplicating media:', error);
-    return new Response(
-      JSON.stringify({
-        error: error.message === 'Unauthorized' || error.message.includes('Forbidden')
-          ? 'Unauthorized'
-          : error.message || 'Failed to duplicate media',
-      }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'duplicate media', request);
   }
 };

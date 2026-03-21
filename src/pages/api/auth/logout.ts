@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { logAudit } from '../../../features/cms/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -16,10 +17,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Logout error:', error);
-    return new Response(JSON.stringify({ error: 'Logout failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'logout', request);
   }
 };
