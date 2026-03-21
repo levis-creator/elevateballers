@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
 import { logAudit } from '../../../../features/cms/lib/audit';
+import { sendPlayerApprovedEmail } from '../../../../lib/email';
 
 export const prerender = false;
 
@@ -18,14 +19,33 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       });
     }
 
+    const shouldApprove = data.approved ?? true;
+
     const player = await prisma.player.update({
       where: { id },
       data: {
-        approved: data.approved ?? true,
+        approved: shouldApprove,
       },
     });
 
-    await logAudit(request, (data.approved ?? true) ? 'PLAYER_APPROVED' : 'PLAYER_UNAPPROVED', {
+    if (shouldApprove && player.email) {
+      // Resolve team name for the email (fire-and-forget)
+      const teamNamePromise = player.teamId
+        ? prisma.team.findUnique({ where: { id: player.teamId }, select: { name: true } }).then((t) => t?.name ?? null)
+        : Promise.resolve(null);
+
+      teamNamePromise
+        .then((teamName) =>
+          sendPlayerApprovedEmail({
+            name: `${player.firstName} ${player.lastName}`,
+            email: player.email as string,
+            teamName,
+          })
+        )
+        .catch((err) => console.error('[email] Failed to send player approved email:', err));
+    }
+
+    await logAudit(request, shouldApprove ? 'PLAYER_APPROVED' : 'PLAYER_UNAPPROVED', {
       playerId: id,
     });
 

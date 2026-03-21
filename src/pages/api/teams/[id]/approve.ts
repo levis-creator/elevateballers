@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
 import { logAudit } from '../../../../features/cms/lib/audit';
+import { sendTeamApprovedEmail } from '../../../../lib/email';
 
 export const prerender = false;
 
@@ -38,6 +39,21 @@ export const PATCH: APIRoute = async ({ params, request }) => {
           approved: true,
         },
       });
+
+      // Email all coaches for this team (fire-and-forget)
+      const coaches = await prisma.teamStaff.findMany({
+        where: { teamId: id, role: 'COACH' },
+        include: { staff: true },
+      });
+      for (const ts of coaches) {
+        if (ts.staff.email) {
+          sendTeamApprovedEmail({
+            coachName: `${ts.staff.firstName} ${ts.staff.lastName}`,
+            email: ts.staff.email,
+            teamName: team.name,
+          }).catch((err) => console.error('[email] Failed to send team approved email:', err));
+        }
+      }
     }
 
     await logAudit(request, shouldApprove ? 'TEAM_APPROVED' : 'TEAM_UNAPPROVED', {
