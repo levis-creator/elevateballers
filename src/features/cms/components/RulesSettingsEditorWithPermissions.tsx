@@ -1,10 +1,2 @@
-import { PermissionProvider } from '@/features/rbac/usePermissions';
-import RulesSettingsEditor from './RulesSettingsEditor';
-
-export default function RulesSettingsEditorWithPermissions() {
-  return (
-    <PermissionProvider>
-      <RulesSettingsEditor />
-    </PermissionProvider>
-  );
-}
+export * from '../presentation/components/RulesSettingsEditorWithPermissions';
+export { default } from '../presentation/components/RulesSettingsEditorWithPermissions';
