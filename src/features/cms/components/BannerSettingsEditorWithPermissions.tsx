@@ -1,10 +1,2 @@
-import { PermissionProvider } from '@/features/rbac/usePermissions';
-import BannerSettingsEditor from './BannerSettingsEditor';
-
-export default function BannerSettingsEditorWithPermissions() {
-  return (
-    <PermissionProvider>
-      <BannerSettingsEditor />
-    </PermissionProvider>
-  );
-}
+export * from '../presentation/components/BannerSettingsEditorWithPermissions';
+export { default } from '../presentation/components/BannerSettingsEditorWithPermissions';
