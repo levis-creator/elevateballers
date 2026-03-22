@@ -1,0 +1,119 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { checkAuth } from '@/features/auth/lib/auth-astro';
+import AdminShell from './AdminShell';
+import { hasPermission, hasAnyPermission, hasAllPermissions } from '@/features/rbac/data/datasources/permissions';
+import '@/styles/admin.css';
+
+interface Props {
+  title?: string;
+  permission?: string;
+  permissionsAny?: string[];
+  permissionsAll?: string[];
+}
+
+const {
+  title = 'Admin - Elevate Ballers CMS',
+  permission,
+  permissionsAny,
+  permissionsAll,
+} = Astro.props;
+
+// Check authentication
+const user = await checkAuth(Astro.request);
+
+let redirectUrl: string | null = null;
+
+if (!user) {
+  redirectUrl = '/admin/login';
+} else if (permission) {
+  const allowed = await hasPermission(user.id, permission);
+  if (!allowed) redirectUrl = '/unauthorized';
+} else if (permissionsAny?.length) {
+  const allowed = await hasAnyPermission(user.id, permissionsAny);
+  if (!allowed) redirectUrl = '/unauthorized';
+} else if (permissionsAll?.length) {
+  const allowed = await hasAllPermissions(user.id, permissionsAll);
+  if (!allowed) redirectUrl = '/unauthorized';
+}
+
+if (redirectUrl) {
+  try {
+    // Try to perform a proper server-side redirect
+    return Astro.redirect(redirectUrl, 302);
+  } catch (e) {
+    // If output stream has already started, Astro.redirect throws ResponseSentError
+    // We fall back to yielding a meta refresh + client-side script in this case
+    // (This variable checking is done in the template below)
+  }
+}
+---
+
+{redirectUrl ? (
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta http-equiv="refresh" content={`0;url=${redirectUrl}`} />
+      <title>Redirecting...</title>
+      <script define:vars={{ url: redirectUrl }}>
+        window.location.href = url;
+      </script>
+    </head>
+    <body style="background: #f9fafb; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
+      <p>Redirecting to <a href={redirectUrl} style="color: #dd3333; text-decoration: none; font-weight: bold;">{redirectUrl}</a>...</p>
+    </body>
+  </html>
+) : (
+
+<Layout title={title}>
+  <div class="flex min-h-screen bg-[#f9fafb] relative w-full font-sans">
+    <!-- Sidebar + Header (shared PermissionProvider) -->
+    <AdminShell client:only="react" />
+
+    <!-- Main Content Area -->
+    <main class="flex-1 ml-[var(--admin-sidebar-width)] pt-[var(--admin-header-height)] min-h-screen w-[calc(100%-var(--admin-sidebar-width))] max-md:ml-0 max-md:w-full max-md:pt-14">
+      <div class="p-8 max-w-[1400px] mx-auto w-full max-md:p-4 max-[480px]:p-3 admin-page scroll-smooth">
+        <slot />
+      </div>
+    </main>
+  </div>
+
+  <style is:global>
+    /* Design System Variables - Kept for backward compatibility */
+    :root {
+      --admin-primary: #dd3333;
+      --admin-primary-dark: #c02a2a;
+      --admin-gray-50: #f9fafb;
+      --admin-gray-100: #f3f4f6;
+      --admin-gray-200: #e5e7eb;
+      --admin-gray-300: #d1d5db;
+      --admin-gray-500: #6b7280;
+      --admin-gray-700: #374151;
+      --admin-gray-900: #111827;
+      --admin-success: #10b981;
+      --admin-error: #ef4444;
+      --admin-header-height: 4rem;
+      --admin-sidebar-width: 260px;
+    }
+
+    /* Override any conflicting styles from main Layout */
+    body.admin-page,
+    html.admin-page {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* Typography - Preserve heading font */
+    .admin-page h1, .admin-page h2, .admin-page h3 {
+      font-family: 'Teko', sans-serif;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    /* Smooth Scrolling */
+    .admin-page {
+      scroll-behavior: smooth;
+    }
+  </style>
+</Layout>
+)}
