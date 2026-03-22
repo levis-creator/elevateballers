@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { getCommentById } from '../../../features/cms/lib/queries';
-import { updateComment, deleteComment, approveComment, rejectComment } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getCommentById } from '../../../features/contact/lib/queries/comments';
+import { updateComment, deleteComment, approveComment, rejectComment } from '../../../features/contact/lib/mutations/comments';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -28,18 +29,14 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response(JSON.stringify(comment), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error fetching comment:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch comment' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch comment', request);
   }
 };
 
 export const PUT: APIRoute = async ({ request, params }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'comments:update');
     const { id } = params;
 
     if (!id) {
@@ -94,28 +91,14 @@ export const PUT: APIRoute = async ({ request, params }) => {
     return new Response(JSON.stringify(comment), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.error('Error updating comment:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update comment' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update comment', request);
   }
 };
 
 export const DELETE: APIRoute = async ({ request, params }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'comments:update');
     const { id } = params;
 
     if (!id) {
@@ -137,19 +120,8 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.error('Error deleting comment:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete comment' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'delete comment', request);
   }
 };
 

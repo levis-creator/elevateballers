@@ -5,15 +5,15 @@
 
 import { useState, useEffect } from 'react';
 import type { MatchWithTeamsAndLeagueAndSeason } from '../types';
-import type { BracketMatch } from '../../tournaments/lib/bracket-converter';
+import type { BracketMatch } from '@/features/tournaments/domain/usecases/bracket-converter';
 import { 
   convertMatchesToBracket, 
   convertMatchesToDoubleEliminationBracket,
   detectBracketType 
-} from '../../tournaments/lib/bracket-converter';
-import TournamentBracket from '../../tournaments/components/TournamentBracket';
-import BracketMatchDialog from '../../tournaments/components/BracketMatchDialog';
-import BracketGeneratorDialog from '../../tournaments/components/BracketGeneratorDialog';
+} from '@/features/tournaments/domain/usecases/bracket-converter';
+import TournamentBracket from '@/features/tournaments/presentation/components/TournamentBracket';
+import BracketMatchDialog from '@/features/tournaments/presentation/components/BracketMatchDialog';
+import BracketGeneratorDialog from '@/features/tournaments/presentation/components/BracketGeneratorDialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';

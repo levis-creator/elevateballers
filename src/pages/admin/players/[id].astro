@@ -6,13 +6,13 @@ export async function getStaticPaths() {
   return [];
 }
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import PlayerEditor from '../../../features/cms/components/PlayerEditor';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import PlayerEditor from '../../../features/player/components/PlayerEditor';
 
 const { id } = Astro.params;
 ---
 
-<AdminLayout title="Edit Player - Admin">
+<AdminLayout title="Edit Player - Admin" permission="players:update">
   <PlayerEditor playerId={id} client:load />
 </AdminLayout>
 

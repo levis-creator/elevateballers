@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react';
-import type { Player } from '../types';
+import type { Player } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit, User, FileText, AlertCircle, CheckCircle, XCircle, Trophy, Calendar, Clock } from 'lucide-react';
-import { calculatePlayerStatistics, calculatePlayerMatchStats } from '../../player/lib/playerStats';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ArrowLeft, Edit, User, FileText, AlertCircle, CheckCircle, XCircle, Trophy, Calendar, Clock, ArrowRightLeft } from 'lucide-react';
+import { calculatePlayerStatistics, calculatePlayerMatchStats } from '@/features/player/domain/usecases/playerStats';
 
 interface PlayerViewProps {
   playerId: string;
@@ -19,6 +34,12 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
   const [matches, setMatches] = useState<any[]>([]);
   const [matchStats, setMatchStats] = useState<Record<string, any>>({});
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [teamHistory, setTeamHistory] = useState<any[]>([]);
+  const [perTeamStats, setPerTeamStats] = useState<Array<{
+    teamId: string;
+    teamName: string;
+    stats: any;
+  }>>([]);
   const [playerStats, setPlayerStats] = useState({
     totalMatches: 0,
     totalPoints: 0,
@@ -31,6 +52,11 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
     threePointPercentage: 0,
     freeThrowPercentage: 0,
   });
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState('');
 
   useEffect(() => {
     fetchPlayer();
@@ -39,6 +65,7 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
   useEffect(() => {
     if (player) {
       fetchPlayerMatches();
+      fetchTeamHistory();
     }
   }, [player?.id]);
 
@@ -67,7 +94,7 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
       if (response.ok) {
         const data = await response.json();
         setMatches(data);
-        
+
         // Fetch events for each completed match and calculate stats
         const statsPromises = data
           .filter((match: any) => match.status === 'COMPLETED')
@@ -84,11 +111,11 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
             }
             return { matchId: match.id, stats: null, events: [] };
           });
-        
+
         const statsResults = await Promise.all(statsPromises);
         const statsMap: Record<string, any> = {};
         const matchesWithEvents: any[] = [];
-        
+
         statsResults.forEach(({ matchId, stats, events }) => {
           if (stats) statsMap[matchId] = stats;
           const match = data.find((m: any) => m.id === matchId);
@@ -96,12 +123,41 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
             matchesWithEvents.push({ ...match, events });
           }
         });
-        
+
         setMatchStats(statsMap);
-        
+
         // Calculate aggregate player statistics
         const aggregateStats = calculatePlayerStatistics(matchesWithEvents, player.id);
-        setPlayerStats(aggregateStats);
+        const overrides = player.stats && typeof player.stats === 'object' ? player.stats : null;
+        const mergedStats = overrides ? {
+          ...aggregateStats,
+          ...(overrides.ppg !== undefined ? { pointsPerGame: overrides.ppg } : {}),
+          ...(overrides.rpg !== undefined ? { reboundsPerGame: overrides.rpg } : {}),
+          ...(overrides.apg !== undefined ? { assistsPerGame: overrides.apg } : {}),
+          ...(overrides.spg !== undefined ? { stealsPerGame: overrides.spg } : {}),
+          ...(overrides.bpg !== undefined ? { blocksPerGame: overrides.bpg } : {}),
+          ...(overrides.fgPercent !== undefined ? { fieldGoalPercentage: overrides.fgPercent } : {}),
+          ...(overrides.ftPercent !== undefined ? { freeThrowPercentage: overrides.ftPercent } : {}),
+          ...(overrides.threePointPercent !== undefined ? { threePointPercentage: overrides.threePointPercent } : {}),
+        } : aggregateStats;
+        setPlayerStats(mergedStats);
+
+        // Calculate per-team stats using playerTeamId from each match
+        const teamMatchGroups = new Map<string, { teamName: string; matches: any[] }>();
+        matchesWithEvents.forEach((match: any) => {
+          const tid = match.playerTeamId;
+          const tname = tid === match.team1Id ? match.team1?.name : match.team2?.name;
+          if (tid && tname) {
+            if (!teamMatchGroups.has(tid)) teamMatchGroups.set(tid, { teamName: tname, matches: [] });
+            teamMatchGroups.get(tid)!.matches.push(match);
+          }
+        });
+        const perTeam = Array.from(teamMatchGroups.entries()).map(([teamId, { teamName, matches: tMatches }]) => ({
+          teamId,
+          teamName,
+          stats: calculatePlayerStatistics(tMatches, player.id),
+        }));
+        setPerTeamStats(perTeam);
       }
     } catch (err) {
       console.error('Error fetching player matches:', err);
@@ -110,9 +166,59 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
     }
   };
 
+  const fetchTeamHistory = async () => {
+    try {
+      const response = await fetch(`/api/players/${playerId}/team-history`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeamHistory(data);
+      }
+    } catch (err) {
+      console.error('Error fetching team history:', err);
+    }
+  };
+
+  const openTransferModal = async () => {
+    setTransferError('');
+    setSelectedTeamId('');
+    setTransferModalOpen(true);
+    try {
+      const res = await fetch('/api/teams?limit=200');
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data.teams ?? data);
+      }
+    } catch {
+      setTransferError('Failed to load teams');
+    }
+  };
+
+  const handleTransfer = async () => {
+    setTransferring(true);
+    setTransferError('');
+    try {
+      const res = await fetch(`/api/players/${playerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: selectedTeamId === 'none' ? null : selectedTeamId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Transfer failed');
+      }
+      setTransferModalOpen(false);
+      await fetchPlayer();
+      fetchTeamHistory();
+    } catch (err: any) {
+      setTransferError(err.message || 'Transfer failed');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   // Group matches by league and sort within each league
   const getMatchesByLeague = () => {
-    const leagueMap = new Map<string, any[]>();
+    const leagueMap = new Map<string, { leagueId: string; leagueName: string; matches: any[] }>();
     
     matches.forEach((match) => {
       const leagueKey = match.league?.id || match.leagueId || 'no-league';
@@ -207,12 +313,18 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
           </Button>
           <h1 className="text-3xl font-heading font-semibold text-foreground">Player Details</h1>
         </div>
-        <Button asChild>
-          <a href={`/admin/players/${player.id}`} data-astro-prefetch>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Player
-          </a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openTransferModal}>
+            <ArrowRightLeft className="mr-2 h-4 w-4" />
+            Transfer Player
+          </Button>
+          <Button asChild>
+            <a href={`/admin/players/${player.id}`} data-astro-prefetch>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Player
+            </a>
+          </Button>
+        </div>
       </div>
 
       {/* Player Header Card */}
@@ -225,6 +337,7 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
                   src={player.image}
                   alt={playerName}
                   className="w-32 h-32 rounded-xl object-cover border-4 border-border"
+                  onError={(e) => { e.currentTarget.src = '/images/default-player.png'; }}
                 />
               ) : (
                 <div className="w-32 h-32 rounded-xl bg-muted flex items-center justify-center border-4 border-border">
@@ -363,6 +476,104 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
                   {playerStats.freeThrowPercentage > 0 ? `${playerStats.freeThrowPercentage.toFixed(1)}%` : '-'}
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Team History Section */}
+      {teamHistory.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-6 w-6" />
+              Team History
+            </CardTitle>
+            <CardDescription>Teams this player has been a part of</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative pl-6 border-l-2 border-border space-y-6">
+              {teamHistory.map((entry, index) => (
+                <div key={entry.id} className="relative">
+                  <div className="absolute -left-[25px] w-4 h-4 rounded-full bg-primary border-2 border-background" />
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {entry.team ? (
+                          <a
+                            href={`/admin/teams/view/${entry.team.id}`}
+                            className="hover:text-primary underline"
+                            data-astro-prefetch
+                          >
+                            {entry.team.name}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">Unassigned</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(entry.joinedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        {' — '}
+                        {entry.leftAt
+                          ? new Date(entry.leftAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                          : 'Present'}
+                      </p>
+                    </div>
+                    {!entry.leftAt && (
+                      <Badge className="bg-green-100 text-green-700 shrink-0">Current</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-Team Stats Section */}
+      {perTeamStats.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-6 w-6" />
+              Stats by Team
+            </CardTitle>
+            <CardDescription>Career statistics broken down by team</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-4 font-semibold text-muted-foreground">Team</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">GP</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">PPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">RPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">APG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">SPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">BPG</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">FG%</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">3P%</th>
+                    <th className="text-center py-2 px-3 font-semibold text-muted-foreground">FT%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perTeamStats.map(({ teamId, teamName, stats }) => (
+                    <tr key={teamId} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="py-3 pr-4 font-medium">{teamName}</td>
+                      <td className="text-center py-3 px-3">{stats.totalMatches}</td>
+                      <td className="text-center py-3 px-3">{stats.pointsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.reboundsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.assistsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.stealsPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.blocksPerGame.toFixed(1)}</td>
+                      <td className="text-center py-3 px-3">{stats.fieldGoalPercentage > 0 ? `${stats.fieldGoalPercentage.toFixed(1)}%` : '-'}</td>
+                      <td className="text-center py-3 px-3">{stats.threePointPercentage > 0 ? `${stats.threePointPercentage.toFixed(1)}%` : '-'}</td>
+                      <td className="text-center py-3 px-3">{stats.freeThrowPercentage > 0 ? `${stats.freeThrowPercentage.toFixed(1)}%` : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
@@ -533,6 +744,55 @@ export default function PlayerView({ playerId }: PlayerViewProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Transfer Player Modal */}
+      <Dialog open={transferModalOpen} onOpenChange={setTransferModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transfer Player</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Current Team</Label>
+              <p className="text-sm text-muted-foreground">
+                {(player as any).team?.name ?? 'No team'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="transfer-team">Transfer To</Label>
+              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <SelectTrigger id="transfer-team">
+                  <SelectValue placeholder="Select a team..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Team (Free Agent)</SelectItem>
+                  {teams
+                    .filter((t) => t.id !== (player as any).teamId)
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {transferError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{transferError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferModalOpen(false)} disabled={transferring}>
+              Cancel
+            </Button>
+            <Button onClick={handleTransfer} disabled={transferring || selectedTeamId === ''}>
+              {transferring ? 'Transferring...' : 'Confirm Transfer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

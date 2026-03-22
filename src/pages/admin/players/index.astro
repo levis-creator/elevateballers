@@ -2,11 +2,11 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import PlayerList from '../../../features/cms/components/PlayerList';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import PlayerList from '../../../features/player/components/PlayerList';
 ---
 
-<AdminLayout title="Players Management - Admin">
+<AdminLayout title="Players Management - Admin" permission="players:read">
   <PlayerList client:load />
 </AdminLayout>
 

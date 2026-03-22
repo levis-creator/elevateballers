@@ -17,14 +17,17 @@ import QuickEventButtons from './QuickEventButtons';
 import { useGameTrackingStore } from '../stores/useGameTrackingStore';
 import { Play, AlertCircle } from 'lucide-react';
 import type { Match } from '@prisma/client';
-import { getTeam1Name, getTeam2Name, getTeam1Logo, getTeam2Logo } from '../../matches/lib/team-helpers';
+import type { MatchWithGameState } from '../../domain/entities';
+import { getTeam1Name, getTeam2Name, getTeam1Logo, getTeam2Logo } from '../../../matches/domain/usecases/team-helpers';
 
 interface GameTrackingPanelProps {
   matchId: string;
-  match: Match | null;
+  match: MatchWithGameState | null;
+  onRefresh?: () => void;
+  playerRefreshTrigger?: number;
 }
 
-export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelProps) {
+export default function GameTrackingPanel({ matchId, match, onRefresh, playerRefreshTrigger }: GameTrackingPanelProps) {
   const {
     gameState,
     isLoading,
@@ -33,8 +36,16 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
     startGame,
     endGame,
     toggleClock,
+    updateGameState,
+    localClockSeconds,
   } = useGameTrackingStore();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [timerWarning, setTimerWarning] = useState<string | null>(null);
+
+  // Bump refreshTrigger when the parent signals a player roster change
+  useEffect(() => {
+    if (playerRefreshTrigger) setRefreshTrigger((prev) => prev + 1);
+  }, [playerRefreshTrigger]);
 
   useEffect(() => {
     if (matchId) {
@@ -52,6 +63,8 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   const handleStartGame = async () => {
     await startGame(matchId);
+    setRefreshTrigger((prev) => prev + 1);
+    if (onRefresh) onRefresh();
   };
 
   const handleEndGame = async () => {
@@ -65,12 +78,62 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
   };
 
   const handleToggleClock = async () => {
+    // Check if timer is set before allowing start
+    if (!gameState?.clockRunning) {
+      // Timer is paused, check if it's set before allowing start
+      if (localClockSeconds === null || localClockSeconds === 0) {
+        setTimerWarning('Please set the timer duration before starting. Use the Settings button or click on the timer to set the time.');
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => setTimerWarning(null), 5000);
+        return;
+      }
+    }
+    // Clear any existing warning when successfully toggling
+    setTimerWarning(null);
     await toggleClock(matchId);
   };
 
   const handleEventRecorded = async () => {
     await fetchGameState(matchId);
     setRefreshTrigger((prev) => prev + 1);
+    if (onRefresh) onRefresh();
+  };
+
+  const handlePeriodChange = async (newPeriod: number) => {
+    await updateGameState(matchId, {
+      period: newPeriod,
+    });
+  };
+
+  const handlePossessionChange = async (targetTeamId: string) => {
+    await updateGameState(matchId, {
+      possessionTeamId: targetTeamId,
+    });
+
+    // Record possession change as an event so it appears in play-by-play
+    if (match) {
+      const teamName = targetTeamId === match.team1Id ? getTeam1Name(match) : getTeam2Name(match);
+      const currentPeriod = gameState?.period ?? 1;
+      const minutesPerPeriod = match.gameRules?.minutesPerPeriod ?? 10;
+      const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
+      const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
+      const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
+
+      await fetch(`/api/matches/${matchId}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'OTHER',
+          teamId: targetTeamId,
+          description: `Possession: ${teamName}`,
+          minute: calculatedMinute,
+          period: currentPeriod,
+          secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+        }),
+      });
+    }
+
+    handleEventRecorded();
   };
 
   const team1Name = match ? getTeam1Name(match) : undefined;
@@ -107,6 +170,14 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
 
   return (
     <div className="space-y-4">
+      {/* Timer Warning Alert */}
+      {timerWarning && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{timerWarning}</AlertDescription>
+        </Alert>
+      )}
+
       {/* End Game Button - Prominently displayed for live games */}
       {match?.status === 'LIVE' && (
         <Card className="border-red-500 border-2">
@@ -142,6 +213,8 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             team2Logo={team2Logo}
             team1Id={match?.team1Id || null}
             team2Id={match?.team2Id || null}
+            onPeriodChange={handlePeriodChange}
+            onPossessionChange={handlePossessionChange}
           />
         </div>
 
@@ -173,6 +246,7 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
             match={match}
             gameState={gameState}
             onSubstitutionRecorded={handleEventRecorded}
+            refreshTrigger={refreshTrigger}
           />
         </div>
         <div className="flex-1">
@@ -187,7 +261,11 @@ export default function GameTrackingPanel({ matchId, match }: GameTrackingPanelP
       </div>
 
       {/* Play-by-Play Log */}
-      <PlayByPlayLog matchId={matchId} onRefresh={() => fetchGameState(matchId)} />
+      <PlayByPlayLog 
+        matchId={matchId} 
+        onRefresh={() => fetchGameState(matchId)} 
+        refreshTrigger={refreshTrigger}
+      />
     </div>
   );
 }

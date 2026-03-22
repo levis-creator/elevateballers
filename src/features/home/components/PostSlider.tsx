@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCarouselStore } from '../stores/useCarouselStore';
-import type { PostSlide } from '../types';
-import { reverseCategoryMap } from '../../cms/types';
-import type { NewsArticleDTO } from '../../cms/types';
+import type { PostSlide } from '../../domain/entities';
+import { reverseCategoryMap } from '@/lib/types';
+import type { NewsArticleDTO } from '@/lib/types';
 
 /**
  * PostSlider component - Hero post slider carousel
@@ -42,7 +42,7 @@ export default function PostSlider() {
         const limitedArticles = articles.slice(0, 5);
         
         // Map NewsArticle to PostSlide format
-        const mappedSlides: PostSlide[] = limitedArticles.map((article) => {
+        const mappedSlides: PostSlide[] = limitedArticles.map((article): PostSlide => {
           // Process excerpt: strip HTML tags and truncate to one line
           let processedExcerpt = article.excerpt || '';
           
@@ -61,10 +61,20 @@ export default function PostSlider() {
           if (processedExcerpt.length > 180) {
             processedExcerpt = processedExcerpt.substring(0, 180).trim() + '...';
           }
+
+          // Normalize image URL
+          let imageUrl: string = '/images/default-slide.jpg';
+          if (article.image) {
+            if (typeof article.image === 'string') {
+              imageUrl = article.image;
+            } else if (typeof article.image === 'object') {
+              imageUrl = (article.image as any).url || (article.image as any).src || '/images/default-slide.jpg';
+            }
+          }
           
           return {
             id: article.id,
-            image: article.image || '/images/default-slide.jpg',
+            image: imageUrl,
             category: reverseCategoryMap[article.category] || article.category,
             title: article.title,
             excerpt: processedExcerpt,
@@ -121,6 +131,7 @@ export default function PostSlider() {
       <div className="stm-post__slider container">
         <div className="stm-post__slides">
           <div className="stm-slide active">
+            <div className="stm-post__slider__image" style={{ backgroundImage: 'url(/images/default-slide.jpg)' }} />
             <div className="stm-post__slider__data container">
               <div className="row">
                 <div className="col-md-7 col-sm-6">

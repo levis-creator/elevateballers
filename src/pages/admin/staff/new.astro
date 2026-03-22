@@ -2,11 +2,11 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import StaffEditor from '../../../features/cms/components/StaffEditor';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import StaffEditor from '../../../features/staff/components/StaffEditor';
 ---
 
-<AdminLayout title="Create Staff Member - Admin">
+<AdminLayout title="Create Staff Member - Admin" permission="staff:create">
   <StaffEditor client:load />
 </AdminLayout>
 

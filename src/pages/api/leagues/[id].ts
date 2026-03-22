@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
-import { getLeagueById } from '../../../features/cms/lib/queries';
-import { updateLeague, deleteLeague } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getLeagueById } from '../../../features/leagues/lib/queries/leagues';
+import { updateLeague, deleteLeague } from '../../../features/leagues/lib/mutations/leagues';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { logAudit } from '../../../features/audit/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -20,17 +22,13 @@ export const GET: APIRoute = async ({ params }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching league:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch league' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch league');
   }
 };
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'leagues:update');
     const data = await request.json();
 
     // Convert date strings to Date if provided
@@ -53,21 +51,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(league), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating league:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update league' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update league', request);
   }
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'leagues:update');
     const success = await deleteLeague(params.id!);
 
     if (!success) {
@@ -77,16 +68,12 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'LEAGUE_DELETED', {
+      leagueId: params.id,
+    });
+
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting league:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete league' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete league', request);
   }
 };
-

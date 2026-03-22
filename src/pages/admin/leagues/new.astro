@@ -2,17 +2,11 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import LeagueEditor from '../../../features/cms/components/LeagueEditor';
-import { checkAuth } from '../../../features/cms/lib/auth-astro';
-
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import LeagueEditor from '../../../features/leagues/components/LeagueEditor';
 ---
 
-<AdminLayout title="Create League - Admin">
+<AdminLayout title="Create League - Admin" permission="leagues:create">
   <LeagueEditor client:load />
 </AdminLayout>
 

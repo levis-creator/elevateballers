@@ -1,9 +1,10 @@
 import type { APIRoute } from 'astro';
-import { createEmailReport, updateEmailReport } from '../../../features/reports/lib/mutations';
-import { getReportGeneration } from '../../../features/reports/lib/queries';
-import { sendEmailReport } from '../../../features/reports/lib/emailService';
-import { requireAuth } from '../../../features/cms/lib/auth';
+import { createEmailReport, updateEmailReport } from '../../../features/reports/data/datasources/mutations';
+import { getReportGeneration } from '../../../features/reports/data/datasources/queries';
+import { sendEmailReport } from '../../../features/reports/data/datasources/emailService';
+import { requireAuth } from '@/features/auth/lib/auth';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -85,9 +86,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error sending email report:', error);
-    return new Response(JSON.stringify({ error: 'Failed to send email report' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "send email report");
   }
 };

@@ -2,12 +2,12 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import TeamList from '../../../features/cms/components/TeamList';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import TeamList from '../../../features/team/presentation/components/TeamList';
 ---
 
 
-<AdminLayout title="Teams Management - Admin">
+<AdminLayout title="Teams Management - Admin" permission="teams:read">
   <TeamList client:load />
 </AdminLayout>
 

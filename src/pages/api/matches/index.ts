@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { getFilteredMatches } from '../../../features/matches/lib/queries';
-import { createMatch } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
-import type { MatchFilter, MatchSortOption, MatchDTO, MatchStage } from '../../../features/matches/types';
+import { getFilteredMatches } from '../../../features/matches/data/datasources/queries';
+import { createMatch } from '../../../features/matches/data/datasources/mutations';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import type { MatchFilter, MatchSortOption, MatchDTO, MatchStage } from '../../../features/matches/domain/entities';
+import { logAudit } from '../../../features/audit/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -140,20 +142,13 @@ export const GET: APIRoute = async ({ request }) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching matches:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch matches' }), {
-      status: 500,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+    return handleApiError(error, 'fetch matches', request);
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'matches:create');
     const data = await request.json();
 
     // Validate required fields
@@ -185,19 +180,19 @@ export const POST: APIRoute = async ({ request }) => {
       duration: data.duration,
     });
 
+    await logAudit(request, 'MATCH_CREATED', {
+      matchId: match.id,
+      team1Id: match.team1Id,
+      team2Id: match.team2Id,
+      leagueId: match.leagueId,
+      date: match.date,
+    });
+
     return new Response(JSON.stringify(match), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating match:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create match' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create match', request);
   }
 };
-

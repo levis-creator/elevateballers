@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import type { Team } from '../../cms/types';
+import type { Team } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,8 +28,8 @@ import {
 } from '@/components/ui/select';
 import { AlertCircle, Calendar, Trophy, Loader2, Users, Info, X, Plus, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { calculateBracketStats } from '../lib/bracket-stats';
-import type { GeneratedMatch } from '../lib/bracket-generator';
+import { calculateBracketStats } from '../../domain/usecases/bracket-stats';
+import type { GeneratedMatch } from '../../domain/usecases/bracket-generator';
 import BracketReviewDialog from './BracketReviewDialog';
 import {
   AlertDialog,

@@ -6,13 +6,13 @@ export async function getStaticPaths() {
   return [];
 }
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import StaffEditor from '../../../features/cms/components/StaffEditor';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import StaffEditor from '../../../features/staff/components/StaffEditor';
 
 const { id } = Astro.params;
 ---
 
-<AdminLayout title="Edit Staff Member - Admin">
+<AdminLayout title="Edit Staff Member - Admin" permission="staff:update">
   <StaffEditor staffId={id} client:load />
 </AdminLayout>
 

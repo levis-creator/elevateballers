@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { getArticleComments, getAllArticleComments } from '../../../features/cms/lib/queries';
-import { createComment } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getArticleComments, getAllArticleComments } from '../../../features/contact/lib/queries/comments';
+import { createComment } from '../../../features/contact/lib/mutations/comments';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -22,7 +23,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     // Admin access returns all comments (including unapproved)
     if (admin) {
-      await requireAdmin(request);
+      await requirePermission(request, 'comments:create');
       comments = await getAllArticleComments(articleId);
     } else {
       // Public access only returns approved comments
@@ -32,20 +33,8 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify(comments), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    // Handle authentication errors
-    if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.error('Error fetching comments:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch comments' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch comments', request);
   }
 };
 
@@ -101,15 +90,8 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating comment:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create comment' }),
-      {
-        status: error.message?.includes('not found') ? 404 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create comment', request);
   }
 };
 

@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { getNewsArticleById } from '../../../features/cms/lib/queries';
-import { updateNewsArticle, deleteNewsArticle, generateSlug } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
-import { categoryMap } from '../../../features/cms/types';
+import { getNewsArticleById } from '../../../features/news/lib/queries/news';
+import { updateNewsArticle, deleteNewsArticle, generateSlug } from '../../../features/news/lib/mutations/news';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { categoryMap } from '@/lib/types';
+import { getUserIdFromRequest, writeAuditLog } from '@/features/auth/lib/auth';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -22,17 +24,13 @@ export const GET: APIRoute = async ({ params }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching news article:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch article' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch article', request);
   }
 };
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'news_articles:update');
     const data = await request.json();
 
     // If slug is being updated, check if it's unique
@@ -76,24 +74,24 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'NEWS_ARTICLE_UPDATED', adminId, {
+      articleId: article.id,
+      title: article.title,
+      published: article.published,
+    }).catch(() => {});
+
     return new Response(JSON.stringify(article), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating news article:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update article' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update article', request);
   }
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'news_articles:update');
     const success = await deleteNewsArticle(params.id!);
 
     if (!success) {
@@ -103,16 +101,13 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
+    const adminId = getUserIdFromRequest(request) ?? 'unknown';
+    await writeAuditLog(adminId, 'NEWS_ARTICLE_DELETED', adminId, {
+      articleId: params.id,
+    }).catch(() => {});
+
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting news article:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete article' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete article', request);
   }
 };
-

@@ -7,8 +7,8 @@
 
 import type { MatchStage } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { createMatch } from '../../cms/lib/mutations';
-import type { Team } from '../../cms/types';
+import { createMatch } from '@/features/matches/data/datasources/mutations';
+import type { Team } from '@/lib/types';
 
 export interface BracketGenerationOptions {
   teamIds: string[];
@@ -880,4 +880,3 @@ export function validateBracketOptions(options: BracketGenerationOptions): {
     warnings,
   };
 }
-

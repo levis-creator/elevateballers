@@ -1,211 +1,264 @@
 /**
- * MatchList component
- * Displays a list of matches with filtering and sorting
+ * MatchList — admin table for managing matches
+ * Uses the shared DataTable component for layout and interactions.
  */
 
-import { useState, useEffect } from 'react';
-import type { Match, MatchStatus } from '@prisma/client';
-import MatchCard from './MatchCard';
-import { formatMatchDate, formatMatchTime } from '../lib/utils';
+import { useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DataTable, type ColumnDef, type RowAction, type BulkAction } from '@/components/DataTable';
+import { useMatchStore } from '../stores/useMatchStore';
+import { getLeagueName } from '../../domain/usecases/league-helpers';
+import { getTeam1Name, getTeam2Name } from '../../domain/usecases/team-helpers';
+import { getMatchStatusLabel, getMatchStatusColor, formatMatchDate, formatMatchTime } from '../../domain/usecases/utils';
+import { Trophy, Plus, Eye, Pencil, Trash2, Calendar } from 'lucide-react';
+import type { Match } from '@prisma/client';
 
-interface MatchListProps {
-  matches: Match[];
-  showFilters?: boolean;
-  showLeague?: boolean;
-  compact?: boolean;
-  onMatchClick?: (match: Match) => void;
-}
+const STATUS_VARIANT: Record<string, string> = {
+  UPCOMING: 'bg-blue-100 text-blue-700',
+  LIVE: 'bg-green-100 text-green-700',
+  COMPLETED: 'bg-gray-100 text-gray-600',
+};
 
-export default function MatchList({
-  matches,
-  showFilters = false,
-  showLeague = true,
-  compact = false,
-  onMatchClick,
-}: MatchListProps) {
-  const [filteredMatches, setFilteredMatches] = useState<Match[]>(matches);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [leagueFilter, setLeagueFilter] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState<string>('');
+export default function MatchList() {
+  const {
+    matches,
+    loading,
+    error,
+    fetchMatches,
+    filters,
+    setStatusFilter,
+    setLeagueFilter,
+    setSearchTerm,
+    getFilteredMatches,
+  } = useMatchStore();
+
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
-    let filtered = [...matches];
+    fetchMatches();
+  }, []);
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((m) => m.status === statusFilter.toUpperCase());
+  const filteredMatches = useMemo(() => getFilteredMatches(matches), [matches, filters]);
+
+  const leagues = useMemo(
+    () => Array.from(new Set(matches.map((m) => getLeagueName(m)).filter(Boolean))).sort() as string[],
+    [matches]
+  );
+
+  const showError = (msg: string) => {
+    setActionError(msg);
+    setTimeout(() => setActionError(''), 5000);
+  };
+
+  const handleDelete = async (match: Match) => {
+    if (!window.confirm('Delete this match? This cannot be undone.')) return;
+    const res = await fetch(`/api/matches/${match.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      showError('Failed to delete match.');
+    } else {
+      fetchMatches();
     }
+  };
 
-    // League filter
-    if (leagueFilter !== 'all') {
-      filtered = filtered.filter((m) => getLeagueName(m) === leagueFilter);
+  const handleBulkDelete = async (ids: string[]) => {
+    if (!window.confirm(`Delete ${ids.length} match(es)? This cannot be undone.`)) return;
+    const res = await fetch('/api/matches/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showError(data.error ?? 'Failed to delete matches.');
+      throw new Error(); // keep bulk bar open on failure
     }
+    fetchMatches();
+  };
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (m) =>
-          (m.team1Name && m.team1Name.toLowerCase().includes(term)) ||
-          (m.team2Name && m.team2Name.toLowerCase().includes(term)) ||
-          getLeagueName(m).toLowerCase().includes(term)
-      );
-    }
+  // ── Column definitions ────────────────────────────────────────────────────
+  const columns: ColumnDef<Match>[] = [
+    {
+      key: 'date',
+      header: 'Date',
+      className: 'w-36',
+      cell: (m) => (
+        <div>
+          <div className="text-sm font-medium text-foreground">{formatMatchDate(m.date)}</div>
+          <div className="text-xs text-muted-foreground">{formatMatchTime(m.date)}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'teams',
+      header: 'Teams',
+      cell: (m) => (
+        <div className="flex items-center gap-1.5 font-medium text-sm">
+          <span>{getTeam1Name(m)}</span>
+          <span className="text-muted-foreground font-normal text-xs">vs</span>
+          <span>{getTeam2Name(m)}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'league',
+      header: 'League',
+      cell: (m) => (
+        <span className="text-sm text-muted-foreground">{getLeagueName(m) ?? '—'}</span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      className: 'w-32',
+      cell: (m) => (
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_VARIANT[m.status] ?? 'bg-muted text-muted-foreground'}`}
+        >
+          {getMatchStatusLabel(m.status)}
+        </span>
+      ),
+    },
+    {
+      key: 'score',
+      header: 'Score',
+      className: 'w-24',
+      cell: (m) =>
+        m.team1Score !== null && m.team2Score !== null ? (
+          <span className="font-mono text-sm font-semibold tabular-nums">
+            {m.team1Score} – {m.team2Score}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+  ];
 
-    setFilteredMatches(filtered);
-  }, [matches, statusFilter, leagueFilter, searchTerm]);
+  // ── Row actions ───────────────────────────────────────────────────────────
+  const rowActions: RowAction<Match>[] = [
+    {
+      label: 'View',
+      icon: <Eye size={14} />,
+      href: (m) => `/admin/matches/view/${m.id}`,
+    },
+    {
+      label: 'Edit',
+      icon: <Pencil size={14} />,
+      href: (m) => `/admin/matches/${m.id}`,
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      destructive: true,
+      separator: true,
+      onClick: handleDelete,
+    },
+  ];
 
-  // Get unique leagues for filter
-  const leagues = Array.from(new Set(matches.map((m) => getLeagueName(m)))).sort();
+  // ── Bulk actions ──────────────────────────────────────────────────────────
+  const bulkActions: BulkAction[] = [
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      variant: 'destructive',
+      onClick: handleBulkDelete,
+    },
+  ];
 
-  if (matches.length === 0) {
-    return (
-      <div className="match-list-empty">
-        <p>No matches found.</p>
-      </div>
-    );
-  }
+  // ── Filters slot ──────────────────────────────────────────────────────────
+  const filtersSlot = (
+    <>
+      <Select value={filters.statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="h-9 w-40 text-sm">
+          <SelectValue placeholder="All statuses" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Statuses</SelectItem>
+          <SelectItem value="upcoming">Upcoming</SelectItem>
+          <SelectItem value="live">Live</SelectItem>
+          <SelectItem value="completed">Completed</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {leagues.length > 0 && (
+        <Select value={filters.leagueFilter} onValueChange={setLeagueFilter}>
+          <SelectTrigger className="h-9 w-44 text-sm">
+            <SelectValue placeholder="All leagues" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Leagues</SelectItem>
+            {leagues.map((league) => (
+              <SelectItem key={league} value={league}>
+                {league}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </>
+  );
 
   return (
-    <div className="match-list">
-      {showFilters && (
-        <div className="match-list-filters">
-          <div className="filter-group">
-            <label htmlFor="status-filter">Status:</label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="live">Live</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-
-          {leagues.length > 0 && (
-            <div className="filter-group">
-              <label htmlFor="league-filter">League:</label>
-              <select
-                id="league-filter"
-                value={leagueFilter}
-                onChange={(e) => setLeagueFilter(e.target.value)}
-              >
-                <option value="all">All Leagues</option>
-                {leagues.map((league) => (
-                  <option key={league} value={league}>
-                    {league}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="filter-group">
-            <label htmlFor="search-filter">Search:</label>
-            <input
-              id="search-filter"
-              type="text"
-              placeholder="Search matches..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+    <>
+      {actionError && (
+        <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-2.5 text-sm text-destructive">
+          {actionError}
         </div>
       )}
-
-      {filteredMatches.length === 0 ? (
-        <div className="match-list-empty">
-          <p>No matches match your filters.</p>
-        </div>
-      ) : (
-        <div className={`match-list-grid ${compact ? 'compact' : ''}`}>
-          {filteredMatches.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              showLeague={showLeague}
-              compact={compact}
-              onClick={onMatchClick ? () => onMatchClick(match) : undefined}
-            />
-          ))}
-        </div>
-      )}
-
-      <style>{`
-        .match-list {
-          width: 100%;
+      <DataTable
+        title="Matches"
+        description="Manage match schedule and results"
+        icon={<Trophy size={24} />}
+        headerAction={
+          <Button asChild size="sm">
+            <a href="/admin/matches/new" data-astro-prefetch>
+              <Plus size={16} className="mr-1.5" />
+              Create Match
+            </a>
+          </Button>
         }
-
-        .match-list-filters {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-          flex-wrap: wrap;
+        data={filteredMatches}
+        columns={columns}
+        rowKey={(m) => m.id}
+        onRowClick={(m) => { window.location.href = `/admin/matches/view/${m.id}`; }}
+        loading={loading}
+        error={error}
+        onRetry={fetchMatches}
+        searchValue={filters.searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search by team or league…"
+        filters={filtersSlot}
+        rowActions={rowActions}
+        bulkActions={bulkActions}
+        emptyIcon={<Calendar size={48} />}
+        emptyTitle={
+          filters.searchTerm || filters.statusFilter !== 'all' || filters.leagueFilter !== 'all'
+            ? 'No matches found'
+            : 'No matches yet'
         }
-
-        .filter-group {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
+        emptyDescription={
+          filters.searchTerm || filters.statusFilter !== 'all' || filters.leagueFilter !== 'all'
+            ? 'Try adjusting your search or filters.'
+            : 'Create your first match to get started.'
         }
-
-        .filter-group label {
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: #1e293b;
+        emptyAction={
+          !(filters.searchTerm || filters.statusFilter !== 'all' || filters.leagueFilter !== 'all') && (
+            <Button asChild size="sm">
+              <a href="/admin/matches/new" data-astro-prefetch>
+                <Plus size={16} className="mr-1.5" />
+                Create Match
+              </a>
+            </Button>
+          )
         }
-
-        .filter-group select,
-        .filter-group input {
-          padding: 0.5rem 0.75rem;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          font-size: 0.875rem;
-          background: white;
-          color: #1e293b;
-        }
-
-        .filter-group select:focus,
-        .filter-group input:focus {
-          outline: none;
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .match-list-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-          gap: 1.5rem;
-        }
-
-        .match-list-grid.compact {
-          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-          gap: 1rem;
-        }
-
-        .match-list-empty {
-          text-align: center;
-          padding: 3rem 1rem;
-          color: #64748b;
-        }
-
-        @media (max-width: 768px) {
-          .match-list-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .match-list-filters {
-            flex-direction: column;
-          }
-
-          .filter-group {
-            width: 100%;
-          }
-        }
-      `}</style>
-    </div>
+      />
+    </>
   );
 }
-

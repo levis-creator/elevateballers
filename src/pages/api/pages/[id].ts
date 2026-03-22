@@ -1,12 +1,14 @@
 import type { APIRoute } from 'astro';
-import { getPageContentById } from '../../../features/cms/lib/queries';
-import { updatePageContent, deletePageContent } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getPageContentById } from '../../../features/settings/lib/queries/pageContent';
+import { updatePageContent, deletePageContent } from '../../../features/settings/lib/mutations/pageContent';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
+    await requirePermission(request, 'page_contents:read');
     const page = await getPageContentById(params.id!);
 
     if (!page) {
@@ -20,17 +22,13 @@ export const GET: APIRoute = async ({ params }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching page:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch page' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch page', request);
   }
 };
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'page_contents:update');
     const data = await request.json();
 
     const page = await updatePageContent(params.id!, data);
@@ -45,21 +43,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(page), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating page:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update page' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update page', request);
   }
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'page_contents:update');
     const success = await deletePageContent(params.id!);
 
     if (!success) {
@@ -70,15 +61,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting page:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete page' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete page', request);
   }
 };
-

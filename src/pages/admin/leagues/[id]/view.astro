@@ -2,14 +2,8 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
-import LeagueEditor from '../../../../features/cms/components/LeagueEditor';
-import { checkAuth } from '../../../../features/cms/lib/auth-astro';
-
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import LeagueEditor from '../../../../features/leagues/components/LeagueEditor';
 
 const { id } = Astro.params;
 
@@ -18,6 +12,6 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="View League - Admin">
+<AdminLayout title="View League - Admin" permission="leagues:read">
   <LeagueEditor leagueId={id} mode="view" client:load />
 </AdminLayout>

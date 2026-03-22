@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { getStaff } from '../../../features/cms/lib/queries';
-import { createStaff } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getStaff } from '../../../features/staff/lib/queries/staff';
+import { createStaff } from '../../../features/staff/lib/mutations/staff';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { logAudit } from '../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
@@ -15,16 +17,13 @@ export const GET: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     console.error('Error fetching staff:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch staff' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch staff");
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'staff:create');
     const data = await request.json();
 
     // Validate required fields
@@ -45,19 +44,17 @@ export const POST: APIRoute = async ({ request }) => {
       image: data.image,
     });
 
+    await logAudit(request, 'STAFF_CREATED', {
+      staffId: staff.id,
+      name: `${staff.firstName} ${staff.lastName}`.trim(),
+      role: staff.role,
+    });
+
     return new Response(JSON.stringify(staff), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating staff:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create staff' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create staff', request);
   }
 };
-

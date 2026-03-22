@@ -2,12 +2,12 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import TeamEditor from '../../../features/cms/components/TeamEditor';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import TeamEditor from '../../../features/team/presentation/components/TeamEditor';
 ---
 
 
-<AdminLayout title="Create Team - Admin">
+<AdminLayout title="Create Team - Admin" permission="teams:create">
   <TeamEditor client:load />
 </AdminLayout>
 

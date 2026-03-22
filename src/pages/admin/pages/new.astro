@@ -2,11 +2,11 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import PageContentEditor from '../../../features/cms/components/PageContentEditor';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import PageContentEditor from '../../../features/settings/components/PageContentEditor';
 ---
 
-<AdminLayout title="Create Page - Admin">
+<AdminLayout title="Create Page - Admin" permission="page_contents:create">
   <PageContentEditor client:load />
 </AdminLayout>
 

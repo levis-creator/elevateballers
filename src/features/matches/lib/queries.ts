@@ -1,12 +1,16 @@
 /**
- * Match queries for public-facing pages
- * Provides optimized queries for displaying matches
+ * Match queries — public-facing and admin
  */
 
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '../../../../lib/prisma';
 import type { Match, MatchStatus, MatchStage } from '@prisma/client';
-import type { MatchFilter, MatchSortOption } from '../types';
-import type { MatchWithTeamsAndLeagueAndSeason } from '../../../features/cms/types';
+import type { MatchFilter, MatchSortOption } from '../../domain/entities';
+import type {
+  MatchWithTeamsAndLeagueAndSeason,
+  MatchWithFullDetails,
+  MatchEventWithDetails,
+  MatchPlayerWithDetails,
+} from '@/lib/types';
 
 /**
  * Get upcoming matches (matches with date >= today and status UPCOMING or LIVE)
@@ -366,3 +370,150 @@ export async function getMatchStats() {
   };
 }
 
+// ─── Admin queries ─────────────────────────────────────────────────────────────
+
+export async function getMatches(status?: string): Promise<MatchWithTeamsAndLeagueAndSeason[]> {
+  const where: any = {};
+
+  if (status) {
+    const statusMap: Record<string, MatchStatus> = {
+      upcoming: 'UPCOMING',
+      live: 'LIVE',
+      completed: 'COMPLETED',
+    };
+    if (statusMap[status.toLowerCase()]) {
+      where.status = statusMap[status.toLowerCase()];
+    }
+  }
+
+  return await prisma.match.findMany({
+    where,
+    include: { team1: true, team2: true, league: true, season: true, winner: true },
+    orderBy: { date: 'asc' },
+  }) as MatchWithTeamsAndLeagueAndSeason[];
+}
+
+export async function getMatchById(id: string): Promise<MatchWithTeamsAndLeagueAndSeason | null> {
+  return await prisma.match.findUnique({
+    where: { id },
+    // @ts-expect-error - Prisma types will be correct after dev server restart
+    include: { team1: true, team2: true, league: true, season: true, winner: true },
+  }) as MatchWithTeamsAndLeagueAndSeason | null;
+}
+
+export async function getMatchWithFullDetails(matchId: string): Promise<MatchWithFullDetails | null> {
+  try {
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { team1: true, team2: true, league: true, season: true },
+    });
+
+    if (!match) return null;
+
+    let matchPlayers: MatchPlayerWithDetails[] = [];
+    let events: MatchEventWithDetails[] = [];
+
+    try {
+      matchPlayers = await getMatchPlayers(matchId);
+    } catch (err) {
+      console.warn('Failed to fetch match players:', err);
+    }
+
+    try {
+      events = await getMatchEvents(matchId);
+    } catch (err) {
+      console.warn('Failed to fetch match events:', err);
+    }
+
+    let substitutions: any[] = [];
+    try {
+      substitutions = await prisma.substitution.findMany({
+        where: { matchId },
+        orderBy: { createdAt: 'desc' },
+        include: { playerIn: true, playerOut: true },
+      });
+    } catch (err) {
+      console.warn('Failed to fetch substitutions:', err);
+    }
+
+    return { ...match, matchPlayers, events, substitutions } as MatchWithFullDetails;
+  } catch (error: any) {
+    console.error('Error in getMatchWithFullDetails:', error);
+    throw error;
+  }
+}
+
+export async function getTournamentMatches(
+  leagueId?: string,
+  seasonId?: string
+): Promise<MatchWithTeamsAndLeagueAndSeason[]> {
+  const where: any = {
+    stage: { in: ['PLAYOFF', 'QUARTER_FINALS', 'SEMI_FINALS', 'CHAMPIONSHIP'] },
+  };
+  if (leagueId) where.leagueId = leagueId;
+  if (seasonId) where.seasonId = seasonId;
+
+  return await prisma.match.findMany({
+    where,
+    include: { team1: true, team2: true, league: true, season: true, winner: true },
+    orderBy: { date: 'asc' },
+  }) as MatchWithTeamsAndLeagueAndSeason[];
+}
+
+// ─── Match event queries ───────────────────────────────────────────────────────
+
+export async function getMatchEvents(matchId: string): Promise<MatchEventWithDetails[]> {
+  return await prisma.matchEvent.findMany({
+    where: { matchId },
+    include: { player: true, assistPlayer: true, team: true },
+    orderBy: { createdAt: 'desc' },
+  }) as MatchEventWithDetails[];
+}
+
+export async function getMatchEventsByTeam(matchId: string, teamId: string): Promise<MatchEventWithDetails[]> {
+  return await prisma.matchEvent.findMany({
+    where: { matchId, teamId },
+    include: { player: true, assistPlayer: true, team: true },
+    orderBy: { createdAt: 'desc' },
+  }) as MatchEventWithDetails[];
+}
+
+export async function getMatchEventsByType(matchId: string, eventType: string): Promise<MatchEventWithDetails[]> {
+  return await prisma.matchEvent.findMany({
+    where: { matchId, eventType: eventType as any },
+    include: { player: true, assistPlayer: true, team: true },
+    orderBy: { createdAt: 'desc' },
+  }) as MatchEventWithDetails[];
+}
+
+export async function getMatchEventById(id: string): Promise<MatchEventWithDetails | null> {
+  return await prisma.matchEvent.findUnique({
+    where: { id },
+    include: { player: true, assistPlayer: true, team: true },
+  }) as MatchEventWithDetails | null;
+}
+
+// ─── Match player queries ──────────────────────────────────────────────────────
+
+export async function getMatchPlayers(matchId: string): Promise<MatchPlayerWithDetails[]> {
+  return await prisma.matchPlayer.findMany({
+    where: { matchId },
+    include: { player: true, team: true },
+    orderBy: [{ started: 'desc' }, { jerseyNumber: 'asc' }],
+  }) as MatchPlayerWithDetails[];
+}
+
+export async function getMatchPlayersByTeam(matchId: string, teamId: string): Promise<MatchPlayerWithDetails[]> {
+  return await prisma.matchPlayer.findMany({
+    where: { matchId, teamId },
+    include: { player: true, team: true },
+    orderBy: [{ started: 'desc' }, { jerseyNumber: 'asc' }],
+  }) as MatchPlayerWithDetails[];
+}
+
+export async function getMatchPlayerById(id: string): Promise<MatchPlayerWithDetails | null> {
+  return await prisma.matchPlayer.findUnique({
+    where: { id },
+    include: { player: true, team: true },
+  }) as MatchPlayerWithDetails | null;
+}

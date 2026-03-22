@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CommentWithAuthor } from '../../cms/types';
+import type { CommentWithAuthor } from '@/lib/types';
 import CommentItem from './CommentItem';
 import CommentForm from './CommentForm';
 

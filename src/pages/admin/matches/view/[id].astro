@@ -6,14 +6,8 @@ export async function getStaticPaths() {
   return [];
 }
 
-import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
-import MatchDetailView from '../../../../features/cms/components/MatchDetailView';
-import { checkAuth } from '../../../../features/cms/lib/auth-astro';
-
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import MatchDetailView from '../../../../features/matches/presentation/components/MatchDetailView';
 
 const { id } = Astro.params;
 
@@ -22,7 +16,7 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="Match Details - Admin">
+<AdminLayout title="Match Details - Admin" permission="matches:read">
   <MatchDetailView matchId={id} client:load />
 </AdminLayout>
 

@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
-import { getLeagues } from '../../../features/cms/lib/queries';
-import { createLeague } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getLeagues } from '../../../features/leagues/lib/queries/leagues';
+import { createLeague } from '../../../features/leagues/lib/mutations/leagues';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { logAudit } from '../../../features/audit/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -16,17 +18,13 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching leagues:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch leagues' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch leagues', request);
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'leagues:create');
     const data = await request.json();
 
     // Validate required fields
@@ -51,19 +49,16 @@ export const POST: APIRoute = async ({ request }) => {
       active: data.active !== undefined ? data.active : true,
     });
 
+    await logAudit(request, 'LEAGUE_CREATED', {
+      leagueId: league.id,
+      name: league.name,
+    });
+
     return new Response(JSON.stringify(league), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating league:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create league' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create league', request);
   }
 };
-

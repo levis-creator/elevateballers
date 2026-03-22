@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { startGame } from '../../../../features/game-tracking/lib/mutations';
-import { getGameState } from '../../../../features/game-tracking/lib/queries';
-import { requireAuth } from '../../../../features/cms/lib/auth';
+import { startGame } from '../../../../features/game-tracking/data/datasources/mutations';
+import { getGameState } from '../../../../features/game-tracking/data/datasources/queries';
+import { requireAuth } from '@/features/auth/lib/auth';
+import { logAudit } from '../../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -34,22 +36,17 @@ export const POST: APIRoute = async ({ params, request }) => {
     const success = await startGame(matchId, gameRulesId);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to start game' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "start game");
     }
 
     const state = await getGameState(matchId);
+    await logAudit(request, 'GAME_STARTED', { matchId, gameRulesId });
     return new Response(JSON.stringify(state), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Error starting game:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to start game' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "start game");
   }
 };

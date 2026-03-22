@@ -3,7 +3,7 @@
  * Calculate aggregate team statistics from matches
  */
 
-import type { MatchWithTeamsAndLeagueAndSeason } from '../../cms/types';
+import type { MatchWithTeamsAndLeagueAndSeason } from '@/lib/types';
 
 export type TeamStatistics = {
   wins: number;

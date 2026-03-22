@@ -1,8 +1,11 @@
 import type { APIRoute } from 'astro';
-import { getNewsArticles, getAllNewsArticles, getFeaturedNewsArticles, getArticleCommentCount } from '../../../features/cms/lib/queries';
-import { createNewsArticle, generateSlug } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
-import { categoryMap, type NewsArticleDTO } from '../../../features/cms/types';
+import { getNewsArticles, getAllNewsArticles, getFeaturedNewsArticles } from '../../../features/news/lib/queries/news';
+import { getArticleCommentCount } from '../../../features/contact/lib/queries/comments';
+import { createNewsArticle, generateSlug } from '../../../features/news/lib/mutations/news';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { categoryMap, type NewsArticleDTO } from '@/lib/types';
+import { writeAuditLog } from '@/features/auth/lib/auth';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -17,16 +20,16 @@ export const GET: APIRoute = async ({ request }) => {
     const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
     let articles;
-    
+
     // Admin access requires authentication and returns all articles (including unpublished)
     if (admin) {
-      await requireAdmin(request);
+      await requirePermission(request, 'news_articles:create');
       articles = await getAllNewsArticles(true);
-    } 
+    }
     // Featured articles endpoint - public access, only returns published featured articles
     else if (featured) {
       articles = await getFeaturedNewsArticles();
-    } 
+    }
     // Regular public endpoint - only returns published articles
     else {
       articles = await getNewsArticles(category);
@@ -37,40 +40,55 @@ export const GET: APIRoute = async ({ request }) => {
       articles = articles.slice(0, limit);
     }
 
-    // Add comments count to each article
-    const articlesWithComments: NewsArticleDTO[] = await Promise.all(
-      articles.map(async (article) => {
-        const commentsCount = await getArticleCommentCount(article.id);
-        return {
-          ...article,
-          commentsCount,
-        } as NewsArticleDTO;
-      })
-    );
+    // Optimized: Fetch all comment counts in a single query if there are articles
+    const articleIds = articles.map(a => a.id);
+    let countsMap: Record<string, number> = {};
+
+    if (articleIds.length > 0) {
+      const counts = await prisma.comment.groupBy({
+        by: ['articleId'],
+        _count: {
+          id: true,
+        },
+        where: {
+          articleId: {
+            in: articleIds,
+          },
+          approved: true,
+        },
+      });
+
+      countsMap = Object.fromEntries(
+        counts.map(c => [c.articleId, c._count.id])
+      );
+    }
+
+    const articlesWithComments: NewsArticleDTO[] = articles.map((article) => ({
+      ...article,
+      commentsCount: countsMap[article.id] || 0,
+    } as NewsArticleDTO));
 
     return new Response(JSON.stringify(articlesWithComments), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    // Handle authentication errors
-    if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
+  } catch (error) {
+    // Handle invalid date errors specifically — return empty array instead of crashing
+    if (error instanceof Error &&
+      (error.message.includes('Invalid time value') ||
+        error.message.includes('RangeError'))) {
+      console.error('⚠️  Invalid dates detected in database. Run: npm run fix:dates');
+      return new Response(JSON.stringify([]), {
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    
-    console.error('Error fetching news articles:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch articles' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch articles', request);
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const user = await requireAdmin(request);
+    const user = await requirePermission(request, 'news_articles:create');
     const data = await request.json();
 
     // Validate required fields
@@ -122,6 +140,12 @@ export const POST: APIRoute = async ({ request }) => {
       authorId: user.id,
     });
 
+    await writeAuditLog(user.id, 'NEWS_ARTICLE_CREATED', user.id, {
+      articleId: article.id,
+      title: article.title,
+      published: article.published,
+    }).catch(() => {});
+
     // Verify content was stored
     console.log('Article created successfully:', {
       id: article.id,
@@ -133,15 +157,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating news article:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create article' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create article', request);
   }
 };
-

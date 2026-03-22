@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { getMatchEvents, getMatchEventsByTeam, getMatchEventsByType } from '../../../../../features/cms/lib/queries';
-import { createMatchEvent } from '../../../../../features/cms/lib/mutations';
-import { requireAuth } from '../../../../../features/cms/lib/auth';
+import { getMatchEvents, getMatchEventsByTeam, getMatchEventsByType } from '../../../../../features/matches/data/datasources/queries';
+import { createMatchEvent } from '../../../../../features/matches/data/datasources/mutations';
+import { requireAuth } from '@/features/auth/lib/auth';
+import { logAudit } from '../../../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../../../lib/apiError';
 export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
   if (!matchId) {
@@ -31,10 +33,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match events:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch match events' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch match events");
   }
 };
 
@@ -58,7 +57,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 
   try {
     // Check if match is completed - block adding events
-    const { getMatchById } = await import('../../../../../features/cms/lib/queries');
+    const { getMatchById } = await import('../../../../../features/matches/data/datasources/queries');
     const match = await getMatchById(matchId);
     if (match && match.status === 'COMPLETED') {
       return new Response(
@@ -77,11 +76,14 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!matchEvent) {
-      return new Response(JSON.stringify({ error: 'Failed to create match event' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "create match event");
     }
+
+    await logAudit(request, 'MATCH_EVENT_CREATED', {
+      matchId,
+      eventId: matchEvent.id,
+      eventType: matchEvent.type,
+    });
 
     return new Response(JSON.stringify(matchEvent), {
       status: 201,
@@ -89,10 +91,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating match event:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to create match event' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "create match event");
   }
 };
-

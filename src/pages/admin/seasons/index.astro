@@ -1,12 +1,18 @@
 ---
 export const prerender = false;
-import { checkAuth } from '../../../features/cms/lib/auth-astro';
+import { checkAuth } from '@/features/auth/lib/auth-astro';
+import { hasPermission } from '../../../features/rbac/data/datasources/permissions';
 
 const user = await checkAuth(Astro.request);
 if (!user) {
   return Astro.redirect('/admin/login', 302);
 }
----
 
-<Astro.response.redirect('/admin/leagues', 302) />
+const allowed = await hasPermission(user.id, 'seasons:read');
+if (!allowed) {
+  return Astro.redirect('/unauthorized', 302);
+}
+
+return Astro.redirect('/admin/leagues', 302);
+---
 

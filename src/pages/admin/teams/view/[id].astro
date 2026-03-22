@@ -6,14 +6,8 @@ export async function getStaticPaths() {
   return [];
 }
 
-import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
-import { checkAuth } from '../../../../features/cms/lib/auth-astro';
-import TeamView from '../../../../features/cms/components/TeamView';
-
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import TeamView from '../../../../features/team/presentation/components/TeamView';
 
 const { id } = Astro.params;
 if (!id) {
@@ -21,7 +15,7 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="View Team - Admin">
+<AdminLayout title="View Team - Admin" permission="teams:read">
   <TeamView teamId={id} client:load />
 </AdminLayout>
 
