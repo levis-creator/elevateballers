@@ -6,34 +6,45 @@
   :root {
     /* Preserve existing admin color scheme */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%; /* #111827 - admin-gray-900 */
+    --foreground: 222.2 84% 4.9%;
+    /* #111827 - admin-gray-900 */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    /* Primary color: #dd3333 - exact match to existing admin-primary */
-    --primary: 0 72% 51%; /* #dd3333 */
-    --primary-foreground: 0 0% 100%;
+    /* Primary color: #81ecff - Velocity Courtside cyan */
+    --primary: 192 100% 75%;
+    /* #81ecff */
+    --primary-foreground: 186 100% 19%;
+    /* #005762 */
     /* Secondary matches admin-gray-100 */
-    --secondary: 210 40% 96.1%; /* #f3f4f6 - admin-gray-100 */
-    --secondary-foreground: 222.2 47.4% 11.2%; /* #374151 - admin-gray-700 */
+    --secondary: 210 40% 96.1%;
+    /* #f3f4f6 - admin-gray-100 */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* #374151 - admin-gray-700 */
     /* Muted matches admin-gray-200 */
-    --muted: 210 40% 96.1%; /* #f3f4f6 - admin-gray-100 */
-    --muted-foreground: 215.4 16.3% 46.9%; /* #6b7280 - admin-gray-500 */
+    --muted: 210 40% 96.1%;
+    /* #f3f4f6 - admin-gray-100 */
+    --muted-foreground: 215.4 16.3% 46.9%;
+    /* #6b7280 - admin-gray-500 */
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     /* Destructive matches admin-error */
-    --destructive: 0 84.2% 60.2%; /* #ef4444 - admin-error */
+    --destructive: 0 84.2% 60.2%;
+    /* #ef4444 - admin-error */
     --destructive-foreground: 0 0% 100%;
     /* Border matches admin-gray-300 */
-    --border: 214.3 31.8% 91.4%; /* #d1d5db - admin-gray-300 */
+    --border: 214.3 31.8% 91.4%;
+    /* #d1d5db - admin-gray-300 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 0 72% 51%; /* #dd3333 - admin-primary */
-    --radius: 0.5rem; /* admin-radius-md */
-    
+    --ring: 192 100% 75%;
+    /* #81ecff */
+    --radius: 0.5rem;
+    /* admin-radius-md */
+
     /* Preserve existing admin CSS variables for backward compatibility */
-    --admin-primary: #dd3333;
-    --admin-primary-dark: #c02a2a;
+    --admin-primary: #81ecff;
+    --admin-primary-dark: #00d4ec;
     --admin-gray-50: #f9fafb;
     --admin-gray-100: #f3f4f6;
     --admin-gray-200: #e5e7eb;
@@ -52,8 +63,10 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 0 72% 51%; /* Keep same primary color */
-    --primary-foreground: 0 0% 100%;
+    --primary: 192 100% 75%;
+    /* #81ecff - Velocity Courtside cyan */
+    --primary-foreground: 186 100% 19%;
+    /* #005762 */
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -64,7 +77,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 0 72% 51%;
+    --ring: 192 100% 75%;
   }
 }
 
@@ -72,14 +85,19 @@
   * {
     @apply border-border;
   }
-  
+
   /* Preserve existing fonts: Rubik for body, Teko for headings */
   body {
     @apply bg-background text-foreground;
     font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Teko', sans-serif;
     font-weight: 600;
     line-height: 1.2;
@@ -91,13 +109,13 @@
   .admin-sidebar {
     color: white;
   }
-  
+
   .admin-sidebar a,
   .admin-sidebar button,
   .admin-sidebar span:not([class*="text-primary"]) {
     color: white;
   }
-  
+
   /* Preserve primary color for specific elements like icons */
   .admin-sidebar [class*="text-primary"] {
     color: hsl(var(--primary)) !important;
@@ -106,6 +124,7 @@
 
 /* Override design-system.css grid styles to allow Tailwind utilities to work */
 @layer utilities {
+
   /* Reset any conflicting grid column rules from design-system.css */
   .grid-cols-1,
   .grid-cols-2,
@@ -113,5 +132,21 @@
   .grid-cols-4 {
     /* Tailwind utilities will apply via @tailwind utilities above */
   }
-}
 
+  /* Admin Header Specific Overrides */
+  .admin-header-button {
+    background-color: transparent !important;
+    color: #333 !important;
+  }
+
+  .admin-header-button:hover,
+  .admin-header-button[data-state="open"] {
+    background-color: #f3f4f6 !important;
+    color: #000 !important;
+  }
+
+  /* Ensure icons inside don't get colored */
+  .admin-header-button svg {
+    color: inherit !important;
+  }
+}

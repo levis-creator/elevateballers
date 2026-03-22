@@ -2,11 +2,11 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import PageContentList from '../../../features/cms/components/PageContentList';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import PageContentList from '../../../features/settings/components/PageContentList';
 ---
 
-<AdminLayout title="Page Content Management - Admin">
+<AdminLayout title="Page Content Management - Admin" permission="page_contents:read">
   <PageContentList client:load />
 </AdminLayout>
 

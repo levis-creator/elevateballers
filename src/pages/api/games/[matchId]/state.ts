@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { getGameState, getMatchWithGameState } from '../../../../features/game-tracking/lib/queries';
-import { updateGameState } from '../../../../features/game-tracking/lib/mutations';
-import { requireAuth } from '../../../../features/cms/lib/auth';
+import { getGameState, getMatchWithGameState } from '../../../../features/game-tracking/data/datasources/queries';
+import { updateGameState } from '../../../../features/game-tracking/data/datasources/mutations';
+import { requireAuth } from '@/features/auth/lib/auth';
+import { logAudit } from '../../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -33,10 +35,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching game state:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch game state' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch game state");
   }
 };
 
@@ -67,21 +66,16 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const success = await updateGameState(matchId, data);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to update game state' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "update game state");
     }
 
     const updatedState = await getGameState(matchId);
+    await logAudit(request, 'GAME_STATE_UPDATED', { matchId });
     return new Response(JSON.stringify(updatedState), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Error updating game state:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to update game state' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "update game state");
   }
 };

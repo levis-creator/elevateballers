@@ -1,12 +1,14 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
 import { prisma } from '../../../lib/prisma';
+import { logAudit } from '../../../features/audit/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'matches:bulk_delete');
     const { ids } = await request.json();
 
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -20,18 +22,16 @@ export const POST: APIRoute = async ({ request }) => {
       where: { id: { in: ids } },
     });
 
+    await logAudit(request, 'MATCH_BULK_DELETED', {
+      matchIds: ids,
+      deleted: result.count,
+    });
+
     return new Response(JSON.stringify({ deleted: result.count }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error bulk deleting matches:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete matches' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'bulk delete matches', request);
   }
 };

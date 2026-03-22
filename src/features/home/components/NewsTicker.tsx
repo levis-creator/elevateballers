@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { NewsArticleDTO } from '../../cms/types';
+import type { NewsArticleDTO } from '@/lib/types';
 
 /**
  * NewsTicker component - Scrolling news ticker

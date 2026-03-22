@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { toggleGameClock } from '../../../../features/game-tracking/lib/mutations';
-import { getGameState } from '../../../../features/game-tracking/lib/queries';
-import { requireAuth } from '../../../../features/cms/lib/auth';
+import { toggleGameClock } from '../../../../features/game-tracking/data/datasources/mutations';
+import { getGameState } from '../../../../features/game-tracking/data/datasources/queries';
+import { requireAuth } from '@/features/auth/lib/auth';
+import { logAudit } from '../../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -35,21 +37,16 @@ export const POST: APIRoute = async ({ params, request }) => {
     const success = await toggleGameClock(matchId, running, clockSeconds);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to toggle game clock' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "toggle game clock");
     }
 
     const state = await getGameState(matchId);
+    await logAudit(request, 'GAME_CLOCK_TOGGLED', { matchId, running, clockSeconds });
     return new Response(JSON.stringify(state), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Error toggling game clock:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to toggle game clock' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "toggle game clock");
   }
 };

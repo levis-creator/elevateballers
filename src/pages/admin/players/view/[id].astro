@@ -6,14 +6,8 @@ export async function getStaticPaths() {
   return [];
 }
 
-import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
-import { checkAuth } from '../../../../features/cms/lib/auth-astro';
-import PlayerView from '../../../../features/cms/components/PlayerView';
-
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import PlayerView from '../../../../features/player/components/PlayerView';
 
 const { id } = Astro.params;
 if (!id) {
@@ -21,6 +15,6 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="View Player - Admin">
+<AdminLayout title="View Player - Admin" permission="players:read">
   <PlayerView playerId={id} client:load />
 </AdminLayout>

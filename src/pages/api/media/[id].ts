@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { getMediaById } from '../../../features/cms/lib/queries';
-import { updateMedia, deleteMedia } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getMediaById } from '../../../features/media/lib/queries/media';
+import { updateMedia, deleteMedia } from '../../../features/media/lib/mutations/media';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -20,17 +21,13 @@ export const GET: APIRoute = async ({ params }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching media:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch media' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch media', request);
   }
 };
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:update');
     const data = await request.json();
 
     const mediaItem = await updateMedia(params.id!, data);
@@ -45,21 +42,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(mediaItem), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating media:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update media' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update media', request);
   }
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:update');
     const success = await deleteMedia(params.id!);
 
     if (!success) {
@@ -70,15 +60,8 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }
 
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting media:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete media' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete media', request);
   }
 };
 

@@ -1,19 +1,34 @@
 ---
 export const prerender = false;
-export const ssr = false;
+export const ssr = true; // Enable SSR for proper server-side auth checks
 
-import AdminLayout from '../../features/cms/components/AdminLayout.astro';
-import Dashboard from '../../features/cms/components/Dashboard';
-import { checkAuth } from '../../features/cms/lib/auth-astro';
-
-// Check authentication
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import Dashboard from '../../features/dashboard/components/Dashboard';
 ---
 
-<AdminLayout title="CMS Dashboard">
+<AdminLayout
+  title="CMS Dashboard"
+  permissionsAny={[
+    'news_articles:read',
+    'matches:read',
+    'players:read',
+    'media:read',
+    'page_contents:read',
+    'teams:read',
+    'leagues:read',
+    'seasons:read',
+    'staff:read',
+    'roles:read',
+    'users:read',
+    'reports:read',
+    'notifications:read',
+    'game_rules:read',
+    'potw:read',
+    'sponsors:read',
+    'tournaments:read',
+    'audit_logs:read',
+    'audit_logs:manage',
+  ]}
+>
   <Dashboard client:load />
 </AdminLayout>
-

@@ -1,13 +1,12 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import TopBar from "../../features/layout/components/TopBar.astro";
-import Header from "../../features/layout/components/Header.astro";
-import MobileMenu from "../../features/layout/components/MobileMenu";
-import Footer from "../../features/layout/components/Footer.astro";
+import TopBar from "../../features/layout/presentation/components/TopBar.astro";
+import Header from "../../features/layout/presentation/components/Header";
+import Footer from "../../features/layout/presentation/components/Footer.astro";
 import Spacing from "../../shared/components/ui/Spacing.astro";
-import { getMatchById } from "../../features/cms/lib/queries";
-import MatchDetail from "../../features/matches/components/MatchDetail";
-import type { Match } from "@prisma/client";
+import { getMatchWithFullDetails } from "../../features/matches/data/datasources/queries";
+import MatchDetail from "../../features/matches/presentation/components/MatchDetail";
+import type { MatchWithFullDetails } from "@/lib/types";
 import PageLoader from "../../components/PageLoader";
 import ContentLoader from "../../components/ContentLoader";
 
@@ -24,30 +23,106 @@ if (!id) {
 }
 
 // Fetch match from database
-let match: Match | null = null;
+let match: MatchWithFullDetails | null = null;
 let hasError = false;
 try {
-  match = await getMatchById(id);
+  match = await getMatchWithFullDetails(id);
   if (!match) {
     return Astro.redirect("/matches");
   }
 } catch (error) {
-  console.error('Error fetching match:', error);
+  console.error("Error fetching match:", error);
   hasError = true;
 }
+
+const team1Name = match?.team1Name || match?.team1?.name || "TBD";
+const team2Name = match?.team2Name || match?.team2?.name || "TBD";
+const matchLeague = match?.league?.name || match?.leagueName || "Elevate Ballers";
+const matchDate = match?.date
+  ? new Date(match.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  : null;
+const pageTitle = `${team1Name} vs ${team2Name} - ${matchLeague}`;
+const pageDescription = matchDate
+  ? `Match details for ${team1Name} vs ${team2Name} on ${matchDate}.`
+  : `Match details for ${team1Name} vs ${team2Name}.`;
+const pageUrl = `${Astro.url.origin}/matches/${id}`;
 ---
 
-<Layout>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalURL={pageUrl}
+  type="website"
+>
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": pageUrl,
+          url: pageUrl,
+          name: pageTitle,
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description: pageDescription,
+          breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Results",
+              item: `${Astro.url.origin}/matches/results`,
+            },
+            { "@type": "ListItem", position: 3, name: pageTitle },
+          ],
+        },
+        ...(match
+          ? [
+              {
+                "@type": "SportsEvent",
+                "@id": `${pageUrl}#event`,
+                name: pageTitle,
+                description: pageDescription,
+                sport: "Basketball",
+                ...(match.date && { startDate: new Date(match.date).toISOString() }),
+                organizer: { "@id": `${Astro.url.origin}/#organization` },
+                competitor: [
+                  { "@type": "SportsTeam", name: team1Name },
+                  { "@type": "SportsTeam", name: team2Name },
+                ],
+              },
+            ]
+          : []),
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
-    <Header />
-    <MobileMenu client:load />
+    <Header client:load currentPath={Astro.url.pathname} />
     <div id="main">
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
         style="padding-top: 0; padding-bottom: 0px;"
-      ></div>
+      >
+      </div>
       <div class="container">
         <section class="wpb-content-wrapper">
           <div class="vc_row wpb_row vc_row-fluid">
@@ -56,25 +131,39 @@ try {
                 <div class="wpb_wrapper">
                   <Spacing
                     id="stm-spacing-match-header"
-                    lg="50"
-                    md="50"
-                    sm="40"
-                    xs="40"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
                   />
 
-                  {hasError ? (
-                    <ContentLoader client:load message="Failed to load match details. Please try again later." />
-                  ) : match ? (
-                    <div style="max-width: 800px; margin: 0 auto;">
-                      <MatchDetail client:load match={match} />
-                    </div>
-                  ) : null}
+                  {
+                    hasError ? (
+                      <ContentLoader
+                        client:load
+                        message="Failed to load match details. Please try again later."
+                      />
+                    ) : match ? (
+                      <div style="max-width: 800px; margin: 0 auto;">
+                        <MatchDetail client:load match={match} />
+                      </div>
+                    ) : null
+                  }
 
                   <div style="text-align: center; margin-top: 2rem;">
-                    <a href="/upcoming-fixtures" class="btn btn-primary" data-astro-prefetch>
+                    <a
+                      href="/upcoming-fixtures"
+                      class="btn btn-primary"
+                      data-astro-prefetch
+                    >
                       View All Fixtures
                     </a>
-                    <a href="/matches/results" class="btn btn-secondary" data-astro-prefetch style="margin-left: 1rem;">
+                    <a
+                      href="/matches/results"
+                      class="btn btn-secondary"
+                      data-astro-prefetch
+                      style="margin-left: 1rem;"
+                    >
                       View Results
                     </a>
                   </div>
@@ -97,9 +186,6 @@ try {
 
   <Footer />
 
-  <div class="sp-footer-sponsors">
-    <div class="sportspress"><div class="sp-sponsors"></div></div>
-  </div>
 </Layout>
 
 <style is:inline type="text/css">
@@ -111,31 +197,4 @@ try {
     color: #363f48;
   }
 
-  .btn {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all 0.2s;
-  }
-
-  .btn-primary {
-    background-color: #dd3333;
-    color: white;
-  }
-
-  .btn-primary:hover {
-    background-color: #c02929;
-  }
-
-  .btn-secondary {
-    background-color: #64748b;
-    color: white;
-  }
-
-  .btn-secondary:hover {
-    background-color: #475569;
-  }
 </style>
-

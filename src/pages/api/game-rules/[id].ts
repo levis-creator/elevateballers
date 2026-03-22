@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { getGameRules } from '../../../features/game-tracking/lib/queries';
-import { updateGameRules, deleteGameRules } from '../../../features/game-tracking/lib/mutations';
-import { requireAuth } from '../../../features/cms/lib/auth';
+import { getGameRules } from '../../../features/game-tracking/data/datasources/queries';
+import { updateGameRules, deleteGameRules } from '../../../features/game-tracking/data/datasources/mutations';
+import { requireAuth } from '@/features/auth/lib/auth';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -30,12 +31,8 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response(JSON.stringify(rules), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error fetching game rules:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch game rules' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'fetch game rules', request);
   }
 };
 
@@ -46,14 +43,7 @@ export const GET: APIRoute = async ({ params }) => {
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requireAuth(request);
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
 
-  try {
     const id = params.id;
     if (!id) {
       return new Response(JSON.stringify({ error: 'Game rules ID is required' }), {
@@ -75,12 +65,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify(rules), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating game rules:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update game rules' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'update game rules', request);
   }
 };
 
@@ -91,14 +77,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requireAuth(request);
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
 
-  try {
     const id = params.id;
     if (!id) {
       return new Response(JSON.stringify({ error: 'Game rules ID is required' }), {
@@ -118,11 +97,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error deleting game rules:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete game rules' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    return handleApiError(error, 'delete game rules', request);
   }
 };

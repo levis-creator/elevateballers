@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
-import { generateReport } from '../../../features/reports/lib/reportGenerator';
-import { requireAuth } from '../../../features/cms/lib/auth';
-import { getCurrentUser } from '../../../features/cms/lib/auth';
+import { generateReport } from '../../../features/reports/domain/usecases/reportGenerator';
+import { requireAuth } from '@/features/auth/lib/auth';
+import { getCurrentUser } from '@/features/auth/lib/auth';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -55,9 +56,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error generating report:', error);
-    return new Response(JSON.stringify({ error: 'Failed to generate report' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "generate report");
   }
 };

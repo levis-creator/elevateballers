@@ -1,19 +1,99 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import TopBar from "../features/layout/components/TopBar.astro";
-import Header from "../features/layout/components/Header.astro";
-import MobileMenu from "../features/layout/components/MobileMenu";
-import Footer from "../features/layout/components/Footer.astro";
+import TopBar from "../features/layout/presentation/components/TopBar.astro";
+import Header from "../features/layout/presentation/components/Header";
+import Footer from "../features/layout/presentation/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
+import { getAllSiteSettings } from "../features/settings/lib/queries/siteSettings";
+
+const DEFAULT_CONTENT = `Elevate Ballers is a premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement through competitive basketball. Founded with a vision to elevate the game and the community, we have been serving basketball enthusiasts of all ages and skill levels.
+
+Our mission is to provide a platform for athletes to showcase their skills, develop their talents, and compete at the highest level while fostering a sense of community and sportsmanship. We believe that basketball is more than just a game—it's a vehicle for personal growth, teamwork, and community building.
+
+We offer multiple leagues including Ballers League, Junior Ballers, Senior Ballers, Women's League, and Veterans divisions. Each league is designed to provide competitive opportunities while maintaining a focus on skill development and fair play.
+
+Our state-of-the-art facilities at Pepo Lane, off Dagoretti Road, provide the perfect environment for training and competition. With multiple courts and professional coaching staff, we ensure that every player has the opportunity to reach their full potential.
+
+At Elevate Ballers, we are committed to creating an inclusive environment where everyone can participate, learn, and grow. Whether you're a seasoned player or just starting out, we welcome you to join our basketball family.`;
+
+let aboutTitle = "ABOUT";
+let aboutContent = DEFAULT_CONTENT;
+
+try {
+  const settings = await getAllSiteSettings("about");
+  const titleSetting = settings.find((s: any) => s.key === "about_page_title");
+  const contentSetting = settings.find((s: any) => s.key === "about_page_content");
+  if (titleSetting?.value) aboutTitle = titleSetting.value;
+  if (contentSetting?.value) aboutContent = contentSetting.value;
+} catch (e) {
+  // fall back to defaults
+}
+
+// Detect if content is HTML (from rich text editor) or plain text (legacy)
+const isHtml = aboutContent.trim().startsWith('<');
+const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => p.trim()).filter(Boolean);
 ---
 
-<Layout>
+<Layout
+  title="About Elevate - Our Mission, Vision & Basketball Community"
+  description="Learn about Elevate Ballers, our mission to elevate the game of basketball, and the inclusive community we've built for players of all skill levels."
+  canonicalURL={`${Astro.url.origin}/about-club/`}
+  type="website"
+>
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "AboutPage",
+          "@id": `${Astro.url.origin}/about-club/`,
+          url: `${Astro.url.origin}/about-club/`,
+          name: "About Elevate - Our Mission, Vision & Basketball Community",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Learn about Elevate Ballers, our mission to elevate the game of basketball, and the inclusive community we've built for players of all skill levels.",
+          about: { "@id": `${Astro.url.origin}/#organization` },
+          breadcrumb: { "@id": `${Astro.url.origin}/about-club/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/about-club/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "About" },
+          ],
+        },
+        {
+          "@type": "SportsOrganization",
+          "@id": `${Astro.url.origin}/#organization`,
+          name: "Elevate Ballers",
+          url: `${Astro.url.origin}/`,
+          sport: "Basketball",
+          description:
+            "Premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement.",
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "Pepo Lane, off Dagoretti Road",
+            addressCountry: "KE",
+          },
+          email: "ballers@elevateballers.com",
+        },
+      ],
+    })}
+  />
   <PageLoader client:load />
   <div id="wrapper">
     <TopBar />
-    <Header />
-    <MobileMenu client:load />
+    <Header client:load currentPath={Astro.url.pathname} />
     <div id="main">
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"
@@ -28,18 +108,18 @@ import PageLoader from "../components/PageLoader";
                 <div class="wpb_wrapper">
                   <Spacing
                     id="stm-spacing-about-header"
-                    lg="50"
-                    md="50"
-                    sm="40"
-                    xs="40"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
                   />
 
-                  <h2
+                  <h1
                     class="heading-font"
                     style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                   >
-                    ABOUT
-                  </h2>
+                    {aboutTitle}
+                  </h1>
 
                   <div
                     class="about-content"
@@ -49,43 +129,12 @@ import PageLoader from "../components/PageLoader";
                       class="normal_font"
                       style="line-height: 1.8; color: #363f48;"
                     >
-                      <p style="margin-bottom: 20px;">
-                        Elevate Ballers is a premier basketball league dedicated
-                        to promoting excellence, sportsmanship, and community
-                        engagement through competitive basketball. Founded with
-                        a vision to elevate the game and the community, we have
-                        been serving basketball enthusiasts of all ages and
-                        skill levels.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        Our mission is to provide a platform for athletes to
-                        showcase their skills, develop their talents, and
-                        compete at the highest level while fostering a sense of
-                        community and sportsmanship. We believe that basketball
-                        is more than just a game—it's a vehicle for personal
-                        growth, teamwork, and community building.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        We offer multiple leagues including Ballers League,
-                        Junior Ballers, Senior Ballers, Women's League, and
-                        Veterans divisions. Each league is designed to provide
-                        competitive opportunities while maintaining a focus on
-                        skill development and fair play.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        Our state-of-the-art facilities at Pepo Lane, off
-                        Dagoretti Road, provide the perfect environment for
-                        training and competition. With multiple courts and
-                        professional coaching staff, we ensure that every player
-                        has the opportunity to reach their full potential.
-                      </p>
-                      <p style="margin-bottom: 20px;">
-                        At Elevate Ballers, we are committed to creating an
-                        inclusive environment where everyone can participate,
-                        learn, and grow. Whether you're a seasoned player or
-                        just starting out, we welcome you to join our basketball
-                        family.
-                      </p>
+                      {isHtml
+                        ? <Fragment set:html={aboutContent} />
+                        : paragraphs.map((p: string) => (
+                            <p style="margin-bottom: 20px;">{p}</p>
+                          ))
+                      }
                     </div>
                   </div>
 
@@ -105,9 +154,6 @@ import PageLoader from "../components/PageLoader";
     </div>
     <Footer />
 
-    <div class="sp-footer-sponsors">
-      <div class="sportspress"><div class="sp-sponsors"></div></div>
-    </div>
   </div>
   <!--main-->
   <!--wrapper-->
@@ -199,84 +245,13 @@ import PageLoader from "../components/PageLoader";
     });
   </script>
 
-  <script is:inline>
-    (function () {
-      function maybePrefixUrlField() {
-        const value = this.value.trim();
-        if (value !== "" && value.indexOf("http") !== 0) {
-          this.value = "http://" + value;
-        }
-      }
-
-      const urlFields = document.querySelectorAll(
-        '.mc4wp-form input[type="url"]',
-      );
-      for (let j = 0; j < urlFields.length; j++) {
-        urlFields[j].addEventListener("blur", maybePrefixUrlField);
-      }
-    })();
-  </script>
   <style is:inline type="text/css">
     /* Hide reCAPTCHA V3 badge */
     .grecaptcha-badge {
       visibility: hidden !important;
     }
   </style>
-  <script is:inline>
-    const lazyloadRunObserver = () => {
-      const lazyloadBackgrounds = document.querySelectorAll(
-        `.e-con.e-parent:not(.e-lazyloaded)`,
-      );
-      const lazyloadBackgroundObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              let lazyloadBackground = entry.target;
-              if (lazyloadBackground) {
-                lazyloadBackground.classList.add("e-lazyloaded");
-              }
-              lazyloadBackgroundObserver.unobserve(entry.target);
-            }
-          });
-        },
-        { rootMargin: "200px 0px 200px 0px" },
-      );
-      lazyloadBackgrounds.forEach((lazyloadBackground) => {
-        lazyloadBackgroundObserver.observe(lazyloadBackground);
-      });
-    };
-    const events = ["DOMContentLoaded", "elementor/lazyload/observe"];
-    events.forEach((event) => {
-      document.addEventListener(event, lazyloadRunObserver);
-    });
-  </script>
 
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery.min.js"
-    id="jquery-core-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/jquery-migrate.min.js"
-    id="jquery-migrate-js"></script>
-  <!-- Legacy Scripts (Select2, Fancybox, Counterup, etc.) removed in favor of React components -->
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/lightbox.js"
-    id="lightbox-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/splash.js"
-    id="stm-theme-scripts-js"></script>
-  <script
-    is:inline
-    type="text/javascript"
-    src="/js/header.js"
-    id="stm-theme-scripts-header-js"></script>
   <script is:inline type="text/javascript" id="sportspress-js-extra">
     /* <![CDATA[ */
     var localized_strings = {
@@ -296,24 +271,7 @@ import PageLoader from "../components/PageLoader";
   <script
     is:inline
     type="text/javascript"
-    src="/js/js_composer_front.min.js"
+    src="/js1/js_composer_front.min.js"
     id="wpb_composer_front_js-js"></script>
-  <script is:inline type="text/javascript">
-    (function () {
-      var c = document.body.className;
-      c = c.replace(/woocommerce-no-js/, "woocommerce-js");
-      document.body.className = c;
-    })();
-  </script>
-  <script is:inline type="text/javascript">
-    jQuery(document).ready(function ($) {
-      $(".sp-header-loaded").prepend($(".sp-league-menu"));
-    });
-  </script>
-  <script is:inline type="text/javascript">
-    jQuery(document).ready(function ($) {
-      $(".sp-header-loaded").prepend($(".sp-header-scoreboard"));
-    });
-  </script>
 </Layout>
 <!-- wrapper -->

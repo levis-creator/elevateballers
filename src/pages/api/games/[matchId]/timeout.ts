@@ -1,9 +1,11 @@
 import type { APIRoute } from 'astro';
-import { createTimeout } from '../../../../features/game-tracking/lib/mutations';
-import { getMatchTimeouts, getFilteredTimeouts } from '../../../../features/game-tracking/lib/queries';
-import { requireAuth } from '../../../../features/cms/lib/auth';
+import { createTimeout } from '../../../../features/game-tracking/data/datasources/mutations';
+import { getMatchTimeouts, getFilteredTimeouts } from '../../../../features/game-tracking/data/datasources/queries';
+import { requireAuth } from '@/features/auth/lib/auth';
 import type { TimeoutType } from '@prisma/client';
+import { logAudit } from '../../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -79,13 +81,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching timeouts:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to fetch timeouts' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, "fetch timeouts");
   }
 };
 
@@ -134,11 +130,16 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!timeout) {
-      return new Response(JSON.stringify({ error: 'Failed to create timeout' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handleApiError(error, "create timeout");
     }
+
+    await logAudit(request, 'GAME_TIMEOUT_RECORDED', {
+      matchId,
+      timeoutId: timeout.id,
+      teamId: timeout.teamId,
+      period: timeout.period,
+      timeoutType: timeout.timeoutType,
+    });
 
     const timeouts = await getMatchTimeouts(matchId);
     return new Response(JSON.stringify({ timeout, timeouts }), {
@@ -147,12 +148,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating timeout:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create timeout' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return handleApiError(error, "create timeout");
   }
 };

@@ -1,11 +1,17 @@
 ---
 export const prerender = false;
-import { checkAuth } from '../../../features/cms/lib/auth-astro';
-import { getSeasonById } from '../../../features/cms/lib/queries';
+import { checkAuth } from '@/features/auth/lib/auth-astro';
+import { hasPermission } from '../../../features/rbac/data/datasources/permissions';
+import { getSeasonById } from '../../../features/seasons/lib/queries/seasons';
 
 const user = await checkAuth(Astro.request);
 if (!user) {
   return Astro.redirect('/admin/login', 302);
+}
+
+const allowed = await hasPermission(user.id, 'seasons:read');
+if (!allowed) {
+  return Astro.redirect('/unauthorized', 302);
 }
 
 const { id } = Astro.params;
@@ -18,7 +24,7 @@ if (id) {
     redirectUrl = `/admin/leagues/${season.leagueId}`;
   }
 }
----
 
-<Astro.response.redirect(redirectUrl, 302) />
+return Astro.redirect(redirectUrl, 302);
+---
 

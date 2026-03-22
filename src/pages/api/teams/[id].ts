@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { getTeamById } from '../../../features/cms/lib/queries';
-import { updateTeam, deleteTeam } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getTeamById } from '../../../features/team/lib/queries/team';
+import { updateTeam, deleteTeam } from '../../../features/team/lib/mutations/team';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { logAudit } from '../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
@@ -11,7 +13,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     // Try to get admin user, but don't fail if not authenticated
     let includeUnapproved = false;
     try {
-      await requireAdmin(request);
+      await requirePermission(request, 'teams:update');
       includeUnapproved = true; // Admins can see unapproved teams
     } catch {
       // Not an admin, only show approved teams
@@ -32,16 +34,13 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error) {
     console.error('Error fetching team:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch team' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch team");
   }
 };
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:update');
     const data = await request.json();
 
     // If name is being updated, check if it's unique
@@ -74,43 +73,37 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'TEAM_UPDATED', {
+      teamId: team.id,
+      name: team.name,
+    });
+
     return new Response(JSON.stringify(team), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error updating team:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to update team' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'update team', request);
   }
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'teams:update');
     const success = await deleteTeam(params.id!);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Failed to delete team' }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: 'Team not found' }), {
+        status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    await logAudit(request, 'TEAM_DELETED', {
+      teamId: params.id,
+    });
+
     return new Response(null, { status: 204 });
-  } catch (error: any) {
-    console.error('Error deleting team:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to delete team' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'delete team', request);
   }
 };
-

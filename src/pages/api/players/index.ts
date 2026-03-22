@@ -1,9 +1,45 @@
 import type { APIRoute } from 'astro';
-import { getPlayers } from '../../../features/cms/lib/queries';
-import { createPlayer } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getPlayers } from '../../../features/player/lib/queries/player';
+import { createPlayer } from '../../../features/player/lib/mutations/player';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { sendPlayerRegistrationAutoReplyBrevo } from '../../../lib/email/templates/registration';
+import { logAudit } from '../../../features/audit/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
+
+const ALLOWED_STAT_KEYS = new Set([
+  'ppg',
+  'rpg',
+  'apg',
+  'spg',
+  'bpg',
+  'fgPercent',
+  'ftPercent',
+  'threePointPercent',
+  'eff',
+]);
+
+function sanitizeStats(input: any): Record<string, number> | null {
+  if (input === null || input === undefined) return null;
+  if (typeof input !== 'object') {
+    throw new Error('Invalid stats format');
+  }
+
+  const result: Record<string, number> = {};
+  for (const key of Object.keys(input)) {
+    if (!ALLOWED_STAT_KEYS.has(key)) continue;
+    const raw = input[key];
+    if (raw === '' || raw === null || raw === undefined) continue;
+    const num = Number(raw);
+    if (!Number.isFinite(num)) {
+      throw new Error(`Invalid value for ${key}`);
+    }
+    result[key] = num;
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -13,7 +49,7 @@ export const GET: APIRoute = async ({ request }) => {
     // Try to get admin user, but don't fail if not authenticated
     let includeUnapproved = false;
     try {
-      await requireAdmin(request);
+      await requirePermission(request, 'players:create');
       includeUnapproved = true; // Admins can see unapproved players
     } catch {
       // Not an admin, only show approved players
@@ -26,25 +62,14 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching players:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch players' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch players', request);
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    try {
-      await requireAdmin(request);
-    } catch (authError: any) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    
+    await requirePermission(request, 'players:create');
+
     const data = await request.json();
 
     // Validate required fields
@@ -55,9 +80,21 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    let stats: Record<string, number> | null = null;
+    try {
+      stats = sanitizeStats(data.stats);
+    } catch (err: any) {
+      return new Response(JSON.stringify({ error: err.message || 'Invalid stats' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const player = await createPlayer({
       firstName: data.firstName,
       lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
       height: data.height,
       weight: data.weight,
       image: data.image,
@@ -65,23 +102,31 @@ export const POST: APIRoute = async ({ request }) => {
       teamId: data.teamId || undefined,
       position: data.position,
       jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : undefined,
-      stats: data.stats,
+      stats,
       approved: true, // Admin-created players are approved by default
+    });
+
+    if (data.email) {
+      sendPlayerRegistrationAutoReplyBrevo({
+        name: `${data.firstName} ${data.lastName}`.trim(),
+        email: data.email,
+        teamName: data.teamName || null,
+      }).catch((err) => {
+        console.error('Failed to send player admin-create auto-reply (Brevo):', err);
+      });
+    }
+
+    await logAudit(request, 'PLAYER_CREATED', {
+      playerId: player.id,
+      name: `${player.firstName} ${player.lastName}`.trim(),
+      teamId: player.teamId || null,
     });
 
     return new Response(JSON.stringify(player), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating player:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create player' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create player', request);
   }
 };
-

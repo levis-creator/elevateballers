@@ -1,6 +1,11 @@
 import type { APIRoute } from 'astro';
-import { createTeam, createStaff, assignStaffToTeam } from '../../../features/cms/lib/mutations';
+import { createTeam } from '../../../features/team/lib/mutations/team';
+import { createStaff, assignStaffToTeam } from '../../../features/staff/lib/mutations/staff';
 import { prisma } from '../../../lib/prisma';
+import { sendTeamRegistrationAutoReply } from '../../../lib/email/templates/registration';
+import { sendAdminNotificationEmail } from '../../../lib/email/templates/contact';
+import { logAudit } from '../../../features/audit/lib/audit';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -11,7 +16,7 @@ export const prerender = false;
 function parseName(fullName: string): { firstName: string; lastName: string } {
   const trimmed = fullName.trim();
   const parts = trimmed.split(/\s+/);
-  
+
   if (parts.length === 1) {
     // Single name - use as first name, empty last name
     return { firstName: parts[0], lastName: '' };
@@ -68,12 +73,11 @@ export const POST: APIRoute = async ({ request }) => {
       leagueName = league?.name;
     }
 
-    // Create team with description including registration info
+    // Create team with description excluding private contact info
+    // Coach details are already saved in the Staff record linked to this team
     const description = [
       leagueName && `League: ${leagueName}`,
       data.coachName && `Coach: ${data.coachName}`,
-      data.contactEmail && `Contact Email: ${data.contactEmail}`,
-      data.contactPhone && `Contact Phone: ${data.contactPhone}`,
       data.additionalInfo && `Additional Info: ${data.additionalInfo}`,
     ]
       .filter(Boolean)
@@ -87,7 +91,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Parse coach name and create staff member
     const { firstName, lastName } = parseName(data.coachName);
-    
+
     // Check if staff with same email already exists
     let coachStaff = await prisma.staff.findFirst({
       where: {
@@ -104,6 +108,7 @@ export const POST: APIRoute = async ({ request }) => {
         phone: data.contactPhone,
         role: 'COACH',
         bio: data.additionalInfo || undefined,
+        approved: false,
       });
     }
 
@@ -197,13 +202,42 @@ export const POST: APIRoute = async ({ request }) => {
           },
         },
       });
+      const adminUrl = `${process.env.SITE_URL || 'https://elevateballers.com'}/admin/teams/${team.id}`;
+      sendAdminNotificationEmail({
+        type: 'team_registered',
+        title: 'New Team Registration',
+        message: `${team.name} was submitted by ${data.coachName}.`,
+        actionUrl: adminUrl,
+        actionText: 'Review Team',
+      }).catch((err) => {
+        console.error('Failed to send admin notification email:', err);
+      });
     } catch (error: any) {
       console.error('Error creating team registration notification:', error);
       // Don't fail the registration if notification creation fails
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    // Send auto-reply email (fire-and-forget)
+    sendTeamRegistrationAutoReply({
+      coachName: data.coachName,
+      email: data.contactEmail,
+      teamName: team.name,
+      leagueName: leagueName || null,
+    }).catch((err) => {
+      console.error('Failed to send team registration auto-reply:', err);
+    });
+
+    await logAudit(request, 'TEAM_REGISTRATION_SUBMITTED', {
+      teamId: team.id,
+      teamName: team.name,
+      coachName: data.coachName,
+      contactEmail: data.contactEmail,
+      leagueName: leagueName || null,
+      linkedPlayersCount,
+    });
+
+    return new Response(JSON.stringify({
+      success: true,
       message: 'Team registration submitted successfully',
       team,
       coach: coachStaff,
@@ -212,15 +246,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating team registration:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to submit team registration' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'submit team registration', request);
   }
 };
-

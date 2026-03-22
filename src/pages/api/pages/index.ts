@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { getAllPageContents, getPageContentBySlug } from '../../../features/cms/lib/queries';
-import { createPageContent } from '../../../features/cms/lib/mutations';
-import { requireAdmin } from '../../../features/cms/lib/auth';
+import { getAllPageContents, getPageContentBySlug } from '../../../features/settings/lib/queries/pageContent';
+import { createPageContent } from '../../../features/settings/lib/mutations/pageContent';
+import { requirePermission } from '../../../features/rbac/domain/usecases/middleware';
+import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -10,6 +11,11 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const slug = url.searchParams.get('slug');
     const admin = url.searchParams.get('admin') === 'true';
+
+    // Admin access requires authentication and permission
+    if (admin) {
+      await requirePermission(request, 'page_contents:read');
+    }
 
     if (slug) {
       const page = await getPageContentBySlug(slug);
@@ -44,17 +50,13 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching pages:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch pages' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, 'fetch pages', request);
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'page_contents:create');
     const data = await request.json();
 
     if (!data.slug || !data.title || !data.content) {
@@ -80,15 +82,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error creating page:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create page' }),
-      {
-        status: error.message === 'Unauthorized' || error.message.includes('Forbidden') ? 401 : 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  } catch (error) {
+    return handleApiError(error, 'create page', request);
   }
 };
-

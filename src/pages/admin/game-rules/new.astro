@@ -2,11 +2,11 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import GameRulesEditor from '../../../features/game-tracking/components/GameRulesEditor';
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import GameRulesEditor from '../../../features/game-tracking/presentation/components/GameRulesEditor';
 ---
 
-<AdminLayout title="Create Game Rules - Admin">
+<AdminLayout title="Create Game Rules - Admin" permission="game_rules:manage">
   <div className="space-y-6">
     <div className="pb-6 border-b">
       <h1 className="text-3xl font-heading font-semibold mb-2">Create Game Rules</h1>

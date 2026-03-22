@@ -1,6 +1,7 @@
 ---
-import { getNewsArticles } from '../../cms/lib/queries';
-import { reverseCategoryMap } from '../../cms/types';
+import { getNewsArticles } from '@/features/news/lib/queries/news';
+import { reverseCategoryMap } from '@/lib/types';
+import { getCompletedMatches } from '../../../matches/data/datasources/queries';
 
 interface Props {
   searchQuery?: string;
@@ -11,7 +12,10 @@ interface Props {
 const { searchQuery = '', showTags = false, showInstagram = false } = Astro.props;
 
 // Get sidebar data
-const allArticles = await getNewsArticles();
+const [allArticles, completedMatches] = await Promise.all([
+  getNewsArticles(),
+  getCompletedMatches(3) // Get latest 3 results
+]);
 
 // Get categories with counts
 const categoryCounts = allArticles.reduce((acc, art) => {
@@ -48,6 +52,27 @@ const tags = Array.from(new Set(
   })
 ));
 ---
+<!-- Latest Results Widget -->
+<aside id="stm_recent_results-widget" class="widget widget-default widget_stm_recent_results">
+  <div class="widget-title">
+    <h4>Recent Results</h4>
+  </div>
+  <div class="sidebar-results">
+    {completedMatches.map((match) => (
+      <div class="sidebar-result-item">
+        <div class="result-teams">
+          <span class="team-name">{match.team1Name || match.team1?.name}</span>
+          <span class="result-score">{match.team1Score} - {match.team2Score}</span>
+          <span class="team-name">{match.team2Name || match.team2?.name}</span>
+        </div>
+        <div class="result-meta">
+          {match.league?.name || match.leagueName}
+        </div>
+      </div>
+    ))}
+  </div>
+  <a href="/matches/results" class="view-all-results-btn">View All Results</a>
+</aside>
 
 <!-- Search Widget -->
 <aside id="search-5" class="widget widget-default widget_search">
@@ -163,6 +188,64 @@ const tags = Array.from(new Set(
 )}
 
 <style>
+  /* Sidebar Results Widget Styles */
+  .sidebar-results {
+    margin-bottom: 1rem;
+  }
+  .sidebar-result-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .sidebar-result-item:last-child {
+    border-bottom: none;
+  }
+  .result-teams {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    gap: 5px;
+  }
+  .team-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .result-score {
+    background: #f4f4f4;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #dd3333;
+    min-width: 45px;
+    text-align: center;
+  }
+  .result-meta {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .view-all-results-btn {
+    display: block;
+    text-align: center;
+    background: #333;
+    color: #fff;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.3s;
+  }
+  .view-all-results-btn:hover {
+    background: #dd3333;
+    color: #fff;
+  }
+
   /* Sidebar Styles */
   .widget {
     margin-bottom: 2rem;
@@ -342,4 +425,3 @@ const tags = Array.from(new Set(
     }
   }
 </style>
-

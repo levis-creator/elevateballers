@@ -3,9 +3,9 @@
  * Converts match data to the format expected by @g-loot/react-tournament-brackets
  */
 
-import type { MatchWithTeamsAndLeagueAndSeason } from '../../cms/types';
+import type { MatchWithTeamsAndLeagueAndSeason } from '@/lib/types';
 import type { MatchStage } from '@prisma/client';
-import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../matches/lib/team-helpers';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../../matches/domain/usecases/team-helpers';
 
 export interface BracketMatch {
   id: string;

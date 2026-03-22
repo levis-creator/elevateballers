@@ -4,13 +4,13 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { MatchStatus, Team, League, Season, TeamWithPlayerCount } from '../../cms/types';
+import type { MatchStatus, Team, League, Season, TeamWithPlayerCount } from '@/lib/types';
 import type { MatchStage } from '@prisma/client';
-import type { BracketMatch } from '../lib/bracket-converter';
-import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../matches/lib/team-helpers';
-import { getLeagueId } from '../../matches/lib/league-helpers';
-import { getSeasonId } from '../../matches/lib/season-helpers';
-import TeamSelect from '../../cms/components/TeamSelect';
+import type { BracketMatch } from '../../domain/usecases/bracket-converter';
+import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../../matches/domain/usecases/team-helpers';
+import { getLeagueId } from '../../../matches/domain/usecases/league-helpers';
+import { getSeasonId } from '../../../matches/domain/usecases/season-helpers';
+import TeamSelect from '../../../team/presentation/components/TeamSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

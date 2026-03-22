@@ -2,19 +2,13 @@
 export const prerender = false;
 export const ssr = false;
 
-import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import MatchEditor from '../../../features/cms/components/MatchEditor';
-import { checkAuth } from '../../../features/cms/lib/auth-astro';
-
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
+import AdminLayout from '@/features/admin-layout/presentation/components/AdminLayout.astro';
+import MatchEditor from '../../../features/matches/presentation/components/MatchEditor';
 
 const seasonId = Astro.url.searchParams.get('seasonId') || undefined;
 ---
 
-<AdminLayout title="Create Match - Admin">
+<AdminLayout title="Create Match - Admin" permission="matches:create">
   <MatchEditor seasonId={seasonId} client:load />
 </AdminLayout>
 

@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { syncMatchToMaxPreps } from '../../../../features/reports/lib/maxpreps';
-import { requireAuth } from '../../../../features/cms/lib/auth';
+import { syncMatchToMaxPreps } from '../../../../features/reports/domain/usecases/maxpreps';
+import { requireAuth } from '@/features/auth/lib/auth';
 
+import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
@@ -45,9 +46,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error syncing to MaxPreps:', error);
-    return new Response(JSON.stringify({ error: 'Failed to sync to MaxPreps' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "sync to MaxPreps");
   }
 };

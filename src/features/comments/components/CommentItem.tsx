@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CommentWithAuthor } from '../../cms/types';
+import type { CommentWithAuthor } from '@/lib/types';
 import { CheckCircle, XCircle, Trash2, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import CommentForm from './CommentForm';
 

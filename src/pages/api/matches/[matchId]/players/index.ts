@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
-import { getMatchPlayers, getMatchPlayersByTeam } from '../../../../../features/cms/lib/queries';
-import { createMatchPlayer } from '../../../../../features/cms/lib/mutations';
-import { requireAuth } from '../../../../../features/cms/lib/auth';
+import { getMatchPlayers, getMatchPlayersByTeam } from '../../../../../features/matches/data/datasources/queries';
+import { createMatchPlayer } from '../../../../../features/matches/data/datasources/mutations';
+import { requireAuth } from '@/features/auth/lib/auth';
+import { logAudit } from '../../../../../features/audit/lib/audit';
 
+import { handleApiError } from '../../../../../lib/apiError';
 export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
   if (!matchId) {
@@ -28,10 +30,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match players:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch match players' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "fetch match players");
   }
 };
 
@@ -67,16 +66,19 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'MATCH_PLAYER_ADDED', {
+      matchId,
+      matchPlayerId: matchPlayer.id,
+      playerId: matchPlayer.playerId,
+      teamId: matchPlayer.teamId,
+    });
+
     return new Response(JSON.stringify(matchPlayer), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Error creating match player:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to create match player' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error, "create match player");
   }
 };
-
