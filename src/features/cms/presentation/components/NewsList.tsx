@@ -216,14 +216,14 @@ export default function NewsList() {
 
   const allSelected = filteredArticles.length > 0 && selectedItems.size === filteredArticles.length;
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      'Interviews': '#667eea',
-      'Championships': '#f5576c',
-      'Match report': '#4facfe',
-      'Analysis': '#43e97b',
+  const getCategoryClass = (category: string): string => {
+    const classes: Record<string, string> = {
+      'Interviews':    'bg-indigo-500 text-white',
+      'Championships': 'bg-rose-500 text-white',
+      'Match report':  'bg-sky-500 text-white',
+      'Analysis':      'bg-emerald-500 text-white',
     };
-    return colors[category] || '#64748b';
+    return classes[category] || 'bg-slate-500 text-white';
   };
 
   const PlusIcon = icons.Plus;
@@ -480,11 +480,7 @@ export default function NewsList() {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      style={{
-                        backgroundColor: getCategoryColor(reverseCategoryMap[article.category]),
-                        color: 'white',
-                      }}
-                      className="text-xs uppercase"
+                      className={`text-xs uppercase border-0 ${getCategoryClass(reverseCategoryMap[article.category])}`}
                     >
                       {TagIcon ? <TagIcon size={12} className="mr-1" /> : null}
                       {reverseCategoryMap[article.category]}
@@ -569,11 +565,7 @@ export default function NewsList() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-center mb-3">
                   <Badge
-                    style={{
-                      backgroundColor: getCategoryColor(reverseCategoryMap[article.category]),
-                      color: 'white',
-                    }}
-                    className="text-xs uppercase"
+                    className={`text-xs uppercase border-0 ${getCategoryClass(reverseCategoryMap[article.category])}`}
                   >
                     {TagIcon ? <TagIcon size={12} className="mr-1" /> : null}
                     {reverseCategoryMap[article.category]}

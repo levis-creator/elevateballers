@@ -8,12 +8,21 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
+import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 interface DataTableProps<TData> {
   data: TData[];
   columns: ColumnDef<TData, any>[];
   className?: string;
-  tableClassName?: string;
   pageSize?: number;
 }
 
@@ -21,21 +30,18 @@ export function DataTable<TData>({
   data,
   columns,
   className = '',
-  tableClassName = '',
   pageSize = 10,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize });
 
   const table = useReactTable({
     data,
     columns,
-    state: {
-      sorting,
-    },
-    initialState: {
-      pagination: { pageSize, pageIndex: 0 },
-    },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    autoResetPageIndex: false,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -45,8 +51,7 @@ export function DataTable<TData>({
   const pageCount = table.getPageCount();
   const showPagination = pageCount > 1;
 
-  // Build page number list with ellipsis
-  const getPageNumbers = () => {
+  const getPageNumbers = (): (number | '...')[] => {
     const pages: (number | '...')[] = [];
     if (pageCount <= 7) {
       for (let i = 0; i < pageCount; i++) pages.push(i);
@@ -63,108 +68,134 @@ export function DataTable<TData>({
   };
 
   return (
-    <div className={`sp-table-wrapper ${className}`}>
-      <table className={`sp-data-table ${tableClassName}`}>
-        <thead>
+    <div className={cn('w-full overflow-x-auto', className)}>
+      <Table>
+        <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className={header.column.columnDef.meta?.className as string}
-                  onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
-                  style={{ cursor: header.column.getCanSort() ? 'pointer' : 'default' }}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                  {header.column.getIsSorted() === 'asc' ? ' 🔼' : header.column.getIsSorted() === 'desc' ? ' 🔽' : null}
-                </th>
-              ))}
-            </tr>
+            <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
+              {headerGroup.headers.map((header) => {
+                const sorted = header.column.getIsSorted();
+                const canSort = header.column.getCanSort();
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={cn(
+                      'h-auto bg-brand-red text-white font-normal uppercase text-xs py-3 px-2 text-center',
+                      canSort && 'cursor-pointer select-none',
+                      header.column.columnDef.meta?.className as string,
+                    )}
+                    onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                  >
+                    {header.isPlaceholder ? null : (
+                      <div className="flex items-center justify-center gap-1">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {canSort && (
+                          <span className="shrink-0">
+                            {sorted === 'asc' ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : sorted === 'desc' ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
           ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={cell.column.columnDef.meta?.className as string}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="py-10 text-center text-sm text-muted-foreground"
+              >
+                No data available.
+              </TableCell>
+            </TableRow>
+          ) : (
+            table.getRowModel().rows.map((row, index) => (
+              <TableRow
+                key={row.id}
+                className={cn(
+                  'border-0 transition-colors',
+                  index % 2 === 0
+                    ? 'bg-white hover:bg-gray-50'
+                    : 'bg-table-alt hover:brightness-95',
+                )}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cn(
+                      'py-3 px-2 text-sm text-center',
+                      cell.column.columnDef.meta?.className as string,
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
 
       {showPagination && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '4px',
-          padding: '16px 0 8px',
-          flexWrap: 'wrap',
-        }}>
+        <div className="flex flex-wrap items-center justify-center gap-1 pt-4 pb-2">
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            style={btnStyle(!table.getCanPreviousPage())}
+            className={cn(
+              'inline-flex items-center gap-1 rounded border px-3 py-1.5 text-xs font-medium transition-colors',
+              'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
+              !table.getCanPreviousPage() && 'pointer-events-none opacity-40',
+            )}
           >
-            &laquo; Prev
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Prev
           </button>
 
           {getPageNumbers().map((page, i) =>
             page === '...' ? (
-              <span key={`ellipsis-${i}`} style={{ padding: '0 4px', color: '#888' }}>…</span>
+              <span key={`ellipsis-${i}`} className="px-1 text-xs text-gray-400">
+                …
+              </span>
             ) : (
               <button
                 key={page}
                 onClick={() => table.setPageIndex(page as number)}
-                style={pageStyle(page === pageIndex)}
+                className={cn(
+                  'h-8 min-w-[2rem] rounded border px-2 text-xs font-medium transition-colors',
+                  page === pageIndex
+                    ? 'border-brand-red bg-brand-red font-bold text-white'
+                    : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
+                )}
               >
                 {(page as number) + 1}
               </button>
-            )
+            ),
           )}
 
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            style={btnStyle(!table.getCanNextPage())}
+            className={cn(
+              'inline-flex items-center gap-1 rounded border px-3 py-1.5 text-xs font-medium transition-colors',
+              'border-gray-300 bg-white text-gray-600 hover:bg-gray-50',
+              !table.getCanNextPage() && 'pointer-events-none opacity-40',
+            )}
           >
-            Next &raquo;
+            Next
+            <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
     </div>
   );
 }
-
-const base: React.CSSProperties = {
-  padding: '6px 12px',
-  border: '1px solid #ddd',
-  borderRadius: '3px',
-  background: '#fff',
-  color: '#535353',
-  fontSize: '13px',
-  cursor: 'pointer',
-  lineHeight: 1.4,
-};
-
-const btnStyle = (disabled: boolean): React.CSSProperties => ({
-  ...base,
-  opacity: disabled ? 0.4 : 1,
-  cursor: disabled ? 'default' : 'pointer',
-});
-
-const pageStyle = (active: boolean): React.CSSProperties => ({
-  ...base,
-  background: active ? '#dd3333' : '#fff',
-  color: active ? '#fff' : '#535353',
-  borderColor: active ? '#dd3333' : '#ddd',
-  fontWeight: active ? 700 : 400,
-});
