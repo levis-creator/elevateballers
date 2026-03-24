@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { sendTeamRegistrationAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { verifyTurnstile } from '../../../lib/turnstile';
 
 export const prerender = false;
 
@@ -30,9 +31,24 @@ function parseName(fullName: string): { firstName: string; lastName: string } {
   }
 }
 
+const getClientIp = (request: Request): string =>
+  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+  request.headers.get('x-real-ip') ??
+  'unknown';
+
 export const POST: APIRoute = async ({ request }) => {
   try {
+    const ip = getClientIp(request);
     const data = await request.json();
+
+    // Cloudflare Turnstile verification
+    const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
+    if (!await verifyTurnstile(turnstileToken, ip)) {
+      return new Response(
+        JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validate required fields
     if (!data.name || !data.coachName || !data.contactEmail || !data.contactPhone) {
