@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import TurnstileWidget from '../../../../components/TurnstileWidget';
+
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY as string;
 
 interface FormData {
   name: string;
@@ -17,6 +20,7 @@ export default function ContactForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -25,6 +29,12 @@ export default function ContactForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!turnstileToken) {
+      setError('Please complete the security check before submitting.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -37,6 +47,7 @@ export default function ContactForm() {
           email: formData.email.trim(),
           subject: formData.subject.trim(),
           message: formData.message.trim(),
+          'cf-turnstile-token': turnstileToken,
         }),
       });
 
@@ -46,6 +57,7 @@ export default function ContactForm() {
       }
 
       setFormData({ name: '', email: '', subject: '', message: '' });
+      setTurnstileToken(null);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
@@ -141,6 +153,16 @@ export default function ContactForm() {
             style={{ ...inputStyle, resize: 'vertical' }}
           />
         </div>
+
+        {TURNSTILE_SITE_KEY && (
+          <TurnstileWidget
+            siteKey={TURNSTILE_SITE_KEY}
+            onSuccess={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
+          />
+        )}
+
         <div style={{ marginTop: '10px' }}>
           <button
             type="submit"

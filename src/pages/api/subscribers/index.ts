@@ -4,6 +4,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { sendSubscriberWelcome } from '../../../lib/email';
 
 import { handleApiError } from '../../../lib/apiError';
+import { verifyTurnstile } from '../../../lib/turnstile';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
@@ -13,6 +14,15 @@ export const POST: APIRoute = async ({ request }) => {
     // Honeypot
     if (data.website) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+
+    // Cloudflare Turnstile verification
+    const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
+    if (!await verifyTurnstile(turnstileToken)) {
+      return new Response(JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const email = String(data.email || '').trim().toLowerCase();

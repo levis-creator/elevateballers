@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import TurnstileWidget from '../../../../components/TurnstileWidget';
+
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY as string;
 
 interface League {
   id: string;
@@ -45,6 +48,8 @@ export default function LeagueRegistrationForm() {
   const [leaguesLoading, setLeaguesLoading] = useState(true);
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamsLoading, setTeamsLoading] = useState(true);
+  const [teamTurnstileToken, setTeamTurnstileToken] = useState<string | null>(null);
+  const [playerTurnstileToken, setPlayerTurnstileToken] = useState<string | null>(null);
 
   const [teamFormData, setTeamFormData] = useState<TeamFormData>({
     name: '',
@@ -110,6 +115,12 @@ export default function LeagueRegistrationForm() {
 
   const handleTeamSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!teamTurnstileToken) {
+      setError('Please complete the security check before submitting.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -127,6 +138,7 @@ export default function LeagueRegistrationForm() {
           contactPhone: teamFormData.contactPhone.trim(),
           leagueId: teamFormData.leagueId || undefined,
           additionalInfo: teamFormData.additionalInfo.trim() || undefined,
+          'cf-turnstile-token': teamTurnstileToken,
         }),
       });
 
@@ -144,6 +156,7 @@ export default function LeagueRegistrationForm() {
         leagueId: '',
         additionalInfo: '',
       });
+      setTeamTurnstileToken(null);
       setSuccess('Team and coach registration submitted successfully! We will contact you soon.');
     } catch (err) {
       console.error('Error submitting team registration:', err);
@@ -155,6 +168,12 @@ export default function LeagueRegistrationForm() {
 
   const handlePlayerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!playerTurnstileToken) {
+      setError('Please complete the security check before submitting.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -176,6 +195,7 @@ export default function LeagueRegistrationForm() {
           weight: playerFormData.weight.trim() || undefined,
           teamName: playerFormData.teamName.trim() || undefined,
           additionalInfo: playerFormData.additionalInfo.trim() || undefined,
+          'cf-turnstile-token': playerTurnstileToken,
         }),
       });
 
@@ -197,6 +217,7 @@ export default function LeagueRegistrationForm() {
         teamName: '',
         additionalInfo: '',
       });
+      setPlayerTurnstileToken(null);
       setSuccess('Player registration submitted successfully! We will contact you soon.');
     } catch (err) {
       console.error('Error submitting player registration:', err);
@@ -231,9 +252,9 @@ export default function LeagueRegistrationForm() {
         }
       `}</style>
       {/* Tabs */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '10px', 
+      <div style={{
+        display: 'flex',
+        gap: '10px',
         marginBottom: '30px',
         borderBottom: '2px solid #e5e7eb'
       }}>
@@ -419,6 +440,15 @@ export default function LeagueRegistrationForm() {
               style={{ width: '100%', padding: '12px', border: '1px solid #d8d8d8', borderRadius: '3px', fontFamily: 'Rubik', fontSize: '14px', resize: 'vertical' }}
             />
           </div>
+
+          {TURNSTILE_SITE_KEY && (
+            <TurnstileWidget
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={setTeamTurnstileToken}
+              onExpire={() => setTeamTurnstileToken(null)}
+              onError={() => setTeamTurnstileToken(null)}
+            />
+          )}
 
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
@@ -615,6 +645,15 @@ export default function LeagueRegistrationForm() {
             />
           </div>
 
+          {TURNSTILE_SITE_KEY && (
+            <TurnstileWidget
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={setPlayerTurnstileToken}
+              onExpire={() => setPlayerTurnstileToken(null)}
+              onError={() => setPlayerTurnstileToken(null)}
+            />
+          )}
+
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
@@ -641,4 +680,3 @@ export default function LeagueRegistrationForm() {
     </div>
   );
 }
-
