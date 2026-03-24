@@ -166,18 +166,18 @@ export default function ContactForm() {
         <div style={{ marginTop: '10px' }}>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
             style={{
-              backgroundColor: submitting ? '#999' : '#dd3333',
+              backgroundColor: (submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)) ? '#999' : '#dd3333',
               color: '#fff',
               border: 'none',
               padding: '15px 40px',
               fontFamily: 'Teko',
               fontSize: '18px',
               textTransform: 'uppercase',
-              cursor: submitting ? 'not-allowed' : 'pointer',
+              cursor: (submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)) ? 'not-allowed' : 'pointer',
               borderRadius: '3px',
-              opacity: submitting ? 0.5 : 1,
+              opacity: (submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)) ? 0.5 : 1,
               transition: 'background-color 0.3s ease',
             } as React.CSSProperties}
           >
