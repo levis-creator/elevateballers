@@ -1,33 +1,7 @@
-import { useState, useEffect, type ComponentType } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState } from 'react';
+import { ShieldCheck, ArrowRight, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function OtpForm() {
-  const [icons, setIcons] = useState<{
-    Basketball?: ComponentType<any>;
-    ShieldCheck?: ComponentType<any>;
-    ArrowRight?: ComponentType<any>;
-    ArrowLeft?: ComponentType<any>;
-    AlertCircle?: ComponentType<any>;
-    Loader2?: ComponentType<any>;
-  }>({});
-
-  useEffect(() => {
-    import('lucide-react').then((mod) => {
-      setIcons({
-        Basketball: mod.Basketball,
-        ShieldCheck: mod.ShieldCheck,
-        ArrowRight: mod.ArrowRight,
-        ArrowLeft: mod.ArrowLeft,
-        AlertCircle: mod.AlertCircle,
-        Loader2: mod.Loader2,
-      });
-    });
-  }, []);
-
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,7 +32,6 @@ export default function OtpForm() {
         return;
       }
 
-      // Auth token is now set — redirect to admin
       setTimeout(() => {
         window.location.href = '/admin';
       }, 100);
@@ -69,95 +42,94 @@ export default function OtpForm() {
     }
   };
 
-  const BasketballIcon = icons.Basketball;
-  const ShieldCheckIcon = icons.ShieldCheck;
-  const ArrowRightIcon = icons.ArrowRight;
-  const ArrowLeftIcon = icons.ArrowLeft;
-  const AlertCircleIcon = icons.AlertCircle;
-  const Loader2Icon = icons.Loader2;
-
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center space-y-4 pb-6">
-        <div className="w-20 h-20 mx-auto bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-lg">
-          {BasketballIcon ? <BasketballIcon size={40} /> : null}
-        </div>
-        <div>
-          <h1 className="text-4xl font-heading font-semibold mb-2 text-foreground tracking-wide">
-            ELEVATE BALLERS
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-600 shadow-lg shadow-red-600/30 mb-5">
+            <img src="/images/Elevate_Icon-200x200.png" alt="Elevate Ballers" className="w-10 h-10 object-contain" />
+          </div>
+          <h1 className="text-4xl font-bold text-white tracking-widest uppercase" style={{ fontFamily: 'Teko, sans-serif' }}>
+            Elevate Ballers
           </h1>
-          <p className="text-muted-foreground text-sm">Two-Step Verification</p>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        <div className="text-center space-y-2">
-          {ShieldCheckIcon ? (
-            <ShieldCheckIcon className="mx-auto h-8 w-8 text-primary" />
-          ) : null}
-          <p className="text-sm text-muted-foreground">
-            A 6-digit verification code has been sent to your email address.
-            Enter it below to complete sign-in.
-          </p>
         </div>
 
-        {error && (
-          <Alert variant="destructive">
-            {AlertCircleIcon ? <AlertCircleIcon className="h-4 w-4" /> : null}
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {/* Card */}
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl p-8">
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="code" className="text-sm font-semibold">
-              Verification Code
-            </Label>
-            <Input
-              type="text"
-              id="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              required
-              disabled={loading}
-              placeholder="000000"
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              maxLength={6}
-              className="text-center text-2xl tracking-[0.5em] font-mono"
-            />
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-600/10 border border-red-600/20 mb-3">
+              <ShieldCheck className="w-6 h-6 text-red-500" />
+            </div>
+            <h2 className="text-white font-semibold text-lg">Two-Step Verification</h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Enter the 6-digit code sent to your email to complete sign-in.
+            </p>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full uppercase tracking-wide"
-            disabled={loading || code.trim().length !== 6}
-            size="lg"
-          >
-            {loading ? (
-              <>
-                {Loader2Icon ? <Loader2Icon className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Verifying...
-              </>
-            ) : (
-              <>
-                Verify & Sign In
-                {ArrowRightIcon ? <ArrowRightIcon className="ml-2 h-4 w-4" /> : null}
-              </>
-            )}
-          </Button>
-        </form>
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 mb-6 text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <div className="pt-6 border-t text-center">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="code" className="block text-sm font-medium text-gray-300 mb-2">
+                Verification Code
+              </label>
+              <input
+                type="text"
+                id="code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+                disabled={loading}
+                placeholder="000000"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                maxLength={6}
+                className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-600 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.6em] font-mono focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition disabled:opacity-50"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || code.trim().length !== 6}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm uppercase tracking-widest transition-colors shadow-lg shadow-red-600/20 disabled:shadow-none"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  Verify & Sign In
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Back link */}
+        <div className="text-center mt-6">
           <a
             href="/admin/login"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
           >
-            {ArrowLeftIcon ? <ArrowLeftIcon className="h-4 w-4" /> : null}
-            <span>Back to login</span>
+            <ArrowLeft className="w-4 h-4" />
+            Back to login
           </a>
         </div>
-      </CardContent>
-    </Card>
+
+      </div>
+    </div>
   );
 }
