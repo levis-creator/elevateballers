@@ -1,186 +1,171 @@
-import { useState, useEffect, type ComponentType } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState } from 'react';
+import { Mail, Lock, ArrowRight, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import TurnstileWidget from '@/components/TurnstileWidget';
+
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY as string;
 
 export default function LoginForm() {
-  const [icons, setIcons] = useState<{
-    Basketball?: ComponentType<any>;
-    Mail?: ComponentType<any>;
-    Lock?: ComponentType<any>;
-    ArrowRight?: ComponentType<any>;
-    ArrowLeft?: ComponentType<any>;
-    AlertCircle?: ComponentType<any>;
-    Loader2?: ComponentType<any>;
-  }>({});
-
-  useEffect(() => {
-    import('lucide-react').then((mod) => {
-      setIcons({
-        Basketball: mod.Basketball,
-        Mail: mod.Mail,
-        Lock: mod.Lock,
-        ArrowRight: mod.ArrowRight,
-        ArrowLeft: mod.ArrowLeft,
-        AlertCircle: mod.AlertCircle,
-        Loader2: mod.Loader2,
-      });
-    });
-  }, []);
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!turnstileToken) {
+      setError('Please complete the security check before signing in.');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Important: Include cookies in request
-        body: JSON.stringify({ email, password }),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password, 'cf-turnstile-token': turnstileToken }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Login failed:', data);
         setError(data.error || 'Login failed');
         return;
       }
 
-      // Credentials accepted — redirect to OTP verification page
       window.location.href = '/admin/verify-otp';
-    } catch (err) {
-      console.error('Login error:', err);
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const BasketballIcon = icons.Basketball;
-  const MailIcon = icons.Mail;
-  const LockIcon = icons.Lock;
-  const ArrowRightIcon = icons.ArrowRight;
-  const ArrowLeftIcon = icons.ArrowLeft;
-  const AlertCircleIcon = icons.AlertCircle;
-  const Loader2Icon = icons.Loader2;
+  const isDisabled = loading || (!!TURNSTILE_SITE_KEY && !turnstileToken);
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center space-y-4 pb-6">
-        <div className="w-20 h-20 mx-auto bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-lg">
-          {BasketballIcon ? <BasketballIcon size={40} /> : null}
-        </div>
-        <div>
-          <h1 className="text-4xl font-heading font-semibold mb-2 text-foreground tracking-wide">
-            ELEVATE BALLERS
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-600 shadow-lg shadow-red-600/30 mb-5">
+            <img src="/images/Elevate_Icon-200x200.png" alt="Elevate Ballers" className="w-10 h-10 object-contain" />
+          </div>
+          <h1 className="text-4xl font-bold text-white tracking-widest uppercase" style={{ fontFamily: 'Teko, sans-serif' }}>
+            Elevate Ballers
           </h1>
-          <p className="text-muted-foreground text-sm">Admin Login</p>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            {AlertCircleIcon ? <AlertCircleIcon className="h-4 w-4" /> : null}
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {/* Card */}
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl p-8">
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-semibold">
-              Email Address
-            </Label>
-            <div className="relative">
-              {MailIcon ? (
-                <MailIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              ) : null}
-              <Input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                placeholder="admin@elevateballers.com"
-                autoComplete="email"
-                className="pl-10"
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 mb-6 text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder="admin@elevateballers.com"
+                  autoComplete="email"
+                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+                  Password
+                </label>
+                <a
+                  href="/admin/forgot-password"
+                  className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                >
+                  Forgot password?
+                </a>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            {/* Turnstile */}
+            {TURNSTILE_SITE_KEY && (
+              <TurnstileWidget
+                siteKey={TURNSTILE_SITE_KEY}
+                onSuccess={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => setTurnstileToken(null)}
               />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-semibold">
-              Password
-            </Label>
-            <div className="relative">
-              {LockIcon ? (
-                <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              ) : null}
-              <Input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                className="pl-10"
-              />
-            </div>
-            <div className="text-right">
-              <a
-                href="/admin/forgot-password"
-                className="text-xs text-muted-foreground hover:text-primary transition-colors"
-              >
-                Forgot password?
-              </a>
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full uppercase tracking-wide"
-            disabled={loading}
-            size="lg"
-          >
-            {loading ? (
-              <>
-                {Loader2Icon ? <Loader2Icon className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Signing in...
-              </>
-            ) : (
-              <>
-                Sign In
-                {ArrowRightIcon ? <ArrowRightIcon className="ml-2 h-4 w-4" /> : null}
-              </>
             )}
-          </Button>
-        </form>
 
-        <div className="pt-6 border-t text-center">
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isDisabled}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm uppercase tracking-widest transition-colors shadow-lg shadow-red-600/20 disabled:shadow-none"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Back link */}
+        <div className="text-center mt-6">
           <a
             href="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
           >
-            {ArrowLeftIcon ? <ArrowLeftIcon className="h-4 w-4" /> : null}
-            <span>Back to website</span>
+            <ArrowLeft className="w-4 h-4" />
+            Back to website
           </a>
         </div>
-      </CardContent>
-    </Card>
+
+      </div>
+    </div>
   );
 }

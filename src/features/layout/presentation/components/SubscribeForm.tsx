@@ -66,7 +66,7 @@ export default function SubscribeForm() {
             <input
               type="submit"
               value={status === 'loading' ? 'Submitting...' : 'Submit'}
-              disabled={status === 'loading' || status === 'success'}
+              disabled={status === 'loading' || status === 'success' || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
             />
           </span>
         </div>

@@ -12,6 +12,7 @@ import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { verifyTurnstile } from '../../../lib/turnstile';
 
 export const prerender = false;
 
@@ -66,6 +67,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (!email || !password) {
       return json({ error: 'Email and password are required' }, 400);
+    }
+
+    // Cloudflare Turnstile verification
+    const turnstileToken = String(body['cf-turnstile-token'] ?? '').trim();
+    if (!await verifyTurnstile(turnstileToken, ip)) {
+      return json({ error: 'Security check failed. Please refresh and try again.' }, 400);
     }
 
     const user = await findUserByEmail(email);

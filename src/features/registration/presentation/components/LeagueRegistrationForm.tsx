@@ -453,19 +453,19 @@ export default function LeagueRegistrationForm() {
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)}
               className="button btn-primary btn-lg"
               style={{
-                backgroundColor: submitting ? '#999' : '#dd3333',
+                backgroundColor: (submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)) ? '#999' : '#dd3333',
                 color: '#fff',
                 border: 'none',
                 padding: '15px 40px',
                 fontFamily: 'Teko',
                 fontSize: '18px',
                 textTransform: 'uppercase',
-                cursor: submitting ? 'not-allowed' : 'pointer',
+                cursor: (submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)) ? 'not-allowed' : 'pointer',
                 borderRadius: '3px',
-                opacity: submitting ? 0.5 : 1,
+                opacity: (submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)) ? 0.5 : 1,
               } as React.CSSProperties}
             >
               {submitting ? 'Submitting...' : 'Submit Registration'}
@@ -657,19 +657,19 @@ export default function LeagueRegistrationForm() {
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)}
               className="button btn-primary btn-lg"
               style={{
-                backgroundColor: submitting ? '#999' : '#dd3333',
+                backgroundColor: (submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)) ? '#999' : '#dd3333',
                 color: '#fff',
                 border: '2px solid #dd3333',
                 padding: '15px 40px',
                 fontFamily: 'Teko',
                 fontSize: '18px',
                 textTransform: 'uppercase',
-                cursor: submitting ? 'not-allowed' : 'pointer',
+                cursor: (submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)) ? 'not-allowed' : 'pointer',
                 borderRadius: '3px',
-                opacity: submitting ? 0.5 : 1,
+                opacity: (submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)) ? 0.5 : 1,
               }}
             >
               {submitting ? 'Submitting...' : 'Submit Registration'}
