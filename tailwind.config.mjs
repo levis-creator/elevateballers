@@ -57,6 +57,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Brand palette — used across public-facing components
+        brand: {
+          red:        '#dd3333',
+          'red-dark': '#bb2222',
+          gold:       '#ffba00',
+          teal:       '#2dd4bf',
+          body:       '#535353',
+          'link':     '#009bdc',
+        },
+        surface: {
+          dark:   '#16152c',
+          deeper: '#0f0e1a',
+          mid:    '#2a2847',
+        },
+        'table-alt': '#e8e8e8',
       },
       borderRadius: {
         lg: "var(--radius)",

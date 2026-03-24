@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '../../../../shared/components/DataTable/DataTable';
 import type { TeamStanding } from '../../data/standingsData';
-import styles from './StandingsTable.module.css';
 
 interface StandingsTableProps {
   standings: TeamStanding[];
@@ -16,15 +15,23 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => 
         accessorKey: 'rank',
         cell: (info) => {
           const rank = info.getValue<number>();
+          const isTop3 = rank <= 3;
           return (
-            <div className={styles.rankCell}>
-              <span className={`${styles.rankBadge} ${rank <= 3 ? styles.topThree : ''}`}>
+            <div className="flex items-center justify-center">
+              <span
+                className={cn(
+                  'inline-flex h-7 min-w-[28px] items-center justify-center rounded px-1 text-xs font-semibold',
+                  isTop3
+                    ? 'bg-gradient-to-br from-yellow-400 to-yellow-300 text-gray-900 shadow-sm'
+                    : 'bg-gray-100 text-gray-600',
+                )}
+              >
                 {rank}
               </span>
             </div>
           );
         },
-        meta: { className: 'data-rank' },
+        meta: { className: 'text-center' },
       },
       {
         header: 'Team',
@@ -32,95 +39,72 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => 
         cell: (info) => {
           const team = info.row.original;
           const content = (
-            <div className={styles.teamCell}>
+            <div className="flex items-center gap-3">
               {team.logo && (
-                <img 
-                  src={team.logo} 
+                <img
+                  src={team.logo}
                   alt={team.team}
-                  className={styles.teamLogo}
+                  className="h-8 w-8 rounded object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               )}
-              <span className={styles.teamName}>{team.team}</span>
+              <span className="font-bold text-brand-body">{team.team}</span>
             </div>
           );
-          
+
           return team.url ? (
-            <a href={team.url} className={styles.teamLink}>{content}</a>
+            <a
+              href={team.url}
+              className="block no-underline transition-colors hover:[&_span]:text-brand-link"
+            >
+              {content}
+            </a>
           ) : (
             content
           );
         },
-        meta: { className: 'data-name' },
+        meta: { className: 'text-left pl-5' },
       },
-      {
-        header: 'P',
-        accessorKey: 'played',
-        meta: { className: 'data-played', headerTitle: 'Played' },
-      },
-      {
-        header: 'W',
-        accessorKey: 'won',
-        meta: { className: 'data-won', headerTitle: 'Won' },
-      },
-      {
-        header: 'D',
-        accessorKey: 'drawn',
-        meta: { className: 'data-drawn', headerTitle: 'Drawn' },
-      },
-      {
-        header: 'L',
-        accessorKey: 'lost',
-        meta: { className: 'data-lost', headerTitle: 'Lost' },
-      },
-      {
-        header: 'GF',
-        accessorKey: 'goalsFor',
-        meta: { className: 'data-goals-for', headerTitle: 'Goals For' },
-      },
-      {
-        header: 'GA',
-        accessorKey: 'goalsAgainst',
-        meta: { className: 'data-goals-against', headerTitle: 'Goals Against' },
-      },
+      { header: 'P',   accessorKey: 'played',         meta: { className: 'text-center' } },
+      { header: 'W',   accessorKey: 'won',             meta: { className: 'text-center' } },
+      { header: 'D',   accessorKey: 'drawn',           meta: { className: 'text-center' } },
+      { header: 'L',   accessorKey: 'lost',            meta: { className: 'text-center' } },
+      { header: 'GF',  accessorKey: 'goalsFor',        meta: { className: 'text-center' } },
+      { header: 'GA',  accessorKey: 'goalsAgainst',    meta: { className: 'text-center' } },
       {
         header: 'GD',
         accessorKey: 'goalDifference',
         cell: (info) => {
           const val = info.getValue<number>();
-          const className = val > 0 ? styles.positive : val < 0 ? styles.negative : styles.neutral;
+          const colorClass =
+            val > 0 ? 'text-green-600' : val < 0 ? 'text-red-600' : 'text-gray-500';
           return (
-            <span className={`${styles.goalDiff} ${className}`}>
+            <span className={`font-semibold ${colorClass}`}>
               {val > 0 ? '+' : ''}{val}
             </span>
           );
         },
-        meta: { className: 'data-goal-difference', headerTitle: 'Goal Difference' },
+        meta: { className: 'text-center' },
       },
       {
         header: 'Pts',
         accessorKey: 'points',
-        cell: (info) => {
-          const points = info.getValue<number>();
-          return <strong className={styles.pointsCell}>{points}</strong>;
-        },
-        meta: { className: 'data-points', headerTitle: 'Points' },
+        cell: (info) => (
+          <strong className="text-base font-bold text-brand-red">
+            {info.getValue<number>()}
+          </strong>
+        ),
+        meta: { className: 'text-center' },
       },
     ],
-    []
+    [],
   );
 
-  return (
-    <div className="sp-template sp-template-league-table">
-      <DataTable 
-        data={standings} 
-        columns={columns} 
-        tableClassName="sp-league-table"
-      />
-    </div>
-  );
+  return <DataTable data={standings} columns={columns} />;
 };
 
-
+function cn(...classes: (string | undefined | false)[]) {
+  return classes.filter(Boolean).join(' ');
+}

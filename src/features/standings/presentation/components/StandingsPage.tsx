@@ -10,7 +10,7 @@ interface StandingsPageProps {
 
 export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings }) => {
   const [standings, setStandings] = useState<TeamStanding[]>(initialStandings);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch all standings on initial mount (client-side) to ensure fresh data
@@ -26,8 +26,6 @@ export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings }
         }
       } catch (err) {
         console.error('Error fetching initial standings:', err);
-      } finally {
-        setLoading(false);
       }
     };
     fetchInitial();

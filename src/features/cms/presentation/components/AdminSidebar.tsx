@@ -11,222 +11,14 @@ interface NavItem {
   permissionsAll?: string[];
 }
 
-const styles = `
-  .sb {
-    position: fixed;
-    left: 0; top: 0;
-    width: 260px;
-    height: 100vh;
-    background: #111;
-    border-right: 1px solid rgba(255,255,255,0.08);
-    display: flex;
-    flex-direction: column;
-    z-index: 1000;
-    transition: transform 280ms ease;
-  }
-  .sb.hidden { transform: translateX(-100%); }
-
-  /* Logo */
-  .sb-logo {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 1.25rem 1rem;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    flex-shrink: 0;
-  }
-  .sb-logo-icon {
-    width: 2rem; height: 2rem;
-    border-radius: 50%;
-    background: rgba(221,51,51,0.15);
-    border: 1px solid rgba(221,51,51,0.3);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .sb-logo-text {
-    font-family: var(--font-heading);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  /* Nav */
-  .sb-nav {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0.75rem 0;
-    scrollbar-width: none;
-  }
-  .sb-nav::-webkit-scrollbar { display: none; }
-
-  /* Group label */
-  .sb-group-label {
-    padding: 0.75rem 1rem 0.25rem;
-    font-family: var(--font-heading);
-    font-size: 0.6rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.25);
-  }
-
-  /* Nav link */
-  .sb-link {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.5rem 1rem;
-    margin: 0.05rem 0.5rem;
-    border-radius: 6px;
-    text-decoration: none;
-    color: rgba(255,255,255,0.5) !important;
-    font-size: 0.875rem;
-    font-weight: 400;
-    transition: background 150ms ease, color 150ms ease;
-  }
-  .sb-link:hover {
-    background: rgba(255,255,255,0.06);
-    color: rgba(255,255,255,0.9) !important;
-  }
-  .sb-link.active {
-    background: var(--color-primary);
-    color: #fff !important;
-    font-weight: 500;
-  }
-  .sb-link.active:hover {
-    background: var(--color-primary-dark);
-  }
-  .sb-link-icon {
-    opacity: 0.6;
-    flex-shrink: 0;
-  }
-  .sb-link.active .sb-link-icon,
-  .sb-link:hover .sb-link-icon { opacity: 1; }
-
-  /* Badge */
-  .sb-badge {
-    margin-left: auto;
-    background: #fff;
-    color: var(--color-primary);
-    font-size: 0.6rem;
-    font-weight: 700;
-    padding: 0.1rem 0.4rem;
-    border-radius: 9999px;
-    line-height: 1.4;
-  }
-  .sb-link:not(.active) .sb-badge {
-    background: var(--color-primary);
-    color: #fff;
-  }
-
-  /* Footer */
-  .sb-footer {
-    border-top: 1px solid rgba(255,255,255,0.07);
-    padding: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-
-  /* User row */
-  .sb-user-row {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.4rem 0.25rem;
-  }
-  .sb-avatar {
-    width: 2rem; height: 2rem;
-    border-radius: 50%;
-    background: rgba(221,51,51,0.15);
-    border: 1px solid rgba(221,51,51,0.3);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.78rem; font-weight: 700;
-    color: var(--color-primary);
-    flex-shrink: 0;
-  }
-  .sb-user { flex: 1; min-width: 0; }
-  .sb-user-name {
-    font-size: 0.82rem; font-weight: 600;
-    color: rgba(255,255,255,0.9);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .sb-user-role {
-    font-size: 0.65rem;
-    color: rgba(255,255,255,0.3);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    margin-top: 0.05rem;
-  }
-
-  /* Action buttons row */
-  .sb-footer-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.4rem;
-  }
-  .sb-icon-btn {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.09);
-    cursor: pointer;
-    color: rgba(255,255,255,0.55) !important;
-    padding: 0.45rem 0;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center; gap: 0.35rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
-    text-decoration: none !important;
-    outline: none !important;
-    width: 100%;
-  }
-  .sb-icon-btn:hover {
-    background: rgba(255,255,255,0.1);
-    color: #fff !important;
-    border-color: rgba(255,255,255,0.15);
-    outline: none !important;
-  }
-  .sb-icon-btn.danger:hover {
-    background: rgba(221,51,51,0.12);
-    color: var(--color-primary) !important;
-    border-color: rgba(221,51,51,0.25);
-  }
-
-  /* Mobile toggle */
-  .sb-toggle {
-    position: fixed;
-    top: 0.75rem; left: 0.75rem;
-    z-index: 1001;
-    width: 2.25rem; height: 2.25rem;
-    background: #111;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px;
-    color: rgba(255,255,255,0.7);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-  }
-  .sb-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-  }
-
-  @media (min-width: 769px) {
-    .sb-toggle { display: none; }
-    .sb { transform: translateX(0) !important; }
-  }
-`;
-
 export default function AdminSidebar() {
   const { can, canAny, canAll, user, roles } = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activePath, setActivePath] = useState('');
+  const [activePath, setActivePath] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : ''
+  );
   const [icons, setIcons] = useState<{
     LayoutDashboard?: ComponentType<any>;
     Newspaper?: ComponentType<any>;
@@ -280,8 +72,6 @@ export default function AdminSidebar() {
       .then((r) => r.ok ? r.json() : [])
       .then((data: unknown[]) => setUnreadCount(Array.isArray(data) ? data.length : 0))
       .catch(() => {});
-
-    if (typeof window !== 'undefined') setActivePath(window.location.pathname);
 
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
@@ -387,32 +177,60 @@ export default function AdminSidebar() {
 
   return (
     <>
-      <style>{styles}</style>
-
       {/* Mobile toggle */}
-      <button className="sb-toggle" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu" aria-expanded={isOpen}>
+      <button
+        className="sb-toggle fixed top-3 left-3 z-[1001] w-9 h-9 bg-[#111] border border-white/10 rounded-[6px] text-white/70 flex items-center justify-center cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.4)] md:hidden"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Toggle menu"
+        aria-expanded={isOpen}
+      >
         {isOpen && XIcon ? <XIcon size={18} /> : MenuIcon ? <MenuIcon size={18} /> : '☰'}
       </button>
 
       {/* Overlay */}
-      {isOpen && isMobile && <div className="sb-overlay" onClick={() => setIsOpen(false)} aria-hidden="true" />}
+      {isOpen && isMobile && (
+        <div
+          className="fixed inset-0 bg-black/50 z-[999]"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Sidebar */}
-      <aside className={cn('sb', isMobile && !isOpen && 'hidden')} aria-label="Admin navigation">
-
+      <aside
+        className={cn(
+          'sb fixed left-0 top-0 w-[260px] h-screen bg-[#111] border-r border-white/[0.08] flex flex-col z-[1000] transition-transform duration-[280ms] ease md:!translate-x-0',
+          isMobile && !isOpen ? '-translate-x-full' : 'translate-x-0'
+        )}
+        aria-label="Admin navigation"
+      >
         {/* Logo */}
-        <a href="/admin" className="sb-logo" data-astro-prefetch>
-          <span className="sb-logo-icon" aria-hidden="true">
-            {Ball ? <Ball size={16} style={{ color: 'var(--color-primary)' }} /> : null}
+        <a
+          href="/admin"
+          className="flex items-center gap-[0.65rem] py-5 px-4 no-underline border-b border-white/[0.07] shrink-0"
+          data-astro-prefetch
+        >
+          <span
+            className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center shrink-0"
+            aria-hidden="true"
+          >
+            {Ball ? <Ball size={16} className="text-white" /> : null}
           </span>
-          <span className="sb-logo-text">Elevate CMS</span>
+          <span className="font-['Teko'] text-[1.1rem] font-bold text-white tracking-[0.04em] uppercase">
+            Elevate CMS
+          </span>
         </a>
 
         {/* Nav */}
-        <nav className="sb-nav" aria-label="Main navigation">
+        <nav
+          className="flex-1 overflow-y-auto overflow-x-hidden py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Main navigation"
+        >
           {navGroups.map((group) => (
             <div key={group.label}>
-              <div className="sb-group-label">{group.label}</div>
+              <div className="pt-3 px-4 pb-1 text-[0.6rem] tracking-[0.25em] uppercase text-white/25 font-['Teko']">
+                {group.label}
+              </div>
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = getActive(item.href);
@@ -420,17 +238,33 @@ export default function AdminSidebar() {
                   <a
                     key={item.href}
                     href={item.href}
-                    className={cn('sb-link', isActive && 'active')}
+                    className={cn(
+                      'group flex items-center gap-[0.65rem] py-2 px-4 my-[0.05rem] mx-2 rounded-[6px] no-underline text-sm font-normal transition-[background,color] duration-150',
+                      isActive
+                        ? 'text-white font-medium bg-brand-red border-l-2 border-transparent'
+                        : 'text-white/50 hover:bg-white/[0.06] hover:text-white/90 border-l-2 border-transparent'
+                    )}
                     {...(isActive && { 'aria-current': 'page' as const })}
                     data-astro-prefetch
                     onClick={handleNavClick}
                   >
-                    <span className="sb-link-icon" aria-hidden="true">
-                      {Icon ? <Icon size={15} /> : <span style={{ width: 15, display: 'block' }} />}
+                    <span
+                      className={cn('shrink-0 transition-opacity duration-150', isActive ? 'opacity-90' : 'opacity-60 group-hover:opacity-100')}
+                      aria-hidden="true"
+                    >
+                      {Icon ? <Icon size={15} /> : <span className="block w-[15px]" />}
                     </span>
-                    <span style={{ flex: 1 }}>{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
                     {item.href === '/admin/messages' && unreadCount > 0 && (
-                      <span className="sb-badge" aria-label={`${unreadCount} unread`}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+                      <span
+                        className={cn(
+                          'ml-auto text-[0.6rem] font-bold py-[0.1rem] px-[0.4rem] rounded-full leading-[1.4]',
+                          isActive ? 'bg-white text-brand-red' : 'bg-brand-red text-white'
+                        )}
+                        aria-label={`${unreadCount} unread`}
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
                     )}
                   </a>
                 );
@@ -440,22 +274,38 @@ export default function AdminSidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="sb-footer">
+        <div className="border-t border-white/[0.07] p-3 flex flex-col gap-2 shrink-0">
           {/* User info */}
-          <div className="sb-user-row">
-            <div className="sb-avatar" aria-hidden="true">{user?.name?.charAt(0)?.toUpperCase() || '?'}</div>
-            <div className="sb-user">
-              <div className="sb-user-name">{user?.name || 'User'}</div>
-              <div className="sb-user-role">{roles[0] || 'Member'}</div>
+          <div className="flex items-center gap-[0.6rem] py-[0.4rem] px-1">
+            <div
+              className="w-8 h-8 rounded-full bg-brand-red/15 border border-brand-red/30 flex items-center justify-center text-[0.78rem] font-bold text-brand-red shrink-0"
+              aria-hidden="true"
+            >
+              {user?.name?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[0.82rem] font-semibold text-white/90 truncate">{user?.name || 'User'}</div>
+              <div className="text-[0.65rem] text-white/30 truncate mt-[0.05rem]">{roles[0] || 'Member'}</div>
             </div>
           </div>
+
           {/* Actions */}
-          <div className="sb-footer-actions">
-            <a href="/" className="sb-icon-btn" target="_blank" rel="noopener noreferrer" aria-label="View public site">
+          <div className="grid grid-cols-2 gap-[0.4rem]">
+            <a
+              href="/"
+              className="w-full bg-white/[0.05] border border-white/[0.09] cursor-pointer text-white/55 py-[0.45rem] px-0 rounded-[6px] flex items-center justify-center gap-[0.35rem] text-xs font-medium transition-[background,color,border-color] duration-150 no-underline outline-none hover:bg-white/10 hover:text-white hover:border-white/15"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View public site"
+            >
               {ExternalLinkIcon && <ExternalLinkIcon size={13} />}
               View Site
             </a>
-            <button className="sb-icon-btn danger" onClick={handleLogout} aria-label="Logout">
+            <button
+              className="w-full bg-brand-red border border-brand-red cursor-pointer text-white py-[0.45rem] px-0 rounded-[6px] flex items-center justify-center gap-[0.35rem] text-xs font-medium transition-[background,color,border-color] duration-150 outline-none hover:bg-brand-red-dark hover:border-brand-red-dark hover:text-white"
+              onClick={handleLogout}
+              aria-label="Logout"
+            >
               {LogOutIcon && <LogOutIcon size={13} />}
               Logout
             </button>

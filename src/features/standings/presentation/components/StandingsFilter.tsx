@@ -23,11 +23,12 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedLeague, setSelectedLeague] = useState<string>('');
   const [selectedSeason, setSelectedSeason] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Fetch leagues on mount
   useEffect(() => {
     const fetchLeagues = async () => {
+      setLoading(true);
       try {
         const response = await fetch('/api/leagues');
         if (response.ok) {
