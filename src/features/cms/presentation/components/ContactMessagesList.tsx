@@ -53,7 +53,7 @@ function ContactMessagesContent() {
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch contact messages');
       const data = await response.json();
-      setMessages(Array.isArray(data) ? data : []);
+      setMessages(Array.isArray(data.data) ? data.data : []);
       setError('');
     } catch (err: any) {
       setError(err.message || 'Failed to load contact messages');
