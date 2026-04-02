@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
+import { resolveAssetUrl } from '../../../../lib/asset-url';
 
 /**
  * Player interface for Stats Leaders
@@ -18,6 +19,12 @@ interface Player {
 interface StatsLeadersCarouselProps {
   category?: string;
   setApi?: (api: any) => void;
+}
+
+const PLAYER_IMAGE_FALLBACK = '/images/default-player.png';
+
+function getPlayerImageSrc(image: string | null | undefined) {
+  return resolveAssetUrl(image) || PLAYER_IMAGE_FALLBACK;
 }
 
 /**
@@ -65,7 +72,7 @@ export default function StatsLeadersCarousel({ category = 'points', setApi }: St
         const transformedPlayers: Player[] = apiPlayers.map((player) => {
           const name = `${player.firstName} ${player.lastName}`.trim() || 'Unknown Player';
           const number = player.jerseyNumber?.toString() || '00';
-          const image = player.image || '/images/default-player.png';
+          const image = getPlayerImageSrc(player.image);
           
           const stats = player.stats || {};
           const statValue = stats[category] || '0';
@@ -128,10 +135,13 @@ export default function StatsLeadersCarousel({ category = 'points', setApi }: St
               <div className="player-card-premium">
                 <div className="player-image-box">
                   <img 
-                    src={player.image || '/images/default-player.png'} 
+                    src={getPlayerImageSrc(player.image)}
                     alt={player.name}
                     className="player-photo"
-                    onError={(e) => { e.currentTarget.src = '/images/default-player.png'; }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = PLAYER_IMAGE_FALLBACK;
+                    }}
                   />
                   <div className="player-rank">#{index + 1}</div>
                   <div className="player-overlay"></div>

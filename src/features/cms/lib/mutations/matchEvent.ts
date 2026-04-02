@@ -1,9 +1,32 @@
 import { prisma } from '../../../../lib/prisma';
 import type { CreateMatchEventInput, UpdateMatchEventInput, MatchEvent } from '../../types';
 
+export async function bulkCreateMatchEvents(
+  matchId: string,
+  events: Omit<CreateMatchEventInput, 'matchId'>[]
+): Promise<{ created: number; errors: { row: number; message: string }[] }> {
+  const errors: { row: number; message: string }[] = [];
+  let created = 0;
+
+  for (let i = 0; i < events.length; i++) {
+    try {
+      const result = await createMatchEvent({ ...events[i], matchId });
+      if (result) {
+        created++;
+      } else {
+        errors.push({ row: i + 1, message: 'Failed to create event' });
+      }
+    } catch (err: any) {
+      errors.push({ row: i + 1, message: err?.message ?? 'Unknown error' });
+    }
+  }
+
+  return { created, errors };
+}
+
 export async function createMatchEvent(data: CreateMatchEventInput): Promise<MatchEvent | null> {
   try {
-    const { isScoringEvent, updateMatchScoresFromEvents } = await import(
+    const { isScoringEvent, updateMatchScoresFromEvents, isFoulEvent, updateMatchFoulsFromEvents } = await import(
       '../../../game-tracking/lib/score-calculation'
     );
 
@@ -27,6 +50,7 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
     const sequenceNumber = await getNextSequenceNumber(data.matchId, prisma);
 
     const isScoring = isScoringEvent(data.eventType);
+    const isFoul   = isFoulEvent(data.eventType);
 
     if (data.eventType === 'PLAY_RESUMED') {
       const match = await prisma.match.findUnique({ where: { id: data.matchId }, include: { gameRules: true } });
@@ -89,6 +113,22 @@ export async function createMatchEvent(data: CreateMatchEventInput): Promise<Mat
       });
     }
 
+    // Foul events — create then recalculate the current-period team foul totals
+    if (isFoul) {
+      return await prisma.$transaction(async (tx) => {
+        const event = await tx.matchEvent.create({
+          data: {
+            matchId: data.matchId, eventType: data.eventType, minute: data.minute,
+            period: period ?? 1, secondsRemaining: secondsRemaining ?? null, sequenceNumber,
+            teamId: data.teamId, playerId: data.playerId, assistPlayerId: data.assistPlayerId,
+            description: data.description, metadata: data.metadata,
+          },
+        });
+        await updateMatchFoulsFromEvents(data.matchId, tx);
+        return event;
+      });
+    }
+
     return await prisma.matchEvent.create({
       data: {
         matchId: data.matchId, eventType: data.eventType, minute: data.minute,
@@ -108,7 +148,7 @@ export async function updateMatchEvent(
   data: UpdateMatchEventInput
 ): Promise<MatchEvent | null> {
   try {
-    const { isScoringEvent, updateMatchScoresFromEvents } = await import(
+    const { isScoringEvent, updateMatchScoresFromEvents, isFoulEvent, updateMatchFoulsFromEvents } = await import(
       '../../../game-tracking/lib/score-calculation'
     );
 
@@ -124,6 +164,11 @@ export async function updateMatchEvent(
     const eventTypeChanged = data.eventType !== undefined && data.eventType !== existingEvent.eventType;
     const needsScoreRecalculation = (wasScoringEvent || isNowScoringEvent) && (isUndoneChanged || eventTypeChanged);
 
+    // Foul recalculation needed when the event is a foul AND its isUndone status or type changes
+    const wasFoulEvent = isFoulEvent(existingEvent.eventType);
+    const isNowFoulEvent = data.eventType ? isFoulEvent(data.eventType) : wasFoulEvent;
+    const needsFoulRecalculation = (wasFoulEvent || isNowFoulEvent) && (isUndoneChanged || eventTypeChanged);
+
     if (existingEvent.eventType === 'PLAY_RESUMED' && (data.period !== undefined || data.secondsRemaining !== undefined)) {
       const match = await prisma.match.findUnique({ where: { id: existingEvent.matchId }, include: { gameRules: true } });
       if (match) {
@@ -136,15 +181,17 @@ export async function updateMatchEvent(
           await tx.match.update({ where: { id: existingEvent.matchId }, data: { currentPeriod: targetPeriod, clockSeconds: targetSeconds } });
           const updatedEvent = await tx.matchEvent.update({ where: { id }, data: { ...data, period: targetPeriod, secondsRemaining: targetSeconds } });
           if (needsScoreRecalculation) await updateMatchScoresFromEvents(existingEvent.matchId, tx);
+          if (needsFoulRecalculation) await updateMatchFoulsFromEvents(existingEvent.matchId, tx);
           return updatedEvent;
         });
       }
     }
 
-    if (needsScoreRecalculation) {
+    if (needsScoreRecalculation || needsFoulRecalculation) {
       return await prisma.$transaction(async (tx) => {
         const updatedEvent = await tx.matchEvent.update({ where: { id }, data });
-        await updateMatchScoresFromEvents(existingEvent.matchId, tx);
+        if (needsScoreRecalculation) await updateMatchScoresFromEvents(existingEvent.matchId, tx);
+        if (needsFoulRecalculation) await updateMatchFoulsFromEvents(existingEvent.matchId, tx);
         return updatedEvent;
       });
     }
@@ -158,7 +205,7 @@ export async function updateMatchEvent(
 
 export async function deleteMatchEvent(id: string): Promise<boolean> {
   try {
-    const { isScoringEvent, updateMatchScoresFromEvents } = await import(
+    const { isScoringEvent, updateMatchScoresFromEvents, isFoulEvent, updateMatchFoulsFromEvents } = await import(
       '../../../game-tracking/lib/score-calculation'
     );
 
@@ -169,6 +216,7 @@ export async function deleteMatchEvent(id: string): Promise<boolean> {
     if (!existingEvent) return false;
 
     const wasScoringEvent = isScoringEvent(existingEvent.eventType);
+    const wasFoulEvent    = isFoulEvent(existingEvent.eventType);
 
     if (existingEvent.eventType === 'SUBSTITUTION_IN' || existingEvent.eventType === 'SUBSTITUTION_OUT') {
       const eventWithPlayer = await prisma.matchEvent.findUnique({ where: { id }, select: { playerId: true, teamId: true } });
@@ -185,6 +233,11 @@ export async function deleteMatchEvent(id: string): Promise<boolean> {
       await prisma.$transaction(async (tx) => {
         await tx.matchEvent.delete({ where: { id } });
         await updateMatchScoresFromEvents(existingEvent.matchId, tx);
+      });
+    } else if (wasFoulEvent) {
+      await prisma.$transaction(async (tx) => {
+        await tx.matchEvent.delete({ where: { id } });
+        await updateMatchFoulsFromEvents(existingEvent.matchId, tx);
       });
     } else {
       await prisma.matchEvent.delete({ where: { id } });

@@ -21,6 +21,8 @@ import type { Match, Player } from '@prisma/client';
 import type { MatchPlayerWithDetails } from '../../../cms/types';
 import { getTeam1Id, getTeam2Id, getTeam1Name, getTeam2Name } from '../../../matches/lib/team-helpers';
 import { useGameTrackingStore } from '../../stores/useGameTrackingStore';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
+import ConnectionStatus from './ConnectionStatus';
 
 interface QuickEventButtonsProps {
   matchId: string;
@@ -75,6 +77,8 @@ export default function QuickEventButtons({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [matchPlayers, setMatchPlayers] = useState<MatchPlayerWithDetails[]>([]);
+
+  const { isOnline, pendingCount, enqueue, syncNow } = useOfflineSync(matchId, onEventRecorded);
 
   const team1Id = match ? getTeam1Id(match) : null;
   const team2Id = match ? getTeam2Id(match) : null;
@@ -216,36 +220,55 @@ export default function QuickEventButtons({
       // We use Math.floor(elapsedSecondsInPeriod / 60) + 1 to get current minute (1-indexed)
       const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
 
-      const response = await fetch(`/api/matches/${matchId}/events`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType,
-          teamId,
-          playerId,
-          minute: calculatedMinute,
-          period: currentPeriod,
-          secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
-        }),
-      });
+      const eventPayload = {
+        matchId,
+        eventType,
+        teamId,
+        playerId,
+        minute: calculatedMinute,
+        period: currentPeriod,
+        secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+      };
 
-      if (!response.ok) {
-        let errorMessage = 'Failed to record event';
+      // Offline-first: attempt server POST, fall back to local queue on failure
+      let savedOffline = false;
+      if (!navigator.onLine) {
+        await enqueue(eventPayload);
+        savedOffline = true;
+      } else {
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          const response = await fetch(`/api/matches/${matchId}/events`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(eventPayload),
+          });
+
+          if (!response.ok) {
+            let errorMessage = 'Failed to record event';
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorMessage;
+            } catch {
+              errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
+          }
+        } catch (networkErr: any) {
+          // Network failure — buffer locally and continue
+          if (!networkErr?.message?.startsWith('Server error:') && !networkErr?.message?.startsWith('Failed to record')) {
+            await enqueue(eventPayload);
+            savedOffline = true;
+          } else {
+            throw networkErr;
+          }
         }
-        console.error('Quick event submission error:', errorMessage, response.status, eventType);
-        throw new Error(errorMessage);
       }
 
       setError(null);
-      setSuccess('Event recorded successfully!');
+      setSuccess(savedOffline ? 'Saved offline — will sync when reconnected' : 'Event recorded successfully!');
       // Clear inputs after successful event recording
       setPlayerId('');
-      onEventRecorded?.();
+      if (!savedOffline) onEventRecorded?.();
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to record event';
       console.error('Quick event error:', err);
@@ -263,10 +286,17 @@ export default function QuickEventButtons({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Zap className="h-5 w-5" />
-          Quick Event Entry
-        </CardTitle>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Quick Event Entry
+          </CardTitle>
+          <ConnectionStatus
+            isOnline={isOnline}
+            pendingCount={pendingCount}
+            onSyncClick={syncNow}
+          />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

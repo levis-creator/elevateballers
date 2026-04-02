@@ -56,7 +56,10 @@ const playersWithStats = team.players.map((player: any) => {
 // Get staff for this team
 let teamStaff = [];
 try {
-  teamStaff = await getStaffByTeam(team.id);
+  // Include unapproved staff — if a staff member is explicitly assigned to
+  // this team via the TeamStaff junction, they should always appear here.
+  // The `approved` flag only gates the global /staff directory.
+  teamStaff = await getStaffByTeam(team.id, true);
 } catch (error) {
   console.error("Error fetching team staff:", error);
 }

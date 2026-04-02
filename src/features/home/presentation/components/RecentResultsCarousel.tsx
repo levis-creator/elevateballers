@@ -1,10 +1,46 @@
 import { useEffect, useState } from 'react';
-import type { Match } from '@prisma/client';
 import { formatMatchDate } from '@/features/matches/lib/utils';
 import { getLeagueName } from '@/features/matches/lib/league-helpers';
 
+// The API includes the full team relation so logos/names from the relation
+// take priority over the denormalised match-level fields.
+type MatchWithTeams = {
+  id: string;
+  date: string | Date;
+  status: string;
+  leagueName?: string | null;
+  team1Name?: string | null;
+  team2Name?: string | null;
+  team1Score?: number | null;
+  team2Score?: number | null;
+  // Denormalised logo fields (populated when match was created without a team relation)
+  team1Logo?: string | null;
+  team2Logo?: string | null;
+  // Relation objects returned by the API include
+  team1?: { id: string; name: string; logo?: string | null } | null;
+  team2?: { id: string; name: string; logo?: string | null } | null;
+  league?: { name: string } | null;
+};
+
+/** Resolve the best available logo URL, preferring the team relation logo. */
+function resolveLogo(match: MatchWithTeams, side: 'team1' | 'team2'): string | null {
+  const fromRelation = match[side]?.logo;
+  const fromField   = side === 'team1' ? match.team1Logo : match.team2Logo;
+  const raw = fromRelation || fromField || null;
+  if (!raw) return null;
+  // Make relative paths absolute so <img src> always works
+  return raw.startsWith('/') || raw.startsWith('http') ? raw : `/${raw}`;
+}
+
+/** Resolve the best available team name. */
+function resolveName(match: MatchWithTeams, side: 'team1' | 'team2'): string {
+  const fromRelation = match[side]?.name;
+  const fromField   = side === 'team1' ? match.team1Name : match.team2Name;
+  return fromRelation || fromField || (side === 'team1' ? 'Team 1' : 'Team 2');
+}
+
 export default function RecentResultsCarousel() {
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<MatchWithTeams[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,42 +87,47 @@ export default function RecentResultsCarousel() {
       </div>
 
       <div className="matches-grid">
-        {matches.map((match) => (
+        {matches.map((match) => {
+          const logo1  = resolveLogo(match, 'team1');
+          const logo2  = resolveLogo(match, 'team2');
+          const name1  = resolveName(match, 'team1');
+          const name2  = resolveName(match, 'team2');
+          return (
           <a key={match.id} href={`/matches/${match.id}`} className="match-card-modern result-card">
             <div className="match-card-header">
-              <span className="league-tag">{getLeagueName(match) || match.leagueName || 'ELEVATE LEAGUE'}</span>
-              <span className="match-time">{formatMatchDate(match.date)}</span>
+              <span className="league-tag">{getLeagueName(match as any) || match.league?.name || match.leagueName || 'ELEVATE LEAGUE'}</span>
+              <span className="match-time">{formatMatchDate(match.date as any)}</span>
             </div>
-            
+
             <div className="match-card-body">
               <div className="team-entry team-home">
                 <div className="logo-wrap">
-                  {match.team1Logo ? (
-                    <img src={match.team1Logo} alt={match.team1Name ?? ''} />
+                  {logo1 ? (
+                    <img src={logo1} alt={name1} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
-                    <div className="initials">{match.team1Name?.substring(0, 2).toUpperCase()}</div>
+                    <div className="initials">{name1.substring(0, 2).toUpperCase()}</div>
                   )}
                 </div>
-                <span className="name">{match.team1Name}</span>
+                <span className="name">{name1}</span>
               </div>
 
               <div className="score-display">
                 <span className={`score ${Number(match.team1Score) > Number(match.team2Score) ? 'winner' : ''}`}>
-                  {match.team1Score}
+                  {match.team1Score ?? '-'}
                 </span>
                 <span className="score-divider">-</span>
                 <span className={`score ${Number(match.team2Score) > Number(match.team1Score) ? 'winner' : ''}`}>
-                  {match.team2Score}
+                  {match.team2Score ?? '-'}
                 </span>
               </div>
 
               <div className="team-entry team-away">
-                <span className="name">{match.team2Name}</span>
+                <span className="name">{name2}</span>
                 <div className="logo-wrap">
-                  {match.team2Logo ? (
-                    <img src={match.team2Logo} alt={match.team2Name ?? ''} />
+                  {logo2 ? (
+                    <img src={logo2} alt={name2} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
-                    <div className="initials">{match.team2Name?.substring(0, 2).toUpperCase()}</div>
+                    <div className="initials">{name2.substring(0, 2).toUpperCase()}</div>
                   )}
                 </div>
               </div>
@@ -99,7 +140,8 @@ export default function RecentResultsCarousel() {
               </span>
             </div>
           </a>
-        ))}
+          );
+        })}
       </div>
 
       <style>{`

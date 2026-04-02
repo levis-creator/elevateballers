@@ -5,6 +5,7 @@ import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
 import { prisma } from "../../lib/prisma";
 import { isFeatureEnabled } from "../../lib/feature-flags";
+import { resolveAssetUrl } from "../../lib/asset-url";
 
 export const prerender = false;
 
@@ -52,6 +53,7 @@ const allLeaders = await Promise.all(
 
                 return {
                     ...p,
+                    imageSrc: resolveAssetUrl(p.image) || "/images/default-player.png",
                     displayStat: val,
                     fullName:
                         `${p.firstName} ${p.lastName}`.trim() ||
@@ -157,8 +159,7 @@ const pageUrl = `${Astro.url.origin}/stats/leaders`;
                                                     <div class="player-thumb">
                                                         <img
                                                             src={
-                                                                player.image ||
-                                                                "/images/default-player.png"
+                                                                player.imageSrc
                                                             }
                                                             alt={
                                                                 player.fullName

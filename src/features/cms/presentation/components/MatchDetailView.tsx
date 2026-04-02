@@ -46,6 +46,7 @@ import { getLeagueName } from '../../../matches/lib/league-helpers';
 import AddNewPlayerModal from './AddNewPlayerModal';
 import GameTrackingPanel from '../../../game-tracking/components/GameTrackingPanel';
 import MatchImagesDisplay from './MatchImagesDisplay';
+import MatchEventImportModal from './MatchEventImportModal';
 import { formatClockTime } from '../../../game-tracking/lib/utils';
 import { getPeriodLabel } from '../../../game-tracking/lib/utils';
 import { useGameTrackingStore } from '../../../game-tracking/stores/useGameTrackingStore';
@@ -1206,6 +1207,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [error, setError] = useState('');
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showEditPlayerModal, setShowEditPlayerModal] = useState(false);
   const [editingMatchPlayerId, setEditingMatchPlayerId] = useState<string | null>(null);
   const [editEventId, setEditEventId] = useState<string | null>(null);
@@ -1235,6 +1237,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
     MoreVertical?: ComponentType<any>;
     Trash2?: ComponentType<any>;
     Download?: ComponentType<any>;
+    Upload?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -1259,6 +1262,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         MoreVertical: mod.MoreVertical,
         Trash2: mod.Trash2,
         Download: mod.Download,
+        Upload: mod.Upload,
       });
     });
   }, []);
@@ -1933,15 +1937,26 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                 </span>
               )}
                 </CardTitle>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => setShowAddEventModal(true)}
-                  disabled={match?.status !== 'LIVE'}
-                >
-                  {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
-              Add Event
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowImportModal(true)}
+                    disabled={match?.status === 'COMPLETED'}
+                  >
+                    {icons.Upload ? <icons.Upload className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
+                    Import
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowAddEventModal(true)}
+                    disabled={match?.status !== 'LIVE'}
+                  >
+                    {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
+                    Add Event
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -2301,6 +2316,19 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
           }}
           editEventId={editEventId}
           matchStatus={match?.status}
+        />
+      )}
+
+      {/* Import Match Events Modal */}
+      {match && (
+        <MatchEventImportModal
+          matchId={matchId}
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            setShowImportModal(false);
+            fetchMatchDetails();
+          }}
         />
       )}
 

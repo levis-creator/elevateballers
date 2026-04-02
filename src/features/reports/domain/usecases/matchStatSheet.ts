@@ -44,6 +44,8 @@ type MatchStatSheetData = {
   resultLabel: string;
   team1Name: string;
   team2Name: string;
+  team1Initials: string;
+  team2Initials: string;
   team1Score: number;
   team2Score: number;
   team1Totals: TeamTotalsRow;
@@ -306,34 +308,68 @@ class PdfLayout {
 // ---------- section components ----------
 
 function drawHeader(layout: PdfLayout, data: MatchStatSheetData) {
-  const HEADER_H = 118;
+  const HEADER_H = 148;
   const baseY = PDF_PAGE_HEIGHT - HEADER_H;
 
   // Full-bleed dark-purple banner
   layout.drawRect(0, baseY, PDF_PAGE_WIDTH, HEADER_H, HEADER_BG);
 
-  // Thin orange accent stripe at the very top
+  // Thin gold accent stripe at the very top
   layout.drawRect(0, PDF_PAGE_HEIGHT - 5, PDF_PAGE_WIDTH, 5, ACCENT_COLOR);
 
+  // ── Team identity panels ──
+  // Left panel: Team 1 (red)
+  const PANEL_W = 190;
+  const PANEL_H = 72;
+  const panelY = baseY + HEADER_H - 18 - PANEL_H;
+
+  // Team 1 badge (red)
+  layout.drawRect(PAGE_MARGIN, panelY, PANEL_W, PANEL_H, PRIMARY_COLOR);
+  // Initials box
+  layout.drawRect(PAGE_MARGIN, panelY, 46, PANEL_H, [0.78, 0.12, 0.12]);
+  layout.drawText(data.team1Initials, PAGE_MARGIN + 8, panelY + (PANEL_H / 2) - 10, { size: 20, font: 'F2', color: WHITE });
+  // Team 1 name (wrap to 2 lines if needed)
+  const t1Chars = estimateChars(PANEL_W - 58, 10);
+  const t1Lines = wrapText(data.team1Name.toUpperCase(), t1Chars);
+  t1Lines.slice(0, 2).forEach((line, i) => {
+    layout.drawText(line, PAGE_MARGIN + 52, panelY + PANEL_H - 18 - i * 14, { size: 10, font: 'F2', color: WHITE });
+  });
+
+  // Team 2 badge (purple) — right-aligned
+  const t2PanelX = PDF_PAGE_WIDTH - PAGE_MARGIN - PANEL_W;
+  layout.drawRect(t2PanelX, panelY, PANEL_W, PANEL_H, TEAM2_COLOR);
+  // Initials box (right side of the badge)
+  layout.drawRect(t2PanelX + PANEL_W - 46, panelY, 46, PANEL_H, [0.24, 0.08, 0.40]);
+  layout.drawText(data.team2Initials, t2PanelX + PANEL_W - 38, panelY + (PANEL_H / 2) - 10, { size: 20, font: 'F2', color: WHITE });
+  // Team 2 name
+  const t2Chars = estimateChars(PANEL_W - 58, 10);
+  const t2Lines = wrapText(data.team2Name.toUpperCase(), t2Chars);
+  t2Lines.slice(0, 2).forEach((line, i) => {
+    layout.drawText(line, t2PanelX + 8, panelY + PANEL_H - 18 - i * 14, { size: 10, font: 'F2', color: WHITE });
+  });
+
+  // VS badge in the center between teams
+  const vsX = PAGE_MARGIN + PANEL_W + (CONTENT_WIDTH - PANEL_W * 2) / 2 - 14;
+  layout.drawText('VS', vsX, panelY + (PANEL_H / 2) - 7, { size: 18, font: 'F2', color: ACCENT_COLOR });
+
+  // ── Info strip below team panels ──
+  const infoY = panelY - 6;
+
   // "POST-GAME STAT SHEET" pill badge
-  layout.drawRect(PAGE_MARGIN, baseY + HEADER_H - 32, 168, 18, ACCENT_COLOR);
-  layout.drawText('POST-GAME STAT SHEET', PAGE_MARGIN + 8, baseY + HEADER_H - 24, { size: 8, font: 'F2', color: WHITE });
+  layout.drawRect(PAGE_MARGIN, baseY + HEADER_H - 14, 168, 14, ACCENT_COLOR);
+  layout.drawText('POST-GAME STAT SHEET', PAGE_MARGIN + 8, baseY + HEADER_H - 8, { size: 7, font: 'F2', color: [0.12, 0.08, 0.20] });
 
-  // Match title
-  const maxTitleChars = estimateChars(CONTENT_WIDTH - 10, 21);
-  layout.drawText(truncateText(data.matchTitle, maxTitleChars), PAGE_MARGIN, baseY + HEADER_H - 54, { size: 21, font: 'F2', color: WHITE });
+  // League · Season (top right)
+  const leagueInfo = truncateText(`${data.leagueName}  |  ${data.seasonName}`, 58);
+  layout.drawText(leagueInfo, PDF_PAGE_WIDTH - PAGE_MARGIN - leagueInfo.length * 4.0, baseY + HEADER_H - 8, { size: 7, color: TEXT_LIGHT });
 
-  // League · Season (below title)
-  const leagueInfo = `${data.leagueName}  |  ${data.seasonName}`;
-  layout.drawText(truncateText(leagueInfo, 64), PAGE_MARGIN, baseY + HEADER_H - 74, { size: 9, color: TEXT_LIGHT });
+  // Thin separator before info row
+  layout.drawLine(PAGE_MARGIN, infoY, PDF_PAGE_WIDTH - PAGE_MARGIN, infoY, [0.18, 0.28, 0.43], 0.5);
 
-  // Thin separator
-  layout.drawLine(PAGE_MARGIN, baseY + HEADER_H - 86, PDF_PAGE_WIDTH - PAGE_MARGIN, baseY + HEADER_H - 86, [0.18, 0.28, 0.43], 0.5);
-
-  // Date (left) and result (right) in the bottom strip
-  layout.drawText(data.playedOn, PAGE_MARGIN, baseY + HEADER_H - 102, { size: 8, font: 'F2', color: TEXT_LIGHT });
+  // Date (left) and result (right)
+  layout.drawText(data.playedOn, PAGE_MARGIN, infoY - 12, { size: 8, font: 'F2', color: TEXT_LIGHT });
   const resultTrunc = truncateText(data.resultLabel, 55);
-  layout.drawText(resultTrunc, PDF_PAGE_WIDTH - PAGE_MARGIN - resultTrunc.length * 4.3, baseY + HEADER_H - 102, { size: 8, color: TEXT_LIGHT });
+  layout.drawText(resultTrunc, PDF_PAGE_WIDTH - PAGE_MARGIN - resultTrunc.length * 4.0, infoY - 12, { size: 8, color: TEXT_LIGHT });
 
   // Advance cursor past header
   layout.advance(HEADER_H + 14);
@@ -609,19 +645,21 @@ function addWatermarks(layout: PdfLayout) {
   }
 }
 
-function addFooters(layout: PdfLayout) {
+function addFooters(layout: PdfLayout, data: MatchStatSheetData) {
   const totalPages = layout.getPageCount();
   const legend = 'GS: S = Starter, B = Bench  |  FG = Field Goals  |  3PT = Three-Pointers  |  FT = Free Throws  |  REB = Rebounds  |  AST = Assists  |  STL = Steals  |  BLK = Blocks  |  TO = Turnovers  |  PF = Fouls';
 
   for (let i = 0; i < totalPages; i++) {
     layout.drawOnPage(i, (page) => {
       // Separator line
-      layout.drawLineOnPage(page, PAGE_MARGIN, PAGE_MARGIN + 16, PDF_PAGE_WIDTH - PAGE_MARGIN, PAGE_MARGIN + 16, LIGHT_BORDER, 0.6);
+      layout.drawLineOnPage(page, PAGE_MARGIN, PAGE_MARGIN + 28, PDF_PAGE_WIDTH - PAGE_MARGIN, PAGE_MARGIN + 28, LIGHT_BORDER, 0.6);
+      // Team names in footer
+      layout.drawTextOnPage(page, truncateText(`${data.team1Name}  vs  ${data.team2Name}`, 60), PAGE_MARGIN, PAGE_MARGIN + 20, { size: 7, font: 'F2', color: TEXT_MUTED });
       // Legend
-      layout.drawTextOnPage(page, truncateText(legend, 95), PAGE_MARGIN, PAGE_MARGIN + 8, { size: 6, color: TEXT_MUTED });
+      layout.drawTextOnPage(page, truncateText(legend, 95), PAGE_MARGIN, PAGE_MARGIN + 10, { size: 5.5, color: TEXT_MUTED });
       // Page number (right)
       const pageLabel = `Page ${i + 1} of ${totalPages}`;
-      layout.drawTextOnPage(page, pageLabel, PDF_PAGE_WIDTH - PAGE_MARGIN - pageLabel.length * 3.4, PAGE_MARGIN + 8, { size: 6, color: TEXT_MUTED });
+      layout.drawTextOnPage(page, pageLabel, PDF_PAGE_WIDTH - PAGE_MARGIN - pageLabel.length * 3.1, PAGE_MARGIN + 10, { size: 6, color: TEXT_MUTED });
     });
   }
 }
@@ -718,6 +756,10 @@ async function buildStatSheetData(matchId: string): Promise<MatchStatSheetData> 
   const team1Stats = buildTeamRows(team1Name, team1Players, safeEvents);
   const team2Stats = buildTeamRows(team2Name, team2Players, safeEvents);
 
+  // Build 2-letter initials from team name words
+  const teamInitials = (name: string) =>
+    name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || name.slice(0, 2).toUpperCase();
+
   return {
     fileName: `${playedOnIso}_${sanitizeFileSegment(team1Name) || 'team-1'}_vs_${sanitizeFileSegment(team2Name) || 'team-2'}_stat-sheet.pdf`,
     matchTitle: `${team1Name} vs ${team2Name}`,
@@ -729,6 +771,8 @@ async function buildStatSheetData(matchId: string): Promise<MatchStatSheetData> 
     resultLabel,
     team1Name,
     team2Name,
+    team1Initials: teamInitials(team1Name),
+    team2Initials: teamInitials(team2Name),
     team1Score,
     team2Score,
     team1Totals: team1Stats.totals,
@@ -740,16 +784,52 @@ async function buildStatSheetData(matchId: string): Promise<MatchStatSheetData> 
 
 // ---------- render ----------
 
+function drawShotSummary(layout: PdfLayout, data: MatchStatSheetData) {
+  drawSectionHeader(layout, 'Shot Summary');
+
+  const ROW_H = 22;
+  const HDR_H = 22;
+  const rows = [
+    { label: 'Field Goals (2PT)', t1: data.team1Totals.fieldGoals, t2: data.team2Totals.fieldGoals, t1Pct: data.team1Totals.fieldGoalPercentage, t2Pct: data.team2Totals.fieldGoalPercentage },
+    { label: '3-Pointers',        t1: data.team1Totals.threePointers, t2: data.team2Totals.threePointers, t1Pct: data.team1Totals.threePointPercentage, t2Pct: data.team2Totals.threePointPercentage },
+    { label: 'Free Throws',       t1: data.team1Totals.freeThrows, t2: data.team2Totals.freeThrows, t1Pct: data.team1Totals.freeThrowPercentage, t2Pct: data.team2Totals.freeThrowPercentage },
+  ];
+
+  const tableH = HDR_H + rows.length * ROW_H;
+  layout.ensureSpace(tableH + 4);
+  const tableY = layout.currentY;
+
+  // Header
+  layout.drawRect(PAGE_MARGIN, tableY - HDR_H, CONTENT_WIDTH, HDR_H, HEADER_BG);
+  layout.drawText('SHOT TYPE', PAGE_MARGIN + 8, tableY - HDR_H + 8, { size: 8, font: 'F2', color: TEXT_LIGHT });
+  layout.drawText(truncateText(data.team1Name, 22), PAGE_MARGIN + 200, tableY - HDR_H + 8, { size: 8, font: 'F2', color: WHITE });
+  layout.drawText(truncateText(data.team2Name, 22), PAGE_MARGIN + 360, tableY - HDR_H + 8, { size: 8, font: 'F2', color: WHITE });
+
+  let curY = tableY - HDR_H;
+  rows.forEach((row, i) => {
+    const rowY = curY - ROW_H;
+    layout.drawRect(PAGE_MARGIN, rowY, CONTENT_WIDTH, ROW_H, i % 2 === 0 ? WHITE : LIGHT_PANEL, LIGHT_BORDER, 0.4);
+    layout.drawText(row.label, PAGE_MARGIN + 8, rowY + 7, { size: 8, color: TEXT_DARK });
+    layout.drawText(`${row.t1} (${row.t1Pct})`, PAGE_MARGIN + 200, rowY + 7, { size: 8, font: 'F2', color: PRIMARY_COLOR });
+    layout.drawText(`${row.t2} (${row.t2Pct})`, PAGE_MARGIN + 360, rowY + 7, { size: 8, font: 'F2', color: TEAM2_COLOR });
+    curY = rowY;
+  });
+
+  layout.drawLine(PAGE_MARGIN, curY, PAGE_MARGIN + CONTENT_WIDTH, curY, LIGHT_BORDER, 0.7);
+  layout.advance(tableH + 16);
+}
+
 function renderStatSheetPdf(data: MatchStatSheetData): Uint8Array {
   const layout = new PdfLayout();
 
   drawHeader(layout, data);
   drawScoreboard(layout, data);
   drawTeamComparison(layout, data);
+  drawShotSummary(layout, data);
   drawRosterTable(layout, data.team1Name, data.team1Totals, data.team1Rows, PRIMARY_COLOR);
   drawRosterTable(layout, data.team2Name, data.team2Totals, data.team2Rows, TEAM2_COLOR);
   addWatermarks(layout);
-  addFooters(layout);
+  addFooters(layout, data);
 
   return layout.build();
 }
