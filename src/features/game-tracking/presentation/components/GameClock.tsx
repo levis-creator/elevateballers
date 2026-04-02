@@ -3,7 +3,7 @@
  * Displays and controls the game clock
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,10 @@ export default function GameClock({
   isLoading = false,
 }: GameClockProps) {
   const { localClockSeconds, setLocalClockSeconds, updateGameState, isToggling } = useGameTrackingStore();
-  
+
+  // Web Worker ref — one worker instance per component mount
+  const workerRef = useRef<Worker | null>(null);
+
   // Check if match is live
   const isMatchLive = match?.status === 'LIVE';
   
@@ -111,23 +114,47 @@ export default function GameClock({
     }
   }, [gameState?.clockRunning, localClockSeconds, onToggleClock]);
 
-  // Local countdown timer - only runs when clock is running
+  // Terminate worker on unmount
   useEffect(() => {
-    if (!gameState || !gameState.clockRunning) {
-      return;
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  // Web-Worker-based countdown — runs off the main thread, timestamp-based
+  // so it never drifts even when the tab is hidden or the JS thread is busy.
+  useEffect(() => {
+    // Lazily create the worker on first use
+    if (!workerRef.current && typeof Worker !== 'undefined') {
+      workerRef.current = new Worker('/workers/timer.worker.js');
     }
 
-    const interval = setInterval(() => {
-      setLocalClockSeconds((prev) => {
-        if (prev === null || prev <= 0) {
-          return 0; // Stop at 0, prevent negative values
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    const worker = workerRef.current;
+    if (!worker) return;
 
-    return () => clearInterval(interval);
-  }, [gameState?.clockRunning, gameState, setLocalClockSeconds]);
+    if (gameState?.clockRunning && localClockSeconds !== null && localClockSeconds > 0) {
+      // Start (or restart) the countdown with the current remaining seconds
+      worker.postMessage({ type: 'START', remainingSeconds: localClockSeconds });
+
+      worker.onmessage = (e: MessageEvent) => {
+        const { type, remainingSeconds } = e.data;
+        if (type === 'TICK') {
+          setLocalClockSeconds(remainingSeconds);
+        }
+        // EXPIRED is handled by the auto-pause effect below
+      };
+    } else {
+      // Clock is paused — stop the worker
+      worker.postMessage({ type: 'STOP' });
+    }
+
+    return () => {
+      worker.postMessage({ type: 'STOP' });
+    };
+    // Only re-run when the running state actually toggles, not on every tick
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.clockRunning]);
 
   // Keyboard shortcuts
   useEffect(() => {

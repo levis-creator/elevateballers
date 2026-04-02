@@ -134,6 +134,79 @@ export async function updateMatchScoresFromEvents(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Foul calculation — mirrors the score calculation pattern above
+// ---------------------------------------------------------------------------
+
+const FOUL_EVENT_TYPES = ['FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT'] as const;
+
+/**
+ * Check if an event type is a foul event.
+ */
+export function isFoulEvent(eventType: MatchEventType): boolean {
+  return (FOUL_EVENT_TYPES as readonly string[]).includes(eventType);
+}
+
+/**
+ * Count current-period fouls per team from all non-undone foul events.
+ * Uses the match's currentPeriod so the scoreboard reflects the active quarter.
+ */
+export async function calculateFoulsFromEvents(
+  matchId: string,
+  prismaClient: PrismaClient | any
+): Promise<{ team1Fouls: number; team2Fouls: number }> {
+  const match = await prismaClient.match.findUnique({
+    where: { id: matchId },
+    select: { team1Id: true, team2Id: true, currentPeriod: true },
+  });
+
+  if (!match) return { team1Fouls: 0, team2Fouls: 0 };
+
+  const foulEvents = await prismaClient.matchEvent.findMany({
+    where: {
+      matchId,
+      isUndone: false,
+      eventType: { in: FOUL_EVENT_TYPES },
+      // Count fouls only for the current period (resets each quarter)
+      period: match.currentPeriod,
+    },
+    select: { teamId: true },
+  });
+
+  let team1Fouls = 0;
+  let team2Fouls = 0;
+
+  for (const event of foulEvents) {
+    if (event.teamId === match.team1Id) team1Fouls++;
+    else if (event.teamId === match.team2Id) team2Fouls++;
+  }
+
+  return { team1Fouls, team2Fouls };
+}
+
+/**
+ * Recalculate and persist the current-period team foul totals for a match.
+ * Call this inside any transaction that creates, undoes, or deletes a foul event.
+ */
+export async function updateMatchFoulsFromEvents(
+  matchId: string,
+  prismaClient: PrismaClient | any
+): Promise<boolean> {
+  try {
+    const fouls = await calculateFoulsFromEvents(matchId, prismaClient);
+    await prismaClient.match.update({
+      where: { id: matchId },
+      data: { team1Fouls: fouls.team1Fouls, team2Fouls: fouls.team2Fouls },
+    });
+    return true;
+  } catch (error) {
+    console.error('Error updating match fouls from events:', error);
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+
 /**
  * Determine and update the winner of a completed match
  * Returns the winner team ID, or null if tie or match not completed

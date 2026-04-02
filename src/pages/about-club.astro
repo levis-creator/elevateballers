@@ -5,7 +5,8 @@ import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
-import { getAllSiteSettings } from "../features/cms/lib/queries";
+import { getAllSiteSettings, getPublicStaff } from "../features/cms/lib/queries";
+import { resolveAssetUrl } from "../lib/asset-url";
 
 const DEFAULT_CONTENT = `Elevate Ballers is a premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement through competitive basketball. Founded with a vision to elevate the game and the community, we have been serving basketball enthusiasts of all ages and skill levels.
 
@@ -28,6 +29,13 @@ try {
   if (contentSetting?.value) aboutContent = contentSetting.value;
 } catch (e) {
   // fall back to defaults
+}
+
+let staffMembers: any[] = [];
+try {
+  staffMembers = await getPublicStaff();
+} catch (e) {
+  // non-critical — just hide the section
 }
 
 // Detect if content is HTML (from rich text editor) or plain text (legacy)
@@ -138,6 +146,36 @@ const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => 
                     </div>
                   </div>
 
+                  {staffMembers.length > 0 && (
+                    <>
+                      <Spacing id="stm-spacing-staff-title" lg="60" md="50" sm="40" xs="30" />
+                      <h2 class="heading-font" style="text-align: center; margin-bottom: 40px; color: #dd3333;">
+                        MEET THE DIRECTORS
+                      </h2>
+                      <div class="directors-grid">
+                        {staffMembers.map((member) => {
+                          const imageUrl = resolveAssetUrl(member.image);
+                          const initials = `${member.firstName.charAt(0)}${member.lastName.charAt(0)}`.toUpperCase();
+                          const roleLabel = member.role?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') || '';
+                          return (
+                            <a class="director-card" href={member.slug ? `/staff/${member.slug}` : undefined}>
+                              <div class="director-photo-wrap">
+                                {imageUrl
+                                  ? <img src={imageUrl} alt={`${member.firstName} ${member.lastName}`} loading="lazy" />
+                                  : <div class="director-initials">{initials}</div>
+                                }
+                              </div>
+                              <div class="director-info">
+                                <div class="director-name">{member.firstName} {member.lastName}</div>
+                                <div class="director-role">{roleLabel}</div>
+                              </div>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
                   <Spacing
                     id="stm-spacing-about-footer"
                     lg="50"
@@ -232,6 +270,78 @@ const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => 
     .about-content p {
       margin-bottom: 20px;
       color: #363f48;
+    }
+
+    .directors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .director-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s ease;
+    }
+
+    .director-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .director-photo-wrap {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      border: 3px solid #dd3333;
+    }
+
+    .director-photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .director-initials {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #dd3333;
+      font-family: var(--font-heading, 'Teko', sans-serif);
+    }
+
+    .director-name {
+      font-family: var(--font-heading, 'Teko', sans-serif);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #363f48;
+      line-height: 1.2;
+    }
+
+    .director-role {
+      font-size: 0.85rem;
+      color: #dd3333;
+      font-weight: 600;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 480px) {
+      .directors-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
     }
   </style>
 

@@ -8,6 +8,8 @@ import Footer from '../../features/layout/components/Footer.astro';
 import { getPlayerBySlug, getPlayerById } from '../../features/cms/lib/queries';
 import { getPlayerMatches, getPlayerMatchEvents } from '../../features/player/lib/queries';
 import { calculatePlayerStatistics, calculatePlayerMatchStats } from '../../features/player/lib/playerStats';
+import ShotChart from '../../features/player/presentation/components/ShotChart';
+import type { ShotEvent } from '../../features/player/presentation/components/ShotChart';
 import Spacing from '../../shared/components/ui/Spacing.astro';
 import PageLoader from '../../components/PageLoader';
 import { Image } from 'astro:assets';
@@ -126,6 +128,23 @@ const applyStatOverrides = (base: any, overrides: any) => {
 };
 
 playerStats = applyStatOverrides(playerStats, stats);
+
+// Build shot chart data from all match events for this player
+const SHOT_EVENT_TYPES = new Set([
+  'TWO_POINT_MADE', 'TWO_POINT_MISSED',
+  'THREE_POINT_MADE', 'THREE_POINT_MISSED',
+]);
+const shotEvents: ShotEvent[] = playerMatches.flatMap((match: any) => {
+  const events = Array.isArray(match.events) ? match.events : [];
+  return events
+    .filter((ev: any) => ev.playerId === player.id && SHOT_EVENT_TYPES.has(ev.eventType))
+    .map((ev: any) => ({
+      eventType: ev.eventType as ShotEvent['eventType'],
+      made: ev.eventType === 'TWO_POINT_MADE' || ev.eventType === 'THREE_POINT_MADE',
+      x: ev.metadata?.x ?? null,
+      y: ev.metadata?.y ?? null,
+    }));
+});
 
 // Group matches by league
 const getMatchesByLeague = (matches: any[]) => {
@@ -409,6 +428,22 @@ const pageImage = pageImageSource.startsWith("http")
                   </div>
 
                   <Spacing
+                    id="stm-spacing-shot-chart"
+                    lg="60"
+                    md="50"
+                    sm="40"
+                    xs="30"
+                  />
+
+                  <!-- Shot Chart -->
+                  <div class="player-section">
+                    <h3 class="section-title">Shot Chart</h3>
+                    <div class="shot-chart-wrap">
+                      <ShotChart client:load shots={shotEvents} width={280} />
+                    </div>
+                  </div>
+
+                  <Spacing
                     id="stm-spacing-player-matches"
                     lg="60"
                     md="50"
@@ -577,6 +612,10 @@ const pageImage = pageImageSource.startsWith("http")
     margin: 0 0 1.5rem;
     font-weight: 700;
     text-transform: uppercase;
+  }
+  .shot-chart-wrap {
+    display: flex;
+    justify-content: center;
   }
   .player-bio {
     font-family: Rubik, sans-serif;
