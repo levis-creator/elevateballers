@@ -247,6 +247,7 @@ export default function NextMatchCarousel() {
           display: flex;
           align-items: center;
           gap: 1rem;
+          min-width: 0;
         }
 
         .team-away {
@@ -284,6 +285,8 @@ export default function NextMatchCarousel() {
           font-size: 1.4rem;
           color: #ffffff;
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+          flex: 1;
+          min-width: 0;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
