@@ -1,6 +1,5 @@
 ---
 import { formatMatchDate } from "@/features/matches/lib/utils";
-import { getLeagueName } from "@/features/matches/lib/league-helpers";
 import {
   getTeam1Name,
   getTeam1Logo,
@@ -8,9 +7,7 @@ import {
   getTeam2Logo,
   getTeamInitials,
 } from "@/features/matches/lib/team-helpers";
-import { getStageDisplayName } from "@/features/matches/lib/stage-helpers";
 import { getChampionships, getNextMatch } from "@/features/matches/lib/queries";
-import type { MatchDTO } from "@/features/matches/types";
 
 let match: any = null;
 
@@ -31,16 +28,10 @@ try {
 
 const matchDate = match ? formatMatchDate(match.date) : null;
 const matchUrl = match ? `/matches/${match.id}` : "#";
-const leagueName = match ? getLeagueName(match) || "ELEVATE BASKETBALL" : "";
 const team1Name = match ? getTeam1Name(match) : "";
 const team1Logo = match ? getTeam1Logo(match) : null;
 const team2Name = match ? getTeam2Name(match) : "";
 const team2Logo = match ? getTeam2Logo(match) : null;
-const stageDisplay = match
-  ? match.stage
-    ? getStageDisplayName(match.stage).toUpperCase()
-    : "UPCOMING MATCH"
-  : "SEASON PREVIEW";
 
 const team1Initials = team1Name ? getTeamInitials(team1Name) : "";
 const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
@@ -48,10 +39,8 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
 
 <section class="mq" aria-label="Featured match">
   {match ? (
-    <!-- Match state -->
     <a href={matchUrl} class="mq-link">
       <div class="mq-body">
-        <!-- Home team -->
         <div class="mq-team mq-team--home">
           <div class="mq-logo-wrap">
             {team1Logo
@@ -63,7 +52,6 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
           <span class="mq-team-label">HOME</span>
         </div>
 
-        <!-- VS -->
         <div class="mq-vs-block">
           <span class="mq-vs-text">VS</span>
           <time class="mq-date" datetime={match?.date ? new Date(match.date).toISOString() : undefined}>
@@ -72,7 +60,6 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
           <span class="mq-view-btn">View Match <i class="fa fa-arrow-right"></i></span>
         </div>
 
-        <!-- Away team -->
         <div class="mq-team mq-team--away">
           <div class="mq-logo-wrap">
             {team2Logo
@@ -86,7 +73,6 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
       </div>
     </a>
   ) : (
-    <!-- Empty / off-season state -->
     <div class="mq-empty">
       <div class="mq-empty-glow" aria-hidden="true"></div>
       <div class="mq-empty-body">
@@ -155,6 +141,7 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
     align-items: center;
     gap: 1rem;
     text-align: center;
+    min-width: 0;
   }
 
   .mq-logo-wrap {
@@ -188,6 +175,13 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+    max-width: min(100%, 14ch);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    text-wrap: balance;
   }
 
   .mq-team-label {
@@ -457,6 +451,7 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
     .mq-team--away { order: 3; }
 
     .mq-vs-text { font-size: 2rem; }
+    .mq-team-name { max-width: 12ch; font-size: clamp(1.5rem, 7vw, 2.2rem); }
 
     /* Empty state: stack vertically */
     .mq-empty-body {

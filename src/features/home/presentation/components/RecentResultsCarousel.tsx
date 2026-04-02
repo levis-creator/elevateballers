@@ -248,12 +248,12 @@ export default function RecentResultsCarousel() {
         .league-tag { font-size: 0.75rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 1px; }
         .match-time { font-size: 0.8rem; opacity: 0.7; font-weight: 500; }
         .match-card-body { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-        .team-entry { flex: 1; display: flex; align-items: center; gap: 1rem; }
+        .team-entry { flex: 1; display: flex; align-items: center; gap: 1rem; min-width: 0; }
         .team-away { justify-content: flex-end; text-align: right; }
         .logo-wrap { width: 36px; height: 36px; flex-shrink: 0; background: rgba(255, 255, 255, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; }
         .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
         .initials { font-weight: 700; font-size: 0.8rem; color: var(--color-gray-400); }
-        .name { font-family: var(--font-heading); font-size: 1.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .name { font-family: var(--font-heading); font-size: 1.4rem; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .match-card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.75rem; }
         .view-details { font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 0.5rem; transition: transform 0.3s ease; }
         .match-card-modern:hover .view-details { transform: translateX(3px); }
@@ -282,4 +282,3 @@ export default function RecentResultsCarousel() {
     </div>
   );
 }
-
