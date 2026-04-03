@@ -1,7 +1,44 @@
 ---
-import type { Stat } from '../types';
-import { stats } from '../data/homeData';
 import Spacing from '../../../shared/components/ui/Spacing.astro';
+import { prisma } from '../../../lib/prisma';
+
+const [completedMatches, approvedPlayers, approvedTeams, playerHonors] = await Promise.all([
+  prisma.match.count({ where: { status: 'COMPLETED' } }),
+  prisma.player.count({ where: { approved: true } }),
+  prisma.team.count({ where: { approved: true } }),
+  prisma.playerOfTheWeek.count(),
+]);
+
+const stats = [
+  {
+    id: 'matches',
+    value: completedMatches,
+    label: 'matches played',
+    icon: 'images/court.png',
+    iconAlt: 'Basketball court icon',
+  },
+  {
+    id: 'players',
+    value: approvedPlayers,
+    label: 'players',
+    icon: 'images/basketball-player.png',
+    iconAlt: 'Basketball player icon',
+  },
+  {
+    id: 'teams',
+    value: approvedTeams,
+    label: 'teams',
+    icon: 'images/playing.png',
+    iconAlt: 'Playing icon',
+  },
+  {
+    id: 'honors',
+    value: playerHonors,
+    label: 'player honors',
+    icon: 'images/award_1.png',
+    iconAlt: 'Award icon',
+  },
+] as const;
 ---
 
 <div class="stm-statistics-wrapper">

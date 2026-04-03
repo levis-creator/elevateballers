@@ -30,11 +30,24 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
     const fetchLeagues = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/leagues');
-        if (response.ok) {
-          const data = await response.json();
-          setLeagues(data);
+        const activeResponse = await fetch('/api/leagues?active=true');
+        if (!activeResponse.ok) {
+          throw new Error('Failed to fetch active leagues');
         }
+
+        const activeLeagues = await activeResponse.json();
+        if (Array.isArray(activeLeagues) && activeLeagues.length > 0) {
+          setLeagues(activeLeagues);
+          return;
+        }
+
+        const allResponse = await fetch('/api/leagues');
+        if (!allResponse.ok) {
+          throw new Error('Failed to fetch leagues');
+        }
+
+        const allLeagues = await allResponse.json();
+        setLeagues(Array.isArray(allLeagues) ? allLeagues : []);
       } catch (error) {
         console.error('Failed to fetch leagues:', error);
       } finally {
@@ -95,19 +108,22 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
         <label htmlFor="league-filter" className={styles.filterLabel}>
           League:
         </label>
-        <select
-          id="league-filter"
-          value={selectedLeague}
-          onChange={handleLeagueChange}
-          className={styles.filterSelect}
-        >
-          <option value="">All Leagues</option>
-          {leagues.map((league) => (
-            <option key={league.id} value={league.id}>
-              {league.name}
-            </option>
-          ))}
-        </select>
+        <div className={styles.selectShell}>
+          <select
+            id="league-filter"
+            value={selectedLeague}
+            onChange={handleLeagueChange}
+            className={styles.filterSelect}
+          >
+            <option value="">All Leagues</option>
+            {leagues.map((league) => (
+              <option key={league.id} value={league.id}>
+                {league.name}
+              </option>
+            ))}
+          </select>
+          <span className={styles.selectChevron} aria-hidden="true">▾</span>
+        </div>
       </div>
 
       {selectedLeague && seasons.length > 0 && (
@@ -115,19 +131,22 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
           <label htmlFor="season-filter" className={styles.filterLabel}>
             Season:
           </label>
-          <select
-            id="season-filter"
-            value={selectedSeason}
-            onChange={handleSeasonChange}
-            className={styles.filterSelect}
-          >
-            <option value="">All Seasons</option>
-            {seasons.map((season) => (
-              <option key={season.id} value={season.id}>
-                {season.name}
-              </option>
-            ))}
-          </select>
+          <div className={styles.selectShell}>
+            <select
+              id="season-filter"
+              value={selectedSeason}
+              onChange={handleSeasonChange}
+              className={styles.filterSelect}
+            >
+              <option value="">All Seasons</option>
+              {seasons.map((season) => (
+                <option key={season.id} value={season.id}>
+                  {season.name}
+                </option>
+              ))}
+            </select>
+            <span className={styles.selectChevron} aria-hidden="true">▾</span>
+          </div>
         </div>
       )}
     </div>

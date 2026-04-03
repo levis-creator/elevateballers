@@ -47,7 +47,7 @@ export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings }
       }
 
       const data = await response.json();
-      setStandings(data.length > 0 ? data : initialStandings);
+      setStandings(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching standings:', err);
       setError('Failed to load standings. Please try again.');
