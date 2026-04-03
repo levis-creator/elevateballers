@@ -26,17 +26,29 @@
     letter-spacing: 0.18em;
 }
 
+.selectShell {
+    position: relative;
+}
+
 .filterSelect {
+    width: 100%;
     padding: 0.95rem 1rem;
+    padding-right: 2.75rem;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.95rem;
     font-size: 15px;
     font-weight: 700;
     color: #ffffff;
-    background: rgba(8, 10, 20, 0.55);
+    background:
+        linear-gradient(180deg, rgba(28, 24, 42, 0.96), rgba(17, 14, 29, 0.96));
     cursor: pointer;
     transition: all 0.2s ease;
     outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .filterSelect:hover {
@@ -48,11 +60,37 @@
     box-shadow: 0 0 0 3px rgba(255, 186, 0, 0.14);
 }
 
+.filterSelect:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.filterSelect option {
+    color: #ffffff;
+    background: #14111f;
+}
+
+.selectChevron {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ffba00;
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
 .filterLoading {
     padding: 1rem;
     text-align: center;
     color: #cbd5e1;
     font-style: italic;
+}
+
+.filterHint {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 @media (max-width: 767px) {

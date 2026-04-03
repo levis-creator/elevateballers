@@ -93,7 +93,11 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
     return b.goalsFor - a.goalsFor;
   });
 
-  return standings.map((standing, index) => ({
+  const filteredStandings = (leagueId || seasonId)
+    ? standings.filter((standing) => standing.played > 0)
+    : standings;
+
+  return filteredStandings.map((standing, index) => ({
     ...standing,
     rank: index + 1,
   }));
