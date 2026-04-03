@@ -1339,13 +1339,24 @@ body {
 	left: 0;
 	right: 0;
 	z-index: 5;
-	background: url() no-repeat center;
+	padding-top: 60px;
+	background:
+		linear-gradient(180deg, #5c2791 0%, #552085 100%);
 	background-size: cover;
-	background-color: #222;
+	background-color: #552085;
 }
 
 #stm-footer-top {
-	padding: 40px 0;
+	padding: 0 0 40px;
+	background:
+		linear-gradient(180deg, #5c2791 0%, #552085 100%);
+}
+
+#footer-main,
+.footer-widgets-wrapper {
+	background:
+		linear-gradient(180deg, #5c2791 0%, #552085 100%);
+	background-color: #552085;
 }
 
 #footer-main {
@@ -1569,4 +1580,3 @@ body {
 		align-items: flex-start;
 	}
 }
-
