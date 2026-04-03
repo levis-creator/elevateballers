@@ -126,6 +126,15 @@
   background: #211c33;
 }
 
+.clickableRow {
+  cursor: pointer;
+}
+
+.clickableRow:focus-visible {
+  outline: 2px solid #ffba00;
+  outline-offset: -2px;
+}
+
 .table td:nth-child(2) {
   text-align: left;
 }

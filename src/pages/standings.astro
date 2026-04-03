@@ -4,24 +4,15 @@ import TopBar from "../features/layout/components/TopBar.astro";
 import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
-import { standings as fallbackStandings } from "../features/standings/data/standingsData";
 import { StandingsPage } from "../features/standings/components/StandingsPage";
+import { getStandings } from "../features/standings/lib/getStandings";
 import PageLoader from "../components/PageLoader";
 
-// Fetch standings from API
-let standings = fallbackStandings;
+let standings = [];
 try {
-  const baseUrl =
-    import.meta.env.SITE || `http://localhost:${import.meta.env.PORT || 4321}`;
-  const response = await fetch(`${baseUrl}/api/standings`);
-  if (response.ok) {
-    const data = await response.json();
-    if (data && data.length > 0) {
-      standings = data;
-    }
-  }
+  standings = await getStandings();
 } catch (error) {
-  console.error("Failed to fetch standings, using fallback data:", error);
+  console.error("Failed to fetch standings from database:", error);
 }
 ---
 

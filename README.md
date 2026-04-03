@@ -318,7 +318,6 @@ export function filterMyData(data: MyType[], filter: string): MyType[] {
 - **Bootstrap 5**: Used for base styling and grid system
 - **Custom CSS**: Feature-specific styles in `public/css/`
 - **Component Styles**: Scoped styles in component files
-- **Theme Styles**: Global theme in `src/styles/theme.css`
 
 ## 📊 State Management Details
 

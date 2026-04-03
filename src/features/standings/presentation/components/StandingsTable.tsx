@@ -94,6 +94,19 @@ function SummaryCards({ standings }: { standings: TeamStanding[] }) {
 }
 
 export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => {
+  const openStanding = (standing: TeamStanding) => {
+    if (!standing.url || typeof window === 'undefined') return;
+    window.location.href = standing.url;
+  };
+
+  const handleRowKeyDown = (event: React.KeyboardEvent<HTMLTableRowElement>, standing: TeamStanding) => {
+    if (!standing.url) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openStanding(standing);
+    }
+  };
+
   return (
     <div className={styles.standingsBoard}>
       <SummaryCards standings={standings} />
@@ -116,7 +129,14 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => 
           </thead>
           <tbody>
             {standings.map((standing) => (
-              <tr key={standing.teamId || standing.team}>
+              <tr
+                key={standing.teamId || standing.team}
+                className={standing.url ? styles.clickableRow : undefined}
+                onClick={standing.url ? () => openStanding(standing) : undefined}
+                onKeyDown={standing.url ? (event) => handleRowKeyDown(event, standing) : undefined}
+                tabIndex={standing.url ? 0 : undefined}
+                role={standing.url ? 'link' : undefined}
+              >
                 <td>
                   <span className={`${styles.rankBadge} ${standing.rank <= 3 ? styles.rankBadgeTop : ''}`}>
                     {standing.rank}
