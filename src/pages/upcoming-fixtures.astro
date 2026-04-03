@@ -6,24 +6,46 @@ import TopBar from "../features/layout/components/TopBar.astro";
 import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
-import { getUpcomingMatches } from "../features/matches/lib/queries";
-import { FixturesTable } from "../features/matches/components/FixturesTable";
+import { getCompletedMatches, getUpcomingMatches } from "../features/matches/lib/queries";
+import MatchesTabbedTable from "../features/matches/presentation/components/MatchesTabbedTable";
 import PageLoader from "../components/PageLoader";
 import ContentLoader from "../components/ContentLoader";
 
-// Fetch upcoming matches from database
-let matches: any[] = [];
+// Fetch match center data from database
+let fixtures: any[] = [];
+let results: any[] = [];
 let hasError = false;
 try {
-  const dbMatches = await getUpcomingMatches();
-  // Map database response to Fixture interface
-  matches = dbMatches.map((m) => ({
+  const [upcomingMatches, completedMatches] = await Promise.all([
+    getUpcomingMatches(),
+    getCompletedMatches(),
+  ]);
+
+  fixtures = upcomingMatches.map((m) => ({
     id: m.id,
     date: m.date,
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team2Name: m.team2Name || m.team2?.name || "TBD",
     league: m.league?.name || m.leagueName || "Unknown League",
     venue: (m as any).venue || "Main Court", // Use placeholder since venue isn't in current schema
+    status: m.status,
+  }));
+
+  results = completedMatches.map((m) => ({
+    id: m.id,
+    date: m.date,
+    team1Name: m.team1Name || m.team1?.name || "TBD",
+    team2Name: m.team2Name || m.team2?.name || "TBD",
+    team1Score: m.team1Score ?? "-",
+    team2Score: m.team2Score ?? "-",
+    league: m.league?.name || m.leagueName || "Unknown League",
+    winnerName:
+      m.winner?.name ||
+      (m.winnerId === m.team1Id
+        ? m.team1Name
+        : m.winnerId === m.team2Id
+          ? m.team2Name
+          : undefined),
     status: m.status,
   }));
 } catch (error) {
@@ -78,7 +100,7 @@ try {
     })}
   />
   <PageLoader client:load />
-  <div id="wrapper">
+  <div id="wrapper" class="match-center-page-shell">
     <TopBar />
     <Header client:load currentPath={Astro.url.pathname} />
     <div id="main">
@@ -101,42 +123,24 @@ try {
                     xs="50"
                   />
 
-                  <h1
-                    class="heading-font"
-                    style="text-align: center; margin-bottom: 20px; color: #dd3333;"
-                  >
-                    UPCOMING FIXTURES
-                  </h1>
-
-                  <div
-                    class="view-toggle"
-                    style="text-align: center; margin-bottom: 40px;"
-                  >
-                    <a href="/matches/results" class="btn btn-dark"
-                      >VIEW MATCH RESULTS</a
-                    >
-                  </div>
-
                   {
                     hasError ? (
                       <ContentLoader
                         client:load
-                        message="Failed to load fixtures. Please try again later."
+                        message="Failed to load the match center. Please try again later."
                       />
                     ) : (
                       <div class="sp-template sp-template-event-list">
-                        <FixturesTable matches={matches} client:load />
+                        <MatchesTabbedTable
+                          fixtures={fixtures}
+                          results={results}
+                          initialTab="fixtures"
+                          client:load
+                        />
                       </div>
                     )
                   }
 
-                  <Spacing
-                    id="stm-spacing-fixtures-footer"
-                    lg="50"
-                    md="50"
-                    sm="40"
-                    xs="40"
-                  />
                 </div>
               </div>
             </div>
@@ -163,36 +167,38 @@ try {
     window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};
     window.RS_MODULES.type = "compiled";
   </script>
-  <script is:inline type="speculationrules">
-    {
-      "prefetch": [
+  <script
+    is:inline
+    type="speculationrules"
+    set:html={JSON.stringify({
+      prefetch: [
         {
-          "source": "document",
-          "where": {
-            "and": [
-              { "href_matches": "/*" },
+          source: "document",
+          where: {
+            and: [
+              { href_matches: "/*" },
               {
-                "not": {
-                  "href_matches": [
+                not: {
+                  href_matches: [
                     "/wp-*.php",
                     "/wp-admin/*",
                     "/wp-content/uploads/*",
                     "/wp-content/*",
                     "/wp-content/plugins/*",
                     "/wp-content/themes/elevate/*",
-                    "/*\\?(.+)"
-                  ]
-                }
+                    "/*\\?(.+)",
+                  ],
+                },
               },
-              { "not": { "selector_matches": "a[rel~=\"nofollow\"]" } },
-              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }
-            ]
+              { not: { selector_matches: 'a[rel~="nofollow"]' } },
+              { not: { selector_matches: ".no-prefetch, .no-prefetch a" } },
+            ],
           },
-          "eagerness": "conservative"
-        }
-      ]
-    }
-  </script>
+          eagerness: "conservative",
+        },
+      ],
+    })}
+  />
 
   <style is:inline type="text/css">
     .sp-footer-sponsors {
@@ -208,22 +214,25 @@ try {
       scroll-behavior: smooth;
     }
 
-    /* Fixtures page specific styles */
-    .wpb_wrapper h2.heading-font {
-      font-size: 40px;
-      line-height: 44px;
-      margin-bottom: 20px;
-      color: #dd3333 !important;
+    html:has(#wrapper.match-center-page-shell),
+    body:has(#wrapper.match-center-page-shell) {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
     }
-
 
     /* Dark section background to complement the dark match cards */
     #main {
-      background: #0f0e1a;
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%);
     }
 
-    h1.heading-font {
-      color: #dd3333 !important;
+    .match-center-page-shell {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
+      min-height: 100vh;
     }
 
     .sp-template-event-list {

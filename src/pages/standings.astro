@@ -65,7 +65,7 @@ try {
     })}
   />
   <PageLoader client:load />
-  <div id="wrapper">
+  <div id="wrapper" class="standings-page-shell">
     <TopBar />
     <Header client:load currentPath={Astro.url.pathname} />
     <div id="main">
@@ -99,13 +99,6 @@ try {
                     <StandingsPage initialStandings={standings} client:load />
                   </div>
 
-                  <Spacing
-                    id="stm-spacing-standings-footer"
-                    lg="50"
-                    md="50"
-                    sm="40"
-                    xs="40"
-                  />
                 </div>
               </div>
             </div>
@@ -132,36 +125,38 @@ try {
     window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};
     window.RS_MODULES.type = "compiled";
   </script>
-  <script is:inline type="speculationrules">
-    {
-      "prefetch": [
+  <script
+    is:inline
+    type="speculationrules"
+    set:html={JSON.stringify({
+      prefetch: [
         {
-          "source": "document",
-          "where": {
-            "and": [
-              { "href_matches": "/*" },
+          source: "document",
+          where: {
+            and: [
+              { href_matches: "/*" },
               {
-                "not": {
-                  "href_matches": [
+                not: {
+                  href_matches: [
                     "/wp-*.php",
                     "/wp-admin/*",
                     "/wp-content/uploads/*",
                     "/wp-content/*",
                     "/wp-content/plugins/*",
                     "/wp-content/themes/elevate/*",
-                    "/*\\?(.+)"
-                  ]
-                }
+                    "/*\\?(.+)",
+                  ],
+                },
               },
-              { "not": { "selector_matches": "a[rel~=\"nofollow\"]" } },
-              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }
-            ]
+              { not: { selector_matches: 'a[rel~="nofollow"]' } },
+              { not: { selector_matches: ".no-prefetch, .no-prefetch a" } },
+            ],
           },
-          "eagerness": "conservative"
-        }
-      ]
-    }
-  </script>
+          eagerness: "conservative",
+        },
+      ],
+    })}
+  />
 
   <style is:inline type="text/css">
     .sp-footer-sponsors {
@@ -177,12 +172,37 @@ try {
       scroll-behavior: smooth;
     }
 
-    /* Standings page specific styles */
-    .wpb_wrapper h2.heading-font {
-      font-size: 40px;
-      line-height: 44px;
-      margin-bottom: 50px;
-      color: #dd3333 !important;
+    #main {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%);
+    }
+
+    html:has(#wrapper.standings-page-shell),
+    body:has(#wrapper.standings-page-shell) {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
+    }
+
+    .standings-page-shell {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
+      min-height: 100vh;
+    }
+
+    h1.heading-font {
+      color: #ffffff !important;
+      font-size: clamp(3rem, 7vw, 4.75rem);
+      letter-spacing: 0.04em;
+      margin-bottom: 2rem !important;
+      text-shadow: 0 8px 28px rgba(0, 0, 0, 0.24);
+    }
+
+    .sp-template-league-table {
+      margin-top: 20px;
+      margin-bottom: 0;
     }
 
   </style>

@@ -356,7 +356,6 @@ input[type=password].wpcf7-not-valid {
 }
 
 input[type=submit],
-button,
 .button {
   position: relative;
   display: inline-block;
@@ -378,17 +377,14 @@ button,
   /*Colors*/
 }
 input[type=submit].btn-md,
-button.btn-md,
 .button.btn-md {
   padding: 16px 61px 14px;
 }
 input[type=submit].btn-lg,
-button.btn-lg,
 .button.btn-lg {
   padding: 21px 76px 19px;
 }
 input[type=submit]:before,
-button:before,
 .button:before {
   content: "";
   position: absolute;
@@ -404,19 +400,16 @@ button:before,
   transition-timing-function: cubic-bezier(0.2, 1, 0.3, 1);
 }
 input[type=submit]:hover,
-button:hover,
 .button:hover {
   color: #e21e22;
   border-color: #e21e22;
 }
 input[type=submit]:hover:active,
-button:hover:active,
 .button:hover:active {
   color: #e21e22 !important;
   border-color: #e21e22;
 }
 input[type=submit]:hover:before,
-button:hover:before,
 .button:hover:before {
   opacity: 0;
   transform: scale3d(0.7, 1, 1);
