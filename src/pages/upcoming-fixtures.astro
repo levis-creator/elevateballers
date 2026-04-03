@@ -30,7 +30,7 @@ try {
     team2Name: m.team2Name || m.team2?.name || "TBD",
     team2Logo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
     league: m.league?.name || m.leagueName || "Unknown League",
-    venue: (m as any).venue || undefined,
+    venue: (m as any).venue || "Main Court",
     status: m.status,
   }));
 
