@@ -5,7 +5,9 @@ type FixtureRow = {
   id: string;
   date: Date | string;
   team1Name: string;
+  team1Logo?: string | null;
   team2Name: string;
+  team2Logo?: string | null;
   league: string;
   venue?: string;
   status: string;
@@ -15,7 +17,9 @@ type ResultRow = {
   id: string;
   date: Date | string;
   team1Name: string;
+  team1Logo?: string | null;
   team2Name: string;
+  team2Logo?: string | null;
   team1Score: number | string;
   team2Score: number | string;
   league: string;
@@ -100,10 +104,15 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
                 </td>
                 <td className="px-5 py-4 align-middle text-gray-300">{formatMatchTime(match.date)}</td>
                 <td className="px-5 py-4 align-middle">
-                  <MatchupCell homeTeam={match.team1Name} awayTeam={match.team2Name} />
+                  <MatchupCell
+                    homeTeam={match.team1Name}
+                    awayTeam={match.team2Name}
+                    homeLogo={match.team1Logo}
+                    awayLogo={match.team2Logo}
+                  />
                 </td>
                 <td className="px-5 py-4 align-middle text-gray-300">{match.league}</td>
-                <td className="px-5 py-4 align-middle text-gray-300">{match.venue || 'Main Arena'}</td>
+                <td className="px-5 py-4 align-middle text-gray-300">{match.venue || 'TBA'}</td>
                 <td className="px-5 py-4 align-middle">
                   <StatusBadge status={match.status} />
                 </td>
@@ -136,10 +145,15 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
               </div>
               <StatusBadge status={match.status} />
             </div>
-            <MatchupCard homeTeam={match.team1Name} awayTeam={match.team2Name} />
+            <MatchupCard
+              homeTeam={match.team1Name}
+              awayTeam={match.team2Name}
+              homeLogo={match.team1Logo}
+              awayLogo={match.team2Logo}
+            />
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs text-gray-400">
               <span className="truncate">{match.league}</span>
-              <span className="truncate">{match.venue || 'Main Arena'}</span>
+              <span className="truncate">{match.venue || 'TBA'}</span>
             </div>
           </a>
         ))}
@@ -190,6 +204,8 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
                     <MatchupCell
                       homeTeam={match.team1Name}
                       awayTeam={match.team2Name}
+                      homeLogo={match.team1Logo}
+                      awayLogo={match.team2Logo}
                       homeHighlight={team1Won}
                       awayHighlight={team2Won}
                     />
@@ -243,6 +259,8 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
               <MatchupCard
                 homeTeam={match.team1Name}
                 awayTeam={match.team2Name}
+                homeLogo={match.team1Logo}
+                awayLogo={match.team2Logo}
                 homeHighlight={team1Won}
                 awayHighlight={team2Won}
                 score={<ScoreCell homeScore={match.team1Score} awayScore={match.team2Score} homeHighlight={team1Won} awayHighlight={team2Won} />}
@@ -262,18 +280,22 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
 function MatchupCell({
   homeTeam,
   awayTeam,
+  homeLogo,
+  awayLogo,
   homeHighlight = false,
   awayHighlight = false,
 }: {
   homeTeam: string;
   awayTeam: string;
+  homeLogo?: string | null;
+  awayLogo?: string | null;
   homeHighlight?: boolean;
   awayHighlight?: boolean;
 }) {
   return (
     <div className="grid gap-2">
-      <TeamLine name={homeTeam} highlight={homeHighlight} />
-      <TeamLine name={awayTeam} highlight={awayHighlight} />
+      <TeamLine name={homeTeam} logo={homeLogo} highlight={homeHighlight} />
+      <TeamLine name={awayTeam} logo={awayLogo} highlight={awayHighlight} />
     </div>
   );
 }
@@ -281,32 +303,62 @@ function MatchupCell({
 function MatchupCard({
   homeTeam,
   awayTeam,
+  homeLogo,
+  awayLogo,
   homeHighlight = false,
   awayHighlight = false,
   score,
 }: {
   homeTeam: string;
   awayTeam: string;
+  homeLogo?: string | null;
+  awayLogo?: string | null;
   homeHighlight?: boolean;
   awayHighlight?: boolean;
   score?: React.ReactNode;
 }) {
   return (
     <div className="grid gap-3">
-      <TeamLine name={homeTeam} highlight={homeHighlight} mobile />
+      <TeamLine name={homeTeam} logo={homeLogo} highlight={homeHighlight} mobile />
       <div className="flex items-center justify-center gap-3 text-xs uppercase tracking-[0.24em] text-gray-500">
         <span>vs</span>
         {score}
       </div>
-      <TeamLine name={awayTeam} highlight={awayHighlight} mobile />
+      <TeamLine name={awayTeam} logo={awayLogo} highlight={awayHighlight} mobile />
     </div>
   );
 }
 
-function TeamLine({ name, highlight = false, mobile = false }: { name: string; highlight?: boolean; mobile?: boolean }) {
+function TeamLine({
+  name,
+  logo,
+  highlight = false,
+  mobile = false,
+}: {
+  name: string;
+  logo?: string | null;
+  highlight?: boolean;
+  mobile?: boolean;
+}) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-[0.72rem] font-black uppercase tracking-wide text-gray-200 ring-1 ring-white/10">
+      {logo ? (
+        <img
+          src={logo}
+          alt={name}
+          loading="lazy"
+          onError={(event) => {
+            event.currentTarget.style.display = 'none';
+            const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+          className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+        />
+      ) : null}
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-[0.72rem] font-black uppercase tracking-wide text-gray-200 ring-1 ring-white/10"
+        style={{ display: logo ? 'none' : 'flex' }}
+      >
         {teamAbbr(name)}
       </span>
       <span
