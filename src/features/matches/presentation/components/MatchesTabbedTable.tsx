@@ -347,20 +347,14 @@ function TeamLine({
           src={logo}
           alt={name}
           loading="lazy"
-          onError={(event) => {
-            event.currentTarget.style.display = 'none';
-            const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
-            if (fallback) fallback.style.display = 'flex';
-          }}
           className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/10"
         />
       ) : null}
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-[0.72rem] font-black uppercase tracking-wide text-gray-200 ring-1 ring-white/10"
-        style={{ display: logo ? 'none' : 'flex' }}
-      >
-        {teamAbbr(name)}
-      </span>
+      {!logo ? (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-[0.72rem] font-black uppercase tracking-wide text-gray-200 ring-1 ring-white/10">
+          {teamAbbr(name)}
+        </span>
+      ) : null}
       <span
         className={`min-w-0 truncate font-semibold ${mobile ? 'text-base' : 'text-sm'} ${
           highlight ? 'text-white' : 'text-gray-200'
