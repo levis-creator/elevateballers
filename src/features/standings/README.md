@@ -60,7 +60,7 @@ src/
 │       │   ├── StandingsPage.tsx            # Wrapper component
 │       │   └── StandingsPage.module.css     # Wrapper styles
 │       └── data/
-│           └── standingsData.ts             # TypeScript types & fallback data
+│           └── standingsData.ts             # TypeScript types
 ```
 
 ## Data Flow
