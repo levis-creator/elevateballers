@@ -43,8 +43,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const userAgent = request.headers.get('user-agent') ?? undefined;
 
   // Rate limit: 10 attempts per 15 minutes per IP
-  if (!checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000)) {
-    const retryAfter = getRateLimitRetryAfter(`login:${ip}`);
+  if (!await checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000)) {
+    const retryAfter = await getRateLimitRetryAfter(`login:${ip}`);
     await logAudit(request, 'AUTH_LOGIN_RATE_LIMITED', {
       ip,
       userAgent,

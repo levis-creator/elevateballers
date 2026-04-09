@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma';
 import { calculatePlayerStatistics } from '../../../features/player/lib/playerStats';
 import { resolveAssetUrl } from '../../../lib/asset-url';
 import { handleApiError } from '../../../lib/apiError';
+import { cacheGet, cacheSet } from '../../../lib/cache';
 
 export const prerender = false;
 
@@ -95,6 +96,15 @@ export const GET: APIRoute = async ({ request }) => {
 
     const statField = CATEGORY_MAP[category] ?? 'pointsPerGame';
 
+    // Check cache first
+    const cacheKey = `leaders:${category}:${limit}`;
+    const cached = await cacheGet<unknown[]>(cacheKey);
+    if (cached) {
+      return new Response(JSON.stringify(cached), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // Fetch all approved players with their team
     const players = await prisma.player.findMany({
       where: { approved: true },
@@ -163,6 +173,8 @@ export const GET: APIRoute = async ({ request }) => {
         ),
       },
     }));
+
+    await cacheSet(cacheKey, response, 300); // 5 min TTL
 
     return new Response(JSON.stringify(response), {
       headers: { 'Content-Type': 'application/json' },

@@ -5,6 +5,7 @@
 
 import { prisma } from '../../../../lib/prisma';
 import { getEnvBoolean } from '../../../../lib/env';
+import { cacheDel } from '../../../../lib/cache';
 import type {
   CreateGameRulesInput,
   UpdateGameRulesInput,
@@ -113,6 +114,7 @@ export async function updateGameState(
         possessionTeamId: data.possessionTeamId,
       },
     });
+    await cacheDel(`gamestate:${matchId}`);
     return true;
   } catch (error) {
     console.error('Error updating game state:', error);
@@ -204,6 +206,8 @@ export async function startGame(matchId: string, gameRulesId?: string): Promise<
         currentPeriod: 1,
         clockSeconds: periodLengthSeconds,
         clockRunning: true,
+        clockStartedAt: new Date(),
+        clockSecondsAtStart: periodLengthSeconds,
         team1Score: 0,
         team2Score: 0,
         team1Fouls: 0,
@@ -320,7 +324,12 @@ export async function toggleGameClock(matchId: string, running?: boolean, clockS
   try {
     const match = await prisma.match.findUnique({
       where: { id: matchId },
-      select: { clockRunning: true },
+      select: {
+        clockRunning: true,
+        clockSeconds: true,
+        clockStartedAt: true,
+        clockSecondsAtStart: true,
+      },
     });
 
     if (!match) {
@@ -329,10 +338,27 @@ export async function toggleGameClock(matchId: string, running?: boolean, clockS
 
     const newState = running !== undefined ? running : !match.clockRunning;
 
-    // When pausing (transitioning from running to stopped), save the current clock seconds
-    const updateData: { clockRunning: boolean; clockSeconds?: number } = { clockRunning: newState };
-    if (newState === false && clockSeconds !== undefined) {
-      updateData.clockSeconds = clockSeconds;
+    const updateData: Record<string, unknown> = { clockRunning: newState };
+
+    if (newState === true) {
+      // Resuming: record when the clock started and the seconds at that moment
+      const currentSeconds = clockSeconds ?? match.clockSeconds ?? 0;
+      updateData.clockStartedAt = new Date();
+      updateData.clockSecondsAtStart = currentSeconds;
+      updateData.clockSeconds = currentSeconds;
+    } else {
+      // Pausing: compute actual remaining from timestamp, persist it
+      let remaining: number;
+      if (match.clockStartedAt && match.clockSecondsAtStart !== null) {
+        const elapsed = Math.floor((Date.now() - match.clockStartedAt.getTime()) / 1000);
+        remaining = Math.max(0, match.clockSecondsAtStart - elapsed);
+      } else {
+        // Fallback: use value sent by client or stored value
+        remaining = clockSeconds ?? match.clockSeconds ?? 0;
+      }
+      updateData.clockSeconds = remaining;
+      updateData.clockStartedAt = null;
+      updateData.clockSecondsAtStart = null;
     }
 
     await prisma.match.update({
@@ -340,6 +366,7 @@ export async function toggleGameClock(matchId: string, running?: boolean, clockS
       data: updateData,
     });
 
+    await cacheDel(`gamestate:${matchId}`);
     return true;
   } catch (error) {
     console.error('Error toggling game clock:', error);

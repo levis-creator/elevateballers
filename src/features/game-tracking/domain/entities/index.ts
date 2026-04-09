@@ -68,6 +68,8 @@ export type MatchWithGameState = Match & {
 export type GameClockState = {
   clockSeconds: number | null;
   clockRunning: boolean;
+  clockStartedAt: string | null;
+  clockSecondsAtStart: number | null;
   period: number;
 };
 
@@ -115,6 +117,8 @@ export type UpdateGameRulesInput = Partial<CreateGameRulesInput>;
 export type UpdateGameStateInput = {
   clockSeconds?: number | null;
   clockRunning?: boolean;
+  clockStartedAt?: Date | null;
+  clockSecondsAtStart?: number | null;
   currentPeriod?: number;
   team1Score?: number;
   team2Score?: number;

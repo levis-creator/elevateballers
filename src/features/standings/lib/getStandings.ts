@@ -1,11 +1,32 @@
 import { prisma } from '../../../lib/prisma';
+import { cacheGet, cacheSet } from '../../../lib/cache';
 
 interface GetStandingsOptions {
   leagueId?: string;
   seasonId?: string;
 }
 
-export async function getStandings({ leagueId, seasonId }: GetStandingsOptions = {}) {
+interface StandingEntry {
+  teamId: string;
+  team: string;
+  logo: string | null;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  url: string;
+  rank: number;
+}
+
+export async function getStandings({ leagueId, seasonId }: GetStandingsOptions = {}): Promise<StandingEntry[]> {
+  const cacheKey = `standings:${leagueId ?? 'all'}:${seasonId ?? 'all'}`;
+  const cached = await cacheGet<StandingEntry[]>(cacheKey);
+  if (cached) return cached;
+
   const teams = await prisma.team.findMany({
     where: {
       approved: true,
@@ -97,8 +118,11 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
     ? standings.filter((standing) => standing.played > 0)
     : standings;
 
-  return filteredStandings.map((standing, index) => ({
+  const result = filteredStandings.map((standing, index) => ({
     ...standing,
     rank: index + 1,
   }));
+
+  await cacheSet(cacheKey, result, 300); // 5 min TTL
+  return result;
 }

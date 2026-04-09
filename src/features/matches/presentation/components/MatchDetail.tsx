@@ -88,6 +88,15 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
   const [localClock, setLocalClock] = useState<number | null>(match.clockSeconds);
   const itemsPerPage = 5;
 
+  /** Compute remaining seconds from server timestamp (shared source of truth). */
+  function computeRemainingFromTimestamp(m: typeof match): number | null {
+    if (m.clockRunning && m.clockStartedAt && m.clockSecondsAtStart != null) {
+      const elapsed = Math.floor((Date.now() - new Date(m.clockStartedAt).getTime()) / 1000);
+      return Math.max(0, m.clockSecondsAtStart - elapsed);
+    }
+    return m.clockSeconds;
+  }
+
   // Polling for live updates
   useEffect(() => {
     if (match.status !== 'LIVE') return;
@@ -98,10 +107,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
         if (response.ok) {
           const updatedMatch = await response.json();
           setMatch(updatedMatch);
-          // Sync local clock from server
-          if (updatedMatch.clockSeconds !== null) {
-            setLocalClock(updatedMatch.clockSeconds);
-          }
+          setLocalClock(computeRemainingFromTimestamp(updatedMatch));
         }
       } catch (error) {
         console.error('Error polling for match updates:', error);
@@ -111,23 +117,22 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
     return () => clearInterval(pollInterval);
   }, [match.id, match.status]);
 
-  // Local clock ticker
+  // Timestamp-based clock ticker — recomputes from server timestamp each tick
   useEffect(() => {
-    if (match.status !== 'LIVE' || !match.clockRunning || localClock === null || localClock <= 0) {
-      return;
-    }
+    if (match.status !== 'LIVE' || !match.clockRunning) return;
+    if (!match.clockStartedAt || match.clockSecondsAtStart == null) return;
 
     const ticker = setInterval(() => {
-      setLocalClock(prev => (prev !== null && prev > 0 ? prev - 1 : prev));
-    }, 1000);
+      setLocalClock(computeRemainingFromTimestamp(match));
+    }, 200); // 200ms for smooth display, same cadence as admin Web Worker
 
     return () => clearInterval(ticker);
-  }, [match.status, match.clockRunning, localClock === null || localClock <= 0]);
+  }, [match.status, match.clockRunning, match.clockStartedAt, match.clockSecondsAtStart]);
 
-  // Sync initial and polled clock updates
+  // Sync clock when match data changes (initial load + polls)
   useEffect(() => {
-    setLocalClock(match.clockSeconds);
-  }, [match.clockSeconds]);
+    setLocalClock(computeRemainingFromTimestamp(match));
+  }, [match.clockSeconds, match.clockStartedAt, match.clockSecondsAtStart, match.clockRunning]);
 
   // Determine active players with fallback to starters if no one is explicitly marked as active
   const getActivePlayers = (players: MatchPlayerWithDetails[]) => {

@@ -6,6 +6,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { json, handleApiError } from '../../../lib/apiError';
+import { publishToJob } from '../../../lib/qstash';
 
 export const prerender = false;
 
@@ -59,8 +60,8 @@ export const POST: APIRoute = async ({ request }) => {
     const ip = getClientIp(request);
 
     // Rate limit: 5 contact form submissions per hour per IP
-    if (!checkRateLimit(`contact:${ip}`, 5, 60 * 60 * 1000)) {
-      const retryAfter = getRateLimitRetryAfter(`contact:${ip}`);
+    if (!await checkRateLimit(`contact:${ip}`, 5, 60 * 60 * 1000)) {
+      const retryAfter = await getRateLimitRetryAfter(`contact:${ip}`);
       return json({ error: `Too many submissions. Please try again in ${Math.ceil(retryAfter / 60)} minutes.` }, 429);
     }
 
@@ -93,13 +94,28 @@ export const POST: APIRoute = async ({ request }) => {
       data: { name, email, subject, message, ipAddress: ip, userAgent },
     });
 
-    // Fire-and-forget — don't block the response on email delivery
-    sendContactNotification({ name, email, subject, message }).catch((err) =>
-      console.error('[contact] notification email failed:', err)
-    );
-    sendContactAutoReply({ name, email, subject }).catch((err) =>
-      console.error('[contact] auto-reply email failed:', err)
-    );
+    // Send emails via QStash (with inline fallback)
+    const sendNotification = () =>
+      sendContactNotification({ name, email, subject, message }).catch((err) =>
+        console.error('[contact] notification email failed:', err)
+      );
+    const sendAutoReply = () =>
+      sendContactAutoReply({ name, email, subject }).catch((err) =>
+        console.error('[contact] auto-reply email failed:', err)
+      );
+
+    // Try QStash for reliable delivery with retries; fall back to fire-and-forget
+    const notificationQueued = await publishToJob('/api/jobs/send-email', {
+      jobType: 'contact_notification',
+      data: { name, email, subject, message },
+    });
+    if (!notificationQueued) sendNotification();
+
+    const autoReplyQueued = await publishToJob('/api/jobs/send-email', {
+      jobType: 'contact_auto_reply',
+      data: { name, email, subject },
+    });
+    if (!autoReplyQueued) sendAutoReply();
 
     await prisma.registrationNotification.create({
       data: {
@@ -110,13 +126,25 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     const adminUrl = `${process.env.SITE_URL ?? 'https://elevateballers.com'}/admin/messages?id=${created.id}`;
-    sendAdminNotificationEmail({
-      type: 'contact_message',
-      title: 'New Contact Message',
-      message: `${name} sent a new contact message${subject ? ` about "${subject}"` : ''}.`,
-      actionUrl: adminUrl,
-      actionText: 'View Message',
-    }).catch((err) => console.error('[contact] admin notification email failed:', err));
+    const adminQueued = await publishToJob('/api/jobs/send-email', {
+      jobType: 'admin_notification',
+      data: {
+        type: 'contact_message',
+        title: 'New Contact Message',
+        message: `${name} sent a new contact message${subject ? ` about "${subject}"` : ''}.`,
+        actionUrl: adminUrl,
+        actionText: 'View Message',
+      },
+    });
+    if (!adminQueued) {
+      sendAdminNotificationEmail({
+        type: 'contact_message',
+        title: 'New Contact Message',
+        message: `${name} sent a new contact message${subject ? ` about "${subject}"` : ''}.`,
+        actionUrl: adminUrl,
+        actionText: 'View Message',
+      }).catch((err) => console.error('[contact] admin notification email failed:', err));
+    }
 
     await logAudit(request, 'CONTACT_MESSAGE_SUBMITTED', {
       contactMessageId: created.id,
