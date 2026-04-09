@@ -4,9 +4,11 @@
  */
 
 import { prisma } from '../../../../lib/prisma';
+import { cacheGet, cacheSet } from '../../../../lib/cache';
 import type {
   GameRules,
   GameState,
+  GameStateData,
   MatchPeriod,
   Timeout,
   Substitution,
@@ -109,6 +111,18 @@ export async function getMatchWithGameState(matchId: string): Promise<MatchWithG
  * Get current game state for a match
  */
 export async function getGameState(matchId: string): Promise<GameStateData | null> {
+  // Check cache first (short TTL for live data)
+  const cacheKey = `gamestate:${matchId}`;
+  const cached = await cacheGet<GameStateData>(cacheKey);
+  if (cached) {
+    // Recompute clockSeconds from timestamp even for cached data
+    if (cached.clockRunning && cached.clockStartedAt && cached.clockSecondsAtStart !== null) {
+      const elapsed = Math.floor((Date.now() - new Date(cached.clockStartedAt).getTime()) / 1000);
+      cached.clockSeconds = Math.max(0, cached.clockSecondsAtStart - elapsed);
+    }
+    return cached;
+  }
+
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     select: {
@@ -116,6 +130,8 @@ export async function getGameState(matchId: string): Promise<GameStateData | nul
       currentPeriod: true,
       clockSeconds: true,
       clockRunning: true,
+      clockStartedAt: true,
+      clockSecondsAtStart: true,
       team1Score: true,
       team2Score: true,
       team1Fouls: true,
@@ -130,11 +146,20 @@ export async function getGameState(matchId: string): Promise<GameStateData | nul
     return null;
   }
 
-  return {
+  // Compute live clockSeconds from timestamp when clock is running
+  let computedClockSeconds = match.clockSeconds;
+  if (match.clockRunning && match.clockStartedAt && match.clockSecondsAtStart !== null) {
+    const elapsed = Math.floor((Date.now() - match.clockStartedAt.getTime()) / 1000);
+    computedClockSeconds = Math.max(0, match.clockSecondsAtStart - elapsed);
+  }
+
+  const state: GameStateData = {
     matchId: match.id,
     period: match.currentPeriod,
-    clockSeconds: match.clockSeconds,
+    clockSeconds: computedClockSeconds,
     clockRunning: match.clockRunning,
+    clockStartedAt: match.clockStartedAt?.toISOString() ?? null,
+    clockSecondsAtStart: match.clockSecondsAtStart,
     team1Score: match.team1Score ?? 0,
     team2Score: match.team2Score ?? 0,
     team1Fouls: match.team1Fouls,
@@ -143,6 +168,9 @@ export async function getGameState(matchId: string): Promise<GameStateData | nul
     team2Timeouts: match.team2Timeouts,
     possessionTeamId: match.possessionTeamId,
   };
+
+  await cacheSet(cacheKey, state, 3); // 3s TTL for live data
+  return state;
 }
 
 /**

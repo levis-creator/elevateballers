@@ -5,6 +5,9 @@ import { requireAuth } from '../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../lib/apiError';
+import { cacheDel, cacheInvalidatePattern } from '../../../../lib/cache';
+import { publishToJob } from '../../../../lib/qstash';
+import { prisma } from '../../../../lib/prisma';
 export const prerender = false;
 
 /**
@@ -34,6 +37,25 @@ export const POST: APIRoute = async ({ params, request }) => {
 
     if (!success) {
       return handleApiError(error, "end game");
+    }
+
+    // Invalidate caches that depend on match results
+    await Promise.all([
+      cacheDel(`gamestate:${matchId}`),
+      cacheInvalidatePattern('standings:*'),
+      cacheInvalidatePattern('leaders:*'),
+    ]);
+
+    // Queue background standings recalculation via QStash
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      select: { leagueId: true, seasonId: true },
+    });
+    if (match) {
+      await publishToJob('/api/jobs/recalc-standings', {
+        leagueId: match.leagueId,
+        seasonId: match.seasonId,
+      });
     }
 
     const state = await getGameState(matchId);

@@ -43,8 +43,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Rate limit OTP attempts per user: 5 per 15 minutes
-    if (!checkRateLimit(`otp:${session.userId}`, 5, 15 * 60 * 1000)) {
-      const retryAfter = getRateLimitRetryAfter(`otp:${session.userId}`);
+    if (!await checkRateLimit(`otp:${session.userId}`, 5, 15 * 60 * 1000)) {
+      const retryAfter = await getRateLimitRetryAfter(`otp:${session.userId}`);
       return json(
         { error: `Too many attempts. Please try again in ${retryAfter} seconds.` },
         429

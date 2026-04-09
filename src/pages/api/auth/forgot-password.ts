@@ -37,8 +37,8 @@ export const POST: APIRoute = async ({ request }) => {
     'unknown';
 
   // Rate limit: 5 requests per 15 minutes per IP
-  if (!checkRateLimit(`forgot:${ip}`, 5, 15 * 60 * 1000)) {
-    const retryAfter = getRateLimitRetryAfter(`forgot:${ip}`);
+  if (!await checkRateLimit(`forgot:${ip}`, 5, 15 * 60 * 1000)) {
+    const retryAfter = await getRateLimitRetryAfter(`forgot:${ip}`);
     return new Response(
       JSON.stringify({ error: `Too many requests. Please try again in ${retryAfter} seconds.` }),
       { status: 429, headers: { 'Content-Type': 'application/json' } }

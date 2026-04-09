@@ -60,17 +60,20 @@ export default function GameClock({
   const [timeInput, setTimeInput] = useState('');
   const [setDuration, setSetDuration] = useState<number | null>(null);
 
-  // Sync with backend state - only when clock is paused or initial load
+  // Sync with backend state using server timestamp for accuracy
   useEffect(() => {
-    // Only sync when clock is NOT running (paused) to avoid interrupting countdown
-    if (!gameState?.clockRunning) {
-      if (gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined) {
-        setLocalClockSeconds(gameState.clockSeconds);
-      } else {
-        setLocalClockSeconds(null);
-      }
+    if (!gameState) return;
+
+    if (gameState.clockRunning && gameState.clockStartedAt && gameState.clockSecondsAtStart != null) {
+      // Clock is running: compute actual remaining from server timestamp
+      const elapsed = Math.floor((Date.now() - new Date(gameState.clockStartedAt).getTime()) / 1000);
+      const remaining = Math.max(0, gameState.clockSecondsAtStart - elapsed);
+      setLocalClockSeconds(remaining);
+    } else if (!gameState.clockRunning) {
+      // Clock is paused: use the stored clockSeconds
+      setLocalClockSeconds(gameState.clockSeconds ?? null);
     }
-  }, [gameState?.clockSeconds, gameState?.clockRunning, setLocalClockSeconds]);
+  }, [gameState?.clockSeconds, gameState?.clockRunning, gameState?.clockStartedAt, gameState?.clockSecondsAtStart, setLocalClockSeconds]);
 
   // Track the set duration for the current quarter - update when quarter changes
   const previousPeriodRef = useRef<number | null>(null);
@@ -134,8 +137,13 @@ export default function GameClock({
     if (!worker) return;
 
     if (gameState?.clockRunning && localClockSeconds !== null && localClockSeconds > 0) {
-      // Start (or restart) the countdown with the current remaining seconds
-      worker.postMessage({ type: 'START', remainingSeconds: localClockSeconds });
+      // Compute accurate remaining from server timestamp if available
+      let remaining = localClockSeconds;
+      if (gameState.clockStartedAt && gameState.clockSecondsAtStart != null) {
+        const elapsed = Math.floor((Date.now() - new Date(gameState.clockStartedAt).getTime()) / 1000);
+        remaining = Math.max(0, gameState.clockSecondsAtStart - elapsed);
+      }
+      worker.postMessage({ type: 'START', remainingSeconds: remaining });
 
       worker.onmessage = (e: MessageEvent) => {
         const { type, remainingSeconds } = e.data;

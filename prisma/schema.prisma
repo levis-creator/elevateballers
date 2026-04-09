@@ -266,6 +266,8 @@ model Match {
   currentPeriod         Int              @default(1) @map("current_period")
   clockSeconds          Int?             @map("clock_seconds")
   clockRunning          Boolean          @default(false) @map("clock_running")
+  clockStartedAt        DateTime?        @map("clock_started_at")
+  clockSecondsAtStart   Int?             @map("clock_seconds_at_start")
   possessionTeamId      String?          @map("possession_team_id")
   team1Timeouts         Int              @default(0) @map("team1_timeouts")
   team2Timeouts         Int              @default(0) @map("team2_timeouts")

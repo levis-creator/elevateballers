@@ -74,22 +74,22 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
         throw new Error('Failed to fetch game state');
       }
       const state = await response.json();
-      // Only update localClockSeconds if clock is not running (paused)
-      // When clock is running, the local countdown should continue uninterrupted
-      const currentLocalClock = get().localClockSeconds;
-      const shouldUpdateClock = !state?.clockRunning;
-      
-      // Validate clock seconds - prevent negative values
-      const serverClockSeconds = state?.clockSeconds ?? null;
-      const validatedClockSeconds = serverClockSeconds !== null && serverClockSeconds < 0 
-        ? 0 
-        : serverClockSeconds;
-      
-      set({ 
-        gameState: state, 
-        localClockSeconds: shouldUpdateClock ? validatedClockSeconds : currentLocalClock,
-        isLoading: false, 
-        error: null 
+
+      // Compute accurate clock from server timestamp when running
+      let computedClock: number | null;
+      if (state?.clockRunning && state?.clockStartedAt && state?.clockSecondsAtStart != null) {
+        const elapsed = Math.floor((Date.now() - new Date(state.clockStartedAt).getTime()) / 1000);
+        computedClock = Math.max(0, state.clockSecondsAtStart - elapsed);
+      } else {
+        const serverClockSeconds = state?.clockSeconds ?? null;
+        computedClock = serverClockSeconds !== null && serverClockSeconds < 0 ? 0 : serverClockSeconds;
+      }
+
+      set({
+        gameState: state,
+        localClockSeconds: computedClock,
+        isLoading: false,
+        error: null
       });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });

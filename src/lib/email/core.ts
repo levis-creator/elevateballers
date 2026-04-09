@@ -1,8 +1,9 @@
 import crypto from 'node:crypto';
 import { prisma } from '../prisma';
 import { logAuditSystem } from '../../features/cms/lib/audit';
-import { FROM, SMTP_FROM, SITE_URL, LOGO_URL, C, AdminNotificationType } from './config';
+import { FROM, SMTP_FROM, SITE_URL, LOGO_URL, C, type AdminNotificationType } from './config';
 import { getResend, getSmtpTransport, hashValue, hashRecipients } from './providers';
+import { cacheGet, cacheSet } from '../cache';
 
 export async function sendTransactionalEmail(data: {
   to: string | string[];
@@ -290,6 +291,10 @@ function normalizeEmailPreferences(input: any): Record<AdminNotificationType, bo
 }
 
 export async function getAdminRecipientEmails(type?: AdminNotificationType): Promise<string[]> {
+  const cacheKey = `admin-emails:${type ?? 'all'}`;
+  const cached = await cacheGet<string[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     const toggle = await prisma.siteSetting.findUnique({
       where: { key: 'admin_email_notifications_enabled' },
@@ -341,7 +346,9 @@ export async function getAdminRecipientEmails(type?: AdminNotificationType): Pro
       .map((admin) => admin.email?.trim())
       .filter((email): email is string => Boolean(email));
 
-    return Array.from(new Set(emails));
+    const result = Array.from(new Set(emails));
+    await cacheSet(cacheKey, result, 1800); // 30 min TTL
+    return result;
   } catch (error) {
     console.warn('[email] Failed to read admin emails from users:', error);
     return [];

@@ -57,11 +57,24 @@ const pageDescription = "View all teams in the Elevate Ballers league";
 const pageUrl = teamsPageUrl(currentPageRes, searchQuery);
 const baseTeamsUrl = `${Astro.url.origin}/teams/`;
 const hasFilters = currentPageRes > 1 || Boolean(searchQuery);
-const canonicalURL = hasFilters ? baseTeamsUrl : baseTeamsUrl;
+const canonicalURL = baseTeamsUrl;
 const robots = hasFilters ? "noindex,follow" : undefined;
 const schemaUrl = hasFilters ? canonicalURL : pageUrl;
 const startItem = totalCount === 0 ? 0 : (currentPageRes - 1) * PER_PAGE + 1;
 const endItem = Math.min(currentPageRes * PER_PAGE, totalCount);
+// Truncated page numbers for pagination
+const paginationPages: (number | "...")[] = [];
+if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) paginationPages.push(i);
+} else {
+    paginationPages.push(1);
+    if (currentPageRes > 3) paginationPages.push("...");
+    const start = Math.max(2, currentPageRes - 1);
+    const end = Math.min(totalPages - 1, currentPageRes + 1);
+    for (let i = start; i <= end; i++) paginationPages.push(i);
+    if (currentPageRes < totalPages - 2) paginationPages.push("...");
+    paginationPages.push(totalPages);
+}
 // Pagination rel links (only for pure page navigation, not search)
 const prevURL = !searchQuery && currentPageRes > 1
     ? teamsPageUrl(currentPageRes - 1, "")
@@ -115,7 +128,7 @@ const nextURL = !searchQuery && currentPageRes < totalPages
     />
 
     <PageLoader client:load />
-    <div id="wrapper">
+    <div id="wrapper" class="teams-page-shell">
         <TopBar />
         <Header client:load currentPath={Astro.url.pathname} />
         <div id="main">
@@ -140,18 +153,61 @@ const nextURL = !searchQuery && currentPageRes < totalPages
                                         xs="50"
                                     />
 
-                                    <h1
-                                        class="heading-font"
-                                        style="text-align: center; margin-bottom: 50px; color: #dd3333;"
-                                    >
-                                        TEAMS
-                                    </h1>
+                                    <section class="teams-hero">
+                                        <div class="teams-hero-copy">
+                                            <p class="teams-eyebrow">
+                                                Club Directory
+                                            </p>
+                                            <h1 class="teams-hero-title heading-font">
+                                                TEAMS
+                                            </h1>
+                                            <p class="teams-hero-description">
+                                                Explore every club in Elevate
+                                                Ballers through a more
+                                                competitive, scoreboard-inspired
+                                                directory built to feel at home
+                                                beside results and standings.
+                                            </p>
+                                        </div>
+                                        <div class="teams-hero-stats">
+                                            <div class="teams-stat-card">
+                                                <span class="teams-stat-label">
+                                                    Clubs listed
+                                                </span>
+                                                <strong class="teams-stat-value">
+                                                    {totalCount}
+                                                </strong>
+                                            </div>
+                                            <div class="teams-stat-card">
+                                                <span class="teams-stat-label">
+                                                    Current page
+                                                </span>
+                                                <strong class="teams-stat-value">
+                                                    {currentPageRes}/{totalPages}
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    </section>
 
                                     <form
                                         class="teams-search-form"
                                         method="get"
                                         action="/teams"
                                     >
+                                        <div class="teams-search-header">
+                                            <div>
+                                                <p class="teams-section-kicker">
+                                                    Search
+                                                </p>
+                                                <h2 class="teams-section-title heading-font">
+                                                    Find a Club
+                                                </h2>
+                                            </div>
+                                            <p class="teams-search-summary">
+                                                Showing {startItem}-{endItem} of{" "}
+                                                {totalCount} teams
+                                            </p>
+                                        </div>
                                         <label
                                             for="teams-search-input"
                                             class="teams-search-label"
@@ -216,37 +272,64 @@ const nextURL = !searchQuery && currentPageRes < totalPages
                                                             href={`/teams/${team.slug}`}
                                                             class="team-card-link"
                                                         >
-                                                            {resolveAssetUrl(
-                                                                team.logo,
-                                                            ) ? (
-                                                                <div class="team-logo">
-                                                                    <img
-                                                                        src={
-                                                                            getDisplayImageUrl(
-                                                                                team.logo,
-                                                                                Astro
-                                                                                    .url
-                                                                                    .origin,
-                                                                            )!
-                                                                        }
-                                                                        alt={`${team.name} logo`}
-                                                                    />
-                                                                </div>
-                                                            ) : (
-                                                                <div class="team-logo-placeholder">
-                                                                    <span class="team-logo-text">
-                                                                        {team.name
-                                                                            .charAt(
-                                                                                0,
-                                                                            )
-                                                                            .toUpperCase()}
-                                                                    </span>
-                                                                </div>
-                                                            )}
+                                                            <div class="team-card-topline">
+                                                                <span class="team-card-chip">
+                                                                    Team
+                                                                </span>
+                                                                <span class="team-card-arrow">
+                                                                    Explore
+                                                                </span>
+                                                            </div>
+                                                            <div class="team-card-main">
+                                                                {resolveAssetUrl(
+                                                                    team.logo,
+                                                                ) ? (
+                                                                    <div class="team-logo">
+                                                                        <img
+                                                                            src={
+                                                                                getDisplayImageUrl(
+                                                                                    team.logo,
+                                                                                    Astro
+                                                                                        .url
+                                                                                        .origin,
+                                                                                )!
+                                                                            }
+                                                                            alt={`${team.name} logo`}
+                                                                        />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div class="team-logo-placeholder">
+                                                                        <span class="team-logo-text">
+                                                                            {team.name
+                                                                                .charAt(
+                                                                                    0,
+                                                                                )
+                                                                                .toUpperCase()}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                             <div class="team-info">
                                                                 <h3 class="team-name">
                                                                     {team.name}
                                                                 </h3>
+                                                                <p class="team-description">
+                                                                    {team.description?.trim()
+                                                                        ? team.description
+                                                                              .trim()
+                                                                              .slice(
+                                                                                  0,
+                                                                                  110,
+                                                                              )
+                                                                        : "Roster, club identity, and squad profile available on the full team page."}
+                                                                    {team.description &&
+                                                                    team.description
+                                                                        .trim()
+                                                                        .length >
+                                                                        110
+                                                                        ? "..."
+                                                                        : ""}
+                                                                </p>
                                                                 <div class="team-stats">
                                                                     <span class="team-player-count">
                                                                         <i
@@ -265,6 +348,12 @@ const nextURL = !searchQuery && currentPageRes < totalPages
                                                                             ? "Player"
                                                                             : "Players"}
                                                                     </span>
+                                                                    <span class="team-card-divider">
+                                                                        /
+                                                                    </span>
+                                                                    <span class="team-roster-link">
+                                                                        View roster
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </a>
@@ -278,9 +367,8 @@ const nextURL = !searchQuery && currentPageRes < totalPages
                                         !hasError && totalCount > 0 && (
                                             <div class="teams-pagination-wrapper">
                                                 <p class="teams-pagination-summary">
-                                                    Showing {startItem}-
-                                                    {endItem} of {totalCount}{" "}
-                                                    teams
+                                                    Page {currentPageRes} of{" "}
+                                                    {totalPages}
                                                 </p>
                                                 {totalPages > 1 && (
                                                     <nav
@@ -311,34 +399,29 @@ const nextURL = !searchQuery && currentPageRes < totalPages
                                                                     </span>
                                                                 )}
                                                             </li>
-                                                            {Array.from(
-                                                                {
-                                                                    length: totalPages,
-                                                                },
-                                                                (_, i) => i + 1,
-                                                            ).map((p) => (
-                                                                <li>
-                                                                    {p ===
-                                                                    currentPageRes ? (
-                                                                        <span
-                                                                            class="teams-pagination-link teams-pagination-link--current"
-                                                                            aria-current="page"
-                                                                        >
-                                                                            {p}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <a
-                                                                            class="teams-pagination-link"
-                                                                            href={teamsPageUrl(
-                                                                                p,
-                                                                                searchQuery,
-                                                                            )}
-                                                                        >
-                                                                            {p}
-                                                                        </a>
-                                                                    )}
-                                                                </li>
-                                                            ))}
+                                                            {paginationPages.map((p) => (
+                                                            <li>
+                                                                {p === "..." ? (
+                                                                    <span class="teams-pagination-link teams-pagination-link--disabled">
+                                                                        &hellip;
+                                                                    </span>
+                                                                ) : p === currentPageRes ? (
+                                                                    <span
+                                                                        class="teams-pagination-link teams-pagination-link--current"
+                                                                        aria-current="page"
+                                                                    >
+                                                                        {p}
+                                                                    </span>
+                                                                ) : (
+                                                                    <a
+                                                                        class="teams-pagination-link"
+                                                                        href={teamsPageUrl(p, searchQuery)}
+                                                                    >
+                                                                        {p}
+                                                                    </a>
+                                                                )}
+                                                            </li>
+                                                        ))}
                                                             <li>
                                                                 {currentPageRes <
                                                                 totalPages ? (
@@ -388,151 +471,253 @@ const nextURL = !searchQuery && currentPageRes < totalPages
     <Footer />
 
 
-    <!-- Additional Scripts and Styles -->
-    <div class="rev-close-btn" aria-hidden="true">
-        <span class="close-left"></span>
-        <span class="close-right"></span>
-    </div>
-
-    <!-- Speculation Rules for Prefetching -->
-    <script is:inline type="speculationrules">
-        {
-            "prefetch": [
-                {
-                    "source": "document",
-                    "where": {
-                        "and": [
-                            { "href_matches": "/*" },
-                            {
-                                "not": {
-                                    "href_matches": [
-                                        "/wp-*.php",
-                                        "/wp-admin/*",
-                                        "/wp-content/uploads/*",
-                                        "/wp-content/*",
-                                        "/wp-content/plugins/*",
-                                        "/wp-content/themes/elevate/*",
-                                        "/*\\?(.+)"
-                                    ]
-                                }
-                            },
-                            {
-                                "not": {
-                                    "selector_matches": "a[rel~=\"nofollow\"]"
-                                }
-                            },
-                            {
-                                "not": {
-                                    "selector_matches": ".no-prefetch, .no-prefetch a"
-                                }
-                            }
-                        ]
-                    },
-                    "eagerness": "conservative"
-                }
-            ]
-        }
-    </script>
-
-    <!-- Header Sponsors -->
-    <div
-        class="sp-header-sponsors"
-        style="margin-top: 10px; margin-right: 10px;"
-        aria-hidden="true"
-    >
-        <div class="sportspress"><div class="sp-sponsors"></div></div>
-    </div>
-
-    <!-- Legacy Scripts -->
-    <script is:inline type="text/javascript">
-        (function () {
-            if (typeof jQuery !== "undefined") {
-                jQuery(document).ready(function ($) {
-                    var header = $(".sp-header");
-                    var sponsors = $(".sp-header-sponsors");
-                    if (header.length && sponsors.length) {
-                        header.prepend(sponsors);
-                    }
-                });
-            }
-        })();
-    </script>
-
-    <script is:inline type="text/javascript">
-        (function () {
-            if (typeof jQuery !== "undefined") {
-                jQuery(document).ready(function ($) {
-                    var header = $(".sp-header-loaded");
-                    var menu = $(".sp-league-menu");
-                    if (header.length && menu.length) {
-                        header.prepend(menu);
-                    }
-                });
-            }
-        })();
-    </script>
-
-    <script is:inline type="text/javascript">
-        (function () {
-            if (typeof jQuery !== "undefined") {
-                jQuery(document).ready(function ($) {
-                    var header = $(".sp-header-loaded");
-                    var scoreboard = $(".sp-header-scoreboard");
-                    if (header.length && scoreboard.length) {
-                        header.prepend(scoreboard);
-                    }
-                });
-            }
-        })();
-    </script>
-
     <style>
         /* Teams Page Styles */
+        :global(body:has(#wrapper.teams-page-shell)),
+        :global(html:has(#wrapper.teams-page-shell)) {
+            background:
+                radial-gradient(
+                    circle at top,
+                    rgba(221, 51, 51, 0.16),
+                    transparent 28%
+                ),
+                linear-gradient(180deg, #12101c 0%, #171326 50%, #14111f 100%);
+        }
+
+        #wrapper.teams-page-shell,
+        #wrapper.teams-page-shell #main {
+            background: transparent;
+        }
+
+        :global(body:has(#wrapper.teams-page-shell) .stm-footer) {
+            background-color: transparent !important;
+            background-image: none !important;
+        }
+
+        .teams-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.95fr);
+            gap: 1.5rem;
+            align-items: stretch;
+            margin-bottom: 2rem;
+        }
+
+        .teams-hero-copy,
+        .teams-hero-stats,
+        .teams-search-form,
+        .teams-pagination-wrapper,
+        .no-teams-message {
+            border: 1px solid rgba(226, 232, 240, 0.18);
+            border-radius: 28px;
+            background:
+                linear-gradient(
+                    180deg,
+                    rgba(27, 22, 41, 0.98) 0%,
+                    rgba(21, 18, 33, 0.98) 100%
+                );
+            box-shadow: 0 24px 50px rgba(4, 6, 18, 0.3);
+        }
+
+        .teams-hero-copy {
+            padding: 2rem;
+        }
+
+        .teams-eyebrow,
+        .teams-section-kicker {
+            margin: 0 0 0.65rem 0;
+            font-family: "Rubik", sans-serif;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #f8b71d;
+        }
+
+        .teams-hero-title {
+            margin: 0;
+            font-size: clamp(3rem, 6vw, 4.6rem);
+            line-height: 0.92;
+            color: #fff6eb;
+        }
+
+        .teams-hero-description,
+        .teams-search-summary,
+        .team-description,
+        .teams-pagination-summary,
+        .no-teams-message,
+        .no-teams-message a {
+            font-family: "Rubik", sans-serif;
+            color: #9fb0d1;
+        }
+
+        .teams-hero-description {
+            margin: 1rem 0 0 0;
+            max-width: 42rem;
+            font-size: 1rem;
+            line-height: 1.8;
+        }
+
+        .teams-hero-stats {
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.85rem;
+        }
+
+        .teams-stat-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            min-height: 150px;
+            padding: 1.2rem;
+            border-radius: 22px;
+            background: rgba(14, 12, 22, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.08);
+        }
+
+        .teams-stat-label {
+            font-family: "Rubik", sans-serif;
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #8ba0c7;
+        }
+
+        .teams-stat-value {
+            margin-top: 0.6rem;
+            font-family: "Teko", sans-serif;
+            font-size: 2.6rem;
+            line-height: 1;
+            color: #fff;
+            letter-spacing: 0.04em;
+        }
+
+        .teams-search-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .teams-section-title {
+            margin: 0;
+            color: #fff;
+            font-size: clamp(2rem, 3vw, 2.8rem);
+            line-height: 1;
+        }
+
+        .teams-search-summary,
+        .teams-pagination-summary {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
         .no-teams-message {
             text-align: center;
-            padding: 3rem;
-            color: #666;
-            font-family: "Rubik", sans-serif;
+            padding: 3rem 2rem;
             font-size: 16px;
         }
 
         .teams-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
         .team-card {
-            background: #fff;
-            border-radius: 8px;
+            border-radius: 28px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background:
+                linear-gradient(
+                    180deg,
+                    rgba(24, 20, 37, 0.98) 0%,
+                    rgba(17, 14, 27, 0.98) 100%
+                );
+            border: 1px solid rgba(226, 232, 240, 0.12);
+            box-shadow: 0 22px 44px rgba(8, 10, 23, 0.28);
             transition:
                 transform 0.3s ease,
-                box-shadow 0.3s ease;
+                box-shadow 0.3s ease,
+                border-color 0.3s ease;
         }
 
         .team-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 28px 52px rgba(8, 10, 23, 0.34);
+            border-color: rgba(248, 183, 29, 0.34);
+        }
+
+        .team-card:has(.team-card-link:focus-visible) {
+            transform: translateY(-5px);
+            border-color: rgba(248, 183, 29, 0.5);
+            box-shadow:
+                0 28px 52px rgba(8, 10, 23, 0.34),
+                0 0 0 3px rgba(248, 183, 29, 0.25);
+        }
+
+        .team-card-link:focus-visible {
+            outline: none;
         }
 
         .team-card-link {
-            display: block;
+            display: flex;
+            flex-direction: column;
             text-decoration: none;
-            color: inherit;
+            color: #fff;
+            height: 100%;
         }
 
-        .team-logo {
+        .team-card-topline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem 0 1.25rem;
+        }
+
+        .team-card-chip,
+        .team-card-arrow {
+            font-family: "Rubik", sans-serif;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .team-card-chip {
+            color: #161321;
+            background: #ffc53d;
+            border-radius: 999px;
+            padding: 0.36rem 0.72rem;
+        }
+
+        .team-card-arrow {
+            color: #9fb0d1;
+        }
+
+        .team-card-main {
+            padding: 1rem 1.25rem 0 1.25rem;
+        }
+
+        .team-logo,
+        .team-logo-placeholder {
             width: 100%;
-            height: 200px;
+            height: 220px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f8f9fa;
-            padding: 1.5rem;
+            border-radius: 24px;
+            padding: 1.75rem;
             overflow: hidden;
+            background:
+                radial-gradient(
+                    circle at top,
+                    rgba(248, 183, 29, 0.12),
+                    transparent 26%
+                ),
+                linear-gradient(180deg, #221d35, #161321);
         }
 
         .team-logo img {
@@ -542,11 +727,6 @@ const nextURL = !searchQuery && currentPageRes < totalPages
         }
 
         .team-logo-placeholder {
-            width: 100%;
-            height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             background: linear-gradient(135deg, #dd3333 0%, #b82828 100%);
         }
 
@@ -558,25 +738,26 @@ const nextURL = !searchQuery && currentPageRes < totalPages
         }
 
         .team-info {
-            padding: 1.5rem;
+            padding: 1.35rem 1.25rem 1.25rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
         }
 
         .team-name {
             font-family: "Teko", sans-serif;
-            font-size: 24px;
-            line-height: 28px;
-            color: #dd3333;
-            margin: 0 0 1rem 0;
+            font-size: 2.05rem;
+            line-height: 0.95;
+            color: #fff;
+            margin: 0 0 0.8rem 0;
             font-weight: 700;
             text-transform: uppercase;
         }
 
         .team-description {
-            font-family: "Rubik", sans-serif;
-            font-size: 14px;
-            line-height: 20px;
-            color: #666;
-            margin: 0 0 1rem 0;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            margin: 0 0 1.2rem 0;
         }
 
         .team-stats {
@@ -584,35 +765,43 @@ const nextURL = !searchQuery && currentPageRes < totalPages
             align-items: center;
             gap: 0.5rem;
             padding-top: 1rem;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid rgba(226, 232, 240, 0.12);
+            margin-top: auto;
+            flex-wrap: wrap;
         }
 
-        .team-player-count {
+        .team-player-count,
+        .team-roster-link,
+        .team-card-divider {
             font-family: "Rubik", sans-serif;
-            font-size: 14px;
-            color: #666;
+            font-size: 0.88rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
+        .team-player-count,
+        .team-card-divider {
+            color: #9fb0d1;
+        }
+
+        .team-roster-link {
+            color: #fff5df;
+            font-weight: 600;
+        }
+
         .team-player-count i {
-            color: #dd3333;
+            color: #f8b71d;
         }
 
         .teams-pagination-wrapper {
             margin-top: 2.5rem;
+            padding: 1.2rem 1.5rem;
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
             gap: 1rem;
-        }
-
-        .teams-pagination-summary {
-            font-family: "Rubik", sans-serif;
-            font-size: 14px;
-            color: #666;
-            margin: 0;
         }
 
         .teams-pagination-list {
@@ -631,45 +820,50 @@ const nextURL = !searchQuery && currentPageRes < totalPages
             align-items: center;
             justify-content: center;
             min-width: 2.25rem;
-            height: 2.25rem;
-            padding: 0 0.5rem;
+            height: 2.7rem;
+            padding: 0 0.85rem;
             font-family: "Rubik", sans-serif;
             font-size: 14px;
-            font-weight: 500;
-            color: #dd3333;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
+            font-weight: 700;
+            color: #f7f1e6;
+            background: rgba(20, 17, 31, 0.96);
+            border: 1px solid rgba(226, 232, 240, 0.12);
+            border-radius: 14px;
             text-decoration: none;
             transition:
                 background 0.2s,
-                border-color 0.2s;
+                border-color 0.2s,
+                color 0.2s;
         }
 
         .teams-pagination-link:hover:not(.teams-pagination-link--disabled):not(
                 .teams-pagination-link--current
             ) {
-            background: #f8f9fa;
-            border-color: #dd3333;
+            background: rgba(31, 26, 46, 0.98);
+            border-color: rgba(248, 183, 29, 0.34);
+        }
+
+        .teams-pagination-link:focus-visible {
+            outline: none;
+            border-color: rgba(248, 183, 29, 0.5);
+            box-shadow: 0 0 0 3px rgba(248, 183, 29, 0.25);
         }
 
         .teams-pagination-link--current {
-            background: #dd3333;
-            border-color: #dd3333;
-            color: #fff;
+            background: #f7f1e6;
+            border-color: #f7f1e6;
+            color: #161321;
             cursor: default;
         }
 
         .teams-pagination-link--disabled {
-            color: #9ca3af;
+            color: #7d8dae;
             cursor: not-allowed;
         }
 
         .teams-search-form {
             margin-bottom: 2rem;
-            max-width: 420px;
-            margin-left: auto;
-            margin-right: auto;
+            padding: 1.5rem;
         }
 
         .teams-search-label {
@@ -677,8 +871,8 @@ const nextURL = !searchQuery && currentPageRes < totalPages
             font-family: "Rubik", sans-serif;
             font-size: 14px;
             font-weight: 500;
-            color: #374151;
-            margin-bottom: 0.5rem;
+            color: #d8e0f1;
+            margin: 1rem 0 0.5rem 0;
         }
 
         .teams-search-row {
@@ -691,59 +885,83 @@ const nextURL = !searchQuery && currentPageRes < totalPages
         .teams-search-input {
             flex: 1;
             min-width: 180px;
-            height: 2.5rem;
-            padding: 0 0.75rem;
+            height: 3.2rem;
+            padding: 0 1rem;
             font-family: "Rubik", sans-serif;
             font-size: 14px;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            color: #374151;
+            border: 1px solid rgba(226, 232, 240, 0.12);
+            border-radius: 16px;
+            color: #fff;
+            background: rgba(14, 12, 22, 0.92);
         }
 
         .teams-search-input:focus {
             outline: none;
-            border-color: #dd3333;
-            box-shadow: 0 0 0 2px rgba(221, 51, 51, 0.2);
+            border-color: rgba(248, 183, 29, 0.45);
+            box-shadow: 0 0 0 3px rgba(248, 183, 29, 0.14);
         }
 
         .teams-search-input::placeholder {
-            color: #9ca3af;
+            color: #7d8dae;
         }
 
         .teams-search-button {
-            height: 2.5rem;
-            padding: 0 1rem;
+            position: relative;
+            z-index: 0;
+            height: 3.2rem;
+            padding: 0 1.35rem;
             font-family: "Rubik", sans-serif;
             font-size: 14px;
-            font-weight: 500;
-            color: #fff;
-            background: #dd3333;
-            border: none;
-            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #161321;
+            background: #ffc53d;
+            border: 1px solid #ffc53d;
+            border-radius: 16px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition:
+                transform 0.2s,
+                filter 0.2s;
         }
 
         .teams-search-button:hover {
-            background: #b82828;
+            transform: translateY(-1px);
+            filter: brightness(1.02);
+        }
+
+        .teams-search-button::before,
+        .teams-search-button::after {
+            content: none !important;
+            display: none !important;
         }
 
         .teams-search-clear {
             font-family: "Rubik", sans-serif;
             font-size: 14px;
-            color: #dd3333;
+            color: #f8b71d;
             text-decoration: none;
+            font-weight: 600;
         }
 
         .teams-search-clear:hover {
             text-decoration: underline;
         }
 
-        /* Responsive Styles */
+        @media (max-width: 1100px) {
+            .teams-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 991px) {
             .teams-grid {
                 grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
                 gap: 1.5rem;
+            }
+
+            .teams-hero-stats {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -751,6 +969,12 @@ const nextURL = !searchQuery && currentPageRes < totalPages
             .teams-grid {
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
+            }
+
+            .teams-search-header,
+            .teams-pagination-wrapper {
+                align-items: flex-start;
+                flex-direction: column;
             }
 
             .team-logo,
@@ -763,25 +987,17 @@ const nextURL = !searchQuery && currentPageRes < totalPages
             }
 
             .team-name {
-                font-size: 20px;
-                line-height: 24px;
+                font-size: 1.8rem;
+            }
+
+            .teams-search-form,
+            .teams-hero-copy,
+            .teams-hero-stats,
+            .teams-pagination-wrapper,
+            .no-teams-message {
+                border-radius: 22px;
             }
         }
 
-        /* Page title styling - matching players page */
-        .wpb_wrapper h2.heading-font {
-            font-size: 40px;
-            line-height: 44px;
-            margin-bottom: 50px;
-            color: #dd3333 !important;
-        }
-
-        .sp-footer-sponsors {
-            background: #f4f4f4;
-            color: #363f48;
-        }
-        .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
-            color: #363f48;
-        }
     </style>
 </Layout>
