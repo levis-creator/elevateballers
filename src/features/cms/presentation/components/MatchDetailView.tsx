@@ -1554,7 +1554,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                     className="w-24 h-24 mx-auto mb-4 object-contain" 
                   />
                   <h2 className="text-2xl font-heading font-semibold mb-2">{team1Name}</h2>
-                  {match.team1Score !== null && match.team1Score !== undefined && (
+                  {match.status !== 'LIVE' && match.team1Score !== null && match.team1Score !== undefined && (
                     <div className="text-5xl font-bold">{match.team1Score}</div>
             )}
                   {team1IsWinner && (
@@ -1616,7 +1616,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                     className="w-24 h-24 mx-auto mb-4 object-contain" 
                   />
                   <h2 className="text-2xl font-heading font-semibold mb-2">{team2Name}</h2>
-                  {match.team2Score !== null && match.team2Score !== undefined && (
+                  {match.status !== 'LIVE' && match.team2Score !== null && match.team2Score !== undefined && (
                     <div className="text-5xl font-bold">{match.team2Score}</div>
             )}
                   {team2IsWinner && (
