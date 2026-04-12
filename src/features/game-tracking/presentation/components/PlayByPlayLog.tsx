@@ -3,7 +3,7 @@
  * Displays chronological list of game events
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,9 +56,13 @@ export default function PlayByPlayLog({ matchId, onRefresh, refreshTrigger }: Pl
     fetchPlayByPlay();
   }, [matchId, refreshTrigger]);
 
+  const fetchingRef = useRef(false);
+
   const fetchPlayByPlay = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
-      setLoading(true);
+      if (events.length === 0) setLoading(true);
       setError(null);
       const response = await fetch(`/api/games/${matchId}/play-by-play`);
       if (!response.ok) {
@@ -71,6 +75,7 @@ export default function PlayByPlayLog({ matchId, onRefresh, refreshTrigger }: Pl
       setError(err.message || 'Failed to load play-by-play');
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
 

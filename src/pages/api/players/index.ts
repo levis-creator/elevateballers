@@ -59,7 +59,10 @@ export const GET: APIRoute = async ({ request }) => {
     const players = await getPlayers(teamId, includeUnapproved);
 
     return new Response(JSON.stringify(players), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': includeUnapproved ? 'no-cache' : 'public, s-maxage=120, stale-while-revalidate=60',
+      },
     });
   } catch (error) {
     return handleApiError(error, 'fetch players', request);

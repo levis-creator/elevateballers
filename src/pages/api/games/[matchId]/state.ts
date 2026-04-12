@@ -66,7 +66,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const success = await updateGameState(matchId, data);
 
     if (!success) {
-      return handleApiError(error, "update game state");
+      return new Response(JSON.stringify({ error: 'Failed to update game state' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const updatedState = await getGameState(matchId);

@@ -101,7 +101,10 @@ export const GET: APIRoute = async ({ request }) => {
     const cached = await cacheGet<unknown[]>(cacheKey);
     if (cached) {
       return new Response(JSON.stringify(cached), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=120',
+        },
       });
     }
 
@@ -174,10 +177,13 @@ export const GET: APIRoute = async ({ request }) => {
       },
     }));
 
-    await cacheSet(cacheKey, response, 300); // 5 min TTL
+    await cacheSet(cacheKey, response, 1800); // 30 min TTL — invalidated on game end
 
     return new Response(JSON.stringify(response), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=120',
+      },
     });
   } catch (error) {
     return handleApiError(error, 'fetch stats leaders', request);

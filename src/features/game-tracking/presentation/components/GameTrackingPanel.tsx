@@ -40,16 +40,18 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
   } = useGameTrackingStore();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [timerWarning, setTimerWarning] = useState<string | null>(null);
+  const [isEndingGame, setIsEndingGame] = useState(false);
 
   useEffect(() => {
     if (matchId) {
       fetchGameState(matchId);
-      // Set up polling for live games (every 2 seconds)
+      // Poll for state sync (scores, period, fouls, etc.) — not for clock ticks.
+      // The web worker handles clock display locally.
       const interval = setInterval(() => {
         if (match?.status === 'LIVE') {
           fetchGameState(matchId);
         }
-      }, 2000);
+      }, 10000);
 
       return () => clearInterval(interval);
     }
@@ -63,28 +65,30 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
 
   const handleEndGame = async () => {
     if (window.confirm('Are you sure you want to end this game? This action cannot be undone.')) {
-      await endGame(matchId);
-      // Refresh match data
-      if (match) {
-        window.location.reload();
+      setIsEndingGame(true);
+      try {
+        await endGame(matchId);
+        if (onRefresh) onRefresh();
+      } catch {
+        // keep button enabled so user can retry
+      } finally {
+        setIsEndingGame(false);
       }
     }
   };
 
-  const handleToggleClock = async () => {
+  const handleToggleClock = () => {
     // Check if timer is set before allowing start
     if (!gameState?.clockRunning) {
-      // Timer is paused, check if it's set before allowing start
       if (localClockSeconds === null || localClockSeconds === 0) {
         setTimerWarning('Please set the timer duration before starting. Use the Settings button or click on the timer to set the time.');
-        // Auto-dismiss after 5 seconds
         setTimeout(() => setTimerWarning(null), 5000);
         return;
       }
     }
-    // Clear any existing warning when successfully toggling
     setTimerWarning(null);
-    await toggleClock(matchId);
+    // Fire and forget — store handles optimistic update + background persist
+    toggleClock(matchId);
   };
 
   const handleEventRecorded = async () => {
@@ -127,7 +131,7 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
       });
     }
 
-    handleEventRecorded();
+    await handleEventRecorded();
   };
 
   const team1Name = match ? getTeam1Name(match) : undefined;
@@ -183,12 +187,12 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
               </div>
               <Button
                 onClick={handleEndGame}
-                disabled={isLoading}
+                disabled={isEndingGame}
                 variant="destructive"
                 size="lg"
                 className="min-w-[150px]"
               >
-                {isLoading ? 'Ending...' : 'End Game'}
+                {isEndingGame ? 'Ending...' : 'End Game'}
               </Button>
             </div>
           </CardContent>

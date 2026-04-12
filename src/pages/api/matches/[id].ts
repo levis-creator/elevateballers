@@ -7,7 +7,7 @@ import { json, handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params, url }) => {
+export const GET: APIRoute = async ({ params, url, request }) => {
   try {
     const includeDetails = url.searchParams.get('includeDetails') === 'true';
     const match = includeDetails
@@ -16,10 +16,15 @@ export const GET: APIRoute = async ({ params, url }) => {
 
     if (!match) return json({ error: 'Match not found' }, 404);
 
+    // Completed matches are immutable — cache aggressively
+    const cacheControl = match.status === 'COMPLETED'
+      ? 'public, s-maxage=3600, stale-while-revalidate=300'
+      : 'no-store, max-age=0';
+
     return new Response(JSON.stringify(match), {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, max-age=0',
+        'Cache-Control': cacheControl,
       },
     });
   } catch (error) {

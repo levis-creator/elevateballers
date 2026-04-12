@@ -38,6 +38,7 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
           ...(leagueId && { leagueId }),
           ...(seasonId && { seasonId }),
         },
+        select: { team1Score: true, team2Score: true },
       },
       team2Matches: {
         where: {
@@ -45,6 +46,7 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
           ...(leagueId && { leagueId }),
           ...(seasonId && { seasonId }),
         },
+        select: { team1Score: true, team2Score: true },
       },
     },
   });
@@ -123,6 +125,6 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
     rank: index + 1,
   }));
 
-  await cacheSet(cacheKey, result, 300); // 5 min TTL
+  await cacheSet(cacheKey, result, 1800); // 30 min TTL — invalidated on game end via QStash
   return result;
 }

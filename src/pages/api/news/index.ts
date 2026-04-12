@@ -68,7 +68,10 @@ export const GET: APIRoute = async ({ request }) => {
     } as NewsArticleDTO));
 
     return new Response(JSON.stringify(articlesWithComments), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': admin ? 'no-cache' : 'public, s-maxage=120, stale-while-revalidate=60',
+      },
     });
   } catch (error) {
     // Handle invalid date errors specifically — return empty array instead of crashing
@@ -119,13 +122,6 @@ export const POST: APIRoute = async ({ request }) => {
     // Map category from frontend format to Prisma enum
     const category = categoryMap[data.category] || data.category;
 
-    // Log content for verification
-    console.log('Creating article with content:', {
-      contentLength: data.content?.length || 0,
-      contentPreview: data.content?.substring(0, 200) + '...',
-      hasHTML: data.content?.includes('<') || false,
-    });
-
     const article = await createNewsArticle({
       title: data.title,
       slug,
@@ -144,13 +140,6 @@ export const POST: APIRoute = async ({ request }) => {
       title: article.title,
       published: article.published,
     }).catch(() => {});
-
-    // Verify content was stored
-    console.log('Article created successfully:', {
-      id: article.id,
-      title: article.title,
-      storedContentLength: article.content?.length || 0,
-    });
 
     return new Response(JSON.stringify(article), {
       status: 201,

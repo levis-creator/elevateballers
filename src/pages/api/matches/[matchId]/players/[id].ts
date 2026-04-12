@@ -97,7 +97,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     const success = await deleteMatchPlayer(id);
     if (!success) {
-      return handleApiError(error, "delete match player");
+      return new Response(JSON.stringify({ error: 'Failed to delete match player' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'MATCH_PLAYER_REMOVED', {

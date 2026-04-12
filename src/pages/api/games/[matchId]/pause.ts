@@ -37,7 +37,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     const success = await toggleGameClock(matchId, running, clockSeconds);
 
     if (!success) {
-      return handleApiError(error, "toggle game clock");
+      return new Response(JSON.stringify({ error: 'Failed to toggle game clock' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const state = await getGameState(matchId);
