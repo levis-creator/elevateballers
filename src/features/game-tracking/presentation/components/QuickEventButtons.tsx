@@ -17,7 +17,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Zap, CheckCircle } from 'lucide-react';
 import type { GameStateData, MatchWithGameState } from '../../types';
-import type { Match, Player } from '@prisma/client';
+import type { Player } from '@prisma/client';
 import type { MatchPlayerWithDetails } from '../../../cms/types';
 import { getTeam1Id, getTeam2Id, getTeam1Name, getTeam2Name } from '../../../matches/lib/team-helpers';
 import { useGameTrackingStore } from '../../stores/useGameTrackingStore';
@@ -69,10 +69,9 @@ export default function QuickEventButtons({
   match,
   gameState,
   onEventRecorded,
-  refreshTrigger,
   matchPlayers: matchPlayersProp,
 }: QuickEventButtonsProps) {
-  const { localClockSeconds, updateGameState } = useGameTrackingStore();
+  const { localClockSeconds, updateGameState, setGameState } = useGameTrackingStore();
   const [teamId, setTeamId] = useState<string>('');
   const [playerId, setPlayerId] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -137,6 +136,40 @@ export default function QuickEventButtons({
     }
   }, [success]);
 
+  const getScoreValue = (eventType: QuickEventType): number => {
+    switch (eventType) {
+      case 'TWO_POINT_MADE':
+        return 2;
+      case 'THREE_POINT_MADE':
+        return 3;
+      case 'FREE_THROW_MADE':
+        return 1;
+      default:
+        return 0;
+    }
+  };
+
+  const applyOptimisticScore = (eventType: QuickEventType, scoringTeamId: string) => {
+    const points = getScoreValue(eventType);
+    if (!points || !gameState) return null;
+
+    const previousState = { ...gameState };
+
+    if (scoringTeamId === team1Id) {
+      setGameState({
+        ...gameState,
+        team1Score: gameState.team1Score + points,
+      });
+    } else if (scoringTeamId === team2Id) {
+      setGameState({
+        ...gameState,
+        team2Score: gameState.team2Score + points,
+      });
+    }
+
+    return previousState;
+  };
+
   const handleSetPossession = (targetTeamId: string) => {
     if (!matchId || !targetTeamId) return;
 
@@ -150,6 +183,7 @@ export default function QuickEventButtons({
     // Optimistic feedback
     setError(null);
     setSuccess(`Possession switched to ${teamName}`);
+    setLoading(true);
 
     // Fire-and-forget persistence
     (async () => {
@@ -171,6 +205,8 @@ export default function QuickEventButtons({
       } catch (err: any) {
         setError(err.message || 'Failed to update possession');
         setSuccess(null);
+      } finally {
+        setLoading(false);
       }
     })();
   };
@@ -202,6 +238,8 @@ export default function QuickEventButtons({
     setError(null);
     setSuccess('Event recorded');
     setPlayerId('');
+    const previousState = applyOptimisticScore(eventType, teamId);
+    setLoading(true);
 
     // Fire-and-forget persistence
     (async () => {
@@ -229,9 +267,14 @@ export default function QuickEventButtons({
           await enqueue(eventPayload);
           setSuccess('Saved offline — will sync when reconnected');
         } catch {
+          if (previousState) {
+            setGameState(previousState);
+          }
           setError('Failed to record event');
           setSuccess(null);
         }
+      } finally {
+        setLoading(false);
       }
     })();
   };
