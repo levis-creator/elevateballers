@@ -336,8 +336,8 @@ export async function getPlayByPlay(matchId: string): Promise<PlayByPlayData> {
         team: true,
       },
       orderBy: [
-        { period: 'asc' },
-        { sequenceNumber: 'asc' },
+        { period: 'desc' },
+        { sequenceNumber: 'desc' },
       ],
     }),
     getMatchPeriods(matchId),

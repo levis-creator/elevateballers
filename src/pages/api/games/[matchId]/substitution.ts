@@ -53,7 +53,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!substitution) {
-      return handleApiError(error, "create substitution");
+      return new Response(JSON.stringify({ error: 'Failed to create substitution' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'GAME_SUBSTITUTION_RECORDED', {

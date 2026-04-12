@@ -1,6 +1,13 @@
 ---
 export const prerender = false;
 
+// Edge cache the homepage for 60s — most visitors see the exact same content
+// so serving from cache avoids running ~8 DB queries per visit.
+Astro.response.headers.set(
+  'Cache-Control',
+  'public, s-maxage=60, stale-while-revalidate=120'
+);
+
 import Layout from "../layouts/Layout.astro";
 import TopBar from "../features/layout/components/TopBar.astro";
 import Header from "../features/layout/components/Header";

@@ -56,7 +56,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const matchPlayer = await updateMatchPlayer(id, body);
 
     if (!matchPlayer) {
-      return handleApiError(error, "update match player");
+      return new Response(JSON.stringify({ error: 'Failed to update match player' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'MATCH_PLAYER_UPDATED', {

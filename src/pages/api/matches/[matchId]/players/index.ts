@@ -26,7 +26,12 @@ export const GET: APIRoute = async ({ params, url, request }) => {
 
     return new Response(JSON.stringify(players), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Match players only change on substitutions — cache briefly at edge
+        // to absorb polling bursts from multiple concurrent admins/viewers.
+        'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30',
+      },
     });
   } catch (error: any) {
     console.error('Error fetching match players:', error);
@@ -60,7 +65,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!matchPlayer) {
-      return handleApiError(error, "create match player");
+      return new Response(JSON.stringify({ error: 'Failed to create match player' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'MATCH_PLAYER_ADDED', {

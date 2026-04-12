@@ -163,10 +163,13 @@ export default function GameClock({
     const worker = workerRef.current;
     if (!worker) return;
 
-    if (gameState?.clockRunning && gameState?.clockStartedAt && gameState?.clockSecondsAtStart != null) {
+    const isActive = !!(gameState?.clockRunning && gameState?.clockStartedAt && gameState?.clockSecondsAtStart != null);
+    let cancelled = false;
+
+    if (isActive) {
       // Compute accurate remaining from server timestamp
-      const elapsed = Math.floor((Date.now() - new Date(gameState.clockStartedAt).getTime()) / 1000);
-      const remaining = Math.max(0, gameState.clockSecondsAtStart - elapsed);
+      const elapsed = Math.floor((Date.now() - new Date(gameState!.clockStartedAt!).getTime()) / 1000);
+      const remaining = Math.max(0, gameState!.clockSecondsAtStart! - elapsed);
 
       if (remaining > 0) {
         worker.postMessage({ type: 'START', remainingSeconds: remaining });
@@ -175,19 +178,22 @@ export default function GameClock({
       }
 
       worker.onmessage = (e: MessageEvent) => {
+        if (cancelled) return; // Ignore late TICKs after pause
         const { type: msgType, remainingSeconds } = e.data;
         if (msgType === 'TICK') {
           setLocalClockSeconds(remainingSeconds);
         }
-        // EXPIRED is handled by the auto-pause check interval
       };
     } else {
-      // Clock is paused or not initialized — stop the worker
+      // Clock is paused or not initialized — stop the worker and ignore any in-flight ticks
       worker.postMessage({ type: 'STOP' });
+      worker.onmessage = null;
     }
 
     return () => {
+      cancelled = true;
       worker.postMessage({ type: 'STOP' });
+      worker.onmessage = null;
     };
   }, [gameState?.clockRunning, gameState?.clockStartedAt, gameState?.clockSecondsAtStart, setLocalClockSeconds]);
 

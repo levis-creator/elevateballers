@@ -1,6 +1,12 @@
 ---
 export const prerender = false;
 
+// Edge cache teams directory for 2 min
+Astro.response.headers.set(
+  'Cache-Control',
+  'public, s-maxage=120, stale-while-revalidate=300'
+);
+
 import Layout from "../../layouts/Layout.astro";
 import TopBar from "../../features/layout/components/TopBar.astro";
 import Header from "../../features/layout/components/Header";

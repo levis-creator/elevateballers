@@ -3,7 +3,7 @@
  * Provides rapid event entry buttons for common game events
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -30,6 +30,7 @@ interface QuickEventButtonsProps {
   gameState: GameStateData | null;
   onEventRecorded?: () => void;
   refreshTrigger?: number;
+  matchPlayers?: MatchPlayerWithDetails[];
 }
 
 type QuickEventType =
@@ -69,6 +70,7 @@ export default function QuickEventButtons({
   gameState,
   onEventRecorded,
   refreshTrigger,
+  matchPlayers: matchPlayersProp,
 }: QuickEventButtonsProps) {
   const { localClockSeconds, updateGameState } = useGameTrackingStore();
   const [teamId, setTeamId] = useState<string>('');
@@ -76,7 +78,9 @@ export default function QuickEventButtons({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [matchPlayers, setMatchPlayers] = useState<MatchPlayerWithDetails[]>([]);
+
+  // Use matchPlayers from parent (single source of truth in GameTrackingPanel)
+  const matchPlayers = matchPlayersProp ?? [];
 
   const { isOnline, pendingCount, enqueue, syncNow } = useOfflineSync(matchId, onEventRecorded);
 
@@ -103,24 +107,6 @@ export default function QuickEventButtons({
       })()
     : [];
 
-  const fetchingRef = useRef(false);
-
-  const fetchMatchPlayers = useCallback(async () => {
-    if (!matchId || fetchingRef.current) return;
-    fetchingRef.current = true;
-    try {
-      const response = await fetch(`/api/matches/${matchId}/players`);
-      if (response.ok) {
-        const data = await response.json();
-        setMatchPlayers(data || []);
-      }
-    } catch (err) {
-      // Silently ignore — will retry on next trigger
-    } finally {
-      fetchingRef.current = false;
-    }
-  }, [matchId]);
-
   // Set default team when component mounts
   useEffect(() => {
     if (team1Id && !teamId) {
@@ -128,13 +114,6 @@ export default function QuickEventButtons({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [team1Id]);
-
-  // Fetch players when component mounts
-  useEffect(() => {
-    if (matchId) {
-      fetchMatchPlayers();
-    }
-  }, [matchId, fetchMatchPlayers]);
 
   // Reset player selection when team changes
   useEffect(() => {
@@ -148,13 +127,6 @@ export default function QuickEventButtons({
     }
   }, [teamPlayers, playerId]);
 
-  // Refresh match players when refreshTrigger changes (e.g., after substitutions)
-  useEffect(() => {
-    if (refreshTrigger !== undefined && refreshTrigger > 0) {
-      fetchMatchPlayers();
-    }
-  }, [refreshTrigger, fetchMatchPlayers]);
-
   // Auto-hide success message after 3 seconds
   useEffect(() => {
     if (success) {
@@ -165,121 +137,103 @@ export default function QuickEventButtons({
     }
   }, [success]);
 
-  const handleSetPossession = async (targetTeamId: string) => {
+  const handleSetPossession = (targetTeamId: string) => {
     if (!matchId || !targetTeamId) return;
-    
-    setLoading(true);
+
+    const teamName = targetTeamId === team1Id ? team1Name : team2Name;
+    const currentPeriod = gameState?.period ?? 1;
+    const minutesPerPeriod = match?.gameRules?.minutesPerPeriod ?? 10;
+    const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
+    const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
+    const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
+
+    // Optimistic feedback
     setError(null);
-    try {
-      await updateGameState(matchId, { possessionTeamId: targetTeamId });
-      
-      const teamName = targetTeamId === team1Id ? team1Name : team2Name;
-      const currentPeriod = gameState?.period ?? 1;
-      const minutesPerPeriod = match?.gameRules?.minutesPerPeriod ?? 10;
-      const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
-      const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
-      const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
+    setSuccess(`Possession switched to ${teamName}`);
 
-      // Log possession change event
-      await fetch(`/api/matches/${matchId}/events`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: 'OTHER',
-          teamId: targetTeamId,
-          description: `Possession: ${teamName}`,
-          minute: calculatedMinute,
-          period: currentPeriod,
-          secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
-        }),
-      });
-
-      setSuccess(`Possession switched to ${teamName}`);
-      onEventRecorded?.();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update possession');
-    } finally {
-      setLoading(false);
-    }
+    // Fire-and-forget persistence
+    (async () => {
+      try {
+        await updateGameState(matchId, { possessionTeamId: targetTeamId });
+        await fetch(`/api/matches/${matchId}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventType: 'OTHER',
+            teamId: targetTeamId,
+            description: `Possession: ${teamName}`,
+            minute: calculatedMinute,
+            period: currentPeriod,
+            secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+          }),
+        });
+        onEventRecorded?.();
+      } catch (err: any) {
+        setError(err.message || 'Failed to update possession');
+        setSuccess(null);
+      }
+    })();
   };
 
-  const handleQuickEvent = async (eventType: QuickEventType) => {
+  const handleQuickEvent = (eventType: QuickEventType) => {
     if (!teamId || !playerId) {
       setError('Please select team and player first');
       return;
     }
 
+    // Compute game minute based on period and clock
+    const minutesPerPeriod = match?.gameRules?.minutesPerPeriod ?? 10;
+    const currentPeriod = gameState?.period ?? 1;
+    const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
+    const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
+    const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
+
+    const eventPayload = {
+      matchId,
+      eventType,
+      teamId,
+      playerId,
+      minute: calculatedMinute,
+      period: currentPeriod,
+      secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+    };
+
+    // Optimistic UI — show success immediately, clear inputs, don't block
     setError(null);
-    setLoading(true);
+    setSuccess('Event recorded');
+    setPlayerId('');
 
-    try {
-      // Calculate current game minute based on period and clock
-      const minutesPerPeriod = match?.gameRules?.minutesPerPeriod ?? 10;
-      const currentPeriod = gameState?.period ?? 1;
-      const secondsInPeriod = (localClockSeconds ?? gameState?.clockSeconds ?? (minutesPerPeriod * 60));
-      const elapsedSecondsInPeriod = (minutesPerPeriod * 60) - secondsInPeriod;
-      
-      // Cumulative minute: (periods completed * minutes per period) + (minutes elapsed in current period)
-      // We use Math.floor(elapsedSecondsInPeriod / 60) + 1 to get current minute (1-indexed)
-      const calculatedMinute = ((currentPeriod - 1) * minutesPerPeriod) + Math.floor(elapsedSecondsInPeriod / 60) + 1;
-
-      const eventPayload = {
-        matchId,
-        eventType,
-        teamId,
-        playerId,
-        minute: calculatedMinute,
-        period: currentPeriod,
-        secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
-      };
-
-      // Offline-first: attempt server POST, fall back to local queue on failure
-      let savedOffline = false;
-      if (!navigator.onLine) {
-        await enqueue(eventPayload);
-        savedOffline = true;
-      } else {
+    // Fire-and-forget persistence
+    (async () => {
+      try {
+        if (!navigator.onLine) {
+          await enqueue(eventPayload);
+          setSuccess('Saved offline — will sync when reconnected');
+          return;
+        }
+        const response = await fetch(`/api/matches/${matchId}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventPayload),
+        });
+        if (!response.ok) {
+          // Try to buffer locally on server error
+          await enqueue(eventPayload);
+          setSuccess('Saved offline — will sync when reconnected');
+          return;
+        }
+        onEventRecorded?.();
+      } catch {
+        // Network failure — buffer locally
         try {
-          const response = await fetch(`/api/matches/${matchId}/events`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(eventPayload),
-          });
-
-          if (!response.ok) {
-            let errorMessage = 'Failed to record event';
-            try {
-              const errorData = await response.json();
-              errorMessage = errorData.error || errorMessage;
-            } catch {
-              errorMessage = `Server error: ${response.status} ${response.statusText}`;
-            }
-            throw new Error(errorMessage);
-          }
-        } catch (networkErr: any) {
-          // Network failure — buffer locally and continue
-          if (!networkErr?.message?.startsWith('Server error:') && !networkErr?.message?.startsWith('Failed to record')) {
-            await enqueue(eventPayload);
-            savedOffline = true;
-          } else {
-            throw networkErr;
-          }
+          await enqueue(eventPayload);
+          setSuccess('Saved offline — will sync when reconnected');
+        } catch {
+          setError('Failed to record event');
+          setSuccess(null);
         }
       }
-
-      setError(null);
-      setSuccess(savedOffline ? 'Saved offline — will sync when reconnected' : 'Event recorded successfully!');
-      // Clear inputs after successful event recording
-      setPlayerId('');
-      if (!savedOffline) onEventRecorded?.();
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to record event';
-      console.error('Quick event error:', err);
-      setError(errorMessage);
-      setSuccess(null);
-    } finally {
-      setLoading(false);
-    }
+    })();
   };
 
   const getPlayerDisplayName = (player: Player) => {

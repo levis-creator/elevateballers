@@ -29,6 +29,7 @@ interface SubstitutionPanelProps {
   gameState: GameStateData | null;
   onSubstitutionRecorded?: () => void;
   refreshTrigger?: number;
+  matchPlayers?: MatchPlayerWithDetails[];
 }
 
 export default function SubstitutionPanel({
@@ -37,15 +38,18 @@ export default function SubstitutionPanel({
   gameState,
   onSubstitutionRecorded,
   refreshTrigger,
+  matchPlayers: matchPlayersProp,
 }: SubstitutionPanelProps) {
   const { localClockSeconds } = useGameTrackingStore();
   const [teamId, setTeamId] = useState<string>('');
   const [playerInId, setPlayerInId] = useState<string>('');
   const [playerOutId, setPlayerOutId] = useState<string>('');
-  const [matchPlayers, setMatchPlayers] = useState<MatchPlayerWithDetails[]>([]);
   const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Use matchPlayers from prop (single source of truth in GameTrackingPanel)
+  const matchPlayers = (matchPlayersProp ?? []) as MatchPlayerWithDetails[];
 
   const team1Id = match ? getTeam1Id(match) : null;
   const team2Id = match ? getTeam2Id(match) : null;
@@ -72,45 +76,26 @@ export default function SubstitutionPanel({
     }
   };
 
-  const fetchMatchPlayers = async () => {
-    if (fetchingRef.current) return;
-    try {
-      const response = await fetch(`/api/matches/${matchId}/players`);
-      if (response.ok) {
-        const data = await response.json();
-        setMatchPlayers(data || []);
-      }
-    } catch (err) {
-      // Silently ignore — will retry on next trigger
-    }
-  };
-
   const fetchTeamPlayers = async (teamIdToFetch: string) => {
     try {
       const response = await fetch(`/api/players?teamId=${teamIdToFetch}`);
       if (response.ok) {
         const data = await response.json();
         setTeamPlayers(data || []);
-      } else {
-        console.error('Failed to fetch team players:', response.status, response.statusText);
       }
-    } catch (err) {
-      console.error('Failed to fetch team players:', err);
+    } catch {
+      // silent
     }
   };
 
+  // Fetch substitutions on mount and when refresh trigger bumps
   useEffect(() => {
-    if (matchId) {
-      fetchMatchPlayers();
-      fetchSubstitutions();
-    }
+    if (matchId) fetchSubstitutions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
-  // Refresh match players when refreshTrigger changes (e.g., after starters are marked)
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
-      fetchMatchPlayers();
       fetchSubstitutions();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,53 +157,51 @@ export default function SubstitutionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchPlayers, teamPlayers, teamId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const payload = {
+      teamId,
+      playerInId,
+      playerOutId,
+      period: gameState?.period ?? 1,
+      secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+    };
+
+    // Optimistic: clear form and notify parent immediately
     setError(null);
-    setLoading(true);
+    setPlayerInId('');
+    setPlayerOutId('');
 
-    try {
-      const response = await fetch(`/api/games/${matchId}/substitution`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teamId,
-          playerInId,
-          playerOutId,
-          period: gameState?.period ?? 1,
-          secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
-        }),
-      });
+    // Fire-and-forget persistence
+    (async () => {
+      try {
+        const response = await fetch(`/api/games/${matchId}/substitution`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-      if (!response.ok) {
-        let errorMessage = 'Failed to record substitution';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        if (!response.ok) {
+          let errorMessage = 'Failed to record substitution';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            errorMessage = `Server error: ${response.status}`;
+          }
+          setError(errorMessage);
+          return;
         }
-        console.error('Substitution submission error:', errorMessage, response.status);
-        throw new Error(errorMessage);
-      }
 
-      // Reset form and refresh players
-      setPlayerInId('');
-      setPlayerOutId('');
-      await fetchMatchPlayers();
-      await fetchSubstitutions();
-      if (teamId) {
-        await fetchTeamPlayers(teamId);
+        // Refresh substitutions list; parent handles match players refresh
+        fetchSubstitutions();
+        if (teamId) fetchTeamPlayers(teamId);
+        onSubstitutionRecorded?.();
+      } catch (err: any) {
+        setError(err.message || 'Failed to record substitution');
       }
-      setError(null);
-      onSubstitutionRecorded?.();
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to record substitution';
-      console.error('Substitution error:', err);
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    })();
   };
 
   // Get unique teams from match players to ensure we have correct team data
