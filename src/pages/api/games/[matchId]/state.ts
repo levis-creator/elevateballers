@@ -31,7 +31,12 @@ export const GET: APIRoute = async ({ params }) => {
     }
 
     return new Response(JSON.stringify(state), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Short edge cache — clock is tracked locally by worker, so a 3s cache
+        // is invisible to users but dedupes concurrent poll requests.
+        'Cache-Control': 'public, s-maxage=3, stale-while-revalidate=5',
+      },
     });
   } catch (error: any) {
     console.error('Error fetching game state:', error);

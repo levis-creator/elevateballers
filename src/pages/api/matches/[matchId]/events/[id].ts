@@ -72,7 +72,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const updatedEvent = await updateMatchEvent(id, body);
 
     if (!updatedEvent) {
-      return handleApiError(error, "update match event");
+      return new Response(JSON.stringify({ error: 'Failed to update match event' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'MATCH_EVENT_UPDATED', {

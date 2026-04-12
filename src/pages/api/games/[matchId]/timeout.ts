@@ -130,7 +130,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!timeout) {
-      return handleApiError(error, "create timeout");
+      return new Response(JSON.stringify({ error: 'Failed to create timeout' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'GAME_TIMEOUT_RECORDED', {

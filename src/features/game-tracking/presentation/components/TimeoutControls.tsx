@@ -79,70 +79,52 @@ export default function TimeoutControls({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Validate required fields
     if (!teamId) {
       setError('Please select a team');
       return;
     }
 
-    // Calculate remaining timeouts for validation
-    const currentRemainingTimeouts = teamId === team1Id
-      ? gameState?.team1Timeouts ?? null
-      : teamId === team2Id
-      ? gameState?.team2Timeouts ?? null
-      : null;
+    const payload = {
+      teamId,
+      timeoutType,
+      period: gameState?.period ?? 1,
+      secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+    };
 
-    // Allow 0 timeouts - server will initialize if needed
-    // Only block if explicitly negative (shouldn't happen, but safety check)
-    if (currentRemainingTimeouts !== null && currentRemainingTimeouts < 0) {
-      setError('Invalid timeout count');
-      return;
-    }
+    // Optimistic: reset form immediately
+    setTimeoutType('SIXTY_SECOND');
 
-    setLoading(true);
+    // Fire-and-forget persistence
+    (async () => {
+      try {
+        const response = await fetch(`/api/games/${matchId}/timeout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-    try {
-      const response = await fetch(`/api/games/${matchId}/timeout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teamId,
-          timeoutType,
-          period: gameState?.period ?? 1,
-          secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to record timeout';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        if (!response.ok) {
+          let errorMessage = 'Failed to record timeout';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            errorMessage = `Server error: ${response.status}`;
+          }
+          setError(errorMessage);
+          return;
         }
-        console.error('Timeout submission error:', errorMessage, response.status);
-        throw new Error(errorMessage);
-      }
 
-      // Reset form after successful submission
-      setTimeoutType('SIXTY_SECOND');
-      setError(null);
-      
-      // Refresh game state and timeout list
-      fetchTimeouts();
-      onTimeoutRecorded?.();
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to record timeout';
-      console.error('Timeout error:', err);
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+        fetchTimeouts();
+        onTimeoutRecorded?.();
+      } catch (err: any) {
+        setError(err.message || 'Failed to record timeout');
+      }
+    })();
   };
 
   const availableTeams = [

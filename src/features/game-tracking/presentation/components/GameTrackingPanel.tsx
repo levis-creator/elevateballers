@@ -3,7 +3,7 @@
  * Main component that combines scoreboard, clock, and controls
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -38,28 +38,72 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
     updateGameState,
     localClockSeconds,
   } = useGameTrackingStore();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Scoped refresh triggers — only fire for what actually changed
+  const [playersRefreshTrigger, setPlayersRefreshTrigger] = useState(0); // substitutions, player changes
+  const [eventsRefreshTrigger, setEventsRefreshTrigger] = useState(0);   // play-by-play
   const [timerWarning, setTimerWarning] = useState<string | null>(null);
   const [isEndingGame, setIsEndingGame] = useState(false);
 
-  useEffect(() => {
-    if (matchId) {
-      fetchGameState(matchId);
-      // Poll for state sync (scores, period, fouls, etc.) — not for clock ticks.
-      // The web worker handles clock display locally.
-      const interval = setInterval(() => {
-        if (match?.status === 'LIVE') {
-          fetchGameState(matchId);
-        }
-      }, 10000);
+  // Shared match players — fetched once here, passed down to consumers
+  const [matchPlayers, setMatchPlayers] = useState<any[]>([]);
+  const matchPlayersFetchingRef = useRef(false);
 
-      return () => clearInterval(interval);
+  const fetchMatchPlayers = useCallback(async () => {
+    if (!matchId || matchPlayersFetchingRef.current) return;
+    matchPlayersFetchingRef.current = true;
+    try {
+      const res = await fetch(`/api/matches/${matchId}/players`);
+      if (res.ok) {
+        const data = await res.json();
+        setMatchPlayers(data || []);
+      }
+    } catch {
+      // silent — will retry on next trigger
+    } finally {
+      matchPlayersFetchingRef.current = false;
     }
+  }, [matchId]);
+
+  // Initial load
+  useEffect(() => {
+    if (matchId) fetchMatchPlayers();
+  }, [matchId, fetchMatchPlayers]);
+
+  // Refetch match players only when playersRefreshTrigger bumps (i.e. on substitutions)
+  useEffect(() => {
+    if (playersRefreshTrigger > 0) fetchMatchPlayers();
+  }, [playersRefreshTrigger, fetchMatchPlayers]);
+
+  useEffect(() => {
+    if (!matchId) return;
+    fetchGameState(matchId);
+
+    // Pause polling when the tab is hidden to save resources
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible' && match?.status === 'LIVE') {
+        fetchGameState(matchId);
+      }
+    }, 10000);
+
+    // Refetch immediately when the tab becomes visible again
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && match?.status === 'LIVE') {
+        fetchGameState(matchId);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [matchId, match?.status, fetchGameState]);
 
   const handleStartGame = async () => {
     await startGame(matchId);
-    setRefreshTrigger((prev) => prev + 1);
+    // Initial game start — refresh players (starters get marked) and events
+    setPlayersRefreshTrigger((p) => p + 1);
+    setEventsRefreshTrigger((p) => p + 1);
     if (onRefresh) onRefresh();
   };
 
@@ -91,9 +135,19 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
     toggleClock(matchId);
   };
 
+  // Generic event recorded — only refreshes play-by-play + game state (score/fouls)
+  // Does NOT refetch match players (those don't change on scoring events)
   const handleEventRecorded = async () => {
     await fetchGameState(matchId);
-    setRefreshTrigger((prev) => prev + 1);
+    setEventsRefreshTrigger((p) => p + 1);
+    if (onRefresh) onRefresh();
+  };
+
+  // Substitution recorded — refreshes players AND events
+  const handleSubstitutionRecorded = async () => {
+    await fetchGameState(matchId);
+    setPlayersRefreshTrigger((p) => p + 1);
+    setEventsRefreshTrigger((p) => p + 1);
     if (onRefresh) onRefresh();
   };
 
@@ -243,8 +297,9 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
             matchId={matchId}
             match={match}
             gameState={gameState}
-            onSubstitutionRecorded={handleEventRecorded}
-            refreshTrigger={refreshTrigger}
+            onSubstitutionRecorded={handleSubstitutionRecorded}
+            refreshTrigger={playersRefreshTrigger}
+            matchPlayers={matchPlayers}
           />
         </div>
         <div className="flex-1">
@@ -253,16 +308,17 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
             match={match}
             gameState={gameState}
             onEventRecorded={handleEventRecorded}
-            refreshTrigger={refreshTrigger}
+            refreshTrigger={playersRefreshTrigger}
+            matchPlayers={matchPlayers}
           />
         </div>
       </div>
 
       {/* Play-by-Play Log */}
-      <PlayByPlayLog 
-        matchId={matchId} 
-        onRefresh={() => fetchGameState(matchId)} 
-        refreshTrigger={refreshTrigger}
+      <PlayByPlayLog
+        matchId={matchId}
+        onRefresh={() => fetchGameState(matchId)}
+        refreshTrigger={eventsRefreshTrigger}
       />
     </div>
   );

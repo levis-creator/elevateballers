@@ -76,7 +76,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!matchEvent) {
-      return handleApiError(error, "create match event");
+      return new Response(JSON.stringify({ error: 'Failed to create match event' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'MATCH_EVENT_CREATED', {

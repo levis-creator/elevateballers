@@ -21,7 +21,11 @@ export const GET: APIRoute = async ({ params }) => {
     const playByPlay = await getPlayByPlay(matchId);
 
     return new Response(JSON.stringify(playByPlay), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Short edge cache — absorbs polling bursts, still feels instant
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10',
+      },
     });
   } catch (error: any) {
     console.error('Error fetching play-by-play:', error);

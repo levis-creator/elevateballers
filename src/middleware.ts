@@ -1,6 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
 import { syncPermissions } from './lib/syncPermissions';
-import { logAudit } from './features/cms/lib/audit';
 
 // Runs once per server process — all concurrent first requests
 // await the same promise so the sync never executes more than once.
@@ -18,28 +17,11 @@ export const onRequest = defineMiddleware(async (_context, next) => {
 
   const response = await next();
 
-  try {
-    const { request } = _context;
-    const url = new URL(request.url);
-    const method = request.method.toUpperCase();
-    const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
-    if (isMutation && url.pathname.startsWith('/api/')) {
-      await logAudit(
-        request,
-        response.ok ? 'API_MUTATION' : 'API_MUTATION_FAILED',
-        {
-          method,
-          path: url.pathname,
-          status: response.status,
-          ok: response.ok,
-        },
-        undefined,
-        'middleware'
-      );
-    }
-  } catch (error) {
-    console.error('[audit] Failed to record API mutation:', error);
-  }
+  // Audit logging moved OUT of middleware — it was causing an extra DB write
+  // on every mutation, blocking responses and duplicating logs that individual
+  // endpoints already record. Endpoints still call logAudit() explicitly where
+  // it matters (high-value actions); high-frequency mutations (events, clock
+  // toggles, subs) are no longer audit-logged twice.
 
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');

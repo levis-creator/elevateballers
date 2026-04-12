@@ -95,7 +95,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!jumpBall) {
-      return handleApiError(error, "create jump ball");
+      return new Response(JSON.stringify({ error: 'Failed to create jump ball' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'GAME_JUMP_BALL_RECORDED', {
