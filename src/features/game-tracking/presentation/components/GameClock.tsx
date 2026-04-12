@@ -59,63 +59,88 @@ export default function GameClock({
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [timeInput, setTimeInput] = useState('');
   const [setDuration, setSetDuration] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Sync with backend state using server timestamp for accuracy
+  // Persist a clock value to the backend with visual feedback
+  const saveClockSeconds = useCallback(async (seconds: number) => {
+    if (!match) return;
+    setIsSaving(true);
+    try {
+      await updateGameState(match.id, { clockSeconds: seconds });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [match, updateGameState]);
+
+  // Sync local clock with server state when the clock is paused or the
+  // server anchor changes (pause/resume/period change).  When the clock is
+  // running the web worker is the single source of truth — we don't touch
+  // localClockSeconds here to avoid fighting the worker.
   useEffect(() => {
     if (!gameState) return;
 
-    if (gameState.clockRunning && gameState.clockStartedAt && gameState.clockSecondsAtStart != null) {
-      // Clock is running: compute actual remaining from server timestamp
-      const elapsed = Math.floor((Date.now() - new Date(gameState.clockStartedAt).getTime()) / 1000);
-      const remaining = Math.max(0, gameState.clockSecondsAtStart - elapsed);
-      setLocalClockSeconds(remaining);
-    } else if (!gameState.clockRunning) {
-      // Clock is paused: use the stored clockSeconds
+    if (!gameState.clockRunning) {
+      // Paused — display whatever the server says
       setLocalClockSeconds(gameState.clockSeconds ?? null);
     }
-  }, [gameState?.clockSeconds, gameState?.clockRunning, gameState?.clockStartedAt, gameState?.clockSecondsAtStart, setLocalClockSeconds]);
+    // When running, the worker effect (below) handles the initial sync
+    // and then ticks it down.  We intentionally do NOT update here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.clockRunning, gameState?.clockSeconds, setLocalClockSeconds]);
 
   // Track the set duration for the current quarter - update when quarter changes
   const previousPeriodRef = useRef<number | null>(null);
+  const setDurationRef = useRef(setDuration);
+  setDurationRef.current = setDuration;
+
   useEffect(() => {
     if (!gameState) return;
-    
-    // When quarter changes, reset the set duration to the new quarter's default duration
-    if (previousPeriodRef.current !== null && previousPeriodRef.current !== gameState.period) {
-      const isOvertime = isOvertimePeriod(gameState.period, numberOfPeriods);
-      const periodDurationMinutes = isOvertime ? overtimeLength : minutesPerPeriod;
-      const periodDurationSeconds = periodDurationMinutes * 60;
-      setSetDuration(periodDurationSeconds);
-    } else if (setDuration === null) {
-      // Initialize set duration on first load
-      const isOvertime = isOvertimePeriod(gameState.period, numberOfPeriods);
-      const periodDurationMinutes = isOvertime ? overtimeLength : minutesPerPeriod;
-      const periodDurationSeconds = periodDurationMinutes * 60;
+
+    const isOvertime = isOvertimePeriod(gameState.period, numberOfPeriods);
+    const periodDurationMinutes = isOvertime ? overtimeLength : minutesPerPeriod;
+    const periodDurationSeconds = periodDurationMinutes * 60;
+
+    // Initialize on first load, or reset when quarter changes
+    if (setDurationRef.current === null || (previousPeriodRef.current !== null && previousPeriodRef.current !== gameState.period)) {
       setSetDuration(periodDurationSeconds);
     }
-    
+
     previousPeriodRef.current = gameState.period;
-  }, [gameState?.period, numberOfPeriods, minutesPerPeriod, overtimeLength, setDuration]);
+  }, [gameState?.period, numberOfPeriods, minutesPerPeriod, overtimeLength]);
 
   // Ref to track if auto-pause was triggered to prevent multiple triggers
   const autoPauseTriggeredRef = useRef(false);
+  const localClockRef = useRef(localClockSeconds);
+  localClockRef.current = localClockSeconds;
 
-  // Auto-pause when clock reaches 0
+  // Auto-pause when clock reaches 0.
+  // Uses a ref guard that is ONLY reset when the clock is explicitly started
+  // again (clockStartedAt changes), preventing repeated triggers.
   useEffect(() => {
-    if (
-      gameState?.clockRunning &&
-      localClockSeconds !== null &&
-      localClockSeconds <= 0 &&
-      !autoPauseTriggeredRef.current
-    ) {
-      autoPauseTriggeredRef.current = true;
-      onToggleClock();
-    }
-    // Reset the ref when clock is not running or clock seconds changes to a positive value
-    if (!gameState?.clockRunning || (localClockSeconds !== null && localClockSeconds > 0)) {
+    if (!gameState?.clockRunning) return;
+
+    const checkInterval = setInterval(() => {
+      if (
+        localClockRef.current !== null &&
+        localClockRef.current <= 0 &&
+        !autoPauseTriggeredRef.current
+      ) {
+        autoPauseTriggeredRef.current = true;
+        clearInterval(checkInterval); // stop checking immediately
+        onToggleClock();
+      }
+    }, 500);
+
+    return () => clearInterval(checkInterval);
+  }, [gameState?.clockRunning, onToggleClock]);
+
+  // Only reset the auto-pause guard when the clock is freshly started
+  // (new clockStartedAt), not on every clockRunning change.
+  useEffect(() => {
+    if (gameState?.clockStartedAt) {
       autoPauseTriggeredRef.current = false;
     }
-  }, [gameState?.clockRunning, localClockSeconds, onToggleClock]);
+  }, [gameState?.clockStartedAt]);
 
   // Terminate worker on unmount
   useEffect(() => {
@@ -127,6 +152,8 @@ export default function GameClock({
 
   // Web-Worker-based countdown — runs off the main thread, timestamp-based
   // so it never drifts even when the tab is hidden or the JS thread is busy.
+  // Depends on clockRunning AND the server anchor (clockStartedAt) so it
+  // restarts with the correct time after pause/resume.
   useEffect(() => {
     // Lazily create the worker on first use
     if (!workerRef.current && typeof Worker !== 'undefined') {
@@ -136,43 +163,44 @@ export default function GameClock({
     const worker = workerRef.current;
     if (!worker) return;
 
-    if (gameState?.clockRunning && localClockSeconds !== null && localClockSeconds > 0) {
-      // Compute accurate remaining from server timestamp if available
-      let remaining = localClockSeconds;
-      if (gameState.clockStartedAt && gameState.clockSecondsAtStart != null) {
-        const elapsed = Math.floor((Date.now() - new Date(gameState.clockStartedAt).getTime()) / 1000);
-        remaining = Math.max(0, gameState.clockSecondsAtStart - elapsed);
+    if (gameState?.clockRunning && gameState?.clockStartedAt && gameState?.clockSecondsAtStart != null) {
+      // Compute accurate remaining from server timestamp
+      const elapsed = Math.floor((Date.now() - new Date(gameState.clockStartedAt).getTime()) / 1000);
+      const remaining = Math.max(0, gameState.clockSecondsAtStart - elapsed);
+
+      if (remaining > 0) {
+        worker.postMessage({ type: 'START', remainingSeconds: remaining });
+      } else {
+        worker.postMessage({ type: 'STOP' });
       }
-      worker.postMessage({ type: 'START', remainingSeconds: remaining });
 
       worker.onmessage = (e: MessageEvent) => {
-        const { type, remainingSeconds } = e.data;
-        if (type === 'TICK') {
+        const { type: msgType, remainingSeconds } = e.data;
+        if (msgType === 'TICK') {
           setLocalClockSeconds(remainingSeconds);
         }
-        // EXPIRED is handled by the auto-pause effect below
+        // EXPIRED is handled by the auto-pause check interval
       };
     } else {
-      // Clock is paused — stop the worker
+      // Clock is paused or not initialized — stop the worker
       worker.postMessage({ type: 'STOP' });
     }
 
     return () => {
       worker.postMessage({ type: 'STOP' });
     };
-    // Only re-run when the running state actually toggles, not on every tick
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.clockRunning]);
+  }, [gameState?.clockRunning, gameState?.clockStartedAt, gameState?.clockSecondsAtStart, setLocalClockSeconds]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — use refs so the listener doesn't re-register on every tick
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+  const onToggleClockRef = useRef(onToggleClock);
+  onToggleClockRef.current = onToggleClock;
+
   useEffect(() => {
-    // Disable keyboard shortcuts if match is not live
-    if (!isMatchLive) {
-      return;
-    }
+    if (!isMatchLive) return;
 
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Only handle if not typing in an input
       if (
         document.activeElement?.tagName === 'INPUT' ||
         document.activeElement?.tagName === 'TEXTAREA'
@@ -180,42 +208,38 @@ export default function GameClock({
         return;
       }
 
+      const gs = gameStateRef.current;
+
       if (e.code === 'Space') {
         e.preventDefault();
-        if (gameState && !isLoading) {
-          onToggleClock();
-        }
+        if (gs) onToggleClockRef.current();
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        if (!gameState?.clockRunning && gameState && match) {
+        if (!gs?.clockRunning && gs && match) {
           const seconds = e.shiftKey ? 10 : 1;
-          const newSeconds = Math.max(0, (localClockSeconds ?? 0) + seconds);
+          const newSeconds = Math.max(0, (localClockRef.current ?? 0) + seconds);
           setLocalClockSeconds(newSeconds);
-          updateGameState(match.id, {
-            clockSeconds: newSeconds,
-          });
+          saveClockSeconds(newSeconds);
         }
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        if (!gameState?.clockRunning && gameState && match) {
+        if (!gs?.clockRunning && gs && match) {
           const seconds = e.shiftKey ? -10 : -1;
-          const newSeconds = Math.max(0, (localClockSeconds ?? 0) + seconds);
+          const newSeconds = Math.max(0, (localClockRef.current ?? 0) + seconds);
           setLocalClockSeconds(newSeconds);
-          updateGameState(match.id, {
-            clockSeconds: newSeconds,
-          });
+          saveClockSeconds(newSeconds);
         }
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
-        if (gameState) {
-          setShowResetConfirm(true);
-        }
+        if (gs) setShowResetConfirm(true);
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [gameState, isLoading, onToggleClock, localClockSeconds, match, setLocalClockSeconds, updateGameState, isMatchLive]);
+    // Stable deps only — callbacks and state read via refs to avoid re-registering on every tick
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMatchLive, match, setLocalClockSeconds, saveClockSeconds]);
 
   // Calculate display time from local clock seconds
   const displayTime = localClockSeconds !== null ? formatClockTime(localClockSeconds) : '00:00';
@@ -240,13 +264,8 @@ export default function GameClock({
 
     setLocalClockSeconds(parsedSeconds);
     setIsEditingTime(false);
-    // Update the set duration to the manually entered value
     setSetDuration(parsedSeconds);
-
-    // Update backend
-    await updateGameState(match.id, {
-      clockSeconds: parsedSeconds,
-    });
+    await saveClockSeconds(parsedSeconds);
   };
 
   // Initialize settings dialog with current values
@@ -268,13 +287,8 @@ export default function GameClock({
 
     setLocalClockSeconds(parsedSeconds);
     setShowSettings(false);
-    // Update the set duration to the manually set value
     setSetDuration(parsedSeconds);
-
-    // Update backend
-    await updateGameState(match.id, {
-      clockSeconds: parsedSeconds,
-    });
+    await saveClockSeconds(parsedSeconds);
   };
 
   // Adjust time by seconds (only when paused)
@@ -283,35 +297,25 @@ export default function GameClock({
 
     const newSeconds = Math.max(0, (localClockSeconds ?? 0) + seconds);
     setLocalClockSeconds(newSeconds);
-
-    // Update backend
-    await updateGameState(match.id, {
-      clockSeconds: newSeconds,
-    });
+    await saveClockSeconds(newSeconds);
   };
 
   // Handle reset - reset to the duration that was set (manually or quarter start)
   const handleReset = async () => {
     if (!gameState || !match || gameState.clockRunning || !isMatchLive) return;
 
-    // Use the set duration if available, otherwise fall back to quarter duration
     let resetSeconds: number;
     if (setDuration !== null) {
       resetSeconds = setDuration;
     } else {
-      // Fallback to quarter duration if setDuration not initialized
       const isOvertime = isOvertimePeriod(gameState.period, numberOfPeriods);
       const periodDurationMinutes = isOvertime ? overtimeLength : minutesPerPeriod;
       resetSeconds = periodDurationMinutes * 60;
     }
-    
+
     setLocalClockSeconds(resetSeconds);
     setShowResetConfirm(false);
-
-    // Update backend
-    await updateGameState(match.id, {
-      clockSeconds: resetSeconds,
-    });
+    await saveClockSeconds(resetSeconds);
   };
 
   if (!gameState) {
@@ -344,6 +348,7 @@ export default function GameClock({
           {/* Quarter Display */}
           <div className="text-xs font-semibold text-muted-foreground">
             {currentPeriodLabel} Quarter
+            {isSaving && <span className="ml-2 text-blue-500 animate-pulse">Saving...</span>}
           </div>
 
           {/* Time Display */}
@@ -385,7 +390,7 @@ export default function GameClock({
           <div className="flex items-center justify-center gap-2">
             <Button
               onClick={onToggleClock}
-              disabled={isLoading || isToggling || !isMatchLive}
+              disabled={isToggling || !isMatchLive}
               variant={gameState.clockRunning ? 'destructive' : 'default'}
               size="default"
               className="flex-1"

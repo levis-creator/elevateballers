@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import type { MatchWithFullDetails, MatchPlayerWithDetails, MatchEventWithDetails } from '../../cms/types';
 import {
   formatMatchDate,
@@ -58,13 +58,79 @@ function formatClockTime(seconds: number | null): string {
   return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
+/** Compute remaining seconds from server timestamp (shared source of truth). */
+function computeRemainingFromTimestamp(m: {
+  clockRunning: boolean;
+  clockStartedAt: string | Date | null;
+  clockSecondsAtStart: number | null;
+  clockSeconds: number | null;
+}): number | null {
+  if (m.clockRunning && m.clockStartedAt && m.clockSecondsAtStart != null) {
+    const elapsed = Math.floor((Date.now() - new Date(m.clockStartedAt).getTime()) / 1000);
+    return Math.max(0, m.clockSecondsAtStart - elapsed);
+  }
+  return m.clockSeconds ?? null;
+}
+
 interface MatchDetailProps {
   match: MatchWithFullDetails;
 }
 
 export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
   const [match, setMatch] = useState(initialMatch);
+  const [page1, setPage1] = useState(1);
+  const [page2, setPage2] = useState(1);
+  const [localClock, setLocalClock] = useState<number | null>(match.clockSeconds);
+  const itemsPerPage = 5;
 
+  // Keep a ref to the latest match so interval callbacks never use stale state
+  const matchRef = useRef(match);
+  matchRef.current = match;
+
+  // Polling for match updates — runs for both UPCOMING (slow) and LIVE (fast)
+  useEffect(() => {
+    if (match.status === 'COMPLETED') return;
+
+    // Poll every 5s when LIVE, every 30s when UPCOMING (to detect game start)
+    const interval = match.status === 'LIVE' ? 5000 : 30000;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/matches/${matchRef.current.id}?includeDetails=true`);
+        if (response.ok) {
+          const updatedMatch = await response.json();
+          setMatch(updatedMatch);
+          setLocalClock(computeRemainingFromTimestamp(updatedMatch));
+        }
+      } catch (error) {
+        console.error('Error polling for match updates:', error);
+      }
+    }, interval);
+
+    return () => clearInterval(pollInterval);
+  }, [match.id, match.status]);
+
+  // Timestamp-based clock ticker — uses ref to always read fresh match state
+  useEffect(() => {
+    if (match.status !== 'LIVE' || !match.clockRunning) return;
+    if (!match.clockStartedAt || match.clockSecondsAtStart == null) return;
+
+    const ticker = setInterval(() => {
+      setLocalClock(computeRemainingFromTimestamp(matchRef.current));
+    }, 1000);
+
+    // Compute immediately so there's no 1s delay on start
+    setLocalClock(computeRemainingFromTimestamp(match));
+
+    return () => clearInterval(ticker);
+  }, [match.status, match.clockRunning, match.clockStartedAt, match.clockSecondsAtStart]);
+
+  // Sync clock when match data changes (pause/resume/period change)
+  useEffect(() => {
+    setLocalClock(computeRemainingFromTimestamp(match));
+  }, [match.clockSeconds, match.clockStartedAt, match.clockSecondsAtStart, match.clockRunning]);
+
+  // Memoize derived values so they don't recompute on every clock tick
   const statusColor = getMatchStatusColor(match.status);
   const statusLabel = getMatchStatusLabel(match.status);
   const hasScore = match.team1Score !== null && match.team2Score !== null;
@@ -79,60 +145,12 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
   const team2IsWinner = isWinner(match, team2Id);
   const isTie = match.status === 'COMPLETED' && match.team1Score !== null && match.team2Score !== null && match.team1Score === match.team2Score;
 
-  const team1Players = match.matchPlayers?.filter(mp => mp.teamId === team1Id) || [];
-  const team2Players = match.matchPlayers?.filter(mp => mp.teamId === team2Id) || [];
-  const events = [...(match.events || [])].sort((a, b) => b.minute - a.minute || (b.secondsRemaining || 0) - (a.secondsRemaining || 0));
-
-  const [page1, setPage1] = useState(1);
-  const [page2, setPage2] = useState(1);
-  const [localClock, setLocalClock] = useState<number | null>(match.clockSeconds);
-  const itemsPerPage = 5;
-
-  /** Compute remaining seconds from server timestamp (shared source of truth). */
-  function computeRemainingFromTimestamp(m: typeof match): number | null {
-    if (m.clockRunning && m.clockStartedAt && m.clockSecondsAtStart != null) {
-      const elapsed = Math.floor((Date.now() - new Date(m.clockStartedAt).getTime()) / 1000);
-      return Math.max(0, m.clockSecondsAtStart - elapsed);
-    }
-    return m.clockSeconds;
-  }
-
-  // Polling for live updates
-  useEffect(() => {
-    if (match.status !== 'LIVE') return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/matches/${match.id}?includeDetails=true`);
-        if (response.ok) {
-          const updatedMatch = await response.json();
-          setMatch(updatedMatch);
-          setLocalClock(computeRemainingFromTimestamp(updatedMatch));
-        }
-      } catch (error) {
-        console.error('Error polling for match updates:', error);
-      }
-    }, 5000);
-
-    return () => clearInterval(pollInterval);
-  }, [match.id, match.status]);
-
-  // Timestamp-based clock ticker — recomputes from server timestamp each tick
-  useEffect(() => {
-    if (match.status !== 'LIVE' || !match.clockRunning) return;
-    if (!match.clockStartedAt || match.clockSecondsAtStart == null) return;
-
-    const ticker = setInterval(() => {
-      setLocalClock(computeRemainingFromTimestamp(match));
-    }, 200); // 200ms for smooth display, same cadence as admin Web Worker
-
-    return () => clearInterval(ticker);
-  }, [match.status, match.clockRunning, match.clockStartedAt, match.clockSecondsAtStart]);
-
-  // Sync clock when match data changes (initial load + polls)
-  useEffect(() => {
-    setLocalClock(computeRemainingFromTimestamp(match));
-  }, [match.clockSeconds, match.clockStartedAt, match.clockSecondsAtStart, match.clockRunning]);
+  const team1Players = useMemo(() => match.matchPlayers?.filter(mp => mp.teamId === team1Id) || [], [match.matchPlayers, team1Id]);
+  const team2Players = useMemo(() => match.matchPlayers?.filter(mp => mp.teamId === team2Id) || [], [match.matchPlayers, team2Id]);
+  const events = useMemo(
+    () => [...(match.events || [])].sort((a, b) => b.minute - a.minute || (b.secondsRemaining || 0) - (a.secondsRemaining || 0)),
+    [match.events],
+  );
 
   // Determine active players with fallback to starters if no one is explicitly marked as active
   const getActivePlayers = (players: MatchPlayerWithDetails[]) => {

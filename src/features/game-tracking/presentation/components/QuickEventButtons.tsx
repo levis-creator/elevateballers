@@ -3,7 +3,7 @@
  * Provides rapid event entry buttons for common game events
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -103,18 +103,21 @@ export default function QuickEventButtons({
       })()
     : [];
 
+  const fetchingRef = useRef(false);
+
   const fetchMatchPlayers = useCallback(async () => {
-    if (!matchId) return;
+    if (!matchId || fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       const response = await fetch(`/api/matches/${matchId}/players`);
       if (response.ok) {
         const data = await response.json();
         setMatchPlayers(data || []);
-      } else {
-        console.error('Failed to fetch match players:', response.status, response.statusText);
       }
     } catch (err) {
-      console.error('Failed to fetch match players:', err);
+      // Silently ignore — will retry on next trigger
+    } finally {
+      fetchingRef.current = false;
     }
   }, [matchId]);
 

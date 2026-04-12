@@ -49,7 +49,6 @@ import MatchImagesDisplay from './MatchImagesDisplay';
 import MatchEventImportModal from './MatchEventImportModal';
 import { formatClockTime } from '../../../game-tracking/lib/utils';
 import { getPeriodLabel } from '../../../game-tracking/lib/utils';
-import { useGameTrackingStore } from '../../../game-tracking/stores/useGameTrackingStore';
 
 interface MatchDetailViewProps {
   matchId: string;
@@ -1212,9 +1211,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [editingMatchPlayerId, setEditingMatchPlayerId] = useState<string | null>(null);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
-  const [isEndingGame, setIsEndingGame] = useState(false);
-  const [isStartingGame, setIsStartingGame] = useState(false);
-  const { endGame, startGame } = useGameTrackingStore();
+  // Start/End game controls are in GameTrackingPanel — no duplicate state needed here.
   const [page1, setPage1] = useState(1);
   const [page2, setPage2] = useState(1);
   const playersPerPage = 10;
@@ -1504,53 +1501,6 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         </div>
         {match && (
           <div className="flex gap-2">
-            {match.status === 'UPCOMING' && (
-              <Button
-                onClick={async () => {
-                  if (window.confirm('Are you sure you want to start this game? This will change the match status to LIVE.')) {
-                    setIsStartingGame(true);
-                    try {
-                      await startGame(matchId);
-                      // Refresh the page to show updated status
-                      window.location.reload();
-                    } catch (error) {
-                      console.error('Failed to start game:', error);
-                      alert('Failed to start game. Please try again.');
-                      setIsStartingGame(false);
-                    }
-                  }
-                }}
-                disabled={isStartingGame}
-                variant="default"
-                size="default"
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {isStartingGame ? 'Starting...' : 'Start Match'}
-              </Button>
-            )}
-            {match.status === 'LIVE' && (
-              <Button
-                onClick={async () => {
-                  if (window.confirm('Are you sure you want to end this game? This action cannot be undone.')) {
-                    setIsEndingGame(true);
-                    try {
-                      await endGame(matchId);
-                      // Refresh the page to show updated status
-                      window.location.reload();
-                    } catch (error) {
-                      console.error('Failed to end game:', error);
-                      alert('Failed to end game. Please try again.');
-                      setIsEndingGame(false);
-                    }
-                  }
-                }}
-                disabled={isEndingGame}
-                variant="destructive"
-                size="default"
-              >
-                {isEndingGame ? 'Ending...' : 'End Game'}
-              </Button>
-            )}
             {match.status === 'COMPLETED' && (
               <Button asChild variant="outline">
                 <a href={`/api/matches/${matchId}/stat-sheet`}>

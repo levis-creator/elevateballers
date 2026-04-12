@@ -3,7 +3,7 @@
  * Allows recording player substitutions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -54,7 +54,11 @@ export default function SubstitutionPanel({
 
   const [substitutions, setSubstitutions] = useState<any[]>([]);
 
+  const fetchingRef = useRef(false);
+
   const fetchSubstitutions = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       const response = await fetch(`/api/games/${matchId}/substitution`);
       if (response.ok) {
@@ -62,21 +66,22 @@ export default function SubstitutionPanel({
         setSubstitutions(data || []);
       }
     } catch (err) {
-       console.error('Failed to fetch substitutions:', err);
+      // Silently ignore — will retry on next trigger
+    } finally {
+      fetchingRef.current = false;
     }
   };
 
   const fetchMatchPlayers = async () => {
+    if (fetchingRef.current) return;
     try {
       const response = await fetch(`/api/matches/${matchId}/players`);
       if (response.ok) {
         const data = await response.json();
         setMatchPlayers(data || []);
-      } else {
-        console.error('Failed to fetch match players:', response.status, response.statusText);
       }
     } catch (err) {
-      console.error('Failed to fetch match players:', err);
+      // Silently ignore — will retry on next trigger
     }
   };
 

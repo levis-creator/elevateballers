@@ -121,9 +121,9 @@ export const GET: APIRoute = async ({ request }) => {
       ? (sortParam as MatchSortOption)
       : 'date-asc';
     
-    // Limit
+    // Limit — default to 50 to prevent unbounded queries
     const limitParam = url.searchParams.get('limit');
-    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+    const limit = limitParam ? Math.min(200, parseInt(limitParam, 10)) : 50;
     
     // Get filtered matches
     const matches: MatchDTO[] = await getFilteredMatches(filter, sort, limit);
@@ -133,9 +133,15 @@ export const GET: APIRoute = async ({ request }) => {
       new Map(matches.map((match) => [match.id, match])).values()
     );
 
+    // Completed matches change rarely; upcoming/live matches need fresher data
+    const cacheControl = filter.status === 'COMPLETED'
+      ? 'public, s-maxage=300, stale-while-revalidate=60'
+      : 'public, s-maxage=30, stale-while-revalidate=15';
+
     return new Response(JSON.stringify(uniqueMatches), {
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': cacheControl,
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',

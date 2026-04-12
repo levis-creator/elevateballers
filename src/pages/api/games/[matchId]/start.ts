@@ -36,7 +36,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     const success = await startGame(matchId, gameRulesId);
 
     if (!success) {
-      return handleApiError(error, "start game");
+      return new Response(JSON.stringify({ error: 'Failed to start game' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const state = await getGameState(matchId);

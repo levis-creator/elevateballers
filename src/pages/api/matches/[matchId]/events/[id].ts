@@ -128,7 +128,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     
     const success = await deleteMatchEvent(id);
     if (!success) {
-      return handleApiError(error, "delete match event");
+      return new Response(JSON.stringify({ error: 'Failed to delete match event' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     await logAudit(request, 'MATCH_EVENT_DELETED', {

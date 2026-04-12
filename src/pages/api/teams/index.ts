@@ -10,11 +10,7 @@ export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
 export const GET: APIRoute = async ({ request, url }) => {
-  const startTime = Date.now();
   try {
-    console.log('[API /teams] GET request received at', new Date().toISOString());
-    console.log('[API /teams] Fetching teams from database...');
-
     // Check if the query parameter explicitly requests approved teams only
     const approvedParam = url.searchParams.get('approved');
 
@@ -41,29 +37,15 @@ export const GET: APIRoute = async ({ request, url }) => {
     );
 
     const teams = await Promise.race([queryPromise, timeoutPromise]) as any;
-    const duration = Date.now() - startTime;
-    
-    console.log(`[API /teams] Successfully fetched ${teams.length} teams in ${duration}ms`);
-    console.log('[API /teams] Teams data:', teams);
 
     return new Response(JSON.stringify(teams), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': includeUnapproved ? 'no-cache' : 'public, s-maxage=120, stale-while-revalidate=60',
       },
     });
   } catch (error: any) {
-    const duration = Date.now() - startTime;
-    console.error(`[API /teams] Error after ${duration}ms:`, error);
-    const errorMessage = error?.message || 'Failed to fetch teams';
-    console.error('[API /teams] Error details:', {
-      message: errorMessage,
-      code: error?.code,
-      meta: error?.meta,
-      stack: error?.stack,
-    });
-
     const response = handleApiError(error, 'fetch teams', request);
     response.headers.set('Cache-Control', 'no-cache');
     return response;

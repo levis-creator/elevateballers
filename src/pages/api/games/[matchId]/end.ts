@@ -36,7 +36,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     const success = await endGame(matchId);
 
     if (!success) {
-      return handleApiError(error, "end game");
+      return new Response(JSON.stringify({ error: 'Failed to end game' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Invalidate caches that depend on match results

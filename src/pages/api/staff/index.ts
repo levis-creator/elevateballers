@@ -6,14 +6,16 @@ import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
-import { prisma } from '../../../lib/prisma';
 
 export const GET: APIRoute = async ({ request }) => {
   try {
     const staff = await getStaff();
 
     return new Response(JSON.stringify(staff), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+      },
     });
   } catch (error) {
     console.error('Error fetching staff:', error);
