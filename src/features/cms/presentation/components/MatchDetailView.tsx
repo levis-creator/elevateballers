@@ -833,7 +833,13 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
     } else {
       setAvailablePlayers([]);
     }
-  }, [selectedTeam, existingMatchPlayers]);
+    // NOTE: do NOT depend on `existingMatchPlayers` — the parent passes
+    // `match.matchPlayers || []`, which is a new array reference every render.
+    // Including it caused an infinite fetch loop that exhausted browser sockets
+    // (ERR_INSUFFICIENT_RESOURCES) and broke unrelated calls like substitution.
+    // Refresh after adding players is handled imperatively in the modal's onSuccess.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTeam]);
 
   const fetchMatchTeams = async () => {
     try {

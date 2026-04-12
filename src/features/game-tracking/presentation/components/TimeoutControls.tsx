@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import type { GameStateData, TimeoutWithRelations } from '../../types';
 import type { Match, TimeoutType } from '@prisma/client';
 import { getTeam1Id, getTeam2Id, getTeam1Name, getTeam2Name } from '../../../matches/lib/team-helpers';
@@ -42,6 +42,7 @@ export default function TimeoutControls({
   const [timeoutType, setTimeoutType] = useState<TimeoutType>('SIXTY_SECOND');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [timeouts, setTimeouts] = useState<TimeoutWithRelations[]>([]);
   const [loadingTimeouts, setLoadingTimeouts] = useState(false);
 
@@ -79,6 +80,15 @@ export default function TimeoutControls({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -96,6 +106,7 @@ export default function TimeoutControls({
     };
 
     // Optimistic: reset form immediately
+    setSuccess('Timeout recorded');
     setTimeoutType('SIXTY_SECOND');
 
     // Fire-and-forget persistence
@@ -116,6 +127,7 @@ export default function TimeoutControls({
             errorMessage = `Server error: ${response.status}`;
           }
           setError(errorMessage);
+          setSuccess(null);
           return;
         }
 
@@ -123,6 +135,7 @@ export default function TimeoutControls({
         onTimeoutRecorded?.();
       } catch (err: any) {
         setError(err.message || 'Failed to record timeout');
+        setSuccess(null);
       }
     })();
   };
@@ -217,6 +230,13 @@ export default function TimeoutControls({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="border-green-500/50 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 

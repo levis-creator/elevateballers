@@ -23,6 +23,11 @@ export function useOfflineSync(
   );
   const [pendingCount, setPendingCount] = useState(0);
   const syncingRef = useRef(false);
+  const onSyncedRef = useRef(onSynced);
+
+  useEffect(() => {
+    onSyncedRef.current = onSynced;
+  }, [onSynced]);
 
   const refreshCount = useCallback(async () => {
     const count = await offlineStore.pendingEvents
@@ -49,6 +54,7 @@ export function useOfflineSync(
         .where('matchId')
         .equals(matchId)
         .sortBy('createdAt');
+      let syncedCount = 0;
 
       for (const ev of events) {
         try {
@@ -68,6 +74,7 @@ export function useOfflineSync(
 
           if (res.ok) {
             await offlineStore.pendingEvents.delete(ev.id!);
+            syncedCount += 1;
           } else {
             // Server rejected — remove so we don't retry invalid events forever.
             // In the future a "dead-letter" table could be added here.
@@ -80,11 +87,13 @@ export function useOfflineSync(
       }
 
       await refreshCount();
-      onSynced?.();
+      if (syncedCount > 0) {
+        onSyncedRef.current?.();
+      }
     } finally {
       syncingRef.current = false;
     }
-  }, [matchId, refreshCount, onSynced]);
+  }, [matchId, refreshCount]);
 
   useEffect(() => {
     const handleOnline = () => {

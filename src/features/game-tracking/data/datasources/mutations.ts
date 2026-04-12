@@ -629,7 +629,9 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
     return result;
   } catch (error) {
     console.error('Error creating substitution:', error);
-    return null;
+    // Re-throw so the API route can surface the real Prisma/transaction error
+    // via handleApiError instead of a generic "Failed to create substitution".
+    throw error;
   }
 }
 

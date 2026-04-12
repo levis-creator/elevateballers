@@ -60,6 +60,17 @@ export default function GameClock({
   const [timeInput, setTimeInput] = useState('');
   const [setDuration, setSetDuration] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const autoPauseTriggeredRef = useRef(false);
+  const localClockRef = useRef(localClockSeconds);
+  localClockRef.current = localClockSeconds;
+  const onToggleClockRef = useRef(onToggleClock);
+  onToggleClockRef.current = onToggleClock;
+
+  const requestAutoPause = useCallback(() => {
+    if (autoPauseTriggeredRef.current) return;
+    autoPauseTriggeredRef.current = true;
+    onToggleClockRef.current();
+  }, []);
 
   // Persist a clock value to the backend with visual feedback
   const saveClockSeconds = useCallback(async (seconds: number) => {
@@ -108,32 +119,6 @@ export default function GameClock({
     previousPeriodRef.current = gameState.period;
   }, [gameState?.period, numberOfPeriods, minutesPerPeriod, overtimeLength]);
 
-  // Ref to track if auto-pause was triggered to prevent multiple triggers
-  const autoPauseTriggeredRef = useRef(false);
-  const localClockRef = useRef(localClockSeconds);
-  localClockRef.current = localClockSeconds;
-
-  // Auto-pause when clock reaches 0.
-  // Uses a ref guard that is ONLY reset when the clock is explicitly started
-  // again (clockStartedAt changes), preventing repeated triggers.
-  useEffect(() => {
-    if (!gameState?.clockRunning) return;
-
-    const checkInterval = setInterval(() => {
-      if (
-        localClockRef.current !== null &&
-        localClockRef.current <= 0 &&
-        !autoPauseTriggeredRef.current
-      ) {
-        autoPauseTriggeredRef.current = true;
-        clearInterval(checkInterval); // stop checking immediately
-        onToggleClock();
-      }
-    }, 500);
-
-    return () => clearInterval(checkInterval);
-  }, [gameState?.clockRunning, onToggleClock]);
-
   // Only reset the auto-pause guard when the clock is freshly started
   // (new clockStartedAt), not on every clockRunning change.
   useEffect(() => {
@@ -174,7 +159,9 @@ export default function GameClock({
       if (remaining > 0) {
         worker.postMessage({ type: 'START', remainingSeconds: remaining });
       } else {
+        setLocalClockSeconds(0);
         worker.postMessage({ type: 'STOP' });
+        requestAutoPause();
       }
 
       worker.onmessage = (e: MessageEvent) => {
@@ -182,6 +169,9 @@ export default function GameClock({
         const { type: msgType, remainingSeconds } = e.data;
         if (msgType === 'TICK') {
           setLocalClockSeconds(remainingSeconds);
+        } else if (msgType === 'EXPIRED') {
+          setLocalClockSeconds(0);
+          requestAutoPause();
         }
       };
     } else {
@@ -195,13 +185,11 @@ export default function GameClock({
       worker.postMessage({ type: 'STOP' });
       worker.onmessage = null;
     };
-  }, [gameState?.clockRunning, gameState?.clockStartedAt, gameState?.clockSecondsAtStart, setLocalClockSeconds]);
+  }, [gameState?.clockRunning, gameState?.clockStartedAt, gameState?.clockSecondsAtStart, setLocalClockSeconds, requestAutoPause]);
 
   // Keyboard shortcuts — use refs so the listener doesn't re-register on every tick
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
-  const onToggleClockRef = useRef(onToggleClock);
-  onToggleClockRef.current = onToggleClock;
 
   useEffect(() => {
     if (!isMatchLive) return;

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Users } from 'lucide-react';
+import { AlertCircle, CheckCircle, Users } from 'lucide-react';
 import type { GameStateData } from '../../types';
 import type { Match, Player } from '@prisma/client';
 import type { MatchPlayerWithDetails } from '../../../cms/types';
@@ -47,6 +47,7 @@ export default function SubstitutionPanel({
   const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Use matchPlayers from prop (single source of truth in GameTrackingPanel)
   const matchPlayers = (matchPlayersProp ?? []) as MatchPlayerWithDetails[];
@@ -100,6 +101,15 @@ export default function SubstitutionPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   // Set initial team when teams from players are available, or fall back to match team1Id
   useEffect(() => {
@@ -170,6 +180,7 @@ export default function SubstitutionPanel({
 
     // Optimistic: clear form and notify parent immediately
     setError(null);
+    setSuccess('Substitution recorded');
     setPlayerInId('');
     setPlayerOutId('');
 
@@ -187,10 +198,14 @@ export default function SubstitutionPanel({
           try {
             const errorData = await response.json();
             errorMessage = errorData.error || errorMessage;
+            if (errorData.details) {
+              errorMessage = `${errorMessage}: ${errorData.details}`;
+            }
           } catch {
             errorMessage = `Server error: ${response.status}`;
           }
           setError(errorMessage);
+          setSuccess(null);
           return;
         }
 
@@ -200,6 +215,7 @@ export default function SubstitutionPanel({
         onSubstitutionRecorded?.();
       } catch (err: any) {
         setError(err.message || 'Failed to record substitution');
+        setSuccess(null);
       }
     })();
   };
@@ -378,6 +394,13 @@ export default function SubstitutionPanel({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="border-green-500/50 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 
