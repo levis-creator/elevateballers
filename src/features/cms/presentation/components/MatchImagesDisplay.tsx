@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ArenaPanel as Card,
+  ArenaPanelContent as CardContent,
+  ArenaPanelHeader as CardHeader,
+  ArenaPanelTitle as CardTitle,
+} from '../../../game-tracking/presentation/components/ArenaPanel';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image as ImageIcon, ChevronLeft, ChevronRight, ExternalLink, Download, Eye } from 'lucide-react';
@@ -90,7 +95,7 @@ export default function MatchImagesDisplay({ matchId }: MatchImagesDisplayProps)
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ImageIcon className="h-5 w-5" />
+            <ImageIcon className="h-5 w-5 text-brand-gold" />
             Match Images
           </CardTitle>
         </CardHeader>
@@ -110,7 +115,7 @@ export default function MatchImagesDisplay({ matchId }: MatchImagesDisplayProps)
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ImageIcon className="h-5 w-5" />
+            <ImageIcon className="h-5 w-5 text-brand-gold" />
             Match Images
           </CardTitle>
         </CardHeader>
@@ -132,7 +137,7 @@ export default function MatchImagesDisplay({ matchId }: MatchImagesDisplayProps)
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5" />
+              <ImageIcon className="h-5 w-5 text-brand-gold" />
               Match Images
             </CardTitle>
             {total > 0 && (
@@ -146,6 +151,7 @@ export default function MatchImagesDisplay({ matchId }: MatchImagesDisplayProps)
               variant="outline"
               size="sm"
               asChild
+              className="border-white/15 bg-white/5 text-white transition-all duration-150 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/10 hover:text-white hover:shadow-[0_8px_20px_-8px_rgba(255,255,255,0.25)] active:translate-y-0 active:scale-[0.97]"
             >
               <a href={`/admin/matches/view/${matchId}/images`} data-astro-prefetch>
                 <Eye className="h-4 w-4 mr-2" />
@@ -168,7 +174,7 @@ export default function MatchImagesDisplay({ matchId }: MatchImagesDisplayProps)
               {images.map((image) => (
                 <div
                   key={image.id}
-                  className="group relative aspect-square rounded-lg overflow-hidden border bg-muted cursor-pointer"
+                  className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-gold/50 hover:shadow-[0_12px_28px_-10px_rgba(255,186,0,0.45)]"
                   onClick={() => window.open(image.url, '_blank')}
                 >
                   <img
@@ -208,7 +214,7 @@ export default function MatchImagesDisplay({ matchId }: MatchImagesDisplayProps)
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex items-center justify-between pt-4 border-t border-white/10">
                 <p className="text-sm text-muted-foreground">
                   Showing <span className="font-semibold">{startIndex}-{endIndex}</span> of <span className="font-semibold">{total}</span> images
                 </p>
@@ -258,9 +264,9 @@ export default function MatchImagesDisplay({ matchId }: MatchImagesDisplayProps)
             )}
           </>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No images uploaded yet</p>
+          <div className="rounded-xl border border-dashed border-white/10 py-10 text-center text-slate-400">
+            <ImageIcon className="mx-auto mb-3 h-12 w-12 text-brand-gold/40" />
+            <p className="font-heading text-sm uppercase tracking-[0.18em]">No images uploaded yet</p>
           </div>
         )}
       </CardContent>
