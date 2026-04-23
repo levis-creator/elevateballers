@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, ArrowRight, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '@/components/TurnstileWidget';
-
-const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY as string;
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -45,7 +44,7 @@ export default function LoginForm() {
     }
   };
 
-  const isDisabled = loading || (!!TURNSTILE_SITE_KEY && !turnstileToken);
+  const isDisabled = loading || !turnstileToken;
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-12">
@@ -124,14 +123,12 @@ export default function LoginForm() {
             </div>
 
             {/* Turnstile */}
-            {TURNSTILE_SITE_KEY && (
-              <TurnstileWidget
-                siteKey={TURNSTILE_SITE_KEY}
-                onSuccess={setTurnstileToken}
-                onExpire={() => setTurnstileToken(null)}
-                onError={() => setTurnstileToken(null)}
-              />
-            )}
+            <TurnstileWidget
+              siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+              onError={() => setTurnstileToken(null)}
+            />
 
             {/* Submit */}
             <button

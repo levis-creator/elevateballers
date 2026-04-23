@@ -17,6 +17,7 @@ import type {
   TimeoutType,
   JumpBall,
 } from '@prisma/client';
+import type { MatchPlayerWithDetails } from '../../../cms/types';
 
 // Re-export Prisma types
 export type {
@@ -62,6 +63,10 @@ export type MatchWithGameState = Match & {
   periods: MatchPeriod[];
   timeouts: Timeout[];
   substitutions: Substitution[];
+  // The CMS layer injects the match's players into the same object when it
+  // renders the live tracking panel; children read from here so any edit to
+  // the Match Players card reflects immediately.
+  matchPlayers?: MatchPlayerWithDetails[];
 };
 
 // Game state types

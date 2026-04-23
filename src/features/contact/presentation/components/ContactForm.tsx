@@ -1,7 +1,6 @@
 import { useState } from 'react';
+import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
-
-const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY as string;
 
 interface FormData {
   name: string;
@@ -154,30 +153,28 @@ export default function ContactForm() {
           />
         </div>
 
-        {TURNSTILE_SITE_KEY && (
-          <TurnstileWidget
-            siteKey={TURNSTILE_SITE_KEY}
-            onSuccess={setTurnstileToken}
-            onExpire={() => setTurnstileToken(null)}
-            onError={() => setTurnstileToken(null)}
-          />
-        )}
+        <TurnstileWidget
+          siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+          onSuccess={setTurnstileToken}
+          onExpire={() => setTurnstileToken(null)}
+          onError={() => setTurnstileToken(null)}
+        />
 
         <div style={{ marginTop: '10px' }}>
           <button
             type="submit"
-            disabled={submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+            disabled={submitting || !turnstileToken}
             style={{
-              backgroundColor: (submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)) ? '#999' : '#dd3333',
+              backgroundColor: (submitting || !turnstileToken) ? '#999' : '#dd3333',
               color: '#fff',
               border: 'none',
               padding: '15px 40px',
               fontFamily: 'Teko',
               fontSize: '18px',
               textTransform: 'uppercase',
-              cursor: (submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)) ? 'not-allowed' : 'pointer',
+              cursor: (submitting || !turnstileToken) ? 'not-allowed' : 'pointer',
               borderRadius: '3px',
-              opacity: (submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)) ? 0.5 : 1,
+              opacity: (submitting || !turnstileToken) ? 0.5 : 1,
               transition: 'background-color 0.3s ease',
             } as React.CSSProperties}
           >

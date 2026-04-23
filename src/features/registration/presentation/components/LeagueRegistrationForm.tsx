@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
+import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
-
-const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY as string;
 
 interface League {
   id: string;
@@ -441,31 +440,29 @@ export default function LeagueRegistrationForm() {
             />
           </div>
 
-          {TURNSTILE_SITE_KEY && (
-            <TurnstileWidget
-              siteKey={TURNSTILE_SITE_KEY}
-              onSuccess={setTeamTurnstileToken}
-              onExpire={() => setTeamTurnstileToken(null)}
-              onError={() => setTeamTurnstileToken(null)}
-            />
-          )}
+          <TurnstileWidget
+            siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+            onSuccess={setTeamTurnstileToken}
+            onExpire={() => setTeamTurnstileToken(null)}
+            onError={() => setTeamTurnstileToken(null)}
+          />
 
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
-              disabled={submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)}
+              disabled={submitting || !teamTurnstileToken}
               className="button btn-primary btn-lg"
               style={{
-                backgroundColor: (submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)) ? '#999' : '#dd3333',
+                backgroundColor: (submitting || !teamTurnstileToken) ? '#999' : '#dd3333',
                 color: '#fff',
                 border: 'none',
                 padding: '15px 40px',
                 fontFamily: 'Teko',
                 fontSize: '18px',
                 textTransform: 'uppercase',
-                cursor: (submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)) ? 'not-allowed' : 'pointer',
+                cursor: (submitting || !teamTurnstileToken) ? 'not-allowed' : 'pointer',
                 borderRadius: '3px',
-                opacity: (submitting || (!!TURNSTILE_SITE_KEY && !teamTurnstileToken)) ? 0.5 : 1,
+                opacity: (submitting || !teamTurnstileToken) ? 0.5 : 1,
               } as React.CSSProperties}
             >
               {submitting ? 'Submitting...' : 'Submit Registration'}
@@ -645,31 +642,29 @@ export default function LeagueRegistrationForm() {
             />
           </div>
 
-          {TURNSTILE_SITE_KEY && (
-            <TurnstileWidget
-              siteKey={TURNSTILE_SITE_KEY}
-              onSuccess={setPlayerTurnstileToken}
-              onExpire={() => setPlayerTurnstileToken(null)}
-              onError={() => setPlayerTurnstileToken(null)}
-            />
-          )}
+          <TurnstileWidget
+            siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+            onSuccess={setPlayerTurnstileToken}
+            onExpire={() => setPlayerTurnstileToken(null)}
+            onError={() => setPlayerTurnstileToken(null)}
+          />
 
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
-              disabled={submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)}
+              disabled={submitting || !playerTurnstileToken}
               className="button btn-primary btn-lg"
               style={{
-                backgroundColor: (submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)) ? '#999' : '#dd3333',
+                backgroundColor: (submitting || !playerTurnstileToken) ? '#999' : '#dd3333',
                 color: '#fff',
                 border: '2px solid #dd3333',
                 padding: '15px 40px',
                 fontFamily: 'Teko',
                 fontSize: '18px',
                 textTransform: 'uppercase',
-                cursor: (submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)) ? 'not-allowed' : 'pointer',
+                cursor: (submitting || !playerTurnstileToken) ? 'not-allowed' : 'pointer',
                 borderRadius: '3px',
-                opacity: (submitting || (!!TURNSTILE_SITE_KEY && !playerTurnstileToken)) ? 0.5 : 1,
+                opacity: (submitting || !playerTurnstileToken) ? 0.5 : 1,
               }}
             >
               {submitting ? 'Submitting...' : 'Submit Registration'}

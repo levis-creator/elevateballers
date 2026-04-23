@@ -3,8 +3,8 @@
  * Main component that combines scoreboard, clock, and controls
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,8 +15,7 @@ import TimeoutControls from './TimeoutControls';
 import SubstitutionPanel from './SubstitutionPanel';
 import QuickEventButtons from './QuickEventButtons';
 import { useGameTrackingStore } from '../../stores/useGameTrackingStore';
-import { Play, AlertCircle } from 'lucide-react';
-import type { Match } from '@prisma/client';
+import { AlertCircle } from 'lucide-react';
 import type { MatchWithGameState } from '../../types';
 import { getTeam1Name, getTeam2Name, getTeam1Logo, getTeam2Logo } from '../../../matches/lib/team-helpers';
 
@@ -38,41 +37,15 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
     updateGameState,
     localClockSeconds,
   } = useGameTrackingStore();
-  // Scoped refresh triggers — only fire for what actually changed
-  const [playersRefreshTrigger, setPlayersRefreshTrigger] = useState(0); // substitutions, player changes
   const [eventsRefreshTrigger, setEventsRefreshTrigger] = useState(0);   // play-by-play
   const [timerWarning, setTimerWarning] = useState<string | null>(null);
   const [isEndingGame, setIsEndingGame] = useState(false);
 
-  // Shared match players — fetched once here, passed down to consumers
-  const [matchPlayers, setMatchPlayers] = useState<any[]>([]);
-  const matchPlayersFetchingRef = useRef(false);
-
-  const fetchMatchPlayers = useCallback(async () => {
-    if (!matchId || matchPlayersFetchingRef.current) return;
-    matchPlayersFetchingRef.current = true;
-    try {
-      const res = await fetch(`/api/matches/${matchId}/players`);
-      if (res.ok) {
-        const data = await res.json();
-        setMatchPlayers(data || []);
-      }
-    } catch {
-      // silent — will retry on next trigger
-    } finally {
-      matchPlayersFetchingRef.current = false;
-    }
-  }, [matchId]);
-
-  // Initial load
-  useEffect(() => {
-    if (matchId) fetchMatchPlayers();
-  }, [matchId, fetchMatchPlayers]);
-
-  // Refetch match players only when playersRefreshTrigger bumps (i.e. on substitutions)
-  useEffect(() => {
-    if (playersRefreshTrigger > 0) fetchMatchPlayers();
-  }, [playersRefreshTrigger, fetchMatchPlayers]);
+  // Match players come directly from the parent (MatchDetailView owns the
+  // roster card and refetches after every edit). Reading them here means any
+  // add/edit/remove on that card is immediately reflected in the
+  // Substitution and Quick Event panels without a duplicate fetch.
+  const matchPlayers = useMemo(() => match?.matchPlayers ?? [], [match?.matchPlayers]);
 
   useEffect(() => {
     if (!matchId) return;
@@ -101,8 +74,8 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
 
   const handleStartGame = async () => {
     await startGame(matchId);
-    // Initial game start — refresh players (starters get marked) and events
-    setPlayersRefreshTrigger((p) => p + 1);
+    // Initial game start — starters get marked server-side. Ask the parent to
+    // refetch so match.matchPlayers carries isActive=true for the starters.
     setEventsRefreshTrigger((p) => p + 1);
     if (onRefresh) onRefresh();
   };
@@ -143,10 +116,10 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
     if (onRefresh) onRefresh();
   };
 
-  // Substitution recorded — refreshes players AND events
+  // Substitution recorded — parent refresh brings back updated matchPlayers
+  // (isActive flipped on both sides), which flows through to the children.
   const handleSubstitutionRecorded = async () => {
     await fetchGameState(matchId);
-    setPlayersRefreshTrigger((p) => p + 1);
     setEventsRefreshTrigger((p) => p + 1);
     if (onRefresh) onRefresh();
   };
@@ -298,7 +271,6 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
             match={match}
             gameState={gameState}
             onSubstitutionRecorded={handleSubstitutionRecorded}
-            refreshTrigger={playersRefreshTrigger}
             matchPlayers={matchPlayers}
           />
         </div>
@@ -308,7 +280,6 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
             match={match}
             gameState={gameState}
             onEventRecorded={handleEventRecorded}
-            refreshTrigger={playersRefreshTrigger}
             matchPlayers={matchPlayers}
           />
         </div>

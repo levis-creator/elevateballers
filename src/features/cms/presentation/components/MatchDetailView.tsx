@@ -1217,7 +1217,8 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [editingMatchPlayerId, setEditingMatchPlayerId] = useState<string | null>(null);
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
-  // Start/End game controls are in GameTrackingPanel — no duplicate state needed here.
+  // End Game lives in GameTrackingPanel; Start Game is mirrored in the header below for visibility.
+  const [isStartingGame, setIsStartingGame] = useState(false);
   const [page1, setPage1] = useState(1);
   const [page2, setPage2] = useState(1);
   const playersPerPage = 10;
@@ -1241,6 +1242,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
     Trash2?: ComponentType<any>;
     Download?: ComponentType<any>;
     Upload?: ComponentType<any>;
+    Play?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -1266,6 +1268,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         Trash2: mod.Trash2,
         Download: mod.Download,
         Upload: mod.Upload,
+        Play: mod.Play,
       });
     });
   }, []);
@@ -1325,7 +1328,10 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
 
   const refreshMatchPlayers = async () => {
     try {
-      const response = await fetch(`/api/matches/${matchId}/players`);
+      // `cache: 'no-store'` bypasses the endpoint's `s-maxage=15` so edits to
+      // the Match Players card show up instantly in the downstream Quick Event
+      // and Substitution panels rather than waiting out the CDN window.
+      const response = await fetch(`/api/matches/${matchId}/players`, { cache: 'no-store' });
       if (response.ok) {
         const players = await response.json();
         setMatch((prev) => {
@@ -1341,11 +1347,31 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
     }
   };
 
+  const handleStartGame = async () => {
+    if (!matchId || isStartingGame) return;
+    setIsStartingGame(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/games/${matchId}/start`, { method: 'POST' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Failed to start game' }));
+        throw new Error(data.error || `Server returned ${response.status}`);
+      }
+      await fetchMatch();
+    } catch (err: any) {
+      setError(err.message || 'Failed to start game');
+    } finally {
+      setIsStartingGame(false);
+    }
+  };
+
   const fetchMatchDetails = async () => {
     try {
+      // Always skip the edge cache here — this runs after mutations and needs
+      // fresh state to feed the game tracking panels.
       const [playersRes, eventsRes] = await Promise.all([
-        fetch(`/api/matches/${matchId}/players`).catch(() => ({ ok: false })),
-        fetch(`/api/matches/${matchId}/events`).catch(() => ({ ok: false })),
+        fetch(`/api/matches/${matchId}/players`, { cache: 'no-store' }).catch(() => ({ ok: false })),
+        fetch(`/api/matches/${matchId}/events`, { cache: 'no-store' }).catch(() => ({ ok: false })),
       ]);
       
       const players = playersRes.ok && playersRes instanceof Response ? await playersRes.json() : [];
@@ -1513,6 +1539,14 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                   {icons.Download ? <icons.Download className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
                   Download Stat Sheet
                 </a>
+              </Button>
+            )}
+            {match.status === 'UPCOMING' && (
+              <Button onClick={handleStartGame} disabled={isStartingGame}>
+                {isStartingGame
+                  ? (icons.Loader2 ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 h-4 w-4" />)
+                  : (icons.Play ? <icons.Play className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />)}
+                {isStartingGame ? 'Starting...' : 'Start Game'}
               </Button>
             )}
             <Button asChild disabled={match?.status === 'COMPLETED'}>
