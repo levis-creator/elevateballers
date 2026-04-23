@@ -6,6 +6,7 @@
 import { prisma } from '../../../../lib/prisma';
 import { getEnvBoolean } from '../../../../lib/env';
 import { cacheDel } from '../../../../lib/cache';
+import { getNextSequenceNumber } from '../../domain/usecases/utils';
 import type {
   CreateGameRulesInput,
   UpdateGameRulesInput,
@@ -633,6 +634,215 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
     // via handleApiError instead of a generic "Failed to create substitution".
     throw error;
   }
+}
+
+/**
+ * Create multiple substitutions atomically (line-change UX).
+ * One DB transaction, sequence numbers allocated once and incremented
+ * in-tx so concurrent callers don't collide.
+ */
+export interface BulkSubstitutionPair {
+  playerInId: string;
+  playerOutId: string;
+}
+
+export interface CreateBulkSubstitutionsInput {
+  matchId: string;
+  teamId: string;
+  period: number;
+  secondsRemaining?: number | null;
+  pairs: BulkSubstitutionPair[];
+  // Optional client-minted UUID that makes replays idempotent. If the server
+  // already committed substitutions with this batch id for this match, those
+  // existing rows are returned and no new inserts happen.
+  clientBatchId?: string;
+}
+
+export async function createBulkSubstitutions(
+  data: CreateBulkSubstitutionsInput,
+): Promise<Substitution[]> {
+  if (data.pairs.length === 0) return [];
+
+  const playerIds = Array.from(
+    new Set(data.pairs.flatMap((p) => [p.playerInId, p.playerOutId])),
+  );
+  const outIds = data.pairs.map((p) => p.playerOutId);
+
+  return prisma.$transaction(
+    async (tx) => {
+      // Idempotency: if this batch id has been recorded already (retry after
+      // a timed-out response), skip the writes and return the existing rows.
+      if (data.clientBatchId) {
+        const existing = await tx.substitution.findMany({
+          where: { matchId: data.matchId, clientBatchId: data.clientBatchId },
+        });
+        if (existing.length > 0) return existing;
+      }
+
+      // One connection, three parallel prefetches — everything the writes need.
+      const [match, players, outMatchPlayers, sequenceBase] = await Promise.all([
+        tx.match.findUnique({
+          where: { id: data.matchId },
+          include: { gameRules: true },
+        }),
+        tx.player.findMany({
+          where: { id: { in: playerIds } },
+          select: { id: true, firstName: true, lastName: true, jerseyNumber: true },
+        }),
+        tx.matchPlayer.findMany({
+          where: {
+            matchId: data.matchId,
+            teamId: data.teamId,
+            playerId: { in: outIds },
+          },
+        }),
+        getNextSequenceNumber(data.matchId, tx),
+      ]);
+
+      if (!match) throw new Error('Match not found');
+
+      const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
+      const minute = data.secondsRemaining
+        ? Math.ceil((periodLengthSeconds - data.secondsRemaining) / 60)
+        : Math.ceil(periodLengthSeconds / 2 / 60);
+
+      const playerById = new Map(players.map((p) => [p.id, p]));
+      const outMpByPlayerId = new Map(outMatchPlayers.map((mp) => [mp.playerId, mp]));
+
+      const openEntries = outMatchPlayers.length
+        ? await tx.playerPlayingTime.findMany({
+            where: {
+              matchPlayerId: { in: outMatchPlayers.map((mp) => mp.id) },
+              exitTime: null,
+              period: data.period,
+            },
+            orderBy: { entryTime: 'desc' },
+          })
+        : [];
+
+      // Keep only the most recent open entry per matchPlayer.
+      const openEntryByMp = new Map<string, (typeof openEntries)[number]>();
+      for (const entry of openEntries) {
+        if (!openEntryByMp.has(entry.matchPlayerId)) {
+          openEntryByMp.set(entry.matchPlayerId, entry);
+        }
+      }
+
+      const now = new Date();
+      let sequenceNumber = sequenceBase;
+      const created: Substitution[] = [];
+      const eventRows: Array<{
+        matchId: string;
+        eventType: 'SUBSTITUTION_OUT' | 'SUBSTITUTION_IN';
+        minute: number;
+        period: number;
+        secondsRemaining: number | null | undefined;
+        sequenceNumber: number;
+        teamId: string;
+        playerId: string;
+        description: string;
+      }> = [];
+
+      for (const pair of data.pairs) {
+        const pIn = playerById.get(pair.playerInId);
+        const pOut = playerById.get(pair.playerOutId);
+        const outMp = outMpByPlayerId.get(pair.playerOutId);
+
+        if (outMp) {
+          const openEntry = openEntryByMp.get(outMp.id);
+          if (openEntry) {
+            const secondsPlayed = Math.floor(
+              (now.getTime() - openEntry.entryTime.getTime()) / 1000,
+            );
+            await tx.playerPlayingTime.update({
+              where: { id: openEntry.id },
+              data: { exitTime: now, secondsPlayed },
+            });
+          }
+          await tx.matchPlayer.update({
+            where: { id: outMp.id },
+            data: { isActive: false, subOut: true },
+          });
+        }
+
+        const inMp = await tx.matchPlayer.upsert({
+          where: {
+            matchId_playerId_teamId: {
+              matchId: data.matchId,
+              playerId: pair.playerInId,
+              teamId: data.teamId,
+            },
+          },
+          update: { isActive: true, subOut: false },
+          create: {
+            matchId: data.matchId,
+            playerId: pair.playerInId,
+            teamId: data.teamId,
+            isActive: true,
+            subOut: false,
+            jerseyNumber: pIn?.jerseyNumber,
+          },
+        });
+
+        await tx.playerPlayingTime.create({
+          data: {
+            matchPlayerId: inMp.id,
+            period: data.period,
+            entryTime: now,
+          },
+        });
+
+        const substitution = await tx.substitution.create({
+          data: {
+            matchId: data.matchId,
+            teamId: data.teamId,
+            playerInId: pair.playerInId,
+            playerOutId: pair.playerOutId,
+            period: data.period,
+            secondsRemaining: data.secondsRemaining,
+            clientBatchId: data.clientBatchId ?? null,
+          },
+        });
+        created.push(substitution);
+
+        const inName = pIn ? `${pIn.firstName} ${pIn.lastName}`.trim() : 'Unknown Player';
+        const outName = pOut ? `${pOut.firstName} ${pOut.lastName}`.trim() : 'Unknown Player';
+
+        eventRows.push(
+          {
+            matchId: data.matchId,
+            eventType: 'SUBSTITUTION_OUT',
+            minute,
+            period: data.period,
+            secondsRemaining: data.secondsRemaining,
+            sequenceNumber: sequenceNumber++,
+            teamId: data.teamId,
+            playerId: pair.playerOutId,
+            description: `Substituted out for ${inName}`,
+          },
+          {
+            matchId: data.matchId,
+            eventType: 'SUBSTITUTION_IN',
+            minute,
+            period: data.period,
+            secondsRemaining: data.secondsRemaining,
+            sequenceNumber: sequenceNumber++,
+            teamId: data.teamId,
+            playerId: pair.playerInId,
+            description: `Substituted in for ${outName}`,
+          },
+        );
+      }
+
+      // One insert for every sub event in the batch — 2N rows, 1 roundtrip.
+      if (eventRows.length) {
+        await tx.matchEvent.createMany({ data: eventRows });
+      }
+
+      return created;
+    },
+    { timeout: 20000 },
+  );
 }
 
 /**
