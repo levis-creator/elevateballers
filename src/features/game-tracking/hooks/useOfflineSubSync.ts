@@ -28,18 +28,18 @@ export interface UseOfflineSubSyncResult {
 
 export function useOfflineSubSync(
   matchId: string,
-  onSynced?: () => void,
+  onBatchSynced?: (batch: PendingSubBatch) => void,
 ): UseOfflineSubSyncResult {
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   );
   const [queuedBatches, setQueuedBatches] = useState<PendingSubBatch[]>([]);
   const syncingRef = useRef(false);
-  const onSyncedRef = useRef(onSynced);
+  const onBatchSyncedRef = useRef(onBatchSynced);
 
   useEffect(() => {
-    onSyncedRef.current = onSynced;
-  }, [onSynced]);
+    onBatchSyncedRef.current = onBatchSynced;
+  }, [onBatchSynced]);
 
   const refresh = useCallback(async () => {
     const rows = await offlineStore.pendingSubBatches
@@ -51,15 +51,35 @@ export function useOfflineSubSync(
 
   const enqueue = useCallback(
     async (input: EnqueueSubBatchInput) => {
-      await offlineStore.pendingSubBatches.add({
+      // Synchronous state update so the optimistic projection renders in the
+      // same frame as the user's tap. Persisting to IndexedDB happens in
+      // parallel; if it fails (private-browsing quota, etc.) we still have
+      // the in-memory entry and the subsequent sync will drive it to the
+      // server anyway.
+      const entry: PendingSubBatch = {
         ...input,
         failures: 0,
         lastError: null,
         createdAt: Date.now(),
-      });
-      await refresh();
+      };
+      setQueuedBatches((prev) => [...prev, entry]);
+      void offlineStore.pendingSubBatches
+        .add(entry)
+        .then((id) => {
+          // Patch the id back in so `sync()` can delete by primary key later.
+          setQueuedBatches((prev) =>
+            prev.map((b) =>
+              b === entry || b.clientBatchId === entry.clientBatchId
+                ? { ...b, id }
+                : b,
+            ),
+          );
+        })
+        .catch((err) => {
+          console.warn('[offlineSubSync] failed to persist batch', err);
+        });
     },
-    [refresh],
+    [],
   );
 
   const sync = useCallback(async () => {
@@ -67,12 +87,10 @@ export function useOfflineSubSync(
     syncingRef.current = true;
 
     try {
-      const batches = await offlineStore.pendingSubBatches
-        .where('matchId')
-        .equals(matchId)
-        .sortBy('createdAt');
-
-      let syncedSomething = false;
+      // Read from state (not IDB) so a freshly-enqueued batch whose IDB write
+      // is still in flight is still synced immediately. Filter by matchId in
+      // case a stale batch from a previous match slipped in.
+      const batches = [...queuedBatches].filter((b) => b.matchId === matchId);
 
       for (const batch of batches) {
         try {
@@ -89,16 +107,22 @@ export function useOfflineSubSync(
           });
 
           if (res.ok) {
-            // Server either committed the batch or returned the existing
-            // rows (idempotent replay). Either way, we're done with this.
-            await offlineStore.pendingSubBatches.delete(batch.id!);
-            syncedSomething = true;
+            // Hand the synced batch to the caller FIRST so it can keep the
+            // optimistic overlay alive in its own state until the parent
+            // refetch arrives. Only then drop our copy — otherwise the tiles
+            // flicker back to the pre-sub layout for a frame.
+            onBatchSyncedRef.current?.(batch);
+            setQueuedBatches((prev) =>
+              prev.filter((b) => b.clientBatchId !== batch.clientBatchId),
+            );
+            if (batch.id !== undefined) {
+              void offlineStore.pendingSubBatches.delete(batch.id);
+            }
             continue;
           }
 
-          // 4xx/5xx: bump failure count. After MAX_FAILURES drop it so we
-          // don't jam the queue — caller can look at `queuedBatches` to
-          // surface dead entries if desired.
+          // 4xx/5xx: bump failure count. After MAX_FAILURES drop the batch so
+          // it doesn't jam the queue.
           let serverMessage = `Server ${res.status}`;
           try {
             const data = await res.json();
@@ -108,25 +132,36 @@ export function useOfflineSubSync(
           }
           const nextFailures = (batch.failures ?? 0) + 1;
           if (nextFailures >= MAX_FAILURES) {
-            await offlineStore.pendingSubBatches.delete(batch.id!);
+            setQueuedBatches((prev) =>
+              prev.filter((b) => b.clientBatchId !== batch.clientBatchId),
+            );
+            if (batch.id !== undefined) {
+              void offlineStore.pendingSubBatches.delete(batch.id);
+            }
           } else {
-            await offlineStore.pendingSubBatches.update(batch.id!, {
-              failures: nextFailures,
-              lastError: serverMessage,
-            });
+            setQueuedBatches((prev) =>
+              prev.map((b) =>
+                b.clientBatchId === batch.clientBatchId
+                  ? { ...b, failures: nextFailures, lastError: serverMessage }
+                  : b,
+              ),
+            );
+            if (batch.id !== undefined) {
+              void offlineStore.pendingSubBatches.update(batch.id, {
+                failures: nextFailures,
+                lastError: serverMessage,
+              });
+            }
           }
         } catch {
-          // Network failure — stop draining; the next `online` event will retry.
+          // Network failure — stop draining; the `online` listener retries.
           break;
         }
       }
-
-      await refresh();
-      if (syncedSomething) onSyncedRef.current?.();
     } finally {
       syncingRef.current = false;
     }
-  }, [matchId, refresh]);
+  }, [matchId, queuedBatches]);
 
   useEffect(() => {
     const handleOnline = () => {

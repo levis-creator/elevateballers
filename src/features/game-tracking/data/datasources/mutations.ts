@@ -668,6 +668,30 @@ export async function createBulkSubstitutions(
   );
   const outIds = data.pairs.map((p) => p.playerOutId);
 
+  // Read-only prefetches run OUTSIDE the transaction in parallel on separate
+  // pooled connections. Inside a Prisma transaction all queries share one
+  // connection and are serialized on the wire, so hoisting these four calls
+  // out saves ~3 round trips on high-latency links — the single biggest win
+  // for the perceived "Execute is slow" feel in production.
+  const [match, players] = await Promise.all([
+    prisma.match.findUnique({
+      where: { id: data.matchId },
+      include: { gameRules: true },
+    }),
+    prisma.player.findMany({
+      where: { id: { in: playerIds } },
+      select: { id: true, firstName: true, lastName: true, jerseyNumber: true },
+    }),
+  ]);
+
+  if (!match) throw new Error('Match not found');
+
+  const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
+  const minute = data.secondsRemaining
+    ? Math.ceil((periodLengthSeconds - data.secondsRemaining) / 60)
+    : Math.ceil(periodLengthSeconds / 2 / 60);
+  const playerById = new Map(players.map((p) => [p.id, p]));
+
   return prisma.$transaction(
     async (tx) => {
       // Idempotency: if this batch id has been recorded already (retry after
@@ -679,16 +703,9 @@ export async function createBulkSubstitutions(
         if (existing.length > 0) return existing;
       }
 
-      // One connection, three parallel prefetches — everything the writes need.
-      const [match, players, outMatchPlayers, sequenceBase] = await Promise.all([
-        tx.match.findUnique({
-          where: { id: data.matchId },
-          include: { gameRules: true },
-        }),
-        tx.player.findMany({
-          where: { id: { in: playerIds } },
-          select: { id: true, firstName: true, lastName: true, jerseyNumber: true },
-        }),
+      // These two NEED transaction isolation — matchPlayer state drives the
+      // subsequent updates, and sequence allocation must be atomic.
+      const [outMatchPlayers, sequenceBase] = await Promise.all([
         tx.matchPlayer.findMany({
           where: {
             matchId: data.matchId,
@@ -699,14 +716,6 @@ export async function createBulkSubstitutions(
         getNextSequenceNumber(data.matchId, tx),
       ]);
 
-      if (!match) throw new Error('Match not found');
-
-      const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
-      const minute = data.secondsRemaining
-        ? Math.ceil((periodLengthSeconds - data.secondsRemaining) / 60)
-        : Math.ceil(periodLengthSeconds / 2 / 60);
-
-      const playerById = new Map(players.map((p) => [p.id, p]));
       const outMpByPlayerId = new Map(outMatchPlayers.map((mp) => [mp.playerId, mp]));
 
       const openEntries = outMatchPlayers.length
