@@ -4,7 +4,12 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ArenaPanel as Card,
+  ArenaPanelContent as CardContent,
+  ArenaPanelHeader as CardHeader,
+  ArenaPanelTitle as CardTitle,
+} from './ArenaPanel';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';

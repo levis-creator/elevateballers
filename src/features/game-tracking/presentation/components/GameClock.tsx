@@ -5,7 +5,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  ArenaPanel as Card,
+  ArenaPanelContent as CardContent,
+} from './ArenaPanel';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -240,10 +243,10 @@ export default function GameClock({
 
   // Get time color based on remaining time
   const getTimeColor = () => {
-    if (localClockSeconds === null) return 'text-gray-900';
-    if (localClockSeconds <= 30) return 'text-red-600';
-    if (localClockSeconds <= 60) return 'text-yellow-600';
-    return 'text-gray-900';
+    if (localClockSeconds === null) return 'text-white';
+    if (localClockSeconds <= 30) return 'text-red-400';
+    if (localClockSeconds <= 60) return 'text-yellow-300';
+    return 'text-white';
   };
 
   // Handle manual time input submission
