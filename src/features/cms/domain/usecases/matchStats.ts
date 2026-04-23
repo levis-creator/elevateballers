@@ -103,6 +103,9 @@ export function calculateTeamMatchStats(
       case 'FOUL_PERSONAL':
       case 'FOUL_TECHNICAL':
       case 'FOUL_FLAGRANT':
+      case 'FOUL_UNSPORTSMANLIKE':
+        // Bench/coach technicals intentionally excluded — they charge to the
+        // team, not any player in the box score.
         stats.fouls++;
         break;
       default:
