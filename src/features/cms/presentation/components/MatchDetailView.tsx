@@ -1,7 +1,8 @@
 import { useState, useEffect, type ComponentType } from 'react';
-import type { MatchWithFullDetails, MatchPlayerWithDetails, MatchEventWithDetails } from '../../types';
+import type { MatchWithFullDetails, MatchPlayerWithDetails } from '../../types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,6 +50,15 @@ import MatchImagesDisplay from './MatchImagesDisplay';
 import MatchEventImportModal from './MatchEventImportModal';
 import { formatClockTime } from '../../../game-tracking/lib/utils';
 import { getPeriodLabel } from '../../../game-tracking/lib/utils';
+import {
+  ArenaPanel,
+  ArenaPanelContent,
+  ArenaPanelHeader,
+  ArenaPanelTitle,
+} from '../../../game-tracking/presentation/components/ArenaPanel';
+import { ArenaChip } from '../../../game-tracking/presentation/components/ArenaChip';
+import CompletedScoresheet from '../../../game-tracking/presentation/components/CompletedScoresheet';
+import { useGameTrackingStore } from '../../../game-tracking/stores/useGameTrackingStore';
 
 interface MatchDetailViewProps {
   matchId: string;
@@ -1203,7 +1213,31 @@ function AddPlayerModal({ matchId, team1Id, team2Id, existingMatchPlayers = [], 
   );
 }
 
+function AdminToolsDisclosure({
+  collapse,
+  children,
+}: {
+  collapse: boolean;
+  children: React.ReactNode;
+}) {
+  if (!collapse) return <>{children}</>;
+  return (
+    <details className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+      <summary className="flex cursor-pointer list-none items-center justify-between p-4 font-heading text-sm uppercase tracking-[0.18em] text-slate-300 transition-colors hover:bg-white/5 hover:text-white sm:p-5">
+        <span>Admin Tools</span>
+        <span className="text-brand-gold transition-transform group-open:rotate-180" aria-hidden>▾</span>
+      </summary>
+      <div className="space-y-6 border-t border-white/5 p-4 sm:p-5">{children}</div>
+    </details>
+  );
+}
+
 export default function MatchDetailView({ matchId, initialMatch }: MatchDetailViewProps) {
+  // Subscribe to the live period from the game-tracking store so the hero
+  // label stays fresh when the scorekeeper advances the quarter (which flows
+  // through updateGameState and never updates the stale `match` prop).
+  const livePeriod = useGameTrackingStore((s) => s.gameState?.period ?? null);
+
   const [match, setMatch] = useState<MatchWithFullDetails | null>(
     initialMatch ? { ...initialMatch, matchPlayers: [], events: [] } : null
   );
@@ -1219,6 +1253,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   // End Game lives in GameTrackingPanel; Start Game is mirrored in the header below for visibility.
   const [isStartingGame, setIsStartingGame] = useState(false);
+  const [isEndingGame, setIsEndingGame] = useState(false);
   const [page1, setPage1] = useState(1);
   const [page2, setPage2] = useState(1);
   const playersPerPage = 10;
@@ -1362,6 +1397,25 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
       setError(err.message || 'Failed to start game');
     } finally {
       setIsStartingGame(false);
+    }
+  };
+
+  const handleEndGame = async () => {
+    if (!matchId || isEndingGame) return;
+    if (!window.confirm('End this game? This action cannot be undone.')) return;
+    setIsEndingGame(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/games/${matchId}/end`, { method: 'POST' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Failed to end game' }));
+        throw new Error(data.error || `Server returned ${response.status}`);
+      }
+      await fetchMatch();
+    } catch (err: any) {
+      setError(err.message || 'Failed to end game');
+    } finally {
+      setIsEndingGame(false);
     }
   };
 
@@ -1518,209 +1572,319 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
   const winnerName = getWinnerName(match);
   const isTie = match.status === 'COMPLETED' && match.team1Score !== null && match.team2Score !== null && match.team1Score === match.team2Score;
 
+  const hasScores =
+    match.team1Score !== null &&
+    match.team1Score !== undefined &&
+    match.team2Score !== null &&
+    match.team2Score !== undefined;
+
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b">
-        <div>
-          <Button variant="ghost" size="sm" asChild className="mb-2">
-            <a href="/admin/matches" data-astro-prefetch>
-              {icons.ArrowLeft ? <icons.ArrowLeft className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
-            Back to Matches
-          </a>
-          </Button>
-          <h1 className="text-3xl font-heading font-semibold text-foreground">Match Details</h1>
-        </div>
-        {match && (
-          <div className="flex gap-2">
-            {match.status === 'COMPLETED' && (
-              <Button asChild variant="outline">
-                <a href={`/api/matches/${matchId}/stat-sheet`}>
-                  {icons.Download ? <icons.Download className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
-                  Download Stat Sheet
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-3xl bg-surface-deeper font-sans text-slate-100 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.6)]',
+        'animate-in fade-in slide-in-from-bottom-4 duration-300',
+        // Text
+        '[&_.text-muted-foreground]:text-slate-400',
+        '[&_.text-foreground]:text-white',
+        // Translucent surfaces
+        '[&_.bg-muted]:bg-white/5',
+        '[&_.bg-muted\\/50]:bg-white/5',
+        '[&_.bg-background]:bg-white/[0.04]',
+        '[&_.bg-popover]:bg-surface-dark',
+        '[&_.text-popover-foreground]:text-slate-100',
+        // Borders
+        '[&_.border-input]:border-white/15',
+        // Inputs / triggers (Select, Input, Textarea) — Radix trigger uses
+        // role=combobox; Input/Textarea hit the element selector.
+        '[&_input]:bg-white/[0.04] [&_input]:border-white/15 [&_input]:text-white [&_input]:placeholder:text-slate-500',
+        '[&_textarea]:bg-white/[0.04] [&_textarea]:border-white/15 [&_textarea]:text-white [&_textarea]:placeholder:text-slate-500',
+        '[&_[role=combobox]]:bg-white/[0.04] [&_[role=combobox]]:border-white/15 [&_[role=combobox]]:text-white',
+        // shadcn outline Button uses bg-background + border-input; already
+        // covered. Primary Buttons use bg-primary text-primary-foreground —
+        // keep shadcn defaults; scoreboard-critical buttons (End Game, Start)
+        // get explicit sporty classes at the call site.
+      )}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_50%_0%,rgba(255,186,0,0.12),transparent_60%)]" />
+      <div className="relative space-y-6 p-5 sm:p-8">
+        {/* Admin top bar */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="group text-slate-300 transition-all duration-150 hover:bg-white/5 hover:text-white active:scale-[0.97]"
+            >
+              <a href="/admin/matches" data-astro-prefetch>
+                {icons.ArrowLeft ? (
+                  <icons.ArrowLeft className="mr-2 h-4 w-4 transition-transform duration-150 group-hover:-translate-x-0.5" />
+                ) : (
+                  <span className="mr-2 h-4 w-4" />
+                )}
+                Back
+              </a>
+            </Button>
+            <span className="font-heading text-[0.78rem] uppercase tracking-[0.28em] text-brand-gold">
+              Match Center
+            </span>
+          </div>
+          {match && (
+            <div className="flex flex-wrap gap-2">
+              {match.status === 'COMPLETED' && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-white/15 bg-white/5 text-white transition-all duration-150 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/10 hover:text-white hover:shadow-[0_8px_20px_-8px_rgba(255,255,255,0.25)] active:translate-y-0 active:scale-[0.97]"
+                >
+                  <a href={`/api/matches/${matchId}/stat-sheet`}>
+                    {icons.Download ? (
+                      <icons.Download className="mr-2 h-4 w-4" />
+                    ) : (
+                      <span className="mr-2 h-4 w-4" />
+                    )}
+                    Download Stat Sheet
+                  </a>
+                </Button>
+              )}
+              {match.status === 'UPCOMING' && (
+                <Button
+                  onClick={handleStartGame}
+                  disabled={isStartingGame}
+                  className="bg-brand-red text-white transition-all duration-150 hover:-translate-y-0.5 hover:bg-brand-red-dark hover:shadow-[0_10px_24px_-8px_rgba(221,51,51,0.65)] active:translate-y-0 active:scale-[0.97] disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                >
+                  {isStartingGame
+                    ? icons.Loader2
+                      ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      : <span className="mr-2 h-4 w-4" />
+                    : icons.Play
+                    ? <icons.Play className="mr-2 h-4 w-4" />
+                    : <span className="mr-2 h-4 w-4" />}
+                  {isStartingGame ? 'Starting…' : 'Start Game'}
+                </Button>
+              )}
+              {match.status === 'LIVE' && (
+                <Button
+                  onClick={handleEndGame}
+                  disabled={isEndingGame}
+                  variant="destructive"
+                  className="bg-brand-red text-white transition-all duration-150 hover:-translate-y-0.5 hover:bg-brand-red-dark hover:shadow-[0_10px_24px_-8px_rgba(221,51,51,0.65)] active:translate-y-0 active:scale-[0.97] disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                >
+                  {isEndingGame
+                    ? icons.Loader2
+                      ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      : <span className="mr-2 h-4 w-4" />
+                    : null}
+                  {isEndingGame ? 'Ending…' : 'End Game'}
+                </Button>
+              )}
+              <Button
+                asChild
+                disabled={match?.status === 'COMPLETED'}
+                className="bg-brand-gold text-[#261f45] transition-all duration-150 hover:-translate-y-0.5 hover:bg-brand-gold/90 hover:shadow-[0_10px_24px_-8px_rgba(255,186,0,0.65)] active:translate-y-0 active:scale-[0.97] disabled:hover:translate-y-0 disabled:hover:shadow-none"
+              >
+                <a href={`/admin/matches/${matchId}`} data-astro-prefetch>
+                  {icons.Edit ? (
+                    <icons.Edit className="mr-2 h-4 w-4" />
+                  ) : (
+                    <span className="mr-2 h-4 w-4" />
+                  )}
+                  Edit Match
                 </a>
               </Button>
-            )}
-            {match.status === 'UPCOMING' && (
-              <Button onClick={handleStartGame} disabled={isStartingGame}>
-                {isStartingGame
-                  ? (icons.Loader2 ? <icons.Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 h-4 w-4" />)
-                  : (icons.Play ? <icons.Play className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />)}
-                {isStartingGame ? 'Starting...' : 'Start Game'}
-              </Button>
-            )}
-            <Button asChild disabled={match?.status === 'COMPLETED'}>
-              <a href={`/admin/matches/${matchId}`} data-astro-prefetch>
-                {icons.Edit ? <icons.Edit className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
-            Edit Match
-          </a>
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <Alert variant="destructive">
-          {icons.AlertCircle ? <icons.AlertCircle className="h-4 w-4" /> : <span className="h-4 w-4" />}
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {loadingDetails && (
-        <Alert>
-          {icons.Loader2 ? <icons.Loader2 className="h-4 w-4 animate-spin" /> : <span className="h-4 w-4" />}
-          <AlertDescription>Loading players and events...</AlertDescription>
-        </Alert>
-      )}
-
-      {match && (
-        <>
-          {/* Match Header Card */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                {/* Team 1 */}
-                <div className={`flex-1 text-center ${team1IsWinner ? 'winner-highlight' : ''}`}>
-                  <TeamLogo 
-                    logo={team1Logo} 
-                    name={team1Name} 
-                    size="custom" 
-                    className="w-24 h-24 mx-auto mb-4 object-contain" 
-                  />
-                  <h2 className="text-2xl font-heading font-semibold mb-2">{team1Name}</h2>
-                  {match.status !== 'LIVE' && match.team1Score !== null && match.team1Score !== undefined && (
-                    <div className="text-5xl font-bold">{match.team1Score}</div>
-            )}
-                  {team1IsWinner && (
-                    <div className="mt-2">
-                      <Badge className="bg-yellow-500 text-white">
-                        🏆 Winner
-                      </Badge>
-                    </div>
-                  )}
-          </div>
-          
-                {/* Match Info Center */}
-                <div className="flex-shrink-0 text-center min-w-[200px]">
-                  <Badge variant={getStatusVariant(match.status)} className="mb-4">
-                    {match.status}
-                  </Badge>
-                  {isTie && (
-                    <Badge variant="outline" className="mb-4 ml-2">Tie</Badge>
-                  )}
-                  {match.date && (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center justify-center gap-2">
-                        {icons.Calendar ? <icons.Calendar className="h-4 w-4" /> : <span className="h-4 w-4" />}
-                        {new Date(match.date).toLocaleDateString('en-US', {
-                weekday: 'short', 
-                year: 'numeric', 
-                month: 'short', 
-                          day: 'numeric',
-              })}
             </div>
-                      <div className="flex items-center justify-center gap-2">
-                        {icons.Clock ? <icons.Clock className="h-4 w-4" /> : <span className="h-4 w-4" />}
-                        {new Date(match.date).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-            </div>
-            {leagueName && (
-                        <div className="flex items-center justify-center gap-2">
-                          {icons.Trophy ? <icons.Trophy className="h-4 w-4" /> : <span className="h-4 w-4" />}
-                {leagueName}
-              </div>
-            )}
-                      {match.season && (
-                        <div className="text-xs opacity-85">
-                Season: {match.season.name}
-                        </div>
-                      )}
-              </div>
-            )}
-          </div>
-          
-                {/* Team 2 */}
-                <div className={`flex-1 text-center ${team2IsWinner ? 'winner-highlight' : ''}`}>
-                  <TeamLogo 
-                    logo={team2Logo} 
-                    name={team2Name} 
-                    size="custom" 
-                    className="w-24 h-24 mx-auto mb-4 object-contain" 
-                  />
-                  <h2 className="text-2xl font-heading font-semibold mb-2">{team2Name}</h2>
-                  {match.status !== 'LIVE' && match.team2Score !== null && match.team2Score !== undefined && (
-                    <div className="text-5xl font-bold">{match.team2Score}</div>
-            )}
-                  {team2IsWinner && (
-                    <div className="mt-2">
-                      <Badge className="bg-yellow-500 text-white">
-                        🏆 Winner
-                      </Badge>
-                    </div>
-                  )}
-          </div>
+          )}
         </div>
-            </CardContent>
-          </Card>
 
-      {/* Winner Summary (for completed matches) */}
-      {match.status === 'COMPLETED' && (winnerName || isTie) && (
-        <Alert>
-          {icons.Trophy ? <icons.Trophy className="h-4 w-4" /> : <span className="h-4 w-4" />}
-          <AlertDescription>
-            <strong>Match Result:</strong>{' '}
-            {isTie ? (
-              <span>Match ended in a tie ({match.team1Score} - {match.team2Score})</span>
+        {error && (
+          <Alert
+            variant="destructive"
+            className="border-red-500/40 bg-red-500/10 text-red-100"
+          >
+            {icons.AlertCircle ? (
+              <icons.AlertCircle className="h-4 w-4" />
             ) : (
-              <span><strong>{winnerName}</strong> won the match</span>
+              <span className="h-4 w-4" />
             )}
-          </AlertDescription>
-        </Alert>
-      )}
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {/* Alert for non-live matches */}
-      {match.status !== 'LIVE' && (
-        <Alert>
-          {icons.AlertCircle ? <icons.AlertCircle className="h-4 w-4" /> : <span className="h-4 w-4" />}
-          <AlertDescription>
-            <strong>Match is not live.</strong> {match.status === 'UPCOMING' 
-              ? 'Start the match to enable event tracking and timer controls. You can still add players to the match.' 
-              : 'This match has been completed. Event tracking and timer controls are no longer available.'}
-          </AlertDescription>
-        </Alert>
-      )}
+        {match && (
+          <>
+            {/* Sporty scoreboard hero */}
+            <ArenaPanel className="overflow-hidden">
+              <ArenaPanelContent className="relative px-4 py-6 sm:px-8 sm:py-8">
+                {/* Eyebrow row: league + date + non-LIVE status chip. The
+                    LIVE/period/clock chips live in the center column during
+                    LIVE so the scorekeeper's eye doesn't have to hop between
+                    the eyebrow and the score block. */}
+                <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+                  {leagueName && (
+                    <span className="font-heading text-[0.78rem] uppercase tracking-[0.28em] text-brand-gold">
+                      {leagueName}
+                    </span>
+                  )}
+                  {match.status !== 'LIVE' && (
+                    <ArenaChip
+                      tone={match.status === 'COMPLETED' ? 'muted' : 'gold'}
+                    >
+                      {match.status}
+                    </ArenaChip>
+                  )}
+                  {isTie && <ArenaChip tone="muted">Tie</ArenaChip>}
+                  {match.date && (
+                    <span className="flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.18em] text-slate-300">
+                      {icons.Calendar ? <icons.Calendar className="h-3.5 w-3.5" /> : null}
+                      {new Date(match.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                      {' · '}
+                      {new Date(match.date).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
+                  {/* Team 1 */}
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <TeamLogo
+                      logo={team1Logo}
+                      name={team1Name}
+                      size="custom"
+                      className="size-24 rounded-full bg-white/5 object-contain p-2 ring-1 ring-white/10"
+                    />
+                    <h2
+                      className={`font-heading text-2xl uppercase tracking-[0.08em] md:text-3xl ${team1IsWinner ? 'text-brand-gold' : 'text-white'}`}
+                    >
+                      {team1Name}
+                    </h2>
+                    {team1IsWinner && <ArenaChip tone="gold">🏆 Winner</ArenaChip>}
+                  </div>
+
+                  {/* Center block — status-aware:
+                      · COMPLETED → big final scoreboard (source of truth)
+                      · LIVE      → LIVE pill + live clock + period label (no
+                                    numbers here; GameScoreboard owns those)
+                      · UPCOMING  → VS placeholder */}
+                  <div className="flex min-w-[220px] flex-col items-center gap-2">
+                    {match.status === 'COMPLETED' && hasScores ? (
+                      <div className="flex items-baseline gap-3 font-heading tabular-nums text-white sm:gap-5">
+                        <span className={`text-6xl sm:text-[5rem] leading-none ${team1IsWinner ? 'text-brand-gold' : ''}`}>
+                          {match.team1Score}
+                        </span>
+                        <span className="text-3xl text-white/30" aria-hidden>–</span>
+                        <span className={`text-6xl sm:text-[5rem] leading-none ${team2IsWinner ? 'text-brand-gold' : ''}`}>
+                          {match.team2Score}
+                        </span>
+                      </div>
+                    ) : match.status === 'LIVE' ? (
+                      // Identity-only during LIVE: the live clock lives in
+                      // the GameClock panel (the web worker ticks it there).
+                      // We show just the LIVE pill + the period label, where
+                      // the period reads from the game-tracking store so
+                      // quarter changes reflect immediately.
+                      <div className="flex flex-col items-center gap-3">
+                        <ArenaChip tone="live" pulse>
+                          LIVE
+                        </ArenaChip>
+                        {(() => {
+                          const period = livePeriod ?? match.currentPeriod ?? null;
+                          if (typeof period !== 'number' || period <= 0) return null;
+                          return (
+                            <span className="font-heading text-3xl uppercase tracking-[0.18em] text-brand-gold">
+                              {getPeriodLabel(period)}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="font-heading text-4xl uppercase tracking-[0.2em] text-white/40">
+                        VS
+                      </div>
+                    )}
+                    {match.season && (
+                      <span className="text-[0.68rem] uppercase tracking-[0.18em] text-slate-400">
+                        Season · {match.season.name}
+                      </span>
+                    )}
+                    {match.status === 'COMPLETED' && winnerName && !isTie && (
+                      <span className="text-xs text-slate-300">
+                        <strong className="text-brand-gold">{winnerName}</strong> won
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Team 2 */}
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <TeamLogo
+                      logo={team2Logo}
+                      name={team2Name}
+                      size="custom"
+                      className="size-24 rounded-full bg-white/5 object-contain p-2 ring-1 ring-white/10"
+                    />
+                    <h2
+                      className={`font-heading text-2xl uppercase tracking-[0.08em] md:text-3xl ${team2IsWinner ? 'text-brand-gold' : 'text-white'}`}
+                    >
+                      {team2Name}
+                    </h2>
+                    {team2IsWinner && <ArenaChip tone="gold">🏆 Winner</ArenaChip>}
+                  </div>
+                </div>
+              </ArenaPanelContent>
+            </ArenaPanel>
 
       {/* Game Tracking Panel */}
       {match.status === 'LIVE' || match.status === 'UPCOMING' ? (
         <GameTrackingPanel matchId={matchId} match={match} onRefresh={fetchMatchDetails} />
       ) : null}
 
+      {/* Completed Scoresheet — shown above the admin disclosure */}
+      {match.status === 'COMPLETED' && (
+        <CompletedScoresheet
+          match={match}
+          team1Id={team1Id}
+          team2Id={team2Id}
+          team1Name={team1Name}
+          team2Name={team2Name}
+        />
+      )}
+
+      {/* Admin editing blocks — inline only during pre-game UPCOMING; during
+          LIVE the CourtConsole is the main surface so we tuck roster/event
+          edits under a disclosure; on COMPLETED we do the same to keep the
+          scoresheet above the fold. */}
+      <AdminToolsDisclosure collapse={match.status !== 'UPCOMING'}>
       {/* Match Players */}
-          <Card>
-            <CardHeader>
+          <ArenaPanel>
+            <ArenaPanelHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  {icons.Users ? <icons.Users className="h-6 w-6" /> : <span className="h-6 w-6" />}
+                <ArenaPanelTitle className="flex items-center gap-2">
+                  {icons.Users ? <icons.Users className="h-6 w-6 text-brand-gold" /> : <span className="h-6 w-6" />}
               Match Players
                   {match.matchPlayers && match.matchPlayers.length > 0 && (
-                    <span className="text-sm font-normal text-muted-foreground">
+                    <span className="text-sm font-normal text-slate-400">
                   ({match.matchPlayers.length})
                 </span>
               )}
-                </CardTitle>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                </ArenaPanelTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => setShowAddPlayerModal(true)}
+                  className="border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                 >
                   {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
             Add Player
                 </Button>
         </div>
-            </CardHeader>
-            <CardContent>
+            </ArenaPanelHeader>
+            <ArenaPanelContent>
               {match.matchPlayers && match.matchPlayers.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {team1Id && (
@@ -1911,28 +2075,29 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                   <p className="text-muted-foreground">No players added to this match yet</p>
           </div>
         )}
-            </CardContent>
-          </Card>
+            </ArenaPanelContent>
+          </ArenaPanel>
 
       {/* Match Events */}
-          <Card>
-            <CardHeader>
+          <ArenaPanel>
+            <ArenaPanelHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  {icons.Activity ? <icons.Activity className="h-6 w-6" /> : <span className="h-6 w-6" />}
+                <ArenaPanelTitle className="flex items-center gap-2">
+                  {icons.Activity ? <icons.Activity className="h-6 w-6 text-brand-gold" /> : <span className="h-6 w-6" />}
               Match Events
                   {match.events && match.events.length > 0 && (
-                    <span className="text-sm font-normal text-muted-foreground">
+                    <span className="text-sm font-normal text-slate-400">
                   ({match.events.length})
                 </span>
               )}
-                </CardTitle>
+                </ArenaPanelTitle>
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setShowImportModal(true)}
                     disabled={match?.status === 'COMPLETED'}
+                    className="border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                   >
                     {icons.Upload ? <icons.Upload className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
                     Import
@@ -1942,14 +2107,15 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                     variant="outline"
                     onClick={() => setShowAddEventModal(true)}
                     disabled={match?.status !== 'LIVE'}
+                    className="border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                   >
                     {icons.Plus ? <icons.Plus className="mr-2 h-4 w-4" /> : <span className="mr-2 h-4 w-4" />}
                     Add Event
                   </Button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+            </ArenaPanelHeader>
+            <ArenaPanelContent>
               {match.events && match.events.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[600px] overflow-y-auto pr-2">
                   {team1Id && (
@@ -1962,23 +2128,23 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                           const getEventColor = () => {
                             // Made shots - green
                             if (['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE'].includes(event.eventType)) {
-                              return 'border-green-500 bg-green-50';
+                              return 'border-green-400/60 bg-green-500/10';
                             }
                             // Missed shots - orange
                             if (['TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED'].includes(event.eventType)) {
-                              return 'border-orange-500 bg-orange-50';
+                              return 'border-orange-400/60 bg-orange-500/10';
                             }
                             // Fouls - red/yellow
-                            if (event.eventType === 'FOUL_PERSONAL') return 'border-yellow-500 bg-yellow-50';
-                            if (event.eventType === 'FOUL_TECHNICAL') return 'border-orange-500 bg-orange-50';
-                            if (event.eventType === 'FOUL_FLAGRANT') return 'border-red-500 bg-red-50';
+                            if (event.eventType === 'FOUL_PERSONAL') return 'border-yellow-400/60 bg-yellow-500/10';
+                            if (event.eventType === 'FOUL_TECHNICAL') return 'border-orange-400/60 bg-orange-500/10';
+                            if (event.eventType === 'FOUL_FLAGRANT') return 'border-red-400/60 bg-red-500/10';
                             // Turnovers - red
-                            if (event.eventType === 'TURNOVER') return 'border-red-500 bg-red-50';
+                            if (event.eventType === 'TURNOVER') return 'border-red-400/60 bg-red-500/10';
                             // Positive plays - blue
                             if (['ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE'].includes(event.eventType)) {
-                              return 'border-blue-500 bg-blue-50';
+                              return 'border-sky-400/60 bg-sky-500/10';
                             }
-                            return 'border-gray-500 bg-gray-50';
+                            return 'border-white/15 bg-white/5';
                           };
                     return (
                             <div
@@ -1987,16 +2153,16 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                             >
                               <div className="flex items-start gap-3">
                                 {['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE', 'TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED'].includes(event.eventType) && (
-                                  icons.Goal ? <icons.Goal className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Goal ? <icons.Goal className="h-5 w-5 text-green-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                                 )}
                                 {['FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT'].includes(event.eventType) && (
-                                  icons.Card ? <icons.Card className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Card ? <icons.Card className="h-5 w-5 text-yellow-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                                 )}
                                 {['ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE', 'TURNOVER'].includes(event.eventType) && (
-                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-sky-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                                 )}
                           {!['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE', 'TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED', 'FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT', 'ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE', 'TURNOVER'].includes(event.eventType) && (
-                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-slate-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                           )}
                                 <div className="flex-1">
                                   <div className="font-semibold mb-1">
@@ -2062,23 +2228,23 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                           const getEventColor = () => {
                             // Made shots - green
                             if (['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE'].includes(event.eventType)) {
-                              return 'border-green-500 bg-green-50';
+                              return 'border-green-400/60 bg-green-500/10';
                             }
                             // Missed shots - orange
                             if (['TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED'].includes(event.eventType)) {
-                              return 'border-orange-500 bg-orange-50';
+                              return 'border-orange-400/60 bg-orange-500/10';
                             }
                             // Fouls - red/yellow
-                            if (event.eventType === 'FOUL_PERSONAL') return 'border-yellow-500 bg-yellow-50';
-                            if (event.eventType === 'FOUL_TECHNICAL') return 'border-orange-500 bg-orange-50';
-                            if (event.eventType === 'FOUL_FLAGRANT') return 'border-red-500 bg-red-50';
+                            if (event.eventType === 'FOUL_PERSONAL') return 'border-yellow-400/60 bg-yellow-500/10';
+                            if (event.eventType === 'FOUL_TECHNICAL') return 'border-orange-400/60 bg-orange-500/10';
+                            if (event.eventType === 'FOUL_FLAGRANT') return 'border-red-400/60 bg-red-500/10';
                             // Turnovers - red
-                            if (event.eventType === 'TURNOVER') return 'border-red-500 bg-red-50';
+                            if (event.eventType === 'TURNOVER') return 'border-red-400/60 bg-red-500/10';
                             // Positive plays - blue
                             if (['ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE'].includes(event.eventType)) {
-                              return 'border-blue-500 bg-blue-50';
+                              return 'border-sky-400/60 bg-sky-500/10';
                             }
-                            return 'border-gray-500 bg-gray-50';
+                            return 'border-white/15 bg-white/5';
                           };
                     return (
                             <div
@@ -2087,16 +2253,16 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                             >
                               <div className="flex items-start gap-3">
                                 {['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE', 'TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED'].includes(event.eventType) && (
-                                  icons.Goal ? <icons.Goal className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Goal ? <icons.Goal className="h-5 w-5 text-green-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                                 )}
                                 {['FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT'].includes(event.eventType) && (
-                                  icons.Card ? <icons.Card className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Card ? <icons.Card className="h-5 w-5 text-yellow-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                                 )}
                                 {['ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE', 'TURNOVER'].includes(event.eventType) && (
-                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-sky-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                                 )}
                           {!['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE', 'TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED', 'FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT', 'ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE', 'TURNOVER'].includes(event.eventType) && (
-                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-gray-600 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                  icons.Activity ? <icons.Activity className="h-5 w-5 text-slate-300 flex-shrink-0 mt-0.5" /> : <span className="h-5 w-5 flex-shrink-0 mt-0.5" />
                           )}
                                 <div className="flex-1">
                                   <div className="font-semibold mb-1">
@@ -2158,19 +2324,19 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                   <p className="text-muted-foreground">No events recorded for this match yet</p>
           </div>
         )}
-            </CardContent>
-          </Card>
+            </ArenaPanelContent>
+          </ArenaPanel>
 
           {/* Match Timeline */}
           {match.events && match.events.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {icons.Clock ? <icons.Clock className="h-6 w-6" /> : <span className="h-6 w-6" />}
+            <ArenaPanel>
+              <ArenaPanelHeader>
+                <ArenaPanelTitle className="flex items-center gap-2">
+                  {icons.Clock ? <icons.Clock className="h-6 w-6 text-brand-gold" /> : <span className="h-6 w-6" />}
                   Match Timeline
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </ArenaPanelTitle>
+              </ArenaPanelHeader>
+              <ArenaPanelContent>
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                   {match.events
                     .sort((a, b) => a.minute - b.minute)
@@ -2179,23 +2345,23 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                         {index < match.events!.length - 1 && (
                           <div className="absolute left-6 top-8 bottom-0 w-0.5 bg-border" />
                         )}
-                        <div className="absolute left-0 top-0 w-12 h-12 rounded-full bg-background border-2 border-border flex items-center justify-center font-bold text-sm z-10">
+                        <div className="absolute left-0 top-0 w-12 h-12 rounded-full bg-surface-deeper border-2 border-brand-gold/40 text-brand-gold flex items-center justify-center font-heading font-bold text-sm tabular-nums z-10">
                     {event.minute}'
                   </div>
-                        <Card className="ml-4">
+                        <Card className="ml-4 border-white/10 bg-white/[0.03] text-slate-100 shadow-[0_10px_24px_rgba(0,0,0,0.25)]">
                           <CardContent className="pt-4">
                             <div className="flex items-center gap-3 mb-2">
                               {['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE', 'TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED'].includes(event.eventType) && (
-                                icons.Goal ? <icons.Goal className="h-5 w-5 text-green-600" /> : <span className="h-5 w-5" />
+                                icons.Goal ? <icons.Goal className="h-5 w-5 text-green-300" /> : <span className="h-5 w-5" />
                               )}
                               {['FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT'].includes(event.eventType) && (
-                                icons.Card ? <icons.Card className="h-5 w-5 text-yellow-600" /> : <span className="h-5 w-5" />
+                                icons.Card ? <icons.Card className="h-5 w-5 text-yellow-300" /> : <span className="h-5 w-5" />
                               )}
                               {['ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE', 'TURNOVER'].includes(event.eventType) && (
-                                icons.Activity ? <icons.Activity className="h-5 w-5 text-blue-600" /> : <span className="h-5 w-5" />
+                                icons.Activity ? <icons.Activity className="h-5 w-5 text-sky-300" /> : <span className="h-5 w-5" />
                               )}
                       {!['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE', 'TWO_POINT_MISSED', 'THREE_POINT_MISSED', 'FREE_THROW_MISSED', 'FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT', 'ASSIST', 'STEAL', 'BLOCK', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE', 'TURNOVER'].includes(event.eventType) && (
-                                icons.Activity ? <icons.Activity className="h-5 w-5 text-gray-600" /> : <span className="h-5 w-5" />
+                                icons.Activity ? <icons.Activity className="h-5 w-5 text-slate-300" /> : <span className="h-5 w-5" />
                       )}
                               <div className="font-semibold">
                         {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
@@ -2248,9 +2414,10 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                 </div>
               ))}
           </div>
-              </CardContent>
-            </Card>
+              </ArenaPanelContent>
+            </ArenaPanel>
           )}
+          </AdminToolsDisclosure>
         </>
       )}
 
@@ -2340,26 +2507,7 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
         </AlertDialogContent>
       </AlertDialog>
 
-      <style>{`
-        .winner-highlight {
-          position: relative;
-          padding: 1rem;
-          border-radius: 8px;
-          background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
-        }
-
-        .winner-highlight::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          border: 2px solid #fbbf24;
-          border-radius: 8px;
-          pointer-events: none;
-        }
-      `}</style>
+      </div>
     </div>
   );
 

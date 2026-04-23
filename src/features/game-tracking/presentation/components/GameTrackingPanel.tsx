@@ -51,12 +51,14 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
     if (!matchId) return;
     fetchGameState(matchId);
 
-    // Pause polling when the tab is hidden to save resources
+    // With optimistic UI on every event we only need periodic reconciliation
+    // for cross-device sync; 30s is plenty and saves energy on mobile tablets
+    // courtside. Pause polling when the tab is hidden to save resources.
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible' && match?.status === 'LIVE') {
         fetchGameState(matchId);
       }
-    }, 10000);
+    }, 30000);
 
     // Refetch immediately when the tab becomes visible again
     const onVisibilityChange = () => {
@@ -95,25 +97,31 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
   };
 
   const handleToggleClock = () => {
-    // Check if timer is set before allowing start
-    if (!gameState?.clockRunning) {
-      if (localClockSeconds === null || localClockSeconds === 0) {
-        setTimerWarning('Please set the timer duration before starting. Use the Settings button or click on the timer to set the time.');
+    // If the clock hasn't been initialised yet, default it to the period
+    // length configured on the match rules (e.g. 10:00 for a 10-min period).
+    if (!gameState?.clockRunning && (localClockSeconds === null || localClockSeconds === 0)) {
+      const minutesPerPeriod = match?.gameRules?.minutesPerPeriod;
+      if (minutesPerPeriod && minutesPerPeriod > 0) {
+        updateGameState(matchId, { clockSeconds: minutesPerPeriod * 60 });
+      } else {
+        setTimerWarning('No period length configured for this match. Open Settings on the clock to set the time.');
         setTimeout(() => setTimerWarning(null), 5000);
         return;
       }
     }
     setTimerWarning(null);
-    // Fire and forget — store handles optimistic update + background persist
     toggleClock(matchId);
   };
 
-  // Generic event recorded — only refreshes play-by-play + game state (score/fouls)
-  // Does NOT refetch match players (those don't change on scoring events)
+  // Generic event recorded — refreshes the play-by-play log and reconciles
+  // game state from the server (score/fouls). We intentionally DO NOT call
+  // onRefresh here because scoring events don't change the roster, and the
+  // parent's fetchMatchDetails() refetches both players and events — that was
+  // the biggest source of post-tap latency. Substitutions (which DO change
+  // the roster) still call onRefresh via handleSubstitutionRecorded below.
   const handleEventRecorded = async () => {
     await fetchGameState(matchId);
     setEventsRefreshTrigger((p) => p + 1);
-    if (onRefresh) onRefresh();
   };
 
   // Substitution recorded — parent refresh brings back updated matchPlayers
@@ -203,29 +211,6 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
         </Alert>
       )}
 
-      {/* End Game Button - Prominently displayed for live games */}
-      {match?.status === 'LIVE' && (
-        <Card className="border-red-500 border-2">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-lg">Game is Live</h3>
-                <p className="text-sm text-muted-foreground">Click below to end the game</p>
-              </div>
-              <Button
-                onClick={handleEndGame}
-                disabled={isEndingGame}
-                variant="destructive"
-                size="lg"
-                className="min-w-[150px]"
-              >
-                {isEndingGame ? 'Ending...' : 'End Game'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Scoreboard */}
         <div className="md:col-span-2">
@@ -255,34 +240,31 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
         </div>
       </div>
 
-      {/* Controls Grid */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <TimeoutControls
-            matchId={matchId}
-            match={match}
-            gameState={gameState}
-            onTimeoutRecorded={() => fetchGameState(matchId)}
-          />
-        </div>
-        <div className="flex-1">
-          <SubstitutionPanel
-            matchId={matchId}
-            match={match}
-            gameState={gameState}
-            onSubstitutionRecorded={handleSubstitutionRecorded}
-            matchPlayers={matchPlayers}
-          />
-        </div>
-        <div className="flex-1">
-          <QuickEventButtons
-            matchId={matchId}
-            match={match}
-            gameState={gameState}
-            onEventRecorded={handleEventRecorded}
-            matchPlayers={matchPlayers}
-          />
-        </div>
+      {/* Court Console — primary surface, full width so the 5-on-5 jersey
+          grid has room to breathe and every tap target stays thumb-sized. */}
+      <QuickEventButtons
+        matchId={matchId}
+        match={match}
+        gameState={gameState}
+        onEventRecorded={handleEventRecorded}
+        matchPlayers={matchPlayers}
+      />
+
+      {/* Secondary controls — substitutions and timeouts live below. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SubstitutionPanel
+          matchId={matchId}
+          match={match}
+          gameState={gameState}
+          onSubstitutionRecorded={handleSubstitutionRecorded}
+          matchPlayers={matchPlayers}
+        />
+        <TimeoutControls
+          matchId={matchId}
+          match={match}
+          gameState={gameState}
+          onTimeoutRecorded={() => fetchGameState(matchId)}
+        />
       </div>
 
       {/* Play-by-Play Log */}

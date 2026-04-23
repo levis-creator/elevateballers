@@ -4,7 +4,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ArenaPanel as Card,
+  ArenaPanelContent as CardContent,
+  ArenaPanelHeader as CardHeader,
+  ArenaPanelTitle as CardTitle,
+} from './ArenaPanel';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -234,7 +239,7 @@ export default function TimeoutControls({
           )}
 
           {success && (
-            <Alert className="border-green-500/50 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100">
+            <Alert className="border-green-400/40 bg-green-500/15 text-green-100">
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               <AlertDescription>{success}</AlertDescription>
             </Alert>

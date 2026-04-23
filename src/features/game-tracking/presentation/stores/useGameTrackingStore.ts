@@ -119,7 +119,29 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
   },
 
   updateGameState: async (matchId, updates) => {
-    set({ isUpdating: true, error: null });
+    // --- Optimistic update: merge into local state immediately so possession
+    // toggles, period changes, and clock tweaks reflect without waiting for
+    // the server round-trip. Matches the pattern already used by toggleClock.
+    const previousState = get().gameState;
+    const previousLocalClock = get().localClockSeconds;
+
+    if (previousState) {
+      const optimisticState = { ...previousState, ...updates };
+      const optimisticLocalClock =
+        'clockSeconds' in updates && updates.clockSeconds !== undefined
+          ? clampClock(updates.clockSeconds)
+          : previousLocalClock;
+      set({
+        gameState: optimisticState,
+        localClockSeconds: optimisticLocalClock,
+        isUpdating: true,
+        error: null,
+      });
+    } else {
+      set({ isUpdating: true, error: null });
+    }
+
+    // --- Background persist ---
     try {
       // Map period to currentPeriod for API compatibility
       const apiUpdates: any = { ...updates };
@@ -127,7 +149,7 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
         apiUpdates.currentPeriod = apiUpdates.period;
         delete apiUpdates.period;
       }
-      
+
       const response = await fetch(`/api/games/${matchId}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -138,14 +160,20 @@ export const useGameTrackingStore = create<GameTrackingState>((set, get) => ({
       }
       const updatedState = await response.json();
       const validatedClockSeconds = clampClock(updatedState?.clockSeconds);
-      
+
       set({
         gameState: updatedState,
         localClockSeconds: validatedClockSeconds,
         isUpdating: false,
       });
     } catch (error: any) {
-      set({ error: error.message, isUpdating: false });
+      // Revert optimistic update on failure
+      set({
+        gameState: previousState,
+        localClockSeconds: previousLocalClock,
+        error: error.message,
+        isUpdating: false,
+      });
     }
   },
 

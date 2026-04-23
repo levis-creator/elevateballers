@@ -7,7 +7,12 @@
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ArenaPanel as Card,
+  ArenaPanelContent as CardContent,
+  ArenaPanelHeader as CardHeader,
+  ArenaPanelTitle as CardTitle,
+} from './ArenaPanel';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, ArrowRightLeft, CheckCircle } from 'lucide-react';
@@ -621,7 +626,7 @@ export default function SubstitutionPanel({
           {activePlayers.length === 0 ? (
             <p className="text-xs italic text-muted-foreground">No players on the floor</p>
           ) : (
-            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
               {activePlayers.map((mp) => {
                 const { role, order } = tileRoleOut(mp.playerId);
                 return (
@@ -653,7 +658,7 @@ export default function SubstitutionPanel({
           {totalBenchCount === 0 ? (
             <p className="text-xs italic text-muted-foreground">No players available</p>
           ) : (
-            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
               {playersOnBench.map((mp) => {
                 const { role, order } = tileRoleIn(mp.playerId);
                 return (
@@ -737,7 +742,7 @@ export default function SubstitutionPanel({
         )}
 
         {success && (
-          <Alert className="border-green-500/50 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100">
+          <Alert className="border-green-400/40 bg-green-500/15 text-green-100">
             <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
             <AlertDescription>{success}</AlertDescription>
           </Alert>
