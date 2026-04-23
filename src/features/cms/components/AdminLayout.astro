@@ -53,14 +53,21 @@ if (redirectUrl) {
     {redirectUrl && <meta http-equiv="refresh" content={`0;url=${redirectUrl}`} />}
     <title>{title}</title>
 
-    <!-- Hide sidebar before paint on match-detail pages to give the statistician a focused workspace -->
+    <!-- Resolve sidebar collapsed state before paint. Stored preference wins; match-detail auto-hides by default. -->
     <script is:inline>
       (function () {
         try {
-          var match = /^\/admin\/matches\/([^/]+)\/?$/.exec(location.pathname);
-          var isMatchDetail = !!match && match[1] !== 'new';
+          var stored = null;
+          try { stored = localStorage.getItem('admin-sidebar-collapsed'); } catch (e) {}
+          var collapsed;
+          if (stored === 'true') collapsed = true;
+          else if (stored === 'false') collapsed = false;
+          else {
+            var match = /^\/admin\/matches\/([^/]+)\/?$/.exec(location.pathname);
+            collapsed = !!match && match[1] !== 'new';
+          }
           var isMobile = window.innerWidth <= 768;
-          if (!isMobile && isMatchDetail) {
+          if (!isMobile && collapsed) {
             document.documentElement.style.setProperty('--admin-sidebar-width', '0px');
           }
         } catch (e) {}

@@ -1,10 +1,29 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   MOBILE_BREAKPOINT_PX,
+  SIDEBAR_COLLAPSE_STORAGE_KEY,
   SIDEBAR_WIDTH_COLLAPSED,
   SIDEBAR_WIDTH_EXPANDED,
-  isAdminMatchDetailPath,
+  resolveInitialCollapsed,
 } from '../../lib/sidebar-collapse';
+
+function readStoredCollapsed(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredCollapsed(collapsed: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(SIDEBAR_COLLAPSE_STORAGE_KEY, String(collapsed));
+  } catch {
+    // localStorage can throw in privacy mode or when quota is exceeded; ignore.
+  }
+}
 
 interface AdminShellContextValue {
   /** Mobile overlay visibility (mobile only). */
@@ -25,9 +44,15 @@ const AdminShellContext = createContext<AdminShellContextValue | null>(null);
 export function AdminShellProvider({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isCollapsed, setCollapsed] = useState(() =>
-    typeof window !== 'undefined' && isAdminMatchDetailPath(window.location.pathname)
-  );
+  const [isCollapsed, setCollapsedState] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return resolveInitialCollapsed(window.location.pathname, readStoredCollapsed());
+  });
+
+  const setCollapsed = (collapsed: boolean) => {
+    setCollapsedState(collapsed);
+    writeStoredCollapsed(collapsed);
+  };
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT_PX);
@@ -55,7 +80,7 @@ export function AdminShellProvider({ children }: { children: ReactNode }) {
 
   const toggleSidebar = () => {
     if (isMobile) setSidebarOpen((v) => !v);
-    else setCollapsed((v) => !v);
+    else setCollapsed(!isCollapsed);
   };
 
   const sidebarShown = isMobile ? isSidebarOpen : !isCollapsed;
