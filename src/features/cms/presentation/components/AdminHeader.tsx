@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useAdminShell } from './AdminShellContext';
 
 const PATH_LABELS: Record<string, string> = {
   admin: 'Dashboard',
@@ -50,6 +51,7 @@ interface NotificationItem {
 
 export default function AdminHeader() {
   const { user, roles, can, loading } = usePermissions();
+  const { sidebarShown, toggleSidebar } = useAdminShell();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -66,6 +68,7 @@ export default function AdminHeader() {
     Check?: ComponentType<any>;
     X?: ComponentType<any>;
     BellOff?: ComponentType<any>;
+    Menu?: ComponentType<any>;
   }>({});
 
   useEffect(() => {
@@ -82,6 +85,7 @@ export default function AdminHeader() {
         Check: mod.Check,
         X: mod.X,
         BellOff: mod.BellOff,
+        Menu: mod.Menu,
       });
     });
   }, []);
@@ -223,19 +227,33 @@ export default function AdminHeader() {
   const CheckIcon = icons.Check;
   const XIcon = icons.X;
   const BellOffIcon = icons.BellOff;
+  const MenuIcon = icons.Menu;
 
   return (
     <header
       className={cn(
         'fixed top-0 right-0 h-16 z-[998]',
         'bg-white/95 backdrop-blur-sm border-b border-border',
-        'flex items-center justify-between px-8',
-        'ml-[260px] w-[calc(100%-260px)]',
-        'max-md:ml-0 max-md:w-full max-md:h-14 max-md:px-4 max-md:pl-16'
+        'flex items-center justify-between gap-3 px-8',
+        'ml-[var(--admin-sidebar-width)] w-[calc(100%-var(--admin-sidebar-width))]',
+        'transition-[margin,width] duration-[280ms] ease-out',
+        'max-md:ml-0 max-md:w-full max-md:h-14 max-md:px-4'
       )}
     >
-      {/* Breadcrumbs */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm min-w-0">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="relative z-[1001] shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-muted-foreground hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
+          aria-label={sidebarShown ? 'Hide menu' : 'Show menu'}
+          aria-expanded={sidebarShown}
+          title={sidebarShown ? 'Hide menu' : 'Show menu'}
+        >
+          {MenuIcon ? <MenuIcon size={20} /> : <span aria-hidden="true">☰</span>}
+        </button>
+
+        {/* Breadcrumbs */}
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm min-w-0">
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
           const isFirst = index === 0;
@@ -277,7 +295,8 @@ export default function AdminHeader() {
             </div>
           );
         })}
-      </nav>
+        </nav>
+      </div>
 
       {/* Right section */}
       <div className="flex items-center gap-2">

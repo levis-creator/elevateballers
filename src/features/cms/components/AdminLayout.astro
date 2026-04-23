@@ -53,6 +53,20 @@ if (redirectUrl) {
     {redirectUrl && <meta http-equiv="refresh" content={`0;url=${redirectUrl}`} />}
     <title>{title}</title>
 
+    <!-- Hide sidebar before paint on match-detail pages to give the statistician a focused workspace -->
+    <script is:inline>
+      (function () {
+        try {
+          var match = /^\/admin\/matches\/([^/]+)\/?$/.exec(location.pathname);
+          var isMatchDetail = !!match && match[1] !== 'new';
+          var isMobile = window.innerWidth <= 768;
+          if (!isMobile && isMatchDetail) {
+            document.documentElement.style.setProperty('--admin-sidebar-width', '0px');
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Google Analytics -->
     <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-VVZ9P3XBLP"></script>
     <script is:inline>
@@ -108,7 +122,7 @@ if (redirectUrl) {
     ) : (
       <div class="flex min-h-screen bg-[#f9fafb] relative w-full font-sans">
         <AdminShell client:only="react" />
-        <main class="flex-1 ml-[var(--admin-sidebar-width)] pt-[var(--admin-header-height)] min-h-screen w-[calc(100%-var(--admin-sidebar-width))] max-md:ml-0 max-md:w-full max-md:pt-14">
+        <main class="flex-1 ml-[var(--admin-sidebar-width)] pt-[var(--admin-header-height)] min-h-screen w-[calc(100%-var(--admin-sidebar-width))] transition-[margin,width] duration-[280ms] ease-out max-md:ml-0 max-md:w-full max-md:pt-14">
           <div class="p-8 max-w-[1400px] mx-auto w-full max-md:p-4 max-[480px]:p-3 admin-page scroll-smooth">
             <slot />
           </div>

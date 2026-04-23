@@ -1,6 +1,7 @@
 import { useState, useEffect, type ComponentType } from 'react';
 import { cn } from '@/lib/utils';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
+import { useAdminShell } from './AdminShellContext';
 
 interface NavItem {
   href: string;
@@ -13,8 +14,7 @@ interface NavItem {
 
 export default function AdminSidebar() {
   const { can, canAny, canAll, user, roles } = usePermissions();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const { isSidebarOpen, setSidebarOpen, isCollapsed, isMobile } = useAdminShell();
   const [unreadCount, setUnreadCount] = useState(0);
   const [activePath, setActivePath] = useState(() =>
     typeof window !== 'undefined' ? window.location.pathname : ''
@@ -32,8 +32,6 @@ export default function AdminSidebar() {
     ExternalLink?: ComponentType<any>;
     Dribbble?: ComponentType<any>;
     Trophy?: ComponentType<any>;
-    Menu?: ComponentType<any>;
-    X?: ComponentType<any>;
     Star?: ComponentType<any>;
     Handshake?: ComponentType<any>;
     ShieldCheck?: ComponentType<any>;
@@ -57,8 +55,6 @@ export default function AdminSidebar() {
         ExternalLink: mod.ExternalLink,
         Dribbble: mod.Dribbble,
         Trophy: mod.Trophy,
-        Menu: mod.Menu,
-        X: mod.X,
         Star: mod.Star,
         Handshake: mod.Handshake,
         ShieldCheck: mod.ShieldCheck,
@@ -72,25 +68,7 @@ export default function AdminSidebar() {
       .then((r) => r.ok ? r.json() : [])
       .then((data: unknown[]) => setUnreadCount(Array.isArray(data) ? data.length : 0))
       .catch(() => {});
-
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    const handleOutside = (e: MouseEvent) => {
-      const t = e.target as HTMLElement;
-      if (isMobile && !t.closest('.sb') && !t.closest('.sb-toggle')) setIsOpen(false);
-    };
-    const handleRoute = () => { if (isMobile) setIsOpen(false); };
-
-    document.addEventListener('click', handleOutside);
-    window.addEventListener('popstate', handleRoute);
-    return () => {
-      window.removeEventListener('resize', checkMobile);
-      document.removeEventListener('click', handleOutside);
-      window.removeEventListener('popstate', handleRoute);
-    };
-  }, [isMobile]);
+  }, []);
 
   const canAccess = (p?: string) => !p || can(p);
   const getActive = (href: string) => {
@@ -98,7 +76,7 @@ export default function AdminSidebar() {
     if (href === '/admin') return activePath === '/admin';
     return activePath.startsWith(href);
   };
-  const handleNavClick = () => { if (isMobile) setIsOpen(false); };
+  const handleNavClick = () => { if (isMobile) setSidebarOpen(false); };
 
   const handleLogout = async () => {
     if (!confirm('Are you sure you want to logout?')) return;
@@ -173,25 +151,17 @@ export default function AdminSidebar() {
     }))
     .filter((g) => g.items.length > 0);
 
-  const { Dribbble: Ball, LogOut: LogOutIcon, ExternalLink: ExternalLinkIcon, Menu: MenuIcon, X: XIcon } = icons;
+  const { Dribbble: Ball, LogOut: LogOutIcon, ExternalLink: ExternalLinkIcon } = icons;
+
+  const sidebarHidden = isMobile ? !isSidebarOpen : isCollapsed;
 
   return (
     <>
-      {/* Mobile toggle */}
-      <button
-        className="sb-toggle fixed top-3 left-3 z-[1001] w-9 h-9 bg-[#111] border border-white/10 rounded-[6px] text-white/70 flex items-center justify-center cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.4)] md:hidden"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="Toggle menu"
-        aria-expanded={isOpen}
-      >
-        {isOpen && XIcon ? <XIcon size={18} /> : MenuIcon ? <MenuIcon size={18} /> : '☰'}
-      </button>
-
-      {/* Overlay */}
-      {isOpen && isMobile && (
+      {/* Mobile overlay backdrop — desktop uses pin/hide reflow, no backdrop */}
+      {isMobile && isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-[999]"
-          onClick={() => setIsOpen(false)}
+          onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
       )}
@@ -199,8 +169,8 @@ export default function AdminSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'sb fixed left-0 top-0 w-[260px] h-screen bg-[#111] border-r border-white/[0.08] flex flex-col z-[1000] transition-transform duration-[280ms] ease md:!translate-x-0',
-          isMobile && !isOpen ? '-translate-x-full' : 'translate-x-0'
+          'sb fixed left-0 top-0 w-[260px] h-screen bg-[#111] border-r border-white/[0.08] flex flex-col z-[1000] transition-transform duration-[280ms] ease-out',
+          sidebarHidden ? '-translate-x-full' : 'translate-x-0'
         )}
         aria-label="Admin navigation"
       >
