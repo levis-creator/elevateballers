@@ -33,7 +33,6 @@ import {
   type TapRole,
 } from '../../lib/subSelection';
 import { useOfflineSubSync } from '../../hooks/useOfflineSubSync';
-import { offlineStore } from '../../lib/offlineStore';
 
 interface SubstitutionPanelProps {
   matchId: string;
@@ -135,13 +134,30 @@ export default function SubstitutionPanel({
   const [submitting, setSubmitting] = useState(false);
   const [substitutions, setSubstitutions] = useState<Substitution[]>([]);
 
-  // Offline queue: every Execute writes here first (IndexedDB). Optimistic
-  // projection reads from the queue so tiles reposition instantly and the
-  // state survives page reloads. When a batch syncs to the server, the hook
-  // drains it and fires `onSynced`, which triggers the parent refetch.
-  const handleBatchSynced = useCallback(() => {
-    onSubstitutionRecorded?.();
-  }, [onSubstitutionRecorded]);
+  // Pairs the server has committed but the parent's `match.matchPlayers`
+  // refetch hasn't echoed yet. Keeping these on the optimistic overlay for a
+  // beat prevents tiles from snapping back to the pre-sub layout between the
+  // POST response and the refetch arrival.
+  const [pendingPairs, setPendingPairs] = useState<
+    Array<{ outId: string; inId: string }>
+  >([]);
+
+  // Offline queue: every Execute writes here first (IndexedDB). The
+  // projection reads from the queue so tiles reposition instantly; when a
+  // batch syncs, the hook hands the pairs to `handleBatchSynced` which moves
+  // them to `pendingPairs` so the optimistic overlay survives the refetch.
+  const handleBatchSynced = useCallback(
+    (batch: { pairs: Array<{ playerOutId: string; playerInId: string }>; teamId: string }) => {
+      if (batch.teamId === teamId) {
+        setPendingPairs((prev) => [
+          ...prev,
+          ...batch.pairs.map((p) => ({ outId: p.playerOutId, inId: p.playerInId })),
+        ]);
+      }
+      onSubstitutionRecorded?.();
+    },
+    [onSubstitutionRecorded, teamId],
+  );
   const { isOnline, queuedBatches, enqueue, syncNow } = useOfflineSubSync(
     matchId,
     handleBatchSynced,
@@ -243,6 +259,9 @@ export default function SubstitutionPanel({
 
   useEffect(() => {
     setSelection(EMPTY_SELECTION);
+    // Drop server-confirmed overlay on team switch — it belongs to the team
+    // we just left.
+    setPendingPairs([]);
     if (teamId) fetchTeamPlayers(teamId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
@@ -265,20 +284,20 @@ export default function SubstitutionPanel({
     return result;
   }, [teamId, matchPlayers]);
 
-  // Pairs currently queued (either unsent because offline, or mid-sync).
+  // Pairs currently queued (either unsent because offline, or mid-sync) AND
+  // pairs already synced but awaiting the parent's matchPlayers refetch.
   // Scoped to the team currently being viewed.
-  const queuedPairs = useMemo(
-    () =>
-      queuedBatches
-        .filter((b) => b.teamId === teamId)
-        .flatMap((b) =>
-          b.pairs.map((pair) => ({
-            outId: pair.playerOutId,
-            inId: pair.playerInId,
-          })),
-        ),
-    [queuedBatches, teamId],
-  );
+  const queuedPairs = useMemo(() => {
+    const fromQueue = queuedBatches
+      .filter((b) => b.teamId === teamId)
+      .flatMap((b) =>
+        b.pairs.map((pair) => ({
+          outId: pair.playerOutId,
+          inId: pair.playerInId,
+        })),
+      );
+    return [...fromQueue, ...pendingPairs];
+  }, [queuedBatches, pendingPairs, teamId]);
 
   // Optimistic projection: flip `isActive`/`subOut` on existing rows for
   // queued out-players, and inject synthetic rows for queued reserves being
@@ -316,6 +335,33 @@ export default function SubstitutionPanel({
 
     return [...updated, ...synthetic];
   }, [matchTeamPlayers, teamPlayers, queuedPairs, teamId, matchId]);
+
+  // Drain `pendingPairs` once the parent's `matchTeamPlayers` reflects the
+  // committed sub (out-player now inactive/subbed, in-player now active).
+  // At that point the overlay is redundant and we collapse to server truth.
+  useEffect(() => {
+    if (pendingPairs.length === 0) return;
+    const byPlayerId = new Map(matchTeamPlayers.map((mp) => [mp.playerId, mp]));
+    const stillPending = pendingPairs.filter(({ outId, inId }) => {
+      const outMp = byPlayerId.get(outId);
+      const inMp = byPlayerId.get(inId);
+      const outSettled = !outMp || outMp.subOut === true || outMp.isActive === false;
+      const inSettled = Boolean(inMp && inMp.isActive === true);
+      return !(outSettled && inSettled);
+    });
+    if (stillPending.length !== pendingPairs.length) {
+      setPendingPairs(stillPending);
+    }
+  }, [matchTeamPlayers, pendingPairs]);
+
+  // Safety net: if the refetch never reflects a committed pair (match ended,
+  // someone edited match players mid-air, etc.), drop the overlay after 8s so
+  // the UI isn't permanently wrong.
+  useEffect(() => {
+    if (pendingPairs.length === 0) return;
+    const timer = setTimeout(() => setPendingPairs([]), 8000);
+    return () => clearTimeout(timer);
+  }, [pendingPairs]);
 
   const {
     onFloor: activePlayers,
@@ -409,15 +455,9 @@ export default function SubstitutionPanel({
       })),
     };
 
-    try {
-      // Always persist the batch to IndexedDB first. `queuedBatches` state
-      // updates, which flows into `queuedPairs`, which the optimistic
-      // projection reads — tiles reposition the moment IDB acknowledges (~10ms).
-      await enqueue(queuedBatch);
-    } catch {
-      // IDB write failed (quota exceeded, private browsing). We can still try
-      // an online send below; if that also fails the user sees the error.
-    }
+    // `enqueue` updates React state synchronously (IDB write happens in the
+    // background), so tiles reposition in the same frame as the tap.
+    void enqueue(queuedBatch);
 
     const summary =
       pairs.length === 1
@@ -426,34 +466,19 @@ export default function SubstitutionPanel({
 
     if (!navigator.onLine) {
       setSuccess(`${summary} — saved offline, will sync when reconnected`);
-      submittingRef.current = false;
-      setSubmitting(false);
-      return;
+    } else {
+      setSuccess(summary);
+      // Fire and forget — the hook drains queued batches on HTTP success and
+      // calls `handleBatchSynced` with the pairs, which moves them into the
+      // `pendingPairs` overlay so the optimistic layout stays stable while
+      // the parent refetches `matchPlayers`. Nothing here needs to await.
+      void syncNow();
     }
 
-    setSuccess(summary);
-
-    try {
-      await syncNow();
-      // `syncNow` drains the batch on HTTP success (either a fresh commit or
-      // an idempotent replay) and fires `handleBatchSynced` → parent refetch.
-      // If the batch is still queued after this call, the network fell over
-      // mid-sync and the hook's `online` listener will retry automatically.
-      const stillQueued = await offlineStore.pendingSubBatches
-        .where('clientBatchId')
-        .equals(clientBatchId)
-        .first();
-      if (stillQueued) {
-        setSuccess(`${summary} — queued, retrying automatically`);
-      }
-    } catch {
-      // syncNow doesn't throw in normal paths; any thrown error means
-      // something unexpected. Leave the batch in the queue for retry.
-      setSuccess(`${summary} — queued, retrying automatically`);
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
-    }
+    // Release the panel immediately — the scorer can start selecting the
+    // next sub while this one syncs in the background.
+    submittingRef.current = false;
+    setSubmitting(false);
   };
 
   const pairingPreview = useMemo(() => {
