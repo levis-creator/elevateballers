@@ -769,6 +769,10 @@ model Substitution {
   playerOutId      String   @map("player_out_id")
   period           Int
   secondsRemaining Int?     @map("seconds_remaining")
+  // UUID minted by the offline client. Used for idempotent replay — if a sync
+  // retry lands after the server already committed the batch, the endpoint
+  // returns the existing rows instead of creating duplicates.
+  clientBatchId    String?  @map("client_batch_id")
   createdAt        DateTime @default(now()) @map("created_at")
   match            Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   playerIn         Player   @relation("SubstitutionIn", fields: [playerInId], references: [id])
@@ -780,6 +784,7 @@ model Substitution {
   @@index([playerInId])
   @@index([playerOutId])
   @@index([period])
+  @@index([matchId, clientBatchId])
   @@map("substitutions")
 }
 

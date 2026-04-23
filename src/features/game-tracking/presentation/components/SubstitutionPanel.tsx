@@ -1,10 +1,12 @@
 /**
  * Substitution Panel
- * Tap-to-swap UX: pick a player on the floor and a player on the bench in
- * either order; the second tap records the substitution optimistically.
+ * Multi-select line-change UX: tap any number of on-floor players and the
+ * same number of bench/reserve players, then commit all substitutions at
+ * once. Tiles show an order badge so the scorekeeper can see the pairing
+ * (#1 out swaps with #1 in, etc.).
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -22,7 +24,16 @@ import {
 import { formatClockTime } from '../../lib/utils';
 import { useGameTrackingStore } from '../../stores/useGameTrackingStore';
 import { deriveRoster } from '../../lib/roster';
-import { resolveSubTap, type SubSelection, type TapRole } from '../../lib/subSelection';
+import {
+  resolveSubTap,
+  canCommit,
+  buildPairs,
+  EMPTY_SELECTION,
+  type SubSelection,
+  type TapRole,
+} from '../../lib/subSelection';
+import { useOfflineSubSync } from '../../hooks/useOfflineSubSync';
+import { offlineStore } from '../../lib/offlineStore';
 
 interface SubstitutionPanelProps {
   matchId: string;
@@ -33,24 +44,37 @@ interface SubstitutionPanelProps {
   matchPlayers?: MatchPlayerWithDetails[];
 }
 
-const EMPTY_SELECTION: SubSelection = { outId: '', inId: '' };
-
 function playerLabel(player: Player | null | undefined) {
   if (!player) return 'Unknown';
   const name = `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim();
   return name || 'Unknown';
 }
 
+function playerLabelWithJersey(player: Player | null | undefined) {
+  const name = playerLabel(player);
+  if (!player?.jerseyNumber && player?.jerseyNumber !== 0) return name;
+  return `${name} #${player.jerseyNumber}`;
+}
+
 interface PlayerTileProps {
   jersey: number | string | null | undefined;
   name: string;
   role: 'out' | 'in' | null;
+  order: number | null;
   variant: 'floor' | 'bench' | 'reserve';
   disabled: boolean;
   onTap: () => void;
 }
 
-function PlayerTile({ jersey, name, role, variant, disabled, onTap }: PlayerTileProps) {
+function PlayerTile({
+  jersey,
+  name,
+  role,
+  order,
+  variant,
+  disabled,
+  onTap,
+}: PlayerTileProps) {
   return (
     <button
       type="button"
@@ -58,7 +82,7 @@ function PlayerTile({ jersey, name, role, variant, disabled, onTap }: PlayerTile
       disabled={disabled}
       aria-pressed={role !== null}
       className={cn(
-        'flex flex-col items-start justify-between gap-0.5 rounded-md border px-2 py-1.5 text-left transition-colors',
+        'relative flex flex-col items-start justify-between gap-0.5 rounded-md border px-2 py-1.5 text-left transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
         'disabled:pointer-events-none disabled:opacity-50',
         variant === 'reserve' && 'border-dashed',
@@ -68,8 +92,26 @@ function PlayerTile({ jersey, name, role, variant, disabled, onTap }: PlayerTile
         role === null && 'hover:bg-accent',
       )}
     >
-      <span className="font-mono text-[10px] text-muted-foreground">
-        {jersey !== null && jersey !== undefined && jersey !== '' ? `#${jersey}` : '—'}
+      {order !== null && (
+        <span
+          className={cn(
+            'absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white shadow',
+            role === 'out' ? 'bg-destructive' : 'bg-green-600',
+          )}
+          aria-label={`Selection ${order}`}
+        >
+          {order}
+        </span>
+      )}
+      <span className="flex w-full items-center justify-between gap-1 font-mono text-[10px] text-muted-foreground">
+        <span>
+          {jersey !== null && jersey !== undefined && jersey !== '' ? `#${jersey}` : '—'}
+        </span>
+        {variant === 'reserve' && (
+          <span className="rounded bg-muted px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide">
+            Reserve
+          </span>
+        )}
       </span>
       <span className="text-sm font-medium leading-tight line-clamp-2">{name}</span>
     </button>
@@ -92,6 +134,18 @@ export default function SubstitutionPanel({
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [substitutions, setSubstitutions] = useState<Substitution[]>([]);
+
+  // Offline queue: every Execute writes here first (IndexedDB). Optimistic
+  // projection reads from the queue so tiles reposition instantly and the
+  // state survives page reloads. When a batch syncs to the server, the hook
+  // drains it and fires `onSynced`, which triggers the parent refetch.
+  const handleBatchSynced = useCallback(() => {
+    onSubstitutionRecorded?.();
+  }, [onSubstitutionRecorded]);
+  const { isOnline, queuedBatches, enqueue, syncNow } = useOfflineSubSync(
+    matchId,
+    handleBatchSynced,
+  );
 
   const matchPlayers = (matchPlayersProp ?? []) as MatchPlayerWithDetails[];
 
@@ -154,7 +208,7 @@ export default function SubstitutionPanel({
 
   useEffect(() => {
     if (!success) return;
-    const timer = setTimeout(() => setSuccess(null), 2000);
+    const timer = setTimeout(() => setSuccess(null), 2500);
     return () => clearTimeout(timer);
   }, [success]);
 
@@ -193,18 +247,83 @@ export default function SubstitutionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
 
-  const matchTeamPlayers = useMemo(
-    () => (teamId ? matchPlayers.filter((mp) => mp.teamId === teamId && mp.player) : []),
-    [teamId, matchPlayers],
+  // Defensive dedupe by playerId. The DB enforces
+  // `@@unique(matchId, playerId, teamId)` so this should be a no-op, but if
+  // the payload ever carries a stale duplicate (e.g. mid-flight double-add)
+  // we'd otherwise render two tiles for the same underlying player and get a
+  // React key collision the moment one of them is tapped.
+  const matchTeamPlayers = useMemo(() => {
+    if (!teamId) return [];
+    const seen = new Set<string>();
+    const result: MatchPlayerWithDetails[] = [];
+    for (const mp of matchPlayers) {
+      if (mp.teamId !== teamId || !mp.player) continue;
+      if (seen.has(mp.playerId)) continue;
+      seen.add(mp.playerId);
+      result.push(mp);
+    }
+    return result;
+  }, [teamId, matchPlayers]);
+
+  // Pairs currently queued (either unsent because offline, or mid-sync).
+  // Scoped to the team currently being viewed.
+  const queuedPairs = useMemo(
+    () =>
+      queuedBatches
+        .filter((b) => b.teamId === teamId)
+        .flatMap((b) =>
+          b.pairs.map((pair) => ({
+            outId: pair.playerOutId,
+            inId: pair.playerInId,
+          })),
+        ),
+    [queuedBatches, teamId],
   );
+
+  // Optimistic projection: flip `isActive`/`subOut` on existing rows for
+  // queued out-players, and inject synthetic rows for queued reserves being
+  // subbed in. When the hook drains a batch (on sync success), `queuedPairs`
+  // shrinks and the projection naturally collapses back to server truth.
+  const optimisticMatchTeamPlayers = useMemo(() => {
+    if (queuedPairs.length === 0) return matchTeamPlayers;
+    const outIds = new Set(queuedPairs.map((p) => p.outId));
+    const inIds = new Set(queuedPairs.map((p) => p.inId));
+    const existing = new Set(matchTeamPlayers.map((mp) => mp.playerId));
+
+    const updated = matchTeamPlayers.map((mp) => {
+      if (outIds.has(mp.playerId)) return { ...mp, isActive: false, subOut: true };
+      if (inIds.has(mp.playerId)) return { ...mp, isActive: true, subOut: false };
+      return mp;
+    });
+
+    const synthetic: MatchPlayerWithDetails[] = [];
+    for (const inId of inIds) {
+      if (existing.has(inId)) continue;
+      const p = teamPlayers.find((tp) => tp.id === inId);
+      if (!p) continue;
+      synthetic.push({
+        id: `__pending__${inId}`,
+        matchId,
+        playerId: inId,
+        teamId,
+        started: false,
+        isActive: true,
+        subOut: false,
+        jerseyNumber: p.jerseyNumber ?? null,
+        player: p,
+      } as unknown as MatchPlayerWithDetails);
+    }
+
+    return [...updated, ...synthetic];
+  }, [matchTeamPlayers, teamPlayers, queuedPairs, teamId, matchId]);
 
   const {
     onFloor: activePlayers,
     onBench: playersOnBench,
     reserves: playersReserves,
   } = useMemo(
-    () => deriveRoster(matchTeamPlayers, teamPlayers, substitutions),
-    [matchTeamPlayers, teamPlayers, substitutions],
+    () => deriveRoster(optimisticMatchTeamPlayers, teamPlayers, substitutions),
+    [optimisticMatchTeamPlayers, teamPlayers, substitutions],
   );
 
   const benchPlayerIds = useMemo(
@@ -216,104 +335,167 @@ export default function SubstitutionPanel({
     [playersOnBench, playersReserves],
   );
 
-  // Drop stale selections when the roster changes underneath us.
+  // Drop stale selections when the roster shifts beneath us (team switch,
+  // substitution sync, edit to match players card).
   useEffect(() => {
     setSelection((prev) => {
-      const next = { ...prev };
-      if (prev.outId && !activePlayers.some((mp) => mp.playerId === prev.outId)) {
-        next.outId = '';
+      const activeIds = new Set(activePlayers.map((mp) => mp.playerId));
+      const filteredOut = prev.outIds.filter((id) => activeIds.has(id));
+      const filteredIn = prev.inIds.filter((id) => benchPlayerIds.has(id));
+      if (
+        filteredOut.length === prev.outIds.length &&
+        filteredIn.length === prev.inIds.length
+      ) {
+        return prev;
       }
-      if (prev.inId && !benchPlayerIds.has(prev.inId)) {
-        next.inId = '';
-      }
-      return next.outId === prev.outId && next.inId === prev.inId ? prev : next;
+      return { outIds: filteredOut, inIds: filteredIn };
     });
   }, [activePlayers, benchPlayerIds]);
 
   const lookupOutName = (outId: string) =>
-    playerLabel(activePlayers.find((mp) => mp.playerId === outId)?.player);
+    playerLabelWithJersey(activePlayers.find((mp) => mp.playerId === outId)?.player);
 
   const lookupInName = (inId: string) => {
     const fromBench = playersOnBench.find((mp) => mp.playerId === inId)?.player;
-    if (fromBench) return playerLabel(fromBench);
-    return playerLabel(playersReserves.find((p) => p.id === inId));
+    if (fromBench) return playerLabelWithJersey(fromBench);
+    return playerLabelWithJersey(playersReserves.find((p) => p.id === inId));
   };
 
-  const submitSubstitution = async (outId: string, inId: string) => {
+  const handleTap = (role: TapRole, playerId: string) => {
+    if (isPanelDisabled || submitting) return;
+    setSelection((prev) => resolveSubTap(prev, role, playerId));
+    setError(null);
+  };
+
+  const clearSelection = () => setSelection(EMPTY_SELECTION);
+
+  const executeSubs = async () => {
     if (submittingRef.current || isPanelDisabled) return;
-    if (!teamId || !outId || !inId || outId === inId) return;
+    if (!teamId || !canCommit(selection)) return;
+
+    const pairs = buildPairs(selection);
+    if (pairs.some((p) => p.outId === p.inId)) {
+      setError('A player cannot be substituted with themselves');
+      return;
+    }
 
     submittingRef.current = true;
     setSubmitting(true);
     setError(null);
 
-    const label = `${lookupOutName(outId)} → ${lookupInName(inId)}`;
-    setSuccess(`Substitution: ${label}`);
+    const labels = pairs.map(
+      ({ outId, inId }) => `${lookupOutName(outId)} → ${lookupInName(inId)}`,
+    );
+    setSelection(EMPTY_SELECTION);
 
-    const payload = {
+    // Client-minted UUID. The server indexes substitutions on
+    // (matchId, clientBatchId) and short-circuits if a batch with this id has
+    // already been committed. That makes retries after a timed-out response
+    // idempotent — no duplicates if the network flakes mid-sync.
+    const clientBatchId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const queuedBatch = {
+      matchId,
+      clientBatchId,
       teamId,
-      playerInId: inId,
-      playerOutId: outId,
       period: gameState?.period ?? 1,
       secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
+      pairs: pairs.map(({ outId, inId }) => ({
+        playerOutId: outId,
+        playerInId: inId,
+      })),
     };
 
     try {
-      const response = await fetch(`/api/games/${matchId}/substitution`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // Always persist the batch to IndexedDB first. `queuedBatches` state
+      // updates, which flows into `queuedPairs`, which the optimistic
+      // projection reads — tiles reposition the moment IDB acknowledges (~10ms).
+      await enqueue(queuedBatch);
+    } catch {
+      // IDB write failed (quota exceeded, private browsing). We can still try
+      // an online send below; if that also fails the user sees the error.
+    }
 
-      if (!response.ok) {
-        let serverMessage = 'Failed to record substitution';
-        try {
-          const errorData = await response.json();
-          serverMessage = errorData.error || serverMessage;
-          if (errorData.details) serverMessage = `${serverMessage}: ${errorData.details}`;
-        } catch {
-          serverMessage = `Server error: ${response.status}`;
-        }
-        setError(`${serverMessage} (${label})`);
-        setSuccess(null);
-        return;
+    const summary =
+      pairs.length === 1
+        ? `Substitution: ${labels[0]}`
+        : `${pairs.length} substitutions: ${labels.join(' · ')}`;
+
+    if (!navigator.onLine) {
+      setSuccess(`${summary} — saved offline, will sync when reconnected`);
+      submittingRef.current = false;
+      setSubmitting(false);
+      return;
+    }
+
+    setSuccess(summary);
+
+    try {
+      await syncNow();
+      // `syncNow` drains the batch on HTTP success (either a fresh commit or
+      // an idempotent replay) and fires `handleBatchSynced` → parent refetch.
+      // If the batch is still queued after this call, the network fell over
+      // mid-sync and the hook's `online` listener will retry automatically.
+      const stillQueued = await offlineStore.pendingSubBatches
+        .where('clientBatchId')
+        .equals(clientBatchId)
+        .first();
+      if (stillQueued) {
+        setSuccess(`${summary} — queued, retrying automatically`);
       }
-
-      fetchSubstitutions();
-      fetchTeamPlayers(teamId);
-      onSubstitutionRecorded?.();
-    } catch (err: any) {
-      setError(`${err?.message || 'Failed to record substitution'} (${label})`);
-      setSuccess(null);
+    } catch {
+      // syncNow doesn't throw in normal paths; any thrown error means
+      // something unexpected. Leave the batch in the queue for retry.
+      setSuccess(`${summary} — queued, retrying automatically`);
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
-  const handleTap = (role: TapRole, playerId: string) => {
-    if (isPanelDisabled || submitting) return;
-    const result = resolveSubTap(selection, role, playerId);
-    setSelection(result.next);
-    if (result.kind === 'submit') {
-      setError(null);
-      submitSubstitution(result.selection.outId, result.selection.inId);
-    } else {
-      setError(null);
-    }
-  };
+  const pairingPreview = useMemo(() => {
+    const pairCount = Math.min(selection.outIds.length, selection.inIds.length);
+    return Array.from({ length: pairCount }, (_, idx) => ({
+      idx: idx + 1,
+      outName: lookupOutName(selection.outIds[idx]),
+      inName: lookupInName(selection.inIds[idx]),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, activePlayers, playersOnBench, playersReserves]);
 
-  const clearSelection = () => setSelection(EMPTY_SELECTION);
+  const mismatch =
+    selection.outIds.length !== selection.inIds.length
+      ? Math.abs(selection.outIds.length - selection.inIds.length)
+      : 0;
+  const needsFloor = mismatch > 0 && selection.outIds.length < selection.inIds.length;
+  const needsBench = mismatch > 0 && selection.inIds.length < selection.outIds.length;
 
   const promptLine = (() => {
     if (isPanelDisabled) return null;
-    if (selection.outId && !selection.inId) return 'Now tap a bench player to sub in';
-    if (!selection.outId && selection.inId) return 'Now tap an on-floor player to sub out';
-    if (!selection.outId && !selection.inId) return 'Tap a player to start a substitution';
-    return null;
+    if (submitting) return 'Recording…';
+    if (selection.outIds.length === 0 && selection.inIds.length === 0) {
+      return 'Tap players on and off the floor — you can select multiple';
+    }
+    if (needsFloor) return `Pick ${mismatch} more on-floor player${mismatch === 1 ? '' : 's'}`;
+    if (needsBench) return `Pick ${mismatch} more bench player${mismatch === 1 ? '' : 's'}`;
+    return `Ready — ${selection.outIds.length} swap${selection.outIds.length === 1 ? '' : 's'}`;
   })();
 
   const totalBenchCount = playersOnBench.length + playersReserves.length;
+  const commitReady = canCommit(selection);
+
+  const tileRoleOut = (playerId: string): { role: 'out' | null; order: number | null } => {
+    const idx = selection.outIds.indexOf(playerId);
+    return idx >= 0 ? { role: 'out', order: idx + 1 } : { role: null, order: null };
+  };
+
+  const tileRoleIn = (playerId: string): { role: 'in' | null; order: number | null } => {
+    const idx = selection.inIds.indexOf(playerId);
+    return idx >= 0 ? { role: 'in', order: idx + 1 } : { role: null, order: null };
+  };
 
   return (
     <Card>
@@ -323,14 +505,35 @@ export default function SubstitutionPanel({
             <ArrowRightLeft className="h-5 w-5" />
             Substitutions
           </CardTitle>
-          {gameState && (
-            <div className="text-xs text-muted-foreground tabular-nums">
-              Q{gameState.period}
-              {(localClockSeconds !== null || gameState.clockSeconds !== null) && (
-                <> · {formatClockTime(localClockSeconds ?? gameState.clockSeconds ?? 0)}</>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {(!isOnline || queuedBatches.length > 0) && (
+              <button
+                type="button"
+                onClick={() => syncNow()}
+                className={cn(
+                  'rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                  !isOnline
+                    ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                    : 'bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200',
+                )}
+                title={
+                  !isOnline
+                    ? 'Offline — substitutions will sync when the connection returns'
+                    : 'Queued substitutions — tap to retry sync now'
+                }
+              >
+                {!isOnline ? 'Offline' : `${queuedBatches.length} queued`}
+              </button>
+            )}
+            {gameState && (
+              <div className="text-xs text-muted-foreground tabular-nums">
+                Q{gameState.period}
+                {(localClockSeconds !== null || gameState.clockSeconds !== null) && (
+                  <> · {formatClockTime(localClockSeconds ?? gameState.clockSeconds ?? 0)}</>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -394,17 +597,21 @@ export default function SubstitutionPanel({
             <p className="text-xs italic text-muted-foreground">No players on the floor</p>
           ) : (
             <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
-              {activePlayers.map((mp) => (
-                <PlayerTile
-                  key={mp.id}
-                  jersey={mp.player?.jerseyNumber ?? null}
-                  name={playerLabel(mp.player)}
-                  role={selection.outId === mp.playerId ? 'out' : null}
-                  variant="floor"
-                  disabled={isPanelDisabled || submitting}
-                  onTap={() => handleTap('floor', mp.playerId)}
-                />
-              ))}
+              {activePlayers.map((mp) => {
+                const { role, order } = tileRoleOut(mp.playerId);
+                return (
+                  <PlayerTile
+                    key={mp.id}
+                    jersey={mp.player?.jerseyNumber ?? null}
+                    name={playerLabel(mp.player)}
+                    role={role}
+                    order={order}
+                    variant="floor"
+                    disabled={isPanelDisabled || submitting}
+                    onTap={() => handleTap('floor', mp.playerId)}
+                  />
+                );
+              })}
             </div>
           )}
         </section>
@@ -422,43 +629,80 @@ export default function SubstitutionPanel({
             <p className="text-xs italic text-muted-foreground">No players available</p>
           ) : (
             <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
-              {playersOnBench.map((mp) => (
-                <PlayerTile
-                  key={mp.id}
-                  jersey={mp.player?.jerseyNumber ?? null}
-                  name={playerLabel(mp.player)}
-                  role={selection.inId === mp.playerId ? 'in' : null}
-                  variant="bench"
-                  disabled={isPanelDisabled || submitting}
-                  onTap={() => handleTap('bench', mp.playerId)}
-                />
-              ))}
-              {playersReserves.map((p) => (
-                <PlayerTile
-                  key={p.id}
-                  jersey={p.jerseyNumber ?? null}
-                  name={playerLabel(p)}
-                  role={selection.inId === p.id ? 'in' : null}
-                  variant="reserve"
-                  disabled={isPanelDisabled || submitting}
-                  onTap={() => handleTap('bench', p.id)}
-                />
-              ))}
+              {playersOnBench.map((mp) => {
+                const { role, order } = tileRoleIn(mp.playerId);
+                return (
+                  <PlayerTile
+                    key={mp.id}
+                    jersey={mp.player?.jerseyNumber ?? null}
+                    name={playerLabel(mp.player)}
+                    role={role}
+                    order={order}
+                    variant="bench"
+                    disabled={isPanelDisabled || submitting}
+                    onTap={() => handleTap('bench', mp.playerId)}
+                  />
+                );
+              })}
+              {playersReserves.map((p) => {
+                const { role, order } = tileRoleIn(p.id);
+                return (
+                  <PlayerTile
+                    key={p.id}
+                    jersey={p.jerseyNumber ?? null}
+                    name={playerLabel(p)}
+                    role={role}
+                    order={order}
+                    variant="reserve"
+                    disabled={isPanelDisabled || submitting}
+                    onTap={() => handleTap('bench', p.id)}
+                  />
+                );
+              })}
             </div>
           )}
         </section>
 
-        {(selection.outId || selection.inId) && !submitting && (
+        {pairingPreview.length > 0 && (
+          <ul
+            aria-label="Pending substitutions"
+            className="space-y-0.5 rounded-md bg-muted/50 px-2 py-1.5 text-xs"
+          >
+            {pairingPreview.map(({ idx, outName, inName }) => (
+              <li key={idx} className="flex items-center gap-1.5 tabular-nums">
+                <span className="font-semibold text-muted-foreground">{idx}.</span>
+                <span className="text-destructive">{outName}</span>
+                <ArrowRightLeft className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="text-green-700 dark:text-green-400">{inName}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex gap-2">
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
-            onClick={clearSelection}
-            className="w-full"
+            onClick={executeSubs}
+            disabled={!commitReady || isPanelDisabled || submitting}
+            className="flex-1"
           >
-            Clear selection
+            {submitting
+              ? 'Recording…'
+              : selection.outIds.length > 1
+              ? `Execute ${selection.outIds.length} subs`
+              : 'Execute sub'}
           </Button>
-        )}
+          {(selection.outIds.length > 0 || selection.inIds.length > 0) && !submitting && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="default"
+              onClick={clearSelection}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
 
         {error && (
           <Alert variant="destructive">
