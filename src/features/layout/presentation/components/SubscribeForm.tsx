@@ -1,7 +1,6 @@
 import { useState } from 'react';
+import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
-
-const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY as string;
 
 export default function SubscribeForm() {
   const [email, setEmail] = useState('');
@@ -66,18 +65,16 @@ export default function SubscribeForm() {
             <input
               type="submit"
               value={status === 'loading' ? 'Submitting...' : 'Submit'}
-              disabled={status === 'loading' || status === 'success' || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+              disabled={status === 'loading' || status === 'success' || !turnstileToken}
             />
           </span>
         </div>
-        {TURNSTILE_SITE_KEY && (
-          <TurnstileWidget
-            siteKey={TURNSTILE_SITE_KEY}
-            onSuccess={setTurnstileToken}
-            onExpire={() => setTurnstileToken(null)}
-            onError={() => setTurnstileToken(null)}
-          />
-        )}
+        <TurnstileWidget
+          siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+          onSuccess={setTurnstileToken}
+          onExpire={() => setTurnstileToken(null)}
+          onError={() => setTurnstileToken(null)}
+        />
         {message && (
           <p style={{ marginTop: '8px', color: status === 'error' ? '#e53e3e' : '#38a169', fontSize: '13px' }}>
             {message}

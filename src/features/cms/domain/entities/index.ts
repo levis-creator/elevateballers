@@ -180,7 +180,6 @@ export type MatchWithFullDetails = Match & {
 export type MatchPlayerWithDetails = MatchPlayer & {
   player: Player;
   team: Team;
-  subOut?: boolean;
 };
 
 export type MatchEventWithDetails = MatchEvent & {

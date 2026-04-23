@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, envField } from 'astro/config';
 import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
 import node from '@astrojs/node';
@@ -28,6 +28,12 @@ export default defineConfig({
       mode: 'standalone'
     }),
   trailingSlash: 'ignore',
+  env: {
+    schema: {
+      PUBLIC_TURNSTILE_SITE_KEY: envField.string({ context: 'client', access: 'public' }),
+      TURNSTILE_SECRET_KEY: envField.string({ context: 'server', access: 'secret' }),
+    },
+  },
   image: {
     remotePatterns: [{ protocol: 'https', hostname: 'cdn.sanity.io' }],
   },

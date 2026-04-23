@@ -1,27 +1,28 @@
 /**
- * Substitution Panel Component
- * Allows recording player substitutions
+ * Substitution Panel
+ * Tap-to-swap UX: pick a player on the floor and a player on the bench in
+ * either order; the second tap records the substitution optimistically.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, Users } from 'lucide-react';
+import { AlertCircle, ArrowRightLeft, CheckCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { GameStateData } from '../../types';
-import type { Match, Player } from '@prisma/client';
+import type { Match, Player, Substitution } from '@prisma/client';
 import type { MatchPlayerWithDetails } from '../../../cms/types';
-import { getTeam1Id, getTeam2Id, getTeam1Name, getTeam2Name } from '../../../matches/lib/team-helpers';
+import {
+  getTeam1Id,
+  getTeam2Id,
+  getTeam1Name,
+  getTeam2Name,
+} from '../../../matches/lib/team-helpers';
 import { formatClockTime } from '../../lib/utils';
 import { useGameTrackingStore } from '../../stores/useGameTrackingStore';
+import { deriveRoster } from '../../lib/roster';
+import { resolveSubTap, type SubSelection, type TapRole } from '../../lib/subSelection';
 
 interface SubstitutionPanelProps {
   matchId: string;
@@ -30,6 +31,49 @@ interface SubstitutionPanelProps {
   onSubstitutionRecorded?: () => void;
   refreshTrigger?: number;
   matchPlayers?: MatchPlayerWithDetails[];
+}
+
+const EMPTY_SELECTION: SubSelection = { outId: '', inId: '' };
+
+function playerLabel(player: Player | null | undefined) {
+  if (!player) return 'Unknown';
+  const name = `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim();
+  return name || 'Unknown';
+}
+
+interface PlayerTileProps {
+  jersey: number | string | null | undefined;
+  name: string;
+  role: 'out' | 'in' | null;
+  variant: 'floor' | 'bench' | 'reserve';
+  disabled: boolean;
+  onTap: () => void;
+}
+
+function PlayerTile({ jersey, name, role, variant, disabled, onTap }: PlayerTileProps) {
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      disabled={disabled}
+      aria-pressed={role !== null}
+      className={cn(
+        'flex flex-col items-start justify-between gap-0.5 rounded-md border px-2 py-1.5 text-left transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+        'disabled:pointer-events-none disabled:opacity-50',
+        variant === 'reserve' && 'border-dashed',
+        role === 'out' && 'border-destructive bg-destructive/10 text-destructive',
+        role === 'in' &&
+          'border-green-600 bg-green-600/10 text-green-800 dark:text-green-300',
+        role === null && 'hover:bg-accent',
+      )}
+    >
+      <span className="font-mono text-[10px] text-muted-foreground">
+        {jersey !== null && jersey !== undefined && jersey !== '' ? `#${jersey}` : '—'}
+      </span>
+      <span className="text-sm font-medium leading-tight line-clamp-2">{name}</span>
+    </button>
+  );
 }
 
 export default function SubstitutionPanel({
@@ -42,14 +86,13 @@ export default function SubstitutionPanel({
 }: SubstitutionPanelProps) {
   const { localClockSeconds } = useGameTrackingStore();
   const [teamId, setTeamId] = useState<string>('');
-  const [playerInId, setPlayerInId] = useState<string>('');
-  const [playerOutId, setPlayerOutId] = useState<string>('');
+  const [selection, setSelection] = useState<SubSelection>(EMPTY_SELECTION);
   const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [substitutions, setSubstitutions] = useState<Substitution[]>([]);
 
-  // Use matchPlayers from prop (single source of truth in GameTrackingPanel)
   const matchPlayers = (matchPlayersProp ?? []) as MatchPlayerWithDetails[];
 
   const team1Id = match ? getTeam1Id(match) : null;
@@ -57,39 +100,46 @@ export default function SubstitutionPanel({
   const team1Name = match ? getTeam1Name(match) : 'Team 1';
   const team2Name = match ? getTeam2Name(match) : 'Team 2';
 
-  const [substitutions, setSubstitutions] = useState<any[]>([]);
+  const fetchingSubsRef = useRef(false);
+  const fetchingPlayersRef = useRef<string | null>(null);
+  const submittingRef = useRef(false);
 
-  const fetchingRef = useRef(false);
+  const isPanelDisabled = match?.status !== 'LIVE' || !gameState;
 
   const fetchSubstitutions = async () => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
+    if (fetchingSubsRef.current) return;
+    fetchingSubsRef.current = true;
     try {
       const response = await fetch(`/api/games/${matchId}/substitution`);
       if (response.ok) {
-        const data = await response.json();
-        setSubstitutions(data || []);
+        const data = (await response.json()) as Substitution[] | null;
+        setSubstitutions(data ?? []);
       }
-    } catch (err) {
-      // Silently ignore — will retry on next trigger
+    } catch {
+      // silent — retries on next trigger
     } finally {
-      fetchingRef.current = false;
+      fetchingSubsRef.current = false;
     }
   };
 
   const fetchTeamPlayers = async (teamIdToFetch: string) => {
+    if (fetchingPlayersRef.current === teamIdToFetch) return;
+    fetchingPlayersRef.current = teamIdToFetch;
     try {
       const response = await fetch(`/api/players?teamId=${teamIdToFetch}`);
       if (response.ok) {
-        const data = await response.json();
-        setTeamPlayers(data || []);
+        const data = (await response.json()) as Player[] | null;
+        setTeamPlayers(data ?? []);
       }
     } catch {
       // silent
+    } finally {
+      if (fetchingPlayersRef.current === teamIdToFetch) {
+        fetchingPlayersRef.current = null;
+      }
     }
   };
 
-  // Fetch substitutions on mount and when refresh trigger bumps
   useEffect(() => {
     if (matchId) fetchSubstitutions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,323 +153,326 @@ export default function SubstitutionPanel({
   }, [refreshTrigger]);
 
   useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        setSuccess(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(null), 2000);
+    return () => clearTimeout(timer);
   }, [success]);
 
-  // Set initial team when teams from players are available, or fall back to match team1Id
-  useEffect(() => {
-    if (!teamId) {
-      // Get unique teams from match players
-      const teamsFromPlayers = matchPlayers.reduce((acc, mp) => {
-        if (!acc.find(t => t.id === mp.teamId) && mp.team) {
-          acc.push({ id: mp.teamId, name: mp.team.name });
-        }
-        return acc;
-      }, [] as Array<{ id: string; name: string }>);
-      
-      if (teamsFromPlayers.length > 0) {
-        setTeamId(teamsFromPlayers[0].id);
-      } else if (team1Id) {
-        setTeamId(team1Id);
+  const teamsFromPlayers = useMemo(() => {
+    const seen = new Set<string>();
+    const teams: Array<{ id: string; name: string }> = [];
+    for (const mp of matchPlayers) {
+      if (mp.team && !seen.has(mp.teamId)) {
+        seen.add(mp.teamId);
+        teams.push({ id: mp.teamId, name: mp.team.name });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchPlayers, team1Id]);
+    return teams;
+  }, [matchPlayers]);
+
+  const availableTeams = useMemo(() => {
+    if (teamsFromPlayers.length > 0) return teamsFromPlayers;
+    return [
+      team1Id && { id: team1Id, name: team1Name },
+      team2Id && { id: team2Id, name: team2Name },
+    ].filter(Boolean) as Array<{ id: string; name: string }>;
+  }, [teamsFromPlayers, team1Id, team2Id, team1Name, team2Name]);
 
   useEffect(() => {
-    // Reset player selections when team changes
-    setPlayerInId('');
-    setPlayerOutId('');
-    
-    // Fetch all players from the team
-    if (teamId) {
-      fetchTeamPlayers(teamId);
+    if (teamId) return;
+    if (teamsFromPlayers.length > 0) {
+      setTeamId(teamsFromPlayers[0].id);
+    } else if (team1Id) {
+      setTeamId(team1Id);
     }
+  }, [teamId, teamsFromPlayers, team1Id]);
+
+  useEffect(() => {
+    setSelection(EMPTY_SELECTION);
+    if (teamId) fetchTeamPlayers(teamId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
 
-  // Clear player selections when selected players are no longer available
+  const matchTeamPlayers = useMemo(
+    () => (teamId ? matchPlayers.filter((mp) => mp.teamId === teamId && mp.player) : []),
+    [teamId, matchPlayers],
+  );
+
+  const {
+    onFloor: activePlayers,
+    onBench: playersOnBench,
+    reserves: playersReserves,
+  } = useMemo(
+    () => deriveRoster(matchTeamPlayers, teamPlayers, substitutions),
+    [matchTeamPlayers, teamPlayers, substitutions],
+  );
+
+  const benchPlayerIds = useMemo(
+    () =>
+      new Set<string>([
+        ...playersOnBench.map((mp) => mp.playerId),
+        ...playersReserves.map((p) => p.id),
+      ]),
+    [playersOnBench, playersReserves],
+  );
+
+  // Drop stale selections when the roster changes underneath us.
   useEffect(() => {
-    if (teamId) {
-      const currentMatchTeamPlayers = matchPlayers.filter((mp) => mp.teamId === teamId && mp.player);
-      const hasAnyActive = currentMatchTeamPlayers.some((mp) => mp.isActive);
-      const currentActivePlayers = hasAnyActive
-        ? currentMatchTeamPlayers.filter((mp) => mp.isActive)
-        : currentMatchTeamPlayers.filter((mp) => mp.started);
-      const currentMatchPlayerIds = new Set(currentMatchTeamPlayers.map((mp) => mp.playerId));
-      const currentPlayersNotInMatch = teamPlayers.filter((player) => !currentMatchPlayerIds.has(player.id));
-
-      // Clear playerOutId if selected player is no longer in active list
-      if (playerOutId && !currentActivePlayers.find(mp => mp.playerId === playerOutId)) {
-        setPlayerOutId('');
+    setSelection((prev) => {
+      const next = { ...prev };
+      if (prev.outId && !activePlayers.some((mp) => mp.playerId === prev.outId)) {
+        next.outId = '';
       }
-
-      // Clear playerInId if selected player is now in the match
-      if (playerInId && currentMatchPlayerIds.has(playerInId)) {
-        setPlayerInId('');
+      if (prev.inId && !benchPlayerIds.has(prev.inId)) {
+        next.inId = '';
       }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchPlayers, teamPlayers, teamId]);
+      return next.outId === prev.outId && next.inId === prev.inId ? prev : next;
+    });
+  }, [activePlayers, benchPlayerIds]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const lookupOutName = (outId: string) =>
+    playerLabel(activePlayers.find((mp) => mp.playerId === outId)?.player);
+
+  const lookupInName = (inId: string) => {
+    const fromBench = playersOnBench.find((mp) => mp.playerId === inId)?.player;
+    if (fromBench) return playerLabel(fromBench);
+    return playerLabel(playersReserves.find((p) => p.id === inId));
+  };
+
+  const submitSubstitution = async (outId: string, inId: string) => {
+    if (submittingRef.current || isPanelDisabled) return;
+    if (!teamId || !outId || !inId || outId === inId) return;
+
+    submittingRef.current = true;
+    setSubmitting(true);
+    setError(null);
+
+    const label = `${lookupOutName(outId)} → ${lookupInName(inId)}`;
+    setSuccess(`Substitution: ${label}`);
 
     const payload = {
       teamId,
-      playerInId,
-      playerOutId,
+      playerInId: inId,
+      playerOutId: outId,
       period: gameState?.period ?? 1,
       secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
     };
 
-    // Optimistic: clear form and notify parent immediately
-    setError(null);
-    setSuccess('Substitution recorded');
-    setPlayerInId('');
-    setPlayerOutId('');
+    try {
+      const response = await fetch(`/api/games/${matchId}/substitution`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    // Fire-and-forget persistence
-    (async () => {
-      try {
-        const response = await fetch(`/api/games/${matchId}/substitution`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          let errorMessage = 'Failed to record substitution';
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-            if (errorData.details) {
-              errorMessage = `${errorMessage}: ${errorData.details}`;
-            }
-          } catch {
-            errorMessage = `Server error: ${response.status}`;
-          }
-          setError(errorMessage);
-          setSuccess(null);
-          return;
+      if (!response.ok) {
+        let serverMessage = 'Failed to record substitution';
+        try {
+          const errorData = await response.json();
+          serverMessage = errorData.error || serverMessage;
+          if (errorData.details) serverMessage = `${serverMessage}: ${errorData.details}`;
+        } catch {
+          serverMessage = `Server error: ${response.status}`;
         }
-
-        // Refresh substitutions list; parent handles match players refresh
-        fetchSubstitutions();
-        if (teamId) fetchTeamPlayers(teamId);
-        onSubstitutionRecorded?.();
-      } catch (err: any) {
-        setError(err.message || 'Failed to record substitution');
+        setError(`${serverMessage} (${label})`);
         setSuccess(null);
+        return;
       }
-    })();
+
+      fetchSubstitutions();
+      fetchTeamPlayers(teamId);
+      onSubstitutionRecorded?.();
+    } catch (err: any) {
+      setError(`${err?.message || 'Failed to record substitution'} (${label})`);
+      setSuccess(null);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
-  // Get unique teams from match players to ensure we have correct team data
-  const teamsFromPlayers = matchPlayers.reduce((acc, mp) => {
-    if (!acc.find(t => t.id === mp.teamId) && mp.team) {
-      acc.push({ id: mp.teamId, name: mp.team.name });
+  const handleTap = (role: TapRole, playerId: string) => {
+    if (isPanelDisabled || submitting) return;
+    const result = resolveSubTap(selection, role, playerId);
+    setSelection(result.next);
+    if (result.kind === 'submit') {
+      setError(null);
+      submitSubstitution(result.selection.outId, result.selection.inId);
+    } else {
+      setError(null);
     }
-    return acc;
-  }, [] as Array<{ id: string; name: string }>);
-
-  // Use teams from players if available, otherwise fall back to match data
-  const availableTeams = teamsFromPlayers.length > 0 
-    ? teamsFromPlayers
-    : [
-        team1Id && { id: team1Id, name: team1Name },
-        team2Id && { id: team2Id, name: team2Name },
-      ].filter(Boolean) as Array<{ id: string; name: string }>;
-
-  const matchTeamPlayers = teamId
-    ? matchPlayers.filter((mp) => mp.teamId === teamId && mp.player)
-    : [];
-
-  // Logic to determine who is "On the Floor" vs "On the Bench"
-  // This needs to handle cases where `isActive` wasn't initialized for starters (legacy data or simple start).
-  // A player is ON THE FLOOR if:
-  // 1. They are explicitly marked active (mp.isActive === true)
-  // 2. OR They are a starter AND have never been subbed out.
-  
-  // Uses valid state variable 'substitutions' (safely defaulted to empty array in state init)
-  
-  const playersOnFloor = matchTeamPlayers.filter((mp) => {
-    // 1. Explicitly active
-    if (mp.isActive) return true;
-    
-    // 2. Explicitly subbed out (database flag)
-    if ((mp as any).subOut) return false;
-
-    // 3. Fallback for legacy/starters: Started and NOT subbed out (via sub list checks if subOut is null/false)
-    if (mp.started) {
-      // In case subOut isn't populated for old records yet, check valid sub history
-      const hasBeenSubbedOut = substitutions.some((s: any) => s.playerOutId === mp.playerId);
-      return !hasBeenSubbedOut;
-    }
-    
-    return false;
-  });
-
-  // Bench players are those in the match roster but NOT on the floor
-  const playersOnBench = matchTeamPlayers.filter(
-    (mp) => !playersOnFloor.some(onFloor => onFloor.id === mp.id)
-  );
-
-  // Reserves are those in the team roster but NOT in the match roster at all
-  const matchPlayerIds = new Set(matchTeamPlayers.map((mp) => mp.playerId));
-  const playersReserves = teamPlayers.filter((player) => !matchPlayerIds.has(player.id));
-
-  // "Player Out" candidates = Players On Floor
-  const activePlayers = playersOnFloor;
-
-  // "Player In" candidates = Players On Bench + Reserves
-  const playersAvailableToSubIn = [
-    ...playersOnBench.map(mp => mp.player),
-    ...playersReserves
-  ].filter(Boolean) as Player[];
-
-  const getPlayerDisplayName = (player: Player | null | undefined) => {
-    if (!player) return 'Unknown Player';
-    const name = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown Player';
-    return player.jerseyNumber ? `${name} (#${player.jerseyNumber})` : name;
   };
+
+  const clearSelection = () => setSelection(EMPTY_SELECTION);
+
+  const promptLine = (() => {
+    if (isPanelDisabled) return null;
+    if (selection.outId && !selection.inId) return 'Now tap a bench player to sub in';
+    if (!selection.outId && selection.inId) return 'Now tap an on-floor player to sub out';
+    if (!selection.outId && !selection.inId) return 'Tap a player to start a substitution';
+    return null;
+  })();
+
+  const totalBenchCount = playersOnBench.length + playersReserves.length;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Substitution Panel
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="substitution-team">
-              Team <span className="text-destructive">*</span>
-            </Label>
-            <Select value={teamId} onValueChange={setTeamId} required>
-              <SelectTrigger id="substitution-team">
-                <SelectValue placeholder="Select team" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTeams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {teamId && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="substitution-player-out">
-                  Player Out <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={playerOutId}
-                  onValueChange={setPlayerOutId}
-                  required
-                  disabled={activePlayers.length === 0}
-                >
-                  <SelectTrigger id="substitution-player-out">
-                    <SelectValue placeholder="Select player to remove" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activePlayers.map((mp) => (
-                      <SelectItem key={mp.id} value={mp.playerId}>
-                        {getPlayerDisplayName(mp.player)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {activePlayers.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    No players available to substitute out
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="substitution-player-in">
-                  Player In <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={playerInId}
-                  onValueChange={setPlayerInId}
-                  required
-                  disabled={playersAvailableToSubIn.length === 0}
-                >
-                  <SelectTrigger id="substitution-player-in">
-                    <SelectValue placeholder="Select player to add" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {playersAvailableToSubIn.map((player) => (
-                      <SelectItem key={player.id} value={player.id}>
-                        {getPlayerDisplayName(player)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {playersAvailableToSubIn.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    No players available to substitute in
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5" />
+            Substitutions
+          </CardTitle>
           {gameState && (
-            <div className="text-sm text-muted-foreground space-y-1">
-              <div>
-                Quarter: {gameState.period}
-              </div>
+            <div className="text-xs text-muted-foreground tabular-nums">
+              Q{gameState.period}
               {(localClockSeconds !== null || gameState.clockSeconds !== null) && (
-                <div>
-                  Clock: {formatClockTime(localClockSeconds ?? gameState.clockSeconds ?? 0)}
-                </div>
+                <> · {formatClockTime(localClockSeconds ?? gameState.clockSeconds ?? 0)}</>
               )}
             </div>
           )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isPanelDisabled && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {match?.status !== 'LIVE'
+                ? 'Start the game to record substitutions.'
+                : 'Waiting for game state…'}
+            </AlertDescription>
+          </Alert>
+        )}
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+        {availableTeams.length > 0 && (
+          <div
+            role="tablist"
+            aria-label="Select team"
+            className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1"
+          >
+            {availableTeams.map((t) => {
+              const active = teamId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTeamId(t.id)}
+                  disabled={isPanelDisabled}
+                  className={cn(
+                    'rounded px-2 py-1.5 text-sm font-medium transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'disabled:opacity-50',
+                    active
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {t.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {promptLine && (
+          <p className="text-xs text-muted-foreground">{promptLine}</p>
+        )}
+
+        <section aria-label="On floor">
+          <div className="mb-1.5 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              On floor
+            </h4>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {activePlayers.length}
+            </span>
+          </div>
+          {activePlayers.length === 0 ? (
+            <p className="text-xs italic text-muted-foreground">No players on the floor</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+              {activePlayers.map((mp) => (
+                <PlayerTile
+                  key={mp.id}
+                  jersey={mp.player?.jerseyNumber ?? null}
+                  name={playerLabel(mp.player)}
+                  role={selection.outId === mp.playerId ? 'out' : null}
+                  variant="floor"
+                  disabled={isPanelDisabled || submitting}
+                  onTap={() => handleTap('floor', mp.playerId)}
+                />
+              ))}
+            </div>
           )}
+        </section>
 
-          {success && (
-            <Alert className="border-green-500/50 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
+        <section aria-label="Bench and reserves">
+          <div className="mb-1.5 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Bench &amp; reserves
+            </h4>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {totalBenchCount}
+            </span>
+          </div>
+          {totalBenchCount === 0 ? (
+            <p className="text-xs italic text-muted-foreground">No players available</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+              {playersOnBench.map((mp) => (
+                <PlayerTile
+                  key={mp.id}
+                  jersey={mp.player?.jerseyNumber ?? null}
+                  name={playerLabel(mp.player)}
+                  role={selection.inId === mp.playerId ? 'in' : null}
+                  variant="bench"
+                  disabled={isPanelDisabled || submitting}
+                  onTap={() => handleTap('bench', mp.playerId)}
+                />
+              ))}
+              {playersReserves.map((p) => (
+                <PlayerTile
+                  key={p.id}
+                  jersey={p.jerseyNumber ?? null}
+                  name={playerLabel(p)}
+                  role={selection.inId === p.id ? 'in' : null}
+                  variant="reserve"
+                  disabled={isPanelDisabled || submitting}
+                  onTap={() => handleTap('bench', p.id)}
+                />
+              ))}
+            </div>
           )}
+        </section>
 
+        {(selection.outId || selection.inId) && !submitting && (
           <Button
-            type="submit"
-            disabled={
-              loading ||
-              !teamId ||
-              !playerInId ||
-              !playerOutId ||
-              playerInId === playerOutId ||
-              activePlayers.length === 0 ||
-              playersAvailableToSubIn.length === 0
-            }
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearSelection}
             className="w-full"
           >
-            {loading ? 'Recording...' : 'Record Substitution'}
+            Clear selection
           </Button>
-        </form>
+        )}
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert className="border-green-500/50 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
       </CardContent>
     </Card>
   );
