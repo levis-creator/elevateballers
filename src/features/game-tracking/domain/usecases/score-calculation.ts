@@ -138,7 +138,16 @@ export async function updateMatchScoresFromEvents(
 // Foul calculation — mirrors the score calculation pattern above
 // ---------------------------------------------------------------------------
 
-const FOUL_EVENT_TYPES = ['FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT'] as const;
+const FOUL_EVENT_TYPES = [
+  'FOUL_PERSONAL',
+  'FOUL_TECHNICAL',
+  'FOUL_FLAGRANT',
+  'FOUL_UNSPORTSMANLIKE',
+  // Bench and coach technicals charge to the team for bonus purposes even
+  // though they have no playerId attached.
+  'FOUL_BENCH_TECHNICAL',
+  'FOUL_COACH_TECHNICAL',
+] as const;
 
 /**
  * Check if an event type is a foul event.

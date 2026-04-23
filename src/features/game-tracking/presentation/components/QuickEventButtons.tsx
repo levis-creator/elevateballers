@@ -41,6 +41,11 @@ type QuickEventType =
   | 'FREE_THROW_MADE'
   | 'FREE_THROW_MISSED'
   | 'FOUL_PERSONAL'
+  | 'FOUL_TECHNICAL'
+  | 'FOUL_UNSPORTSMANLIKE'
+  | 'EJECTION'
+  | 'FOUL_BENCH_TECHNICAL'
+  | 'FOUL_COACH_TECHNICAL'
   | 'TURNOVER'
   | 'REBOUND_OFFENSIVE'
   | 'REBOUND_DEFENSIVE'
@@ -48,20 +53,41 @@ type QuickEventType =
   | 'BLOCK'
   | 'ASSIST';
 
+// Short-form labels used on the action buttons. `A` reads as "attempted" in
+// the two missed-shot events, matching the scoresheet shorthand the user
+// uses courtside.
 const EVENT_LABELS: Record<QuickEventType, string> = {
-  TWO_POINT_MADE: '2PT Made',
-  TWO_POINT_MISSED: '2PT Miss',
-  THREE_POINT_MADE: '3PT Made',
-  THREE_POINT_MISSED: '3PT Miss',
-  FREE_THROW_MADE: 'FT Made',
-  FREE_THROW_MISSED: 'FT Miss',
-  FOUL_PERSONAL: 'Foul',
+  TWO_POINT_MADE: '2PTM',
+  TWO_POINT_MISSED: '2PTA',
+  THREE_POINT_MADE: '3PTM',
+  THREE_POINT_MISSED: '3PTA',
+  FREE_THROW_MADE: 'FTM',
+  FREE_THROW_MISSED: 'FTA',
+  FOUL_PERSONAL: 'PF',
+  FOUL_TECHNICAL: 'TF',
+  FOUL_UNSPORTSMANLIKE: 'UF',
+  EJECTION: 'EJ',
+  FOUL_BENCH_TECHNICAL: 'BTF',
+  FOUL_COACH_TECHNICAL: 'CTF',
   TURNOVER: 'TO',
   REBOUND_OFFENSIVE: 'OReb',
   REBOUND_DEFENSIVE: 'DReb',
   STEAL: 'Steal',
   BLOCK: 'Block',
   ASSIST: 'Ast',
+};
+
+// Bench and coach technicals are charged directly to the coach — no player
+// selection needed. The event still carries teamId so it counts toward the
+// team foul counter for bonus purposes.
+const TEAM_ONLY_EVENTS: ReadonlySet<QuickEventType> = new Set([
+  'FOUL_BENCH_TECHNICAL',
+  'FOUL_COACH_TECHNICAL',
+]);
+
+const TEAM_ONLY_DESCRIPTIONS: Partial<Record<QuickEventType, string>> = {
+  FOUL_BENCH_TECHNICAL: 'Bench technical foul',
+  FOUL_COACH_TECHNICAL: 'Coach technical foul',
 };
 
 export default function QuickEventButtons({
@@ -212,7 +238,12 @@ export default function QuickEventButtons({
   };
 
   const handleQuickEvent = (eventType: QuickEventType) => {
-    if (!teamId || !playerId) {
+    const teamOnly = TEAM_ONLY_EVENTS.has(eventType);
+    if (!teamId) {
+      setError('Please select team first');
+      return;
+    }
+    if (!teamOnly && !playerId) {
       setError('Please select team and player first');
       return;
     }
@@ -228,7 +259,12 @@ export default function QuickEventButtons({
       matchId,
       eventType,
       teamId,
-      playerId,
+      // Team-only events (bench / coach technicals) intentionally omit playerId
+      // — the event is charged to the coach, not any on-court player.
+      ...(teamOnly ? {} : { playerId }),
+      ...(TEAM_ONLY_DESCRIPTIONS[eventType]
+        ? { description: TEAM_ONLY_DESCRIPTIONS[eventType] }
+        : {}),
       minute: calculatedMinute,
       period: currentPeriod,
       secondsRemaining: localClockSeconds ?? gameState?.clockSeconds ?? null,
@@ -237,7 +273,7 @@ export default function QuickEventButtons({
     // Optimistic UI — show success immediately, clear inputs, don't block
     setError(null);
     setSuccess('Event recorded');
-    setPlayerId('');
+    if (!teamOnly) setPlayerId('');
     const previousState = applyOptimisticScore(eventType, teamId);
     setLoading(true);
 
@@ -385,140 +421,99 @@ export default function QuickEventButtons({
             </div>
           </div>
 
-          <div>
-            <Label className="text-sm font-semibold">Shots</Label>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('TWO_POINT_MADE')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.TWO_POINT_MADE}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('TWO_POINT_MISSED')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.TWO_POINT_MISSED}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('THREE_POINT_MADE')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.THREE_POINT_MADE}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('THREE_POINT_MISSED')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.THREE_POINT_MISSED}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('FREE_THROW_MADE')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.FREE_THROW_MADE}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('FREE_THROW_MISSED')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.FREE_THROW_MISSED}
-              </Button>
-            </div>
-          </div>
+          {(() => {
+            // Local helper keeps the disabled logic in one place. Team-only
+            // events (BTF / CTF) don't require a player selection.
+            const EventButton = ({ eventType }: { eventType: QuickEventType }) => {
+              const teamOnly = TEAM_ONLY_EVENTS.has(eventType);
+              return (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickEvent(eventType)}
+                  disabled={
+                    loading || !teamId || !isLive || (!teamOnly && !playerId)
+                  }
+                  title={
+                    teamOnly
+                      ? 'Charged to the coach — no player selection required'
+                      : undefined
+                  }
+                >
+                  {EVENT_LABELS[eventType]}
+                </Button>
+              );
+            };
 
-          <div>
-            <Label className="text-sm font-semibold">Defense & Fouls</Label>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('FOUL_PERSONAL')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.FOUL_PERSONAL}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('REBOUND_DEFENSIVE')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.REBOUND_DEFENSIVE}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('REBOUND_OFFENSIVE')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.REBOUND_OFFENSIVE}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('STEAL')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.STEAL}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('BLOCK')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.BLOCK}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('TURNOVER')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.TURNOVER}
-              </Button>
-            </div>
-          </div>
+            const SHOT_EVENTS: QuickEventType[] = [
+              'TWO_POINT_MADE',
+              'TWO_POINT_MISSED',
+              'THREE_POINT_MADE',
+              'THREE_POINT_MISSED',
+              'FREE_THROW_MADE',
+              'FREE_THROW_MISSED',
+            ];
+            const FOUL_EVENTS: QuickEventType[] = [
+              'FOUL_PERSONAL',
+              'FOUL_TECHNICAL',
+              'FOUL_UNSPORTSMANLIKE',
+              'EJECTION',
+              'FOUL_BENCH_TECHNICAL',
+              'FOUL_COACH_TECHNICAL',
+            ];
+            const DEFENSE_EVENTS: QuickEventType[] = [
+              'REBOUND_DEFENSIVE',
+              'REBOUND_OFFENSIVE',
+              'STEAL',
+              'BLOCK',
+            ];
+            const OTHER_EVENTS: QuickEventType[] = ['ASSIST', 'TURNOVER'];
 
-          <div>
-            <Label className="text-sm font-semibold">Other</Label>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickEvent('ASSIST')}
-                disabled={loading || !teamId || !playerId || !isLive}
-              >
-                {EVENT_LABELS.ASSIST}
-              </Button>
-            </div>
-          </div>
+            return (
+              <>
+                <div>
+                  <Label className="text-sm font-semibold">Shots</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {SHOT_EVENTS.map((e) => (
+                      <EventButton key={e} eventType={e} />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold">Fouls &amp; discipline</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {FOUL_EVENTS.map((e) => (
+                      <EventButton key={e} eventType={e} />
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    BTF and CTF are charged to the coach — team selection is
+                    all that's required.
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold">Defense</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {DEFENSE_EVENTS.map((e) => (
+                      <EventButton key={e} eventType={e} />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold">Other</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {OTHER_EVENTS.map((e) => (
+                      <EventButton key={e} eventType={e} />
+                    ))}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </CardContent>
     </Card>
