@@ -1907,12 +1907,15 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                                 >
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <strong>{mp.player.firstName} {mp.player.lastName}</strong>
-                                    {mp.jerseyNumber && (
-                                      <Badge variant="secondary" className="gap-1">
-                                        {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
-                                        {mp.jerseyNumber}
-                                      </Badge>
-                                    )}
+                                    {(() => {
+                                      const jersey = mp.jerseyNumber ?? mp.player.jerseyNumber;
+                                      return jersey != null ? (
+                                        <Badge variant="secondary" className="gap-1">
+                                          {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
+                                          {jersey}
+                                        </Badge>
+                                      ) : null;
+                                    })()}
                                     {mp.started && <Badge variant="default" className="bg-blue-600 text-white border-none">Starter</Badge>}
                                     {isPlayerOnFloor(mp) && <Badge variant="default" className="bg-green-600 text-white border-none animate-pulse">On Floor</Badge>}
                                     {mp.subOut && <Badge variant="destructive" className="animate-pulse">Out</Badge>}
@@ -1998,12 +2001,15 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                                 >
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <strong>{mp.player.firstName} {mp.player.lastName}</strong>
-                                    {mp.jerseyNumber && (
-                                      <Badge variant="secondary" className="gap-1">
-                                        {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
-                                        {mp.jerseyNumber}
-                                      </Badge>
-                                    )}
+                                    {(() => {
+                                      const jersey = mp.jerseyNumber ?? mp.player.jerseyNumber;
+                                      return jersey != null ? (
+                                        <Badge variant="secondary" className="gap-1">
+                                          {icons.Shirt ? <icons.Shirt className="h-3 w-3" /> : <span className="h-3 w-3" />}
+                                          {jersey}
+                                        </Badge>
+                                      ) : null;
+                                    })()}
                                     {mp.started && <Badge variant="default" className="bg-blue-600 text-white border-none">Starter</Badge>}
                                     {isPlayerOnFloor(mp) && <Badge variant="default" className="bg-green-600 text-white border-none animate-pulse">On Floor</Badge>}
                                     {mp.subOut && <Badge variant="destructive" className="animate-pulse">Out</Badge>}
