@@ -5,6 +5,7 @@ import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
 import Spacing from "../../shared/components/ui/Spacing.astro";
 import { getMatchWithFullDetails } from "../../features/cms/lib/queries";
+import { MATCH_TIMEZONE } from "../../features/matches/domain/usecases/utils";
 import MatchDetail from "../../features/matches/components/MatchDetail";
 import type { MatchWithFullDetails } from "../../features/cms/types";
 import PageLoader from "../../components/PageLoader";
@@ -40,6 +41,7 @@ const team2Name = match?.team2Name || match?.team2?.name || "TBD";
 const matchLeague = match?.league?.name || match?.leagueName || "Elevate Ballers";
 const matchDate = match?.date
   ? new Date(match.date).toLocaleDateString("en-US", {
+      timeZone: MATCH_TIMEZONE,
       year: "numeric",
       month: "long",
       day: "numeric",

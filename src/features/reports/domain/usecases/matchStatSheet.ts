@@ -1,4 +1,5 @@
 import { getMatchWithFullDetails } from '../../../cms/lib/queries';
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import { calculatePlayerMatchStats, type PlayerMatchStatistics } from '../../../player/lib/playerStats';
 
 type PlayerStatRow = {
@@ -764,6 +765,7 @@ async function buildStatSheetData(matchId: string): Promise<MatchStatSheetData> 
     fileName: `${playedOnIso}_${sanitizeFileSegment(team1Name) || 'team-1'}_vs_${sanitizeFileSegment(team2Name) || 'team-2'}_stat-sheet.pdf`,
     matchTitle: `${team1Name} vs ${team2Name}`,
     playedOn: new Date(match.date).toLocaleDateString('en-US', {
+      timeZone: MATCH_TIMEZONE,
       weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
     }),
     leagueName: match.league?.name || match.leagueName || 'League play',

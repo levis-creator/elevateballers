@@ -4,6 +4,7 @@
  */
 
 import type { BracketMatch } from './bracket-converter';
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 
 // Types for react-brackets (defined locally as they may not be exported)
 export interface SeedTeam {
@@ -227,7 +228,7 @@ export function convertToReactBracketsFormat(
 
       return {
         id: match.id,
-        date: new Date(match.startTime).toLocaleDateString(),
+        date: new Date(match.startTime).toLocaleDateString('en-US', { timeZone: MATCH_TIMEZONE }),
         teams: [
           team1 ? {
             name: team1.name || 'TBD',

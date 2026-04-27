@@ -9,6 +9,7 @@ import { getTeamBySlug, getStaffByTeam } from "../../features/cms/lib/queries";
 import { getTeamPlayerStats } from "../../features/player/lib/queries";
 import { resolveAssetUrl, getDisplayImageUrl } from "../../lib/asset-url";
 import { getFilteredMatches } from "../../features/matches/lib/queries";
+import { formatMatchDate, formatMatchTime } from "../../features/matches/domain/usecases/utils";
 import { calculateTeamStatistics } from "../../features/team/lib/teamStats";
 import Spacing from "../../shared/components/ui/Spacing.astro";
 import PageLoader from "../../components/PageLoader";
@@ -335,7 +336,6 @@ const pageImage = pageImageSource.startsWith("http")
                               const opponent = isTeam1
                                 ? match.team2 || { name: match.team2Name }
                                 : match.team1 || { name: match.team1Name };
-                              const matchDate = new Date(match.date);
                               const isWin =
                                 teamScore !== null &&
                                 opponentScore !== null &&
@@ -356,11 +356,7 @@ const pageImage = pageImageSource.startsWith("http")
                                 >
                                   <div class="flex items-center justify-between mb-2">
                                     <div class="text-sm text-gray-600">
-                                      {matchDate.toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric",
-                                      })}
+                                      {formatMatchDate(match.date)}
                                     </div>
                                     {match.league && (
                                       <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-700">
@@ -427,22 +423,14 @@ const pageImage = pageImageSource.startsWith("http")
                             const opponent = isTeam1
                               ? match.team2 || { name: match.team2Name }
                               : match.team1 || { name: match.team1Name };
-                            const matchDate = new Date(match.date);
 
                             return (
                               <div class="bg-white rounded-lg border-l-4 border-l-blue-500 p-4 shadow-sm hover:shadow-md transition-shadow">
                                 <div class="flex items-center justify-between mb-2">
                                   <div class="text-sm text-gray-600">
-                                    {matchDate.toLocaleDateString("en-US", {
-                                      month: "short",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    })}
+                                    {formatMatchDate(match.date)}
                                     <span class="ml-2 text-gray-500">
-                                      {matchDate.toLocaleTimeString("en-US", {
-                                        hour: "numeric",
-                                        minute: "2-digit",
-                                      })}
+                                      {formatMatchTime(match.date)}
                                     </span>
                                   </div>
                                   {match.league && (

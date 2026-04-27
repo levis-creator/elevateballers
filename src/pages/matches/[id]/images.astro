@@ -5,6 +5,7 @@ import Header from "../../../features/layout/components/Header";
 import Footer from "../../../features/layout/components/Footer.astro";
 import Spacing from "../../../shared/components/ui/Spacing.astro";
 import { getMatchById } from "../../../features/cms/lib/queries";
+import { MATCH_TIMEZONE } from "../../../features/matches/domain/usecases/utils";
 import MatchImagesViewAllPublic from "../../../features/matches/components/MatchImagesViewAllPublic";
 import type { Match } from "@prisma/client";
 import PageLoader from "../../../components/PageLoader";
@@ -34,6 +35,7 @@ const team1Name = match?.team1Name || match?.team1?.name || "TBD";
 const team2Name = match?.team2Name || match?.team2?.name || "TBD";
 const matchDate = match?.date
   ? new Date(match.date).toLocaleDateString("en-US", {
+      timeZone: MATCH_TIMEZONE,
       year: "numeric",
       month: "long",
       day: "numeric",
