@@ -2,6 +2,7 @@
  * CSV Generator
  * Generates CSV files from report data
  */
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 
 /**
  * Escape CSV field value
@@ -51,7 +52,7 @@ export function generateMatchStatisticsCSV(matchData: {
     'Team 1 Score': matchData.match.team1Score || 0,
     'Team 2': matchData.match.team2Name || matchData.match.team2?.name || '',
     'Team 2 Score': matchData.match.team2Score || 0,
-    Date: matchData.match.date ? new Date(matchData.match.date).toLocaleDateString() : '',
+    Date: matchData.match.date ? new Date(matchData.match.date).toLocaleDateString('en-US', { timeZone: MATCH_TIMEZONE }) : '',
   });
 
   // Team statistics
@@ -115,7 +116,7 @@ export function generatePlayerStatisticsCSV(data: {
     data.matches.forEach((match) => {
       rows.push({
         Type: 'Match',
-        Date: match.date ? new Date(match.date).toLocaleDateString() : '',
+        Date: match.date ? new Date(match.date).toLocaleDateString('en-US', { timeZone: MATCH_TIMEZONE }) : '',
         Opponent: match.opponent || '',
         ...match.stats,
       });

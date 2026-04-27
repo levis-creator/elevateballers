@@ -1,5 +1,6 @@
 import { useState, useEffect, type ComponentType } from 'react';
 import type { Match } from '../../types';
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -124,6 +125,7 @@ export default function MatchList() {
 
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString('en-US', {
+      timeZone: MATCH_TIMEZONE,
       year: 'numeric',
       month: 'short',
       day: 'numeric',

@@ -1,5 +1,6 @@
 import { useState, useEffect, type ComponentType } from 'react';
 import type { MatchWithTeamsAndLeagueAndSeason } from '../../types';
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -114,6 +115,7 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
 
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString('en-US', {
+      timeZone: MATCH_TIMEZONE,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -122,6 +124,7 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
 
   const formatTime = (date: string | Date) => {
     return new Date(date).toLocaleTimeString('en-US', {
+      timeZone: MATCH_TIMEZONE,
       hour: '2-digit',
       minute: '2-digit',
     });

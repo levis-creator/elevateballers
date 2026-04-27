@@ -6,6 +6,7 @@
 
 import React from 'react';
 import type { BracketMatch } from '../../lib/bracket-converter';
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 
 interface SimpleBracketProps {
   matches: BracketMatch[] | { upper: BracketMatch[]; lower: BracketMatch[] };
@@ -96,7 +97,7 @@ const SimpleBracket: React.FC<SimpleBracketProps> = ({
         {/* Match info */}
         {match.startTime && !isEmpty && (
           <div className="mt-2 text-xs text-gray-500 text-center">
-            {new Date(match.startTime).toLocaleDateString()}
+            {new Date(match.startTime).toLocaleDateString('en-US', { timeZone: MATCH_TIMEZONE })}
           </div>
         )}
 

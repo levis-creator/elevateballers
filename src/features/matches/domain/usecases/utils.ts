@@ -6,7 +6,7 @@
 import type { Match, MatchStatus } from '@prisma/client';
 import type { MatchDisplay } from '../../types';
 
-const MATCH_TIMEZONE = import.meta.env.PUBLIC_MATCH_TIMEZONE || 'Africa/Nairobi';
+export const MATCH_TIMEZONE = import.meta.env.PUBLIC_MATCH_TIMEZONE || 'Africa/Nairobi';
 
 /**
  * Format date for display

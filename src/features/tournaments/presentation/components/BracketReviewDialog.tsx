@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import type { GeneratedMatch } from '../../lib/bracket-generator';
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import type { MatchStage } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,6 +82,7 @@ export default function BracketReviewDialog({
   const formatDate = (date: Date | string) => {
     const d = typeof date === 'string' ? new Date(date) : date;
     return d.toLocaleDateString('en-US', {
+      timeZone: MATCH_TIMEZONE,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -90,6 +92,7 @@ export default function BracketReviewDialog({
   const formatTime = (date: Date | string) => {
     const d = typeof date === 'string' ? new Date(date) : date;
     return d.toLocaleTimeString('en-US', {
+      timeZone: MATCH_TIMEZONE,
       hour: '2-digit',
       minute: '2-digit',
     });

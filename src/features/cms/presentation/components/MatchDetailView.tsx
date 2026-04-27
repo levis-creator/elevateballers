@@ -44,6 +44,7 @@ import {
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, getWinnerName, isWinner } from '../../../matches/lib/team-helpers';
 import TeamLogo from '../../../matches/components/TeamLogo';
 import { getLeagueName } from '../../../matches/lib/league-helpers';
+import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import AddNewPlayerModal from './AddNewPlayerModal';
 import GameTrackingPanel from '../../../game-tracking/components/GameTrackingPanel';
 import MatchImagesDisplay from './MatchImagesDisplay';
@@ -1737,12 +1738,14 @@ export default function MatchDetailView({ matchId, initialMatch }: MatchDetailVi
                     <span className="flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.18em] text-slate-300">
                       {icons.Calendar ? <icons.Calendar className="h-3.5 w-3.5" /> : null}
                       {new Date(match.date).toLocaleDateString('en-US', {
+                        timeZone: MATCH_TIMEZONE,
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric',
                       })}
                       {' · '}
                       {new Date(match.date).toLocaleTimeString([], {
+                        timeZone: MATCH_TIMEZONE,
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
