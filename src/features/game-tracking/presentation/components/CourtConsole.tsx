@@ -411,7 +411,7 @@ export default function CourtConsole({
             players.map((mp) => (
               <CourtTile
                 key={mp.id}
-                jersey={mp.jerseyNumber}
+                jersey={mp.jerseyNumber ?? mp.player.jerseyNumber}
                 name={`${mp.player.firstName} ${mp.player.lastName}`}
                 side={side}
                 armed={armedPlayerId === mp.playerId}
@@ -489,7 +489,7 @@ export default function CourtConsole({
             onClick={() => handleAssist(mp.playerId)}
             className="rounded-md border border-brand-gold/40 bg-white/[0.05] px-2 py-1 text-sm text-white hover:bg-brand-gold/20"
           >
-            #{mp.jerseyNumber ?? '—'} {mp.player.lastName}
+            #{mp.jerseyNumber ?? mp.player.jerseyNumber ?? '—'} {mp.player.lastName}
           </button>
         ))}
         <button
@@ -525,7 +525,7 @@ export default function CourtConsole({
                 : 'border-rose-400/40 bg-rose-400/10 hover:bg-rose-400/20',
             )}
           >
-            #{mp.jerseyNumber ?? '—'} {mp.player.lastName}
+            #{mp.jerseyNumber ?? mp.player.jerseyNumber ?? '—'} {mp.player.lastName}
           </button>
         ))}
         <button
@@ -668,7 +668,7 @@ export default function CourtConsole({
               ? (() => {
                   const mp = matchPlayers.find((m) => m.playerId === armedPlayerId);
                   return mp
-                    ? `Armed · #${mp.jerseyNumber ?? '—'} ${mp.player.firstName} ${mp.player.lastName}`
+                    ? `Armed · #${mp.jerseyNumber ?? mp.player.jerseyNumber ?? '—'} ${mp.player.firstName} ${mp.player.lastName}`
                     : 'Armed player no longer on floor';
                 })()
               : 'Tap a jersey to arm a player'}
