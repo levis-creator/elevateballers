@@ -54,10 +54,14 @@ function playerLabel(player: Player | null | undefined) {
   return name || 'Unknown';
 }
 
-function playerLabelWithJersey(player: Player | null | undefined) {
+function playerLabelWithJersey(
+  player: Player | null | undefined,
+  overrideJersey?: number | null,
+) {
   const name = playerLabel(player);
-  if (!player?.jerseyNumber && player?.jerseyNumber !== 0) return name;
-  return `${name} #${player.jerseyNumber}`;
+  const jersey = overrideJersey ?? player?.jerseyNumber;
+  if (jersey === null || jersey === undefined) return name;
+  return `${name} #${jersey}`;
 }
 
 interface PlayerTileProps {
@@ -403,12 +407,14 @@ export default function SubstitutionPanel({
     });
   }, [activePlayers, benchPlayerIds]);
 
-  const lookupOutName = (outId: string) =>
-    playerLabelWithJersey(activePlayers.find((mp) => mp.playerId === outId)?.player);
+  const lookupOutName = (outId: string) => {
+    const mp = activePlayers.find((mp) => mp.playerId === outId);
+    return playerLabelWithJersey(mp?.player, mp?.jerseyNumber);
+  };
 
   const lookupInName = (inId: string) => {
-    const fromBench = playersOnBench.find((mp) => mp.playerId === inId)?.player;
-    if (fromBench) return playerLabelWithJersey(fromBench);
+    const benchMp = playersOnBench.find((mp) => mp.playerId === inId);
+    if (benchMp) return playerLabelWithJersey(benchMp.player, benchMp.jerseyNumber);
     return playerLabelWithJersey(playersReserves.find((p) => p.id === inId));
   };
 
@@ -632,7 +638,7 @@ export default function SubstitutionPanel({
                 return (
                   <PlayerTile
                     key={mp.id}
-                    jersey={mp.player?.jerseyNumber ?? null}
+                    jersey={mp.jerseyNumber ?? mp.player?.jerseyNumber ?? null}
                     name={playerLabel(mp.player)}
                     role={role}
                     order={order}
@@ -664,7 +670,7 @@ export default function SubstitutionPanel({
                 return (
                   <PlayerTile
                     key={mp.id}
-                    jersey={mp.player?.jerseyNumber ?? null}
+                    jersey={mp.jerseyNumber ?? mp.player?.jerseyNumber ?? null}
                     name={playerLabel(mp.player)}
                     role={role}
                     order={order}
