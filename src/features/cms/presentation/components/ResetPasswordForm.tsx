@@ -1,36 +1,10 @@
-import { useEffect, useState, type ComponentType } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useEffect, useState } from 'react';
+import { Lock, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 
 const MIN_PASSWORD_LENGTH = 10;
 
 export default function ResetPasswordForm() {
-  const [icons, setIcons] = useState<{
-    Basketball?: ComponentType<any>;
-    Lock?: ComponentType<any>;
-    ArrowRight?: ComponentType<any>;
-    ArrowLeft?: ComponentType<any>;
-    AlertCircle?: ComponentType<any>;
-    Loader2?: ComponentType<any>;
-  }>({});
-
-  useEffect(() => {
-    import('lucide-react').then((mod) => {
-      setIcons({
-        Basketball: mod.Basketball,
-        Lock: mod.Lock,
-        ArrowRight: mod.ArrowRight,
-        ArrowLeft: mod.ArrowLeft,
-        AlertCircle: mod.AlertCircle,
-        Loader2: mod.Loader2,
-      });
-    });
-  }, []);
-
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -76,9 +50,7 @@ export default function ResetPasswordForm() {
     try {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),
       });
 
@@ -101,117 +73,119 @@ export default function ResetPasswordForm() {
     }
   };
 
-  const BasketballIcon = icons.Basketball;
-  const LockIcon = icons.Lock;
-  const ArrowRightIcon = icons.ArrowRight;
-  const ArrowLeftIcon = icons.ArrowLeft;
-  const AlertCircleIcon = icons.AlertCircle;
-  const Loader2Icon = icons.Loader2;
+  const isDisabled = loading || !token;
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center space-y-4 pb-6">
-        <div className="w-20 h-20 mx-auto bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-lg">
-          {BasketballIcon ? <BasketballIcon size={40} /> : null}
-        </div>
-        <div>
-          <h1 className="text-4xl font-heading font-semibold mb-2 text-foreground tracking-wide">
-            ELEVATE BALLERS
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-600 shadow-lg shadow-red-600/30 mb-5">
+            <img src="/images/Elevate_Icon-200x200.png" alt="Elevate Ballers" className="w-10 h-10 object-contain" />
+          </div>
+          <h1 className="text-4xl font-bold text-white tracking-widest uppercase" style={{ fontFamily: 'Teko, sans-serif' }}>
+            Elevate Ballers
           </h1>
-          <p className="text-muted-foreground text-sm">Create a new password</p>
+          <p className="text-sm text-gray-400 mt-2">Create a new password</p>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-6">
-        {error ? (
-          <Alert variant="destructive">
-            {AlertCircleIcon ? <AlertCircleIcon className="h-4 w-4" /> : null}
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+        {/* Card */}
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl p-8">
 
-        {success ? (
-          <Alert>
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-semibold">
-              New Password
-            </Label>
-            <div className="relative">
-              {LockIcon ? (
-                <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              ) : null}
-              <Input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                placeholder="Enter a new password"
-                autoComplete="new-password"
-                className="pl-10"
-              />
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 mb-6 text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
             </div>
-            <PasswordStrengthMeter password={password} />
-          </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-sm font-semibold">
-              Confirm Password
-            </Label>
-            <div className="relative">
-              {LockIcon ? (
-                <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              ) : null}
-              <Input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={loading}
-                placeholder="Re-enter your new password"
-                autoComplete="new-password"
-                className="pl-10"
-              />
+          {/* Success */}
+          {success && (
+            <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl px-4 py-3 mb-6 text-sm">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{success}</span>
             </div>
-          </div>
+          )}
 
-          <Button
-            type="submit"
-            className="w-full uppercase tracking-wide"
-            disabled={loading || !token}
-            size="lg"
-          >
-            {loading ? (
-              <>
-                {Loader2Icon ? <Loader2Icon className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Updating...
-              </>
-            ) : (
-              <>
-                Update password
-                {ArrowRightIcon ? <ArrowRightIcon className="ml-2 h-4 w-4" /> : null}
-              </>
-            )}
-          </Button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* New password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder="Enter a new password"
+                  autoComplete="new-password"
+                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition disabled:opacity-50"
+                />
+              </div>
+              <PasswordStrengthMeter password={password} />
+            </div>
 
-        <div className="pt-6 border-t text-center">
+            {/* Confirm password */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder="Re-enter your new password"
+                  autoComplete="new-password"
+                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isDisabled}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm uppercase tracking-widest transition-colors shadow-lg shadow-red-600/20 disabled:shadow-none"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  Update password
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Back link */}
+        <div className="text-center mt-6">
           <a
             href="/admin/login"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
           >
-            {ArrowLeftIcon ? <ArrowLeftIcon className="h-4 w-4" /> : null}
-            <span>Back to login</span>
+            <ArrowLeft className="w-4 h-4" />
+            Back to login
           </a>
         </div>
-      </CardContent>
-    </Card>
+
+      </div>
+    </div>
   );
 }
