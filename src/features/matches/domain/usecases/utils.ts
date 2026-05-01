@@ -8,46 +8,86 @@ import type { MatchDisplay } from '../../types';
 
 export const MATCH_TIMEZONE = import.meta.env.PUBLIC_MATCH_TIMEZONE || 'Africa/Nairobi';
 
+// Africa/Nairobi has been fixed at UTC+3 since 1928 with no DST. Computing the
+// offset arithmetically lets us format dates correctly even on hosts whose Node
+// build ships without full ICU — there, `toLocaleTimeString({ timeZone })`
+// silently falls back to UTC and produces times 3 hours off from the browser.
+const FIXED_TIMEZONE_OFFSETS_MIN: Record<string, number> = {
+  'Africa/Nairobi': 180,
+};
+
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+interface ZonedDateParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
+
+function getZonedDateParts(date: Date | string): ZonedDateParts {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const fixedOffset = FIXED_TIMEZONE_OFFSETS_MIN[MATCH_TIMEZONE];
+
+  if (fixedOffset !== undefined) {
+    const shifted = new Date(d.getTime() + fixedOffset * 60_000);
+    return {
+      year: shifted.getUTCFullYear(),
+      month: shifted.getUTCMonth() + 1,
+      day: shifted.getUTCDate(),
+      hour: shifted.getUTCHours(),
+      minute: shifted.getUTCMinutes(),
+    };
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: MATCH_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+  const hour = get('hour');
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: hour === 24 ? 0 : hour,
+    minute: get('minute'),
+  };
+}
+
+function formatTimeFromParts(parts: ZonedDateParts): string {
+  const ampm = parts.hour >= 12 ? 'PM' : 'AM';
+  const h12 = parts.hour % 12 === 0 ? 12 : parts.hour % 12;
+  return `${String(h12).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')} ${ampm}`;
+}
+
 /**
  * Format date for display
  */
 export function formatMatchDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
-    timeZone: MATCH_TIMEZONE,
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  const { year, month, day } = getZonedDateParts(date);
+  return `${MONTH_SHORT[month - 1]} ${day}, ${year}`;
 }
 
 /**
  * Format time for display
  */
 export function formatMatchTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleTimeString('en-US', {
-    timeZone: MATCH_TIMEZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+  return formatTimeFromParts(getZonedDateParts(date));
 }
 
 /**
  * Format date and time together
  */
 export function formatMatchDateTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString('en-US', {
-    timeZone: MATCH_TIMEZONE,
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+  const parts = getZonedDateParts(date);
+  return `${MONTH_SHORT[parts.month - 1]} ${parts.day}, ${parts.year}, ${formatTimeFromParts(parts)}`;
 }
 
 /**
@@ -110,24 +150,13 @@ export function enhanceMatchForDisplay(match: Match): MatchDisplay {
  * Get relative time description (e.g., "in 2 days", "yesterday")
  */
 export function getRelativeTimeDescription(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  const now = new Date();
-
   const toDateInTz = (value: Date) => {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: MATCH_TIMEZONE,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(value);
-    const year = Number(parts.find((p) => p.type === 'year')?.value ?? '0');
-    const month = Number(parts.find((p) => p.type === 'month')?.value ?? '1');
-    const day = Number(parts.find((p) => p.type === 'day')?.value ?? '1');
+    const { year, month, day } = getZonedDateParts(value);
     return new Date(year, month - 1, day);
   };
 
-  const dTz = toDateInTz(d);
-  const nowTz = toDateInTz(now);
+  const dTz = toDateInTz(typeof date === 'string' ? new Date(date) : date);
+  const nowTz = toDateInTz(new Date());
   const diffDays = Math.round((dTz.getTime() - nowTz.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
