@@ -56,17 +56,24 @@ export const POST: APIRoute = async ({ params, request }) => {
   }
 
   try {
-    // Check if match is completed - block adding events
-    const { getMatchById } = await import('../../../../../features/cms/lib/queries');
+    // Check if match is completed - block adding events unless the
+    // "Allow editing matches after completion" admin toggle is on.
+    const { getMatchById, getSiteSettingByKey } = await import('../../../../../features/cms/lib/queries');
     const match = await getMatchById(matchId);
     if (match && match.status === 'COMPLETED') {
-      return new Response(
-        JSON.stringify({ error: 'Cannot add events to a completed match' }),
-        {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      const setting = await getSiteSettingByKey('match_allow_edit_after_completion').catch(() => null);
+      if (setting?.value !== 'true') {
+        return new Response(
+          JSON.stringify({
+            error:
+              'Cannot add events to a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.',
+          }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
     }
     
     const body = await request.json();

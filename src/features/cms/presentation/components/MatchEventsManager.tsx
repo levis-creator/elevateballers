@@ -69,6 +69,10 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
   const [gameState, setGameState] = useState<any>(null);
   const [matchStatus, setMatchStatus] = useState<string>('');
+  // Admin override (Site Settings → Matches). When true, the edit page allows
+  // event mutations even on COMPLETED matches.
+  const [allowEditAfterCompletion, setAllowEditAfterCompletion] = useState(false);
+  const eventEditingLocked = matchStatus === 'COMPLETED' && !allowEditAfterCompletion;
   const [formData, setFormData] = useState({
     eventType: 'TWO_POINT_MADE' as MatchEventType,
     minute: '',
@@ -88,6 +92,26 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
       fetchMatchStatus();
     }
   }, [matchId]);
+
+  // Load the admin "allow editing matches after completion" toggle once.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/settings?category=matches', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((settings: Array<{ key: string; value: string }>) => {
+        if (cancelled) return;
+        const found = Array.isArray(settings)
+          ? settings.find((s) => s.key === 'match_allow_edit_after_completion')
+          : null;
+        setAllowEditAfterCompletion(found?.value === 'true');
+      })
+      .catch(() => {
+        // Default to locked on error.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchMatchStatus = async () => {
     try {
@@ -176,8 +200,8 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
     e.preventDefault();
     
     // Block if match is completed
-    if (matchStatus === 'COMPLETED') {
-      setError('Cannot add events to a completed match');
+    if (eventEditingLocked) {
+      setError('Cannot add events to a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.');
       return;
     }
     
@@ -252,8 +276,8 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
     e.preventDefault();
     
     // Block if match is completed
-    if (matchStatus === 'COMPLETED') {
-      setError('Cannot edit events in a completed match');
+    if (eventEditingLocked) {
+      setError('Cannot edit events in a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.');
       return;
     }
     
@@ -316,8 +340,8 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
 
   const handleDeleteEvent = async (id: string) => {
     // Block if match is completed
-    if (matchStatus === 'COMPLETED') {
-      setError('Cannot delete events from a completed match');
+    if (eventEditingLocked) {
+      setError('Cannot delete events from a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.');
       setDeleteEventId(null);
       return;
     }
@@ -401,18 +425,19 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
         <Button
           size="sm"
           onClick={() => setShowAddForm(!showAddForm)}
-          disabled={matchStatus === 'COMPLETED'}
+          disabled={eventEditingLocked}
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Event
         </Button>
       </div>
 
-      {matchStatus === 'COMPLETED' && (
+      {eventEditingLocked && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             <strong>Match is completed.</strong> Cannot add or edit events in a completed match.
+            Enable <em>Allow editing matches after completion</em> in Site Settings → Matches to override.
           </AlertDescription>
         </Alert>
       )}
@@ -446,7 +471,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                       }))
                     }
                     required
-                    disabled={!!editEventId || matchStatus === 'COMPLETED'}
+                    disabled={!!editEventId || eventEditingLocked}
                   >
                     <SelectTrigger id="eventType">
                       <SelectValue />
@@ -476,7 +501,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     min="0"
                     max="120"
                     placeholder="23"
-                    disabled={matchStatus === 'COMPLETED'}
+                    disabled={eventEditingLocked}
                   />
                 </div>
 
@@ -496,7 +521,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                         }));
                       }}
                       required
-                      disabled={matchStatus === 'COMPLETED'}
+                      disabled={eventEditingLocked}
                     >
                       <SelectTrigger id="teamId">
                         <SelectValue placeholder="Select a team" />
@@ -522,7 +547,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                       onValueChange={(value) =>
                         setFormData((prev) => ({ ...prev, playerId: value }))
                       }
-                      disabled={!formData.teamId || matchStatus === 'COMPLETED'}
+                      disabled={!formData.teamId || eventEditingLocked}
                       required={requiresPlayer(formData.eventType)}
                     >
                       <SelectTrigger id="playerId">
@@ -556,7 +581,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     min="1"
                     max="10"
                     placeholder="1"
-                    disabled={matchStatus === 'COMPLETED'}
+                    disabled={eventEditingLocked}
                   />
                 </div>
 
@@ -574,7 +599,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     min="0"
                     max="7200"
                     placeholder={gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined ? String(gameState.clockSeconds) : "Auto from clock"}
-                    disabled={matchStatus === 'COMPLETED'}
+                    disabled={eventEditingLocked}
                   />
                   {gameState?.clockSeconds !== null && gameState?.clockSeconds !== undefined && (
                     <p className="text-xs text-muted-foreground">
@@ -592,7 +617,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     onValueChange={(value) =>
                       setFormData((prev) => ({ ...prev, assistPlayerId: value === "__none" ? "" : value }))
                     }
-                    disabled={!formData.teamId || matchStatus === 'COMPLETED'}
+                    disabled={!formData.teamId || eventEditingLocked}
                   >
                     <SelectTrigger id="assistPlayerId">
                       <SelectValue placeholder="No assist" />
@@ -619,12 +644,12 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                     setFormData((prev) => ({ ...prev, description: e.target.value }))
                   }
                   placeholder="Additional details about the event..."
-                  disabled={matchStatus === 'COMPLETED'}
+                  disabled={eventEditingLocked}
                 />
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit" disabled={matchStatus === 'COMPLETED'}>{editEventId ? 'Update Event' : 'Add Event'}</Button>
+                <Button type="submit" disabled={eventEditingLocked}>{editEventId ? 'Update Event' : 'Add Event'}</Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -679,7 +704,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                         size="sm"
                         variant="ghost"
                         onClick={() => handleStartEdit(event.id)}
-                        disabled={matchStatus === 'COMPLETED'}
+                        disabled={eventEditingLocked}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -687,7 +712,7 @@ export default function MatchEventsManager({ matchId, team1Id, team2Id }: MatchE
                         size="sm"
                         variant="ghost"
                         onClick={() => setDeleteEventId(event.id)}
-                        disabled={matchStatus === 'COMPLETED'}
+                        disabled={eventEditingLocked}
                       >
                         <X className="h-4 w-4" />
                       </Button>

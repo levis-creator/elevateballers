@@ -289,8 +289,11 @@ export async function endGame(matchId: string): Promise<boolean> {
       // Import here to avoid circular dependency
       const { updateMatchScoresFromEvents, updateMatchWinner } = await import('../../domain/usecases/score-calculation');
 
-      // First, ensure scores are up to date from events
-      await updateMatchScoresFromEvents(matchId, tx);
+      // First, ensure scores are up to date from events. Preserve the
+      // already-persisted score when the event-derived total is lower — the
+      // courtside scoreboard is the scorekeeper's source of truth, and any
+      // events lost to offline drops would otherwise snap the final to 0-0.
+      await updateMatchScoresFromEvents(matchId, tx, { preservePersistedIfHigher: true });
 
       // Update match status to COMPLETED and stop the clock
       await tx.match.update({

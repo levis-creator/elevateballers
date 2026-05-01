@@ -16,6 +16,7 @@ import SubstitutionPanel from './SubstitutionPanel';
 import QuickEventButtons from './QuickEventButtons';
 import { useGameTrackingStore } from '../../stores/useGameTrackingStore';
 import { AlertCircle } from 'lucide-react';
+import { offlineStore } from '../../lib/offlineStore';
 import type { MatchWithGameState } from '../../types';
 import { getTeam1Name, getTeam2Name, getTeam1Logo, getTeam2Logo } from '../../../matches/lib/team-helpers';
 
@@ -83,16 +84,42 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
   };
 
   const handleEndGame = async () => {
-    if (window.confirm('Are you sure you want to end this game? This action cannot be undone.')) {
-      setIsEndingGame(true);
-      try {
-        await endGame(matchId);
-        if (onRefresh) onRefresh();
-      } catch {
-        // keep button enabled so user can retry
-      } finally {
-        setIsEndingGame(false);
-      }
+    // Block End Game while offline events are still queued — otherwise the
+    // server-side score recalc runs against a partial event log and the final
+    // scoreboard can snap back to a stale value. Ask the user to come back
+    // online (or accept the discrepancy) before sealing the match.
+    let pendingCount = 0;
+    try {
+      pendingCount = await offlineStore.pendingEvents
+        .where('matchId')
+        .equals(matchId)
+        .count();
+    } catch {
+      // Dexie unavailable (e.g. SSR / private mode) — skip the check.
+    }
+
+    if (pendingCount > 0) {
+      const proceed = window.confirm(
+        `${pendingCount} event${pendingCount === 1 ? '' : 's'} ` +
+          `still queued offline. Ending the game now may produce a final ` +
+          `score that doesn't match what the scorekeeper saw on the floor. ` +
+          `Continue anyway?`,
+      );
+      if (!proceed) return;
+    }
+
+    if (!window.confirm('Are you sure you want to end this game? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsEndingGame(true);
+    try {
+      await endGame(matchId);
+      if (onRefresh) onRefresh();
+    } catch {
+      // keep button enabled so user can retry
+    } finally {
+      setIsEndingGame(false);
     }
   };
 
