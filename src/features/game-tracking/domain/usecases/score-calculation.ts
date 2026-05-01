@@ -100,29 +100,47 @@ export async function calculateScoresFromEvents(
  * Recalculate and update match scores from events
  * Can be used within a transaction by passing the transaction client
  * Also updates winner if match is completed
+ *
+ * Pass `preservePersistedIfHigher: true` (used during End Game) to keep the
+ * already-persisted score when the recalculated score is lower. The optimistic
+ * scoreboard the courtside scorekeeper saw is the source of truth; events lost
+ * to offline-queue drops or failed POSTs would otherwise snap the final score
+ * back to 0-0 at end of game.
  */
 export async function updateMatchScoresFromEvents(
   matchId: string,
-  prismaClient: PrismaClient | any
+  prismaClient: PrismaClient | any,
+  options: { preservePersistedIfHigher?: boolean } = {}
 ): Promise<boolean> {
   try {
     const scores = await calculateScoresFromEvents(matchId, prismaClient);
 
-    // Get match status before updating
     const match = await prismaClient.match.findUnique({
       where: { id: matchId },
-      select: { status: true },
+      select: { status: true, team1Score: true, team2Score: true },
     });
+
+    let { team1Score, team2Score } = scores;
+
+    if (options.preservePersistedIfHigher && match) {
+      const persisted1 = match.team1Score ?? 0;
+      const persisted2 = match.team2Score ?? 0;
+      if (persisted1 > team1Score || persisted2 > team2Score) {
+        console.warn(
+          `[updateMatchScoresFromEvents] event-derived score (${team1Score}-${team2Score}) ` +
+            `is lower than persisted (${persisted1}-${persisted2}) for match ${matchId}; ` +
+            `keeping the higher persisted value. Likely cause: events not flushed before End Game.`,
+        );
+        team1Score = Math.max(team1Score, persisted1);
+        team2Score = Math.max(team2Score, persisted2);
+      }
+    }
 
     await prismaClient.match.update({
       where: { id: matchId },
-      data: {
-        team1Score: scores.team1Score,
-        team2Score: scores.team2Score,
-      },
+      data: { team1Score, team2Score },
     });
 
-    // Update winner if match is completed
     if (match?.status === 'COMPLETED') {
       await updateMatchWinner(matchId, prismaClient);
     }

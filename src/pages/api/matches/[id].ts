@@ -1,11 +1,23 @@
 import type { APIRoute } from 'astro';
-import { getMatchById, getMatchWithFullDetails } from '../../../features/cms/lib/queries';
+import { getMatchById, getMatchWithFullDetails, getSiteSettingByKey } from '../../../features/cms/lib/queries';
 import { updateMatch, deleteMatch } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { json, handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
+
+const ALLOW_EDIT_AFTER_COMPLETION_KEY = 'match_allow_edit_after_completion';
+
+async function isPostCompletionEditAllowed(): Promise<boolean> {
+  try {
+    const setting = await getSiteSettingByKey(ALLOW_EDIT_AFTER_COMPLETION_KEY);
+    return setting?.value === 'true';
+  } catch {
+    // On lookup failure, fall back to the safe default (disallow).
+    return false;
+  }
+}
 
 export const GET: APIRoute = async ({ params, url, request }) => {
   try {
@@ -37,8 +49,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
     await requirePermission(request, 'matches:update');
 
     const existingMatch = await getMatchById(params.id!);
-    if (existingMatch?.status === 'COMPLETED') {
-      return json({ error: 'Cannot edit a completed match' }, 403);
+    if (existingMatch?.status === 'COMPLETED' && !(await isPostCompletionEditAllowed())) {
+      return json(
+        {
+          error:
+            'Cannot edit a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.',
+        },
+        403,
+      );
     }
 
     const data = await request.json();

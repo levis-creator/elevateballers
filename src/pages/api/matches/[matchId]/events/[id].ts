@@ -52,19 +52,26 @@ export const PUT: APIRoute = async ({ params, request }) => {
   }
 
   try {
-    // Check if match is completed - block editing events
+    // Check if match is completed - block editing events unless the
+    // "Allow editing matches after completion" admin toggle is on.
     const matchEvent = await getMatchEventById(id);
     if (matchEvent) {
-      const { getMatchById } = await import('@/features/cms/lib/queries');
+      const { getMatchById, getSiteSettingByKey } = await import('@/features/cms/lib/queries');
       const match = await getMatchById(matchEvent.matchId);
       if (match && match.status === 'COMPLETED') {
-        return new Response(
-          JSON.stringify({ error: 'Cannot edit events in a completed match' }),
-          {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
+        const setting = await getSiteSettingByKey('match_allow_edit_after_completion').catch(() => null);
+        if (setting?.value !== 'true') {
+          return new Response(
+            JSON.stringify({
+              error:
+                'Cannot edit events in a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.',
+            }),
+            {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
       }
     }
     
@@ -113,19 +120,26 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   }
 
   try {
-    // Check if match is completed - block deleting events
+    // Check if match is completed - block deleting events unless the
+    // "Allow editing matches after completion" admin toggle is on.
     const matchEvent = await getMatchEventById(id);
     if (matchEvent) {
-      const { getMatchById } = await import('@/features/cms/lib/queries');
+      const { getMatchById, getSiteSettingByKey } = await import('@/features/cms/lib/queries');
       const match = await getMatchById(matchEvent.matchId);
       if (match && match.status === 'COMPLETED') {
-        return new Response(
-          JSON.stringify({ error: 'Cannot delete events from a completed match' }),
-          {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
+        const setting = await getSiteSettingByKey('match_allow_edit_after_completion').catch(() => null);
+        if (setting?.value !== 'true') {
+          return new Response(
+            JSON.stringify({
+              error:
+                'Cannot delete events from a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.',
+            }),
+            {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
       }
     }
     

@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon } from 'lucide-react';
+import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon } from 'lucide-react';
 import { PermissionProvider } from '@/features/rbac/usePermissions';
 import BannerSettingsEditor from './BannerSettingsEditor';
 import ContactSettingsEditor from './ContactSettingsEditor';
 import AboutPageEditor from './AboutPageEditor';
 import RulesSettingsEditor from './RulesSettingsEditor';
+import MatchSettingsEditor from './MatchSettingsEditor';
 
-type Tab = 'header' | 'contact' | 'about' | 'rules';
+type Tab = 'header' | 'contact' | 'about' | 'rules' | 'matches';
 
 const NAV_ITEMS: { value: Tab; label: string; Icon: React.ElementType }[] = [
   { value: 'header',  label: 'Header',          Icon: ImageIcon    },
   { value: 'contact', label: 'Contact & Social', Icon: PhoneIcon    },
   { value: 'about',   label: 'About Page',       Icon: InfoIcon     },
   { value: 'rules',   label: 'Rules Page',       Icon: BookOpenIcon },
+  { value: 'matches', label: 'Matches',          Icon: TrophyIcon   },
 ];
 
 export default function SettingsTabs() {
@@ -50,6 +52,7 @@ export default function SettingsTabs() {
           {active === 'contact' && <ContactSettingsEditor />}
           {active === 'about'   && <AboutPageEditor />}
           {active === 'rules'   && <RulesSettingsEditor />}
+          {active === 'matches' && <MatchSettingsEditor />}
         </div>
       </div>
     </PermissionProvider>

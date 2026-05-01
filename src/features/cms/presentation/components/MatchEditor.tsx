@@ -108,6 +108,10 @@ interface MatchEditorProps {
 export default function MatchEditor({ matchId, seasonId: initialSeasonId }: MatchEditorProps) {
   const [loading, setLoading] = useState(!!matchId);
   const [saving, setSaving] = useState(false);
+  // Admin toggle: allow editing matches after they've been marked COMPLETED.
+  // Defaults to false so finals stay immutable unless an admin opts in via
+  // /admin/settings → Matches.
+  const [allowEditAfterCompletion, setAllowEditAfterCompletion] = useState(false);
   const [errors, setErrors] = useState({
     teams: '',
     leagues: '',
@@ -345,6 +349,27 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
     }
   }, []);
 
+  // Load the "allow editing after completion" admin toggle. Failure leaves
+  // the default (false) in place, which is the safe option.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/settings?category=matches', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((settings: Array<{ key: string; value: string }>) => {
+        if (cancelled) return;
+        const found = Array.isArray(settings)
+          ? settings.find((s) => s.key === 'match_allow_edit_after_completion')
+          : null;
+        setAllowEditAfterCompletion(found?.value === 'true');
+      })
+      .catch(() => {
+        // Setting not readable → keep default (locked after completion).
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Use effects after functions are defined
   useEffect(() => {
     fetchTeams();
@@ -450,9 +475,15 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Block submission if match is completed
-    if (matchId && formData.status === 'COMPLETED') {
-      setErrors({ teams: '', leagues: '', match: '', save: 'Cannot edit a completed match' });
+    // Block submission if match is completed and the admin toggle is off.
+    // The setting is exposed at /admin/settings → Matches.
+    if (matchId && formData.status === 'COMPLETED' && !allowEditAfterCompletion) {
+      setErrors({
+        teams: '',
+        leagues: '',
+        match: '',
+        save: 'Cannot edit a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.',
+      });
       return;
     }
     

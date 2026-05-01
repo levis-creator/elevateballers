@@ -42,10 +42,17 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
     if (match.status === 'COMPLETED') {
-      return new Response(
-        JSON.stringify({ error: 'Cannot import events into a completed match' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
-      );
+      const { getSiteSettingByKey } = await import('../../../../../features/cms/lib/queries');
+      const setting = await getSiteSettingByKey('match_allow_edit_after_completion').catch(() => null);
+      if (setting?.value !== 'true') {
+        return new Response(
+          JSON.stringify({
+            error:
+              'Cannot import events into a completed match. Enable "Allow editing matches after completion" in Site Settings → Matches to override.',
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const body = await request.json();
