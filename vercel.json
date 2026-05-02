@@ -2,6 +2,19 @@
   "buildCommand": "npm run build:vercel",
   "framework": "astro",
   "installCommand": "npm install",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.elevateballers.com"
+        }
+      ],
+      "destination": "https://elevateballers.com/:path*",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/images/(.*)",
