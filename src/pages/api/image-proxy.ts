@@ -66,11 +66,25 @@ export const GET: APIRoute = async ({ request, url: requestUrl }) => {
     }
 
     const body = await res.arrayBuffer();
+    // Team/player logos rarely change. 30-day browser cache + 1-year edge cache
+    // with stale-while-revalidate keeps these images effectively free to serve.
+    // Honor upstream Cache-Control if it's already long enough; otherwise force ours.
+    const upstreamCacheControl = res.headers.get('Cache-Control') || '';
+    const upstreamMaxAge = parseInt(
+      upstreamCacheControl.match(/max-age=(\d+)/)?.[1] || '0',
+      10,
+    );
+    const cacheControl =
+      upstreamMaxAge >= 86400
+        ? upstreamCacheControl
+        : 'public, max-age=2592000, s-maxage=31536000, stale-while-revalidate=86400';
+
     return new Response(body, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': cacheControl,
+        Vary: 'Accept',
       },
     });
   } catch (err) {

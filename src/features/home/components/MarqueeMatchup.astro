@@ -27,7 +27,7 @@ try {
 }
 
 const matchDate = match ? formatMatchDate(match.date) : null;
-const matchUrl = match ? `/matches/${match.id}` : "#";
+const matchUrl = match ? `/matches/${(match as any).slug || match.id}/` : "#";
 const team1Name = match ? getTeam1Name(match) : "";
 const team1Logo = match ? getTeam1Logo(match) : null;
 const team2Name = match ? getTeam2Name(match) : "";

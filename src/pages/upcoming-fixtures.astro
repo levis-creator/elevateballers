@@ -30,6 +30,7 @@ try {
 
   fixtures = upcomingMatches.map((m) => ({
     id: m.id,
+    slug: (m as any).slug ?? null,
     date: m.date,
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
@@ -42,6 +43,7 @@ try {
 
   results = completedMatches.map((m) => ({
     id: m.id,
+    slug: (m as any).slug ?? null,
     date: m.date,
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),

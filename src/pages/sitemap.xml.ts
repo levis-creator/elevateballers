@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ site }) => {
                 .map(
                     (article: any) => `
   <url>
-    <loc>${baseUrl}/news/${article.slug}</loc>
+    <loc>${baseUrl}/news/${article.slug}/</loc>
     <lastmod>${new Date(article.updatedAt || article.createdAt).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -73,7 +73,7 @@ export const GET: APIRoute = async ({ site }) => {
                 .map(
                     (team: any) => `
   <url>
-    <loc>${baseUrl}/teams/${team.slug}</loc>
+    <loc>${baseUrl}/teams/${team.slug}/</loc>
     <lastmod>${new Date(team.updatedAt || team.createdAt).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -84,7 +84,7 @@ export const GET: APIRoute = async ({ site }) => {
                 .map(
                     (player: any) => `
   <url>
-    <loc>${baseUrl}/players/${player.slug || player.id}</loc>
+    <loc>${baseUrl}/players/${player.slug || player.id}/</loc>
     <lastmod>${new Date(player.updatedAt || player.createdAt).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -95,7 +95,7 @@ export const GET: APIRoute = async ({ site }) => {
                 .map(
                     (member: any) => `
   <url>
-    <loc>${baseUrl}/staff/${member.slug}</loc>
+    <loc>${baseUrl}/staff/${member.slug}/</loc>
     <lastmod>${new Date(member.updatedAt || member.createdAt).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -106,13 +106,13 @@ export const GET: APIRoute = async ({ site }) => {
                 .map(
                     (match: any) => `
   <url>
-    <loc>${baseUrl}/matches/${match.id}</loc>
+    <loc>${baseUrl}/matches/${match.slug || match.id}/</loc>
     <lastmod>${new Date(match.updatedAt || match.date).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>${baseUrl}/matches/${match.id}/images</loc>
+    <loc>${baseUrl}/matches/${match.slug || match.id}/images/</loc>
     <lastmod>${new Date(match.updatedAt || match.date).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>

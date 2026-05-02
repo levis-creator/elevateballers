@@ -193,7 +193,7 @@ const pageTitle = `${playerName} - Players - Elevate Ballers`;
 const pageDescription =
   player.bio || `View ${playerName}'s profile, statistics, and information`;
 const canonicalSlug = player.slug || slug;
-const pageUrl = `${Astro.url.origin}/players/${canonicalSlug}`;
+const pageUrl = `${Astro.url.origin}/players/${canonicalSlug}/`;
 const pageImageSource =
   getDisplayImageUrl(player.image, Astro.url.origin) ||
   "/images/Elevate_Icon-200x200.png";

@@ -67,7 +67,7 @@ export default function NextMatchCarousel() {
             const team2Logo = getTeam2Logo(match);
 
             return (
-              <a key={match.id} href={`/matches/${match.id}`} className="match-card-modern">
+              <a key={match.id} href={`/matches/${(match as any).slug || match.id}/`} className="match-card-modern">
                 <div className="match-card-header">
                   <span className="league-tag">{getLeagueName(match) || match.leagueName || 'ELEVATE LEAGUE'}</span>
                   <span className="match-time">{formatMatchDate(match.date)}</span>

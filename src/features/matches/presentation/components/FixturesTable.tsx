@@ -3,6 +3,8 @@ import { formatMatchDate } from '../../lib/utils';
 
 interface Fixture {
   id: string;
+  // Public URL slug. Prefer this over `id` when constructing /matches/... links.
+  slug?: string | null;
   date: Date | string;
   team1Name: string;
   team2Name: string;
@@ -43,7 +45,7 @@ export const FixturesTable: React.FC<FixturesTableProps> = ({ matches }) => {
         return (
           <a
             key={match.id}
-            href={`/matches/${match.id}`}
+            href={`/matches/${match.slug || match.id}/`}
             aria-label={`${match.team1Name} vs ${match.team2Name}`}
             className="block rounded-[10px] border border-white/[0.08] bg-surface-dark px-4 pb-4 pt-3 no-underline transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red/50 hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)] sm:px-5 sm:pb-5 sm:pt-4"
           >

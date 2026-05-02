@@ -246,6 +246,7 @@ model Season {
 
 model Match {
   id                    String           @id @default(cuid())
+  slug                  String?          @unique
   team1Name             String?          @map("team1_name")
   team1Logo             String?          @map("team1_logo")
   team2Name             String?          @map("team2_name")
