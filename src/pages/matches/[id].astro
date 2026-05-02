@@ -138,6 +138,9 @@ const eventStatusUrl = "https://schema.org/EventScheduled";
   canonicalURL={pageUrl}
   type="website"
   image={ogImage}
+  imageWidth={ogImage ? 1200 : undefined}
+  imageHeight={ogImage ? 630 : undefined}
+  imageType={ogImage ? "image/png" : undefined}
   modifiedTime={match?.updatedAt
     ? new Date(match.updatedAt).toISOString()
     : undefined}

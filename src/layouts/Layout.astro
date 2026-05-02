@@ -8,6 +8,9 @@ interface Props {
 	title?: string;
 	description?: string;
 	image?: string;
+	imageWidth?: number;
+	imageHeight?: number;
+	imageType?: string;
 	canonicalURL?: string;
 	type?: string;
 	robots?: string;
@@ -17,7 +20,7 @@ interface Props {
 	nextURL?: string;
 }
 
-const { title, description, image, canonicalURL, type, robots, publishedTime, modifiedTime, prevURL, nextURL } = Astro.props;
+const { title, description, image, imageWidth, imageHeight, imageType, canonicalURL, type, robots, publishedTime, modifiedTime, prevURL, nextURL } = Astro.props;
 
 const externalStylesheets = [
 	"/css/select2.min.css",
@@ -69,6 +72,9 @@ const googleFonts = [
 			title={title}
 			description={description}
 			image={image}
+			imageWidth={imageWidth}
+			imageHeight={imageHeight}
+			imageType={imageType}
 			canonicalURL={canonicalURL}
 			type={type}
 			robots={robots}
