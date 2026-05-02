@@ -355,7 +355,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
                 <>
                   {paginatedTeam1.map((mp) => (
                     <div key={mp.id} className={`roster-item ${isPlayerActive(mp, activeTeam1Ids) ? 'on-floor' : ''}`}>
-                      <span className="player-num">{mp.jerseyNumber || '#'}</span>
+                      <span className="player-num">{mp.jerseyNumber ?? mp.player?.jerseyNumber ?? '#'}</span>
                       <span className="player-name">{mp.player.firstName} {mp.player.lastName}</span>
                       {isPlayerActive(mp, activeTeam1Ids) ? (
                          <div className="flex flex-col items-end">
@@ -420,7 +420,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
                 <>
                   {paginatedTeam2.map((mp) => (
                     <div key={mp.id} className={`roster-item ${isPlayerActive(mp, activeTeam2Ids) ? 'on-floor' : ''}`}>
-                      <span className="player-num">{mp.jerseyNumber || '#'}</span>
+                      <span className="player-num">{mp.jerseyNumber ?? mp.player?.jerseyNumber ?? '#'}</span>
                       <span className="player-name">{mp.player.firstName} {mp.player.lastName}</span>
                       {isPlayerActive(mp, activeTeam2Ids) ? (
                          <div className="flex flex-col items-end">
