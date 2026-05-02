@@ -120,7 +120,7 @@ const formatStaffRole = (role: string): string => {
 const pageTitle = `${team.name} - Teams - Elevate Ballers`;
 const pageDescription =
   team.description || `View ${team.name} team information, players, and staff`;
-const pageUrl = `${Astro.url.origin}/teams/${slug}`;
+const pageUrl = `${Astro.url.origin}/teams/${slug}/`;
 const pageImageSource =
   getDisplayImageUrl(team.logo, Astro.url.origin) ||
   "/images/Elevate_Icon-200x200.png";

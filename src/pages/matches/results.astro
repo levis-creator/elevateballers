@@ -24,6 +24,7 @@ try {
 
   fixtures = upcomingMatches.map((m) => ({
     id: m.id,
+    slug: (m as any).slug ?? null,
     date: m.date,
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
@@ -36,6 +37,7 @@ try {
 
   results = completedMatches.map((m) => ({
     id: m.id,
+    slug: (m as any).slug ?? null,
     date: m.date,
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
@@ -61,7 +63,7 @@ try {
 const pageTitle = "Match Results - Elevate Ballers";
 const pageDescription =
   "View the latest completed match results from the Elevate Ballers league.";
-const pageUrl = `${Astro.url.origin}/matches/results`;
+const pageUrl = `${Astro.url.origin}/matches/results/`;
 ---
 
 <Layout

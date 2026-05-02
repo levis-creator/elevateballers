@@ -21,10 +21,14 @@ interface ImagesResponse {
 }
 
 interface MatchImagesViewAllPublicProps {
+  // Internal id used for API lookups (/api/matches/{id}/images).
   matchId: string;
+  // Public slug used for /matches/{slug}/ navigation. Falls back to matchId.
+  matchSlug?: string | null;
 }
 
-export default function MatchImagesViewAllPublic({ matchId }: MatchImagesViewAllPublicProps) {
+export default function MatchImagesViewAllPublic({ matchId, matchSlug }: MatchImagesViewAllPublicProps) {
+  const matchPathId = matchSlug || matchId;
   const [images, setImages] = useState<MatchImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -124,7 +128,7 @@ export default function MatchImagesViewAllPublic({ matchId }: MatchImagesViewAll
             {total} {total === 1 ? 'photo' : 'photos'} total
           </p>
         </div>
-        <a href={`/matches/${matchId}`} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+        <a href={`/matches/${matchPathId}/`} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', textDecoration: 'none', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
           ← Back to Match
         </a>
       </div>

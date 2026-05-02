@@ -30,7 +30,7 @@ try {
 const fullName = `${staff.firstName} ${staff.lastName}`.trim() || 'Staff Member';
 const pageTitle = `${fullName} - Staff - Elevate Ballers`;
 const pageDescription = staff.bio || `View ${fullName}'s profile and team assignments.`;
-const pageUrl = `${Astro.url.origin}/staff/${slug}`;
+const pageUrl = `${Astro.url.origin}/staff/${slug}/`;
 const pageImageSource =
   getDisplayImageUrl(staff.image, Astro.url.origin) ||
   "/images/Elevate_Icon-200x200.png";

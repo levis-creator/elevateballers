@@ -3,6 +3,8 @@ import { formatMatchDate, formatMatchTime, getRelativeTimeDescription } from '..
 
 type FixtureRow = {
   id: string;
+  // Public URL slug. Prefer this over `id` when constructing /matches/... links.
+  slug?: string | null;
   date: Date | string;
   team1Name: string;
   team1Logo?: string | null;
@@ -15,6 +17,8 @@ type FixtureRow = {
 
 type ResultRow = {
   id: string;
+  // Public URL slug. Prefer this over `id` when constructing /matches/... links.
+  slug?: string | null;
   date: Date | string;
   team1Name: string;
   team1Logo?: string | null;
@@ -26,6 +30,10 @@ type ResultRow = {
   winnerName?: string;
   status: string;
 };
+
+function matchPath(row: { slug?: string | null; id: string }): string {
+  return row.slug || row.id;
+}
 
 type TabKey = 'fixtures' | 'results';
 
@@ -56,8 +64,8 @@ function teamAbbr(name: string): string {
   return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
 }
 
-function openMatch(matchId: string) {
-  window.location.href = `/matches/${matchId}`;
+function openMatch(matchPathId: string) {
+  window.location.href = `/matches/${matchPathId}/`;
 }
 
 function handleRowKeyDown(event: React.KeyboardEvent<HTMLElement>, matchId: string) {
@@ -94,8 +102,8 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
                 tabIndex={0}
                 role="link"
                 aria-label={`Open match: ${match.team1Name} vs ${match.team2Name}`}
-                onClick={() => openMatch(match.id)}
-                onKeyDown={(event) => handleRowKeyDown(event, match.id)}
+                onClick={() => openMatch(matchPath(match))}
+                onKeyDown={(event) => handleRowKeyDown(event, matchPath(match))}
                 className="cursor-pointer border-b border-white/8 text-sm text-gray-100 transition-colors hover:bg-white/[0.03] focus:outline-none focus:ring-2 focus:ring-[#ffba00]/70 focus:ring-inset"
               >
                 <td className="px-5 py-4 align-middle">
@@ -118,7 +126,7 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
                 </td>
                 <td className="px-5 py-4 align-middle text-right">
                   <a
-                    href={`/matches/${match.id}`}
+                    href={`/matches/${matchPath(match)}/`}
                     onClick={(event) => event.stopPropagation()}
                     className="text-sm font-semibold text-[#ffba00] no-underline transition-colors hover:text-white"
                   >
@@ -135,7 +143,7 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
         {matches.map((match) => (
           <a
             key={match.id}
-            href={`/matches/${match.id}`}
+            href={`/matches/${matchPath(match)}/`}
             className="block rounded-2xl border border-white/10 bg-[#151321] p-4 no-underline shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
           >
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -192,8 +200,8 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
                   tabIndex={0}
                   role="link"
                   aria-label={`Open result: ${match.team1Name} vs ${match.team2Name}`}
-                  onClick={() => openMatch(match.id)}
-                  onKeyDown={(event) => handleRowKeyDown(event, match.id)}
+                  onClick={() => openMatch(matchPath(match))}
+                  onKeyDown={(event) => handleRowKeyDown(event, matchPath(match))}
                   className="cursor-pointer border-b border-white/8 text-sm text-gray-100 transition-colors hover:bg-white/[0.03] focus:outline-none focus:ring-2 focus:ring-[#10b981]/70 focus:ring-inset"
                 >
                   <td className="px-5 py-4 align-middle">
@@ -224,7 +232,7 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
                   </td>
                   <td className="px-5 py-4 align-middle text-right">
                     <a
-                      href={`/matches/${match.id}`}
+                      href={`/matches/${matchPath(match)}/`}
                       onClick={(event) => event.stopPropagation()}
                       className="text-sm font-semibold text-[#10b981] no-underline transition-colors hover:text-white"
                     >
@@ -246,7 +254,7 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
           return (
             <a
               key={match.id}
-              href={`/matches/${match.id}`}
+              href={`/matches/${matchPath(match)}/`}
               className="block rounded-2xl border border-white/10 bg-[#151321] p-4 no-underline shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
             >
               <div className="mb-3 flex items-start justify-between gap-3">

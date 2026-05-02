@@ -1,5 +1,6 @@
 import { prisma } from '../../../../../lib/prisma';
 import { getEnvBoolean } from '../../../../../lib/env';
+import { ensureMatchSlug } from '../../../../matches/lib/slug';
 import type { CreateMatchInput, UpdateMatchInput, Match } from '../../../types';
 
 export async function createMatch(data: CreateMatchInput): Promise<Match> {
@@ -54,11 +55,20 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
   if (data.bracketRound !== undefined) matchData.bracketRound = data.bracketRound;
   if (data.bracketType !== undefined) matchData.bracketType = data.bracketType;
 
-  return await prisma.match.create({
+  const created = await prisma.match.create({
     data: matchData,
-    // @ts-expect-error - Prisma types will be correct after full sync
     include: { team1: true, team2: true, league: true, season: true },
   });
+
+  // Generate the public URL slug now that the row (and its team relations)
+  // exist. Failures shouldn't block creation — slug can be backfilled later.
+  try {
+    await ensureMatchSlug(created.id);
+  } catch (err) {
+    console.warn('createMatch: failed to generate slug', err);
+  }
+
+  return created;
 }
 
 export async function updateMatch(id: string, data: UpdateMatchInput): Promise<Match | null> {
@@ -129,7 +139,6 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
     const updatedMatch = await prisma.match.update({
       where: { id },
       data: updateData,
-      // @ts-expect-error - Prisma types will be correct after full sync
       include: { team1: true, team2: true, league: true, season: true },
     });
 
@@ -146,6 +155,22 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
       if (getEnvBoolean('ENABLE_AUTOMATCHING', true)) {
         const { advanceWinnerToNextMatch } = await import('../../../../tournaments/lib/bracket-automation');
         await advanceWinnerToNextMatch(id, prisma);
+      }
+    }
+
+    // Refresh the slug if teams or date changed (it's idempotent when nothing
+    // relevant moved). Failures are non-fatal — old slug keeps working.
+    const teamOrDateChanged =
+      data.team1Id !== undefined ||
+      data.team2Id !== undefined ||
+      data.team1Name !== undefined ||
+      data.team2Name !== undefined ||
+      data.date !== undefined;
+    if (teamOrDateChanged) {
+      try {
+        await ensureMatchSlug(id);
+      } catch (err) {
+        console.warn('updateMatch: failed to refresh slug', err);
       }
     }
 

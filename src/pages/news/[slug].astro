@@ -80,7 +80,7 @@ const categoryColor = getCategoryColor(category);
 // SEO Meta Tags
 const pageTitle = `${article.title} - Elevate`;
 const pageDescription = article.excerpt || article.title;
-const pageUrl = `${Astro.url.origin}/news/${slug}`;
+const pageUrl = `${Astro.url.origin}/news/${slug}/`;
 const pageImageSource =
   getDisplayImageUrl(article.image, Astro.url.origin) ||
   "/images/Elevate_Icon-200x200.png";

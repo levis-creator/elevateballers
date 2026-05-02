@@ -10,6 +10,7 @@ import MatchDetail from "../../features/matches/components/MatchDetail";
 import type { MatchWithFullDetails } from "../../features/cms/types";
 import PageLoader from "../../components/PageLoader";
 import ContentLoader from "../../components/ContentLoader";
+import { getDisplayImageUrl } from "../../lib/asset-url";
 
 export const prerender = false;
 
@@ -17,17 +18,19 @@ interface Props {
   id: string;
 }
 
-const { id } = Astro.params;
+// `id` is the route param name (Astro routes use the file's param name); the
+// value is interpreted as either the public slug or the legacy cuid.
+const { id: slugOrId } = Astro.params;
 
-if (!id) {
+if (!slugOrId) {
   return Astro.redirect("/matches");
 }
 
-// Fetch match from database
+// Fetch match from database — getMatchWithFullDetails resolves slug-first, id-fallback.
 let match: MatchWithFullDetails | null = null;
 let hasError = false;
 try {
-  match = await getMatchWithFullDetails(id);
+  match = await getMatchWithFullDetails(slugOrId);
   if (!match) {
     return Astro.redirect("/matches");
   }
@@ -36,9 +39,25 @@ try {
   hasError = true;
 }
 
+// If the visitor reached this page via the legacy cuid but a slug exists, 301
+// to the canonical slug URL so search engines consolidate ranking signal.
+const matchSlug = (match as any)?.slug as string | undefined;
+if (match && matchSlug && slugOrId !== matchSlug) {
+  return Astro.redirect(`/matches/${matchSlug}/`, 301);
+}
+
+// Identifier used to construct sub-URLs for this match (slug if available,
+// else the cuid for matches not yet backfilled).
+const matchPathId = matchSlug || (match?.id ?? slugOrId);
+
 const team1Name = match?.team1Name || match?.team1?.name || "TBD";
 const team2Name = match?.team2Name || match?.team2?.name || "TBD";
+const team1Slug = match?.team1?.slug || null;
+const team2Slug = match?.team2?.slug || null;
+const team1Logo = getDisplayImageUrl(match?.team1?.logo || match?.team1Logo);
+const team2Logo = getDisplayImageUrl(match?.team2?.logo || match?.team2Logo);
 const matchLeague = match?.league?.name || match?.leagueName || "Elevate Ballers";
+const matchStatus = match?.status || "UPCOMING";
 const matchDate = match?.date
   ? new Date(match.date).toLocaleDateString("en-US", {
       timeZone: MATCH_TIMEZONE,
@@ -47,11 +66,70 @@ const matchDate = match?.date
       day: "numeric",
     })
   : null;
-const pageTitle = `${team1Name} vs ${team2Name} - ${matchLeague}`;
-const pageDescription = matchDate
-  ? `Match details for ${team1Name} vs ${team2Name} on ${matchDate}.`
-  : `Match details for ${team1Name} vs ${team2Name}.`;
-const pageUrl = `${Astro.url.origin}/matches/${id}`;
+const matchTime = match?.date
+  ? new Date(match.date).toLocaleTimeString("en-US", {
+      timeZone: MATCH_TIMEZONE,
+      hour: "numeric",
+      minute: "2-digit",
+    })
+  : null;
+const team1Score = match?.team1Score;
+const team2Score = match?.team2Score;
+const hasFinalScore =
+  matchStatus === "COMPLETED" && team1Score != null && team2Score != null;
+
+// Status-aware title & description boost ranking for natural search queries
+let pageTitle: string;
+let pageDescription: string;
+if (hasFinalScore) {
+  pageTitle = `${team1Name} ${team1Score}-${team2Score} ${team2Name} | Final${
+    matchDate ? `, ${matchDate}` : ""
+  } | ${matchLeague}`;
+  const winSide =
+    team1Score! > team2Score!
+      ? `${team1Name} defeated ${team2Name} ${team1Score}-${team2Score}`
+      : team2Score! > team1Score!
+        ? `${team2Name} defeated ${team1Name} ${team2Score}-${team1Score}`
+        : `${team1Name} and ${team2Name} drew ${team1Score}-${team2Score}`;
+  pageDescription = `${winSide}${
+    matchDate ? ` on ${matchDate}` : ""
+  } in the ${matchLeague}. View the full box score, lineups and play-by-play.`;
+} else if (matchStatus === "LIVE") {
+  pageTitle = `LIVE: ${team1Name} vs ${team2Name} | ${matchLeague}`;
+  pageDescription = `Follow ${team1Name} vs ${team2Name} live${
+    matchDate ? ` on ${matchDate}` : ""
+  }. Real-time score, play-by-play and lineups in the ${matchLeague}.`;
+} else {
+  pageTitle = `${team1Name} vs ${team2Name}${
+    matchDate ? ` | ${matchDate}` : ""
+  }${matchTime ? `, ${matchTime}` : ""} | ${matchLeague} Fixture`;
+  pageDescription = `${team1Name} face ${team2Name}${
+    matchDate ? ` on ${matchDate}` : ""
+  }${
+    matchTime ? ` at ${matchTime}` : ""
+  } in the ${matchLeague}. Lineups, schedule and live updates.`;
+}
+
+// Per-match OG image — generated server-side at /api/matches/[id]/og.png so
+// social shares get a real 1200×630 scoreboard instead of the site icon.
+const ogImage = match
+  ? `${Astro.url.origin}/api/matches/${match.id}/og.png`
+  : undefined;
+
+// Edge cache — short TTL while LIVE/UPCOMING (data changes), long for COMPLETED.
+const cacheControl =
+  matchStatus === "COMPLETED"
+    ? "public, s-maxage=86400, stale-while-revalidate=604800"
+    : matchStatus === "LIVE"
+      ? "public, s-maxage=15, stale-while-revalidate=60"
+      : "public, s-maxage=60, stale-while-revalidate=300";
+Astro.response.headers.set("Cache-Control", cacheControl);
+
+// Site convention: canonical URLs always end with a trailing slash. astro.config
+// keeps trailingSlash: 'ignore' so both /foo and /foo/ continue to resolve, but
+// the canonical declaration consolidates SEO signal on the slashed form.
+const pageUrl = `${Astro.url.origin}/matches/${matchPathId}/`;
+const eventStatusUrl = "https://schema.org/EventScheduled";
 ---
 
 <Layout
@@ -59,6 +137,10 @@ const pageUrl = `${Astro.url.origin}/matches/${id}`;
   description={pageDescription}
   canonicalURL={pageUrl}
   type="website"
+  image={ogImage}
+  modifiedTime={match?.updatedAt
+    ? new Date(match.updatedAt).toISOString()
+    : undefined}
 >
   <script
     type="application/ld+json"
@@ -89,10 +171,12 @@ const pageUrl = `${Astro.url.origin}/matches/${id}`;
             {
               "@type": "ListItem",
               position: 2,
-              name: "Results",
-              item: `${Astro.url.origin}/matches/results`,
+              name: hasFinalScore ? "Results" : "Fixtures",
+              item: hasFinalScore
+                ? `${Astro.url.origin}/matches/results/`
+                : `${Astro.url.origin}/upcoming-fixtures/`,
             },
-            { "@type": "ListItem", position: 3, name: pageTitle },
+            { "@type": "ListItem", position: 3, name: `${team1Name} vs ${team2Name}` },
           ],
         },
         ...(match
@@ -100,14 +184,55 @@ const pageUrl = `${Astro.url.origin}/matches/${id}`;
               {
                 "@type": "SportsEvent",
                 "@id": `${pageUrl}#event`,
-                name: pageTitle,
+                name: `${team1Name} vs ${team2Name}`,
                 description: pageDescription,
+                url: pageUrl,
                 sport: "Basketball",
-                ...(match.date && { startDate: new Date(match.date).toISOString() }),
+                eventStatus: eventStatusUrl,
+                eventAttendanceMode:
+                  "https://schema.org/OfflineEventAttendanceMode",
+                ...(match.date && {
+                  startDate: new Date(match.date).toISOString(),
+                }),
+                ...(ogImage && { image: ogImage }),
                 organizer: { "@id": `${Astro.url.origin}/#organization` },
+                ...(team1Slug || team2Slug
+                  ? {
+                      homeTeam: {
+                        "@type": "SportsTeam",
+                        name: team1Name,
+                        ...(team1Slug && {
+                          url: `${Astro.url.origin}/teams/${team1Slug}/`,
+                        }),
+                        ...(team1Logo && { logo: team1Logo }),
+                      },
+                      awayTeam: {
+                        "@type": "SportsTeam",
+                        name: team2Name,
+                        ...(team2Slug && {
+                          url: `${Astro.url.origin}/teams/${team2Slug}/`,
+                        }),
+                        ...(team2Logo && { logo: team2Logo }),
+                      },
+                    }
+                  : {}),
                 competitor: [
-                  { "@type": "SportsTeam", name: team1Name },
-                  { "@type": "SportsTeam", name: team2Name },
+                  {
+                    "@type": "SportsTeam",
+                    name: team1Name,
+                    ...(team1Slug && {
+                      url: `${Astro.url.origin}/teams/${team1Slug}/`,
+                    }),
+                    ...(team1Logo && { logo: team1Logo }),
+                  },
+                  {
+                    "@type": "SportsTeam",
+                    name: team2Name,
+                    ...(team2Slug && {
+                      url: `${Astro.url.origin}/teams/${team2Slug}/`,
+                    }),
+                    ...(team2Logo && { logo: team2Logo }),
+                  },
                 ],
               },
             ]
@@ -116,7 +241,7 @@ const pageUrl = `${Astro.url.origin}/matches/${id}`;
     })}
   />
   <PageLoader client:load />
-  <div id="wrapper">
+  <div id="wrapper" class="match-detail-page-shell">
     <TopBar />
     <Header client:load currentPath={Astro.url.pathname} />
     <div id="main">
@@ -146,25 +271,24 @@ const pageUrl = `${Astro.url.origin}/matches/${id}`;
                         message="Failed to load match details. Please try again later."
                       />
                     ) : match ? (
-                      <div style="max-width: 800px; margin: 0 auto;">
+                      <div style="max-width: 960px; margin: 0 auto;">
                         <MatchDetail client:load match={match} />
                       </div>
                     ) : null
                   }
 
-                  <div style="text-align: center; margin-top: 2rem;">
+                  <div class="match-detail-actions">
                     <a
                       href="/upcoming-fixtures"
-                      class="btn btn-primary"
+                      class="match-action-btn match-action-btn--primary"
                       data-astro-prefetch
                     >
                       View All Fixtures
                     </a>
                     <a
                       href="/matches/results"
-                      class="btn btn-secondary"
+                      class="match-action-btn match-action-btn--ghost"
                       data-astro-prefetch
-                      style="margin-left: 1rem;"
                     >
                       View Results
                     </a>
@@ -199,4 +323,73 @@ const pageUrl = `${Astro.url.origin}/matches/${id}`;
     color: #363f48;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
+  html:has(#wrapper.match-detail-page-shell),
+  body:has(#wrapper.match-detail-page-shell) {
+    background:
+      radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+      linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
+  }
+
+  .match-detail-page-shell {
+    background:
+      radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+      linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
+    min-height: 100vh;
+  }
+
+  .match-detail-page-shell #main {
+    background:
+      radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+      linear-gradient(180deg, #0f0d18 0%, #14111f 100%);
+  }
+
+  .match-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 2.5rem;
+  }
+
+  .match-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+  }
+
+  .match-action-btn--primary {
+    background: linear-gradient(135deg, #ffba00 0%, #f59e0b 100%);
+    color: #1a1530;
+    box-shadow: 0 12px 28px rgba(255, 186, 0, 0.28);
+  }
+
+  .match-action-btn--primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(255, 186, 0, 0.36);
+    color: #1a1530;
+  }
+
+  .match-action-btn--ghost {
+    background: rgba(255, 255, 255, 0.04);
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .match-action-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 186, 0, 0.5);
+    color: #ffba00;
+  }
 </style>

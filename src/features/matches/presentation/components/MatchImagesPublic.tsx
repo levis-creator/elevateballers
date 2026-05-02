@@ -21,10 +21,14 @@ interface ImagesResponse {
 }
 
 interface MatchImagesPublicProps {
+  // Internal id used for API lookups (/api/matches/{id}/images).
   matchId: string;
+  // Public slug used for user-facing /matches/{slug}/... links. Falls back to matchId.
+  matchSlug?: string | null;
 }
 
-export default function MatchImagesPublic({ matchId }: MatchImagesPublicProps) {
+export default function MatchImagesPublic({ matchId, matchSlug }: MatchImagesPublicProps) {
+  const matchPathId = matchSlug || matchId;
   const [images, setImages] = useState<MatchImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -112,7 +116,7 @@ export default function MatchImagesPublic({ matchId }: MatchImagesPublicProps) {
           Match Photos
         </h3>
         <a
-          href={`/matches/${matchId}/images`}
+          href={`/matches/${matchPathId}/images/`}
           className="btn btn-primary"
           style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', textDecoration: 'none', borderRadius: '6px' }}
         >

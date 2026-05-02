@@ -4,7 +4,7 @@ import TopBar from "../../../features/layout/components/TopBar.astro";
 import Header from "../../../features/layout/components/Header";
 import Footer from "../../../features/layout/components/Footer.astro";
 import Spacing from "../../../shared/components/ui/Spacing.astro";
-import { getMatchById } from "../../../features/cms/lib/queries";
+import { getMatchWithFullDetails } from "../../../features/cms/lib/queries";
 import { MATCH_TIMEZONE } from "../../../features/matches/domain/usecases/utils";
 import MatchImagesViewAllPublic from "../../../features/matches/components/MatchImagesViewAllPublic";
 import type { Match } from "@prisma/client";
@@ -13,16 +13,16 @@ import ContentLoader from "../../../components/ContentLoader";
 
 export const prerender = false;
 
-const { id } = Astro.params;
+const { id: slugOrId } = Astro.params;
 
-if (!id) {
+if (!slugOrId) {
   return Astro.redirect("/matches");
 }
 
 let match: Match | null = null;
 let hasError = false;
 try {
-  match = await getMatchById(id);
+  match = (await getMatchWithFullDetails(slugOrId)) as unknown as Match | null;
   if (!match) {
     return Astro.redirect("/matches");
   }
@@ -30,6 +30,15 @@ try {
   console.error("Error fetching match:", error);
   hasError = true;
 }
+
+// 301 to the canonical slug URL when accessed via legacy cuid.
+const matchSlug = (match as any)?.slug as string | undefined;
+if (match && matchSlug && slugOrId !== matchSlug) {
+  return Astro.redirect(`/matches/${matchSlug}/images/`, 301);
+}
+
+const matchPathId = matchSlug || (match?.id ?? slugOrId);
+const matchInternalId = match?.id ?? slugOrId;
 
 const team1Name = match?.team1Name || match?.team1?.name || "TBD";
 const team2Name = match?.team2Name || match?.team2?.name || "TBD";
@@ -45,7 +54,7 @@ const pageTitle = `${team1Name} vs ${team2Name} - Match Photos`;
 const pageDescription = matchDate
   ? `Photo gallery for ${team1Name} vs ${team2Name} on ${matchDate}.`
   : `Photo gallery for ${team1Name} vs ${team2Name}.`;
-const pageUrl = `${Astro.url.origin}/matches/${id}/images`;
+const pageUrl = `${Astro.url.origin}/matches/${matchPathId}/images/`;
 ---
 
 <Layout
@@ -84,13 +93,13 @@ const pageUrl = `${Astro.url.origin}/matches/${id}/images`;
               "@type": "ListItem",
               position: 2,
               name: "Results",
-              item: `${Astro.url.origin}/matches/results`,
+              item: `${Astro.url.origin}/matches/results/`,
             },
             {
               "@type": "ListItem",
               position: 3,
               name: `${team1Name} vs ${team2Name}`,
-              item: `${Astro.url.origin}/matches/${id}`,
+              item: `${Astro.url.origin}/matches/${matchPathId}/`,
             },
             { "@type": "ListItem", position: 4, name: "Photos" },
           ],
@@ -130,21 +139,21 @@ const pageUrl = `${Astro.url.origin}/matches/${id}/images`;
                       />
                     ) : match ? (
                       <div style="max-width: 1200px; margin: 0 auto;">
-                        <MatchImagesViewAllPublic matchId={id} client:load />
+                        <MatchImagesViewAllPublic matchId={matchInternalId} matchSlug={matchSlug} client:load />
                       </div>
                     ) : null
                   }
 
                   <div style="text-align: center; margin-top: 2rem;">
                     <a
-                      href={`/matches/${id}`}
+                      href={`/matches/${matchPathId}/`}
                       class="btn btn-primary"
                       data-astro-prefetch
                     >
                       Back to Match
                     </a>
                     <a
-                      href="/upcoming-fixtures"
+                      href="/upcoming-fixtures/"
                       class="btn btn-secondary"
                       data-astro-prefetch
                       style="margin-left: 1rem;"

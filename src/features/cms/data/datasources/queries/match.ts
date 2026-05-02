@@ -31,22 +31,32 @@ export async function getMatches(status?: string): Promise<MatchWithTeamsAndLeag
 export async function getMatchById(id: string): Promise<MatchWithTeamsAndLeagueAndSeason | null> {
   return await prisma.match.findUnique({
     where: { id },
-    // @ts-expect-error - Prisma types will be correct after dev server restart
     include: { team1: true, team2: true, league: true, season: true, winner: true },
   }) as MatchWithTeamsAndLeagueAndSeason | null;
 }
 
-export async function getMatchWithFullDetails(matchId: string): Promise<MatchWithFullDetails | null> {
+export async function getMatchWithFullDetails(matchIdOrSlug: string): Promise<MatchWithFullDetails | null> {
   try {
-    const match = await prisma.match.findUnique({
-      where: { id: matchId },
+    // Resolve by slug first (the new canonical lookup); fall back to id for
+    // backwards-compat with old links and admin internals that still pass cuids.
+    let match = await prisma.match.findUnique({
+      where: { slug: matchIdOrSlug },
       include: { team1: true, team2: true, league: true, season: true },
     });
+    if (!match) {
+      match = await prisma.match.findUnique({
+        where: { id: matchIdOrSlug },
+        include: { team1: true, team2: true, league: true, season: true },
+      });
+    }
 
     if (!match) return null;
 
-    let matchPlayers = [];
-    let events = [];
+    // Use the resolved match's id for sub-queries — the original param may have
+    // been a slug, but related lookups (events, players, subs) all key on id.
+    const matchId = match.id;
+    let matchPlayers: any[] = [];
+    let events: any[] = [];
 
     try {
       matchPlayers = await getMatchPlayers(matchId);

@@ -93,7 +93,7 @@ export default function RecentResultsCarousel() {
           const name1  = resolveName(match, 'team1');
           const name2  = resolveName(match, 'team2');
           return (
-          <a key={match.id} href={`/matches/${match.id}`} className="match-card-modern result-card">
+          <a key={match.id} href={`/matches/${(match as any).slug || match.id}/`} className="match-card-modern result-card">
             <div className="match-card-header">
               <span className="league-tag">{getLeagueName(match as any) || match.league?.name || match.leagueName || 'ELEVATE LEAGUE'}</span>
               <span className="match-time">{formatMatchDate(match.date as any)}</span>
