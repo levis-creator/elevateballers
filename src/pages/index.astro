@@ -1,11 +1,13 @@
 ---
 export const prerender = false;
 
-// Edge cache the homepage for 60s — most visitors see the exact same content
-// so serving from cache avoids running ~8 DB queries per visit.
+// Edge cache the homepage for 5 min — most visitors see the exact same content
+// so serving from cache avoids running ~8 DB queries per visit. SWR keeps
+// stale content serving instantly while the next request triggers a refresh,
+// so admins editing settings see updates within ~5 min and visitors never wait.
 Astro.response.headers.set(
   'Cache-Control',
-  'public, s-maxage=60, stale-while-revalidate=120'
+  'public, s-maxage=300, stale-while-revalidate=600'
 );
 
 import Layout from "../layouts/Layout.astro";
@@ -150,10 +152,10 @@ try {
           <div class="container">
             <div class="row">
               <div class="col-md-6 col-sm-12">
-                <NextMatchCarousel client:load />
+                <NextMatchCarousel client:visible />
               </div>
               <div class="col-md-6 col-sm-12">
-                <RecentResultsCarousel client:load />
+                <RecentResultsCarousel client:visible />
               </div>
             </div>
           </div>
@@ -168,7 +170,7 @@ try {
           aria-label="Latest news"
         >
           <div class="container">
-            <LatestNews client:load />
+            <LatestNews client:visible />
           </div>
         </section>
       </FeatureGate>
@@ -191,7 +193,7 @@ try {
         >
           <div class="container">
             <!-- Redesigned Stats Leaders Section - Integrated React Component -->
-            <StatsLeadersSection client:load />
+            <StatsLeadersSection client:visible />
           </div>
         </section>
       </FeatureGate>
@@ -203,7 +205,7 @@ try {
           aria-label="League statistics"
         >
           <div class="container">
-            <StatsSection client:load />
+            <StatsSection client:visible />
           </div>
         </section>
       </FeatureGate>
@@ -215,13 +217,13 @@ try {
           aria-label="Media gallery"
         >
           <div class="container">
-            <MediaGallery client:load />
+            <MediaGallery client:visible />
           </div>
         </section>
       </FeatureGate>
 
       <!-- Sponsors Section (renders only if there are active sponsors) -->
-      <Sponsors client:load />
+      <Sponsors client:visible />
 
       <!-- Homepage Intro (editable in admin -> Settings -> Homepage Intro) -->
       <HomepageIntro />
