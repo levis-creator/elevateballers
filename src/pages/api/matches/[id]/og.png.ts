@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro';
-import sharp from 'sharp';
+import satori from 'satori';
+import { Resvg } from '@resvg/resvg-js';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { getMatchWithFullDetails } from '../../../../features/cms/lib/queries';
 import { MATCH_TIMEZONE } from '../../../../features/matches/domain/usecases/utils';
 
@@ -8,40 +12,51 @@ export const prerender = false;
 const W = 1200;
 const H = 630;
 
-function escapeXml(s: string): string {
-  return s.replace(/[<>&'"]/g, (c) => {
-    switch (c) {
-      case '<':
-        return '&lt;';
-      case '>':
-        return '&gt;';
-      case '&':
-        return '&amp;';
-      case "'":
-        return '&apos;';
-      default:
-        return '&quot;';
+// Lazy-load fonts once per process. Satori needs raw font bytes per weight —
+// variable fonts crash satori's bundled opentype parser, so we use static TTFs.
+type LoadedFonts = {
+  regular: Buffer;
+  semibold: Buffer;
+  bold: Buffer;
+  extrabold: Buffer;
+  black: Buffer;
+};
+let fontsCache: LoadedFonts | null = null;
+async function loadFonts(): Promise<LoadedFonts> {
+  if (fontsCache) return fontsCache;
+  const here = dirname(fileURLToPath(import.meta.url));
+  const baseCandidates = [
+    join(here, '../../../../assets/fonts'),
+    join(process.cwd(), 'src/assets/fonts'),
+  ];
+  for (const base of baseCandidates) {
+    try {
+      const [regular, semibold, bold, extrabold, black] = await Promise.all([
+        readFile(join(base, 'Rubik-Regular.ttf')),
+        readFile(join(base, 'Rubik-SemiBold.ttf')),
+        readFile(join(base, 'Rubik-Bold.ttf')),
+        readFile(join(base, 'Rubik-ExtraBold.ttf')),
+        readFile(join(base, 'Rubik-Black.ttf')),
+      ]);
+      fontsCache = { regular, semibold, bold, extrabold, black };
+      return fontsCache;
+    } catch {
+      // try next
     }
-  });
-}
-
-// Pick a roughly readable size for variable-length team names.
-function fitTeamFontSize(name: string): number {
-  const len = name.length;
-  if (len <= 10) return 64;
-  if (len <= 16) return 52;
-  if (len <= 22) return 42;
-  return 34;
+  }
+  throw new Error('Rubik static font files not found in src/assets/fonts');
 }
 
 function formatDate(d: Date): string {
-  return d.toLocaleDateString('en-US', {
-    timeZone: MATCH_TIMEZONE,
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return d
+    .toLocaleDateString('en-US', {
+      timeZone: MATCH_TIMEZONE,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    .toUpperCase();
 }
 
 function formatTime(d: Date): string {
@@ -52,7 +67,16 @@ function formatTime(d: Date): string {
   });
 }
 
-function buildSvg(opts: {
+// Pick a roughly-fitting font size for variable-length team names.
+function fitTeamFontSize(name: string): number {
+  const len = name.length;
+  if (len <= 10) return 64;
+  if (len <= 16) return 52;
+  if (len <= 22) return 42;
+  return 34;
+}
+
+interface CardOpts {
   team1Name: string;
   team2Name: string;
   status: 'UPCOMING' | 'LIVE' | 'COMPLETED';
@@ -60,17 +84,11 @@ function buildSvg(opts: {
   team2Score: number | null;
   league: string;
   dateLine: string;
-}): string {
-  const {
-    team1Name,
-    team2Name,
-    status,
-    team1Score,
-    team2Score,
-    league,
-    dateLine,
-  } = opts;
+}
 
+// Build the satori element tree (React-element shape, no JSX needed).
+function buildCard(opts: CardOpts): any {
+  const { team1Name, team2Name, status, team1Score, team2Score, league, dateLine } = opts;
   const showScore =
     status === 'COMPLETED' && team1Score != null && team2Score != null;
   const t1FontSize = fitTeamFontSize(team1Name);
@@ -78,76 +96,239 @@ function buildSvg(opts: {
 
   const statusBadge =
     status === 'LIVE'
-      ? `
-    <g transform="translate(${W / 2 - 60}, 470)">
-      <rect width="120" height="44" rx="22" fill="#ef4444" />
-      <circle cx="22" cy="22" r="6" fill="#ffffff" opacity="0.95" />
-      <text x="40" y="29" font-family="Rubik, Arial, sans-serif" font-size="20" font-weight="800" fill="#ffffff" letter-spacing="3">LIVE</text>
-    </g>`
+      ? {
+          bg: '#ef4444',
+          color: '#ffffff',
+          label: '● LIVE',
+          border: 'transparent',
+        }
       : status === 'COMPLETED'
-        ? `
-    <g transform="translate(${W / 2 - 70}, 470)">
-      <rect width="140" height="44" rx="22" fill="rgba(16, 185, 129, 0.18)" stroke="rgba(16, 185, 129, 0.5)" />
-      <text x="70" y="29" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="18" font-weight="800" fill="#34d399" letter-spacing="3">FINAL</text>
-    </g>`
-        : `
-    <g transform="translate(${W / 2 - 90}, 470)">
-      <rect width="180" height="44" rx="22" fill="rgba(255, 186, 0, 0.15)" stroke="rgba(255, 186, 0, 0.5)" />
-      <text x="90" y="29" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="18" font-weight="800" fill="#ffba00" letter-spacing="3">UPCOMING</text>
-    </g>`;
+        ? {
+            bg: 'rgba(16, 185, 129, 0.18)',
+            color: '#34d399',
+            label: 'FINAL',
+            border: 'rgba(16, 185, 129, 0.5)',
+          }
+        : {
+            bg: 'rgba(255, 186, 0, 0.15)',
+            color: '#ffba00',
+            label: 'UPCOMING',
+            border: 'rgba(255, 186, 0, 0.5)',
+          };
 
-  const centerContent = showScore
-    ? `
-    <text x="${W / 2}" y="320" text-anchor="middle" font-family="JetBrains Mono, Courier New, monospace" font-size="160" font-weight="900" fill="#ffba00">${team1Score}<tspan dx="40" dy="0" fill="#475569" font-size="100">-</tspan><tspan dx="40" dy="0" fill="#ffba00">${team2Score}</tspan></text>`
-    : `
-    <text x="${W / 2}" y="310" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="96" font-weight="900" fill="#475569" letter-spacing="20">VS</text>`;
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0f0d18" />
-      <stop offset="100%" stop-color="#14111f" />
-    </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="0%" r="60%">
-      <stop offset="0%" stop-color="#ffba00" stop-opacity="0.18" />
-      <stop offset="100%" stop-color="#ffba00" stop-opacity="0" />
-    </radialGradient>
-  </defs>
-
-  <rect width="${W}" height="${H}" fill="url(#bg)" />
-  <rect width="${W}" height="${H}" fill="url(#glow)" />
-
-  <!-- Top: League pill -->
-  <g transform="translate(${W / 2 - 200}, 60)">
-    <rect width="400" height="40" rx="20" fill="rgba(255, 255, 255, 0.04)" stroke="rgba(255, 186, 0, 0.3)" />
-    <text x="200" y="27" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="16" font-weight="700" fill="#ffba00" letter-spacing="6">${escapeXml(league.toUpperCase())}</text>
-  </g>
-
-  <!-- Date / time line -->
-  <text x="${W / 2}" y="140" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="22" font-weight="500" fill="#94a3b8" letter-spacing="2">${escapeXml(dateLine.toUpperCase())}</text>
-
-  <!-- Team names -->
-  <text x="240" y="240" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="${t1FontSize}" font-weight="800" fill="#f8fafc" letter-spacing="2">${escapeXml(team1Name.toUpperCase())}</text>
-  <text x="${W - 240}" y="240" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="${t2FontSize}" font-weight="800" fill="#f8fafc" letter-spacing="2">${escapeXml(team2Name.toUpperCase())}</text>
-
-  <!-- Center: VS or score -->
-  ${centerContent}
-
-  <!-- Status badge -->
-  ${statusBadge}
-
-  <!-- Bottom branding -->
-  <line x1="80" y1="560" x2="${W - 80}" y2="560" stroke="rgba(255, 255, 255, 0.06)" stroke-width="1" />
-  <text x="${W / 2}" y="595" text-anchor="middle" font-family="Rubik, Arial, sans-serif" font-size="20" font-weight="800" fill="#ffba00" letter-spacing="6">ELEVATEBALLERS.COM</text>
-</svg>`;
+  return {
+    type: 'div',
+    props: {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#0f0d18',
+        backgroundImage:
+          'radial-gradient(circle at 50% 0%, rgba(255, 186, 0, 0.18) 0%, rgba(255, 186, 0, 0) 60%), linear-gradient(180deg, #0f0d18 0%, #14111f 100%)',
+        fontFamily: 'Rubik',
+        color: '#f8fafc',
+        padding: '50px 80px',
+        justifyContent: 'space-between',
+      },
+      children: [
+        // League pill + date
+        {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 24,
+            },
+            children: [
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    padding: '10px 32px',
+                    border: '1px solid rgba(255, 186, 0, 0.45)',
+                    borderRadius: 9999,
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    color: '#ffba00',
+                    fontSize: 18,
+                    fontWeight: 700,
+                    letterSpacing: 6,
+                  },
+                  children: league.toUpperCase(),
+                },
+              },
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    color: '#94a3b8',
+                    fontSize: 22,
+                    fontWeight: 500,
+                    letterSpacing: 2,
+                  },
+                  children: dateLine,
+                },
+              },
+            ],
+          },
+        },
+        // Match row: team1 — center — team2
+        {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flex: 1,
+              padding: '0 20px',
+            },
+            children: [
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    flex: 1,
+                    fontSize: t1FontSize,
+                    fontWeight: 800,
+                    color: '#f8fafc',
+                    textTransform: 'uppercase',
+                    letterSpacing: 2,
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                  },
+                  children: team1Name.toUpperCase(),
+                },
+              },
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    width: 360,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  },
+                  children: showScore
+                    ? {
+                        type: 'div',
+                        props: {
+                          style: {
+                            display: 'flex',
+                            fontSize: 130,
+                            fontWeight: 900,
+                            color: '#ffba00',
+                            letterSpacing: -2,
+                          },
+                          children: `${team1Score} - ${team2Score}`,
+                        },
+                      }
+                    : {
+                        type: 'div',
+                        props: {
+                          style: {
+                            display: 'flex',
+                            fontSize: 96,
+                            fontWeight: 900,
+                            color: '#475569',
+                            letterSpacing: 18,
+                          },
+                          children: 'VS',
+                        },
+                      },
+                },
+              },
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    flex: 1,
+                    fontSize: t2FontSize,
+                    fontWeight: 800,
+                    color: '#f8fafc',
+                    textTransform: 'uppercase',
+                    letterSpacing: 2,
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                  },
+                  children: team2Name.toUpperCase(),
+                },
+              },
+            ],
+          },
+        },
+        // Status badge + brand
+        {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 24,
+            },
+            children: [
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    padding: '10px 28px',
+                    backgroundColor: statusBadge.bg,
+                    border: `1px solid ${statusBadge.border}`,
+                    borderRadius: 9999,
+                    color: statusBadge.color,
+                    fontSize: 20,
+                    fontWeight: 800,
+                    letterSpacing: 4,
+                  },
+                  children: statusBadge.label,
+                },
+              },
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    width: '100%',
+                    height: 1,
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  },
+                  children: '',
+                },
+              },
+              {
+                type: 'div',
+                props: {
+                  style: {
+                    display: 'flex',
+                    color: '#ffba00',
+                    fontSize: 22,
+                    fontWeight: 800,
+                    letterSpacing: 6,
+                  },
+                  children: 'ELEVATEBALLERS.COM',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
 }
 
 export const GET: APIRoute = async ({ params }) => {
   const id = params.id;
-  if (!id) {
-    return new Response('Missing match id', { status: 400 });
-  }
+  if (!id) return new Response('Missing match id', { status: 400 });
 
   let match;
   try {
@@ -157,41 +338,50 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response('Failed to fetch match', { status: 500 });
   }
 
-  if (!match) {
-    return new Response('Match not found', { status: 404 });
-  }
+  if (!match) return new Response('Match not found', { status: 404 });
 
   const team1Name = match.team1Name || match.team1?.name || 'TBD';
   const team2Name = match.team2Name || match.team2?.name || 'TBD';
-  const league =
-    match.league?.name || match.leagueName || 'Elevate Basketball';
+  const league = match.league?.name || match.leagueName || 'Elevate Basketball';
   const status = match.status as 'UPCOMING' | 'LIVE' | 'COMPLETED';
   const dateObj = match.date ? new Date(match.date) : null;
-  const dateLine = dateObj
-    ? `${formatDate(dateObj)} · ${formatTime(dateObj)}`
-    : '';
-
-  const svg = buildSvg({
-    team1Name,
-    team2Name,
-    status,
-    team1Score: match.team1Score,
-    team2Score: match.team2Score,
-    league,
-    dateLine,
-  });
+  const dateLine = dateObj ? `${formatDate(dateObj)} · ${formatTime(dateObj)}` : '';
 
   let png: Buffer;
   try {
-    png = await sharp(Buffer.from(svg))
-      .png({ compressionLevel: 9, quality: 90 })
-      .toBuffer();
+    const fonts = await loadFonts();
+    const svg = await satori(
+      buildCard({
+        team1Name,
+        team2Name,
+        status,
+        team1Score: match.team1Score,
+        team2Score: match.team2Score,
+        league,
+        dateLine,
+      }),
+      {
+        width: W,
+        height: H,
+        fonts: [
+          { name: 'Rubik', data: fonts.regular, weight: 400, style: 'normal' },
+          { name: 'Rubik', data: fonts.semibold, weight: 600, style: 'normal' },
+          { name: 'Rubik', data: fonts.bold, weight: 700, style: 'normal' },
+          { name: 'Rubik', data: fonts.extrabold, weight: 800, style: 'normal' },
+          { name: 'Rubik', data: fonts.black, weight: 900, style: 'normal' },
+        ],
+      },
+    );
+
+    const resvg = new Resvg(svg, {
+      fitTo: { mode: 'width', value: W },
+    });
+    png = resvg.render().asPng();
   } catch (err) {
-    console.error('OG image: sharp render failed', err);
+    console.error('OG image: render failed', err);
     return new Response('Render failed', { status: 500 });
   }
 
-  // Match the page's Cache-Control profile.
   const cacheControl =
     status === 'COMPLETED'
       ? 'public, s-maxage=86400, max-age=3600, stale-while-revalidate=604800, immutable'
