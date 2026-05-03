@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 interface Sponsor {
   id: string;
@@ -130,7 +131,7 @@ export default function Sponsors() {
                     <a href={sponsor.link} target="_blank" rel="noopener noreferrer">
                       <img
                         decoding="async"
-                        src={sponsor.image}
+                        src={optimizeImageUrl(sponsor.image, { width: 300 })}
                         alt={sponsor.name || 'Sponsor logo'}
                         title={sponsor.name}
                       />
@@ -138,7 +139,7 @@ export default function Sponsors() {
                   ) : (
                     <img
                       decoding="async"
-                      src={sponsor.image}
+                      src={optimizeImageUrl(sponsor.image, { width: 300 })}
                       alt={sponsor.name || 'Sponsor logo'}
                       title={sponsor.name}
                     />

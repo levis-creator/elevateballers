@@ -3,6 +3,7 @@ import { useNewsStore } from '../../stores/useNewsStore';
 import type { NewsItem, NewsFilter } from '../../types';
 import type { NewsArticleDTO } from '../../../cms/types';
 import { reverseCategoryMap } from '../../../cms/types';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 function normalizeImageUrl(imageUrl: any): string {
   if (!imageUrl) return '/images/placeholder-350x250.gif';
@@ -332,7 +333,7 @@ function FeaturedCard({ item }: { item: NewsItem }) {
         <div style={{ position: 'relative', width: '100%', aspectRatio: '16/7', overflow: 'hidden', background: 'var(--color-gray-200)' }}>
           <img
             className="ln-featured-img"
-            src={imgSrc}
+            src={optimizeImageUrl(imgSrc, { width: 1200 })}
             alt={item.title || 'News article image'}
             loading="eager"
             fetchPriority="high"
@@ -366,7 +367,7 @@ function SmallCard({ item }: { item: NewsItem }) {
         <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', overflow: 'hidden', background: 'var(--color-gray-100)' }}>
           <img
             className="ln-card-img"
-            src={imgSrc}
+            src={optimizeImageUrl(imgSrc, { width: 600 })}
             alt={item.title || 'News article image'}
             loading="lazy"
             onError={() => setImgSrc('/images/placeholder-350x250.gif')}

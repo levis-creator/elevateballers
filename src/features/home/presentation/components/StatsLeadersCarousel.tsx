@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { resolveAssetUrl } from '../../../../lib/asset-url';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 /**
  * Player interface for Stats Leaders
@@ -134,8 +135,8 @@ export default function StatsLeadersCarousel({ category = 'points', setApi }: St
             <div key={`${player.id}-${index}`} className="embla__slide">
               <div className="player-card-premium">
                 <div className="player-image-box">
-                  <img 
-                    src={getPlayerImageSrc(player.image)}
+                  <img
+                    src={optimizeImageUrl(getPlayerImageSrc(player.image), { width: 400 })}
                     alt={player.name || 'Player photo'}
                     className="player-photo"
                     onError={(e) => {

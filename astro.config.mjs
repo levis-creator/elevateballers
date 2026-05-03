@@ -23,6 +23,16 @@ export default defineConfig({
       webAnalytics: {
         enabled: true,
       },
+      // Enable Vercel Image Optimization. Components call `optimizeImageUrl()`
+      // (src/lib/image-cdn.ts) which constructs `/_vercel/image?url=...&w=...`
+      // URLs. Source domains must be allowlisted below or Vercel rejects
+      // the request. 1000 transformations/month are free on the Hobby plan.
+      imageService: true,
+      imagesConfig: {
+        sizes: [80, 120, 160, 200, 300, 400, 600, 800, 1200, 1600],
+        domains: ['zjnlvnyjsidnelgciqmz.supabase.co', 'cdn.sanity.io'],
+        formats: ['image/webp'],
+      },
       // OG image generation (src/pages/api/matches/[id]/og.png.ts) reads
       // these font files at runtime via fs.readFile, so they must be bundled
       // into the serverless function output.
