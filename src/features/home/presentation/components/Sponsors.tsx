@@ -131,7 +131,7 @@ export default function Sponsors() {
                       <img
                         decoding="async"
                         src={sponsor.image}
-                        alt={sponsor.name}
+                        alt={sponsor.name || 'Sponsor logo'}
                         title={sponsor.name}
                       />
                     </a>
@@ -139,7 +139,7 @@ export default function Sponsors() {
                     <img
                       decoding="async"
                       src={sponsor.image}
-                      alt={sponsor.name}
+                      alt={sponsor.name || 'Sponsor logo'}
                       title={sponsor.name}
                     />
                   )}

@@ -103,7 +103,7 @@ export default function RecentResultsCarousel() {
               <div className="team-entry team-home">
                 <div className="logo-wrap">
                   {logo1 ? (
-                    <img src={logo1} alt={name1} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={logo1} alt={name1 || 'Home team logo'} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     <div className="initials">{name1.substring(0, 2).toUpperCase()}</div>
                   )}
@@ -125,7 +125,7 @@ export default function RecentResultsCarousel() {
                 <span className="name">{name2}</span>
                 <div className="logo-wrap">
                   {logo2 ? (
-                    <img src={logo2} alt={name2} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={logo2} alt={name2 || 'Away team logo'} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     <div className="initials">{name2.substring(0, 2).toUpperCase()}</div>
                   )}
