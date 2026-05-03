@@ -19,10 +19,12 @@ interface SiteSetting {
 
 // Defaults match the values currently hardcoded on the homepage so the
 // editor opens showing the live state.
-const DEFAULT_TITLE = "Elevate Ballers - Kenya's Premier Basketball League";
+const DEFAULT_TITLE = "Elevate Ballers - Kenya's Premier Basketball League & Championships";
 const DEFAULT_DESCRIPTION =
-  "Elevate Ballers is Kenya's premier basketball league. Follow live standings, rising stars, match results, and join our growing basketball community in Nairobi.";
+  "Elevate Ballers is Kenya's premier basketball league hosting championships in Nairobi. Follow live standings, rising stars, and match results from our basketball community.";
 const DEFAULT_IMAGE = "/images/Elevate_Icon-200x200.png";
+const DEFAULT_KEYWORDS =
+  "basketball, basketball league, Kenya basketball, Elevate Ballers, championships, Nairobi basketball, basketball news, basketball standings, basketball fixtures";
 
 // Recommended ranges per Seobility / Google guidelines.
 const TITLE_MIN = 30;
@@ -57,6 +59,7 @@ export default function SeoSettingsEditor() {
   const [title, setTitle] = useState(DEFAULT_TITLE);
   const [description, setDescription] = useState(DEFAULT_DESCRIPTION);
   const [imageUrl, setImageUrl] = useState(DEFAULT_IMAGE);
+  const [keywords, setKeywords] = useState(DEFAULT_KEYWORDS);
   const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export default function SeoSettingsEditor() {
           if (s.key === 'seo_homepage_title' && s.value) setTitle(s.value);
           if (s.key === 'seo_homepage_description' && s.value) setDescription(s.value);
           if (s.key === 'seo_homepage_image') setImageUrl(s.value || DEFAULT_IMAGE);
+          if (s.key === 'seo_homepage_keywords' && s.value) setKeywords(s.value);
         });
         setSettings(map);
       }
@@ -115,6 +119,7 @@ export default function SeoSettingsEditor() {
         saveSetting('seo_homepage_title', title, 'Homepage SEO Title'),
         saveSetting('seo_homepage_description', description, 'Homepage SEO Meta Description'),
         saveSetting('seo_homepage_image', imageUrl, 'Homepage SEO Share Image'),
+        saveSetting('seo_homepage_keywords', keywords, 'Homepage SEO Keywords'),
       ]);
       alert('SEO settings saved successfully!');
       fetchSettings();
@@ -192,6 +197,28 @@ export default function SeoSettingsEditor() {
           <p className="text-xs text-gray-500">
             Shows as the grey snippet under the title in Google search results.
             Make it inviting — it's your sales pitch in the SERP.
+          </p>
+        </div>
+
+        {/* Homepage Keywords */}
+        <div className="space-y-1.5">
+          <Label htmlFor="seo-homepage-keywords" className="text-sm font-medium text-gray-700">
+            Homepage Keywords
+          </Label>
+          <Textarea
+            id="seo-homepage-keywords"
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            disabled={!canManage}
+            placeholder="basketball, basketball league, Kenya basketball, championships, …"
+            rows={2}
+            maxLength={500}
+          />
+          <p className="text-xs text-gray-500">
+            Comma-separated list of topics this page covers. Emitted as
+            <code className="mx-1 rounded bg-gray-100 px-1 text-[10px]">&lt;meta name="keywords"&gt;</code>.
+            Google ignores this for ranking, but Bing, Yandex, and many SEO audit tools
+            (including Seobility) still read it. Keep it tight — 8–12 phrases is plenty.
           </p>
         </div>
 

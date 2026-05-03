@@ -9,6 +9,8 @@ export interface Props {
 	canonicalURL?: string;
 	type?: string;
 	robots?: string;
+	/** Comma-separated keyword list, emitted as `<meta name="keywords">`. */
+	keywords?: string;
 	publishedTime?: string;
 	modifiedTime?: string;
 	prevURL?: string;
@@ -28,6 +30,7 @@ const {
 	canonicalURL = Astro.props.canonicalURL || new URL(Astro.url.pathname, siteUrl).toString(),
 	type = "website",
 	robots = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+	keywords,
 	publishedTime,
 	modifiedTime,
 	prevURL,
@@ -47,6 +50,7 @@ const ogImage = image.startsWith("http")
 <title>{title}</title>
 <meta name="title" content={title} />
 <meta name="description" content={description} />
+{keywords && <meta name="keywords" content={keywords} />}
 <link rel="canonical" href={canonicalURL} />
 {prevURL && <link rel="prev" href={prevURL} />}
 {nextURL && <link rel="next" href={nextURL} />}

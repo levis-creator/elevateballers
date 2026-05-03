@@ -36,14 +36,17 @@ import { optimizeImageUrl } from "../lib/image-cdn";
 // Editable in admin → Settings → SEO. Defaults match the previously
 // hardcoded values so behaviour is unchanged until an admin overrides them.
 const DEFAULT_SEO_TITLE =
-  "Elevate Ballers - Kenya's Premier Basketball League";
+  "Elevate Ballers - Kenya's Premier Basketball League & Championships";
 const DEFAULT_SEO_DESCRIPTION =
-  "Elevate Ballers is Kenya's premier basketball league. Follow live standings, rising stars, match results, and join our growing basketball community in Nairobi.";
+  "Elevate Ballers is Kenya's premier basketball league hosting championships in Nairobi. Follow live standings, rising stars, and match results from our basketball community.";
 const DEFAULT_SEO_IMAGE = "/images/Elevate_Icon-200x200.png";
+const DEFAULT_SEO_KEYWORDS =
+  "basketball, basketball league, Kenya basketball, Elevate Ballers, championships, Nairobi basketball, basketball news, basketball standings, basketball fixtures";
 
 let seoTitle = DEFAULT_SEO_TITLE;
 let seoDescription = DEFAULT_SEO_DESCRIPTION;
 let seoImage = DEFAULT_SEO_IMAGE;
+let seoKeywords = DEFAULT_SEO_KEYWORDS;
 
 try {
   const seoSettings = await getAllSiteSettings("seo");
@@ -51,6 +54,7 @@ try {
     if (s.key === "seo_homepage_title" && s.value) seoTitle = s.value;
     if (s.key === "seo_homepage_description" && s.value) seoDescription = s.value;
     if (s.key === "seo_homepage_image" && s.value) seoImage = s.value;
+    if (s.key === "seo_homepage_keywords" && s.value) seoKeywords = s.value;
   }
 } catch (err) {
   console.error("[index.astro] failed to load SEO settings, using defaults:", err);
@@ -76,6 +80,7 @@ try {
   title={seoTitle}
   description={seoDescription}
   image={seoImage}
+  keywords={seoKeywords}
   preloadImage={heroPreloadImage}
   canonicalURL={`${Astro.url.origin}/`}
   type="website"
@@ -87,11 +92,22 @@ try {
       "@context": "https://schema.org",
       "@graph": [
         {
+          "@type": "WebSite",
+          "@id": `${Astro.url.origin}/#website`,
+          url: `${Astro.url.origin}/`,
+          name: "Elevate Ballers",
+          description: seoDescription,
+          inLanguage: "en-US",
+          publisher: { "@id": `${Astro.url.origin}/#organization` },
+        },
+        {
           "@type": "WebPage",
           "@id": `${Astro.url.origin}/`,
           url: `${Astro.url.origin}/`,
           name: seoTitle,
           isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          about: { "@id": `${Astro.url.origin}/#organization` },
+          primaryImageOfPage: { "@id": `${Astro.url.origin}/#logo` },
           description: seoDescription,
           breadcrumb: { "@id": `${Astro.url.origin}/#breadcrumb` },
           inLanguage: "en-US",
@@ -100,8 +116,23 @@ try {
           "@type": "BreadcrumbList",
           "@id": `${Astro.url.origin}/#breadcrumb`,
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Home", item: `${Astro.url.origin}/` },
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
           ],
+        },
+        {
+          "@type": "ImageObject",
+          "@id": `${Astro.url.origin}/#logo`,
+          url: `${Astro.url.origin}/images/Elevate_Icon-200x200.png`,
+          contentUrl: `${Astro.url.origin}/images/Elevate_Icon-200x200.png`,
+          width: 200,
+          height: 200,
+          caption: "Elevate Ballers",
+          inLanguage: "en-US",
         },
         {
           "@type": "SportsOrganization",
@@ -114,10 +145,12 @@ try {
           address: {
             "@type": "PostalAddress",
             streetAddress: "Pepo Lane, off Dagoretti Road",
+            addressLocality: "Nairobi",
             addressCountry: "KE",
           },
           email: "ballers@elevateballers.com",
-          logo: `${Astro.url.origin}/images/Elevate_Icon-200x200.png`,
+          logo: { "@id": `${Astro.url.origin}/#logo` },
+          image: { "@id": `${Astro.url.origin}/#logo` },
         },
       ],
     })}
@@ -134,7 +167,7 @@ try {
     }
 
     <main id="main" role="main">
-      <h1 class="sr-only">Elevate Ballers - Kenya's Premier Basketball League</h1>
+      <h1 class="sr-only">Elevate Ballers - Kenya's Premier Basketball League & Championships</h1>
       <!-- Hero Section: Post Slider -->
       <FeatureGate feature="home.postSlider">
         <section class="hero-section" aria-label="Featured content">
