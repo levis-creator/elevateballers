@@ -383,6 +383,11 @@ try {
       padding: 0 !important;
     }
 
+    /* Reserve vertical space for sections whose React content hydrates with
+       `client:visible`. Without these min-heights, content slots in late and
+       pushes everything below it down, killing the CLS score. Values lean
+       slightly conservative for typical desktop renders; on mobile the
+       content may exceed them with a small shift. */
     .next-match-section {
       background: var(--color-accent-dark, #2d1e49)
         url("/images/basketball-game-concept-scaled.jpg") center center
@@ -390,6 +395,7 @@ try {
       background-size: cover;
       position: relative;
       color: white;
+      min-height: 420px;
     }
 
     .next-match-section::before {
@@ -414,6 +420,7 @@ try {
 
     .latest-news-section {
       background-color: var(--color-white, #ffffff);
+      min-height: 700px;
     }
 
     .player-week-section {
@@ -422,6 +429,7 @@ try {
 
     .stats-leaders-section {
       background-color: var(--color-white, #ffffff);
+      min-height: 480px;
     }
 
     .stats-leaders-header {
@@ -439,10 +447,12 @@ try {
 
     .statistics-section {
       background-color: var(--color-secondary, #ffba00);
+      min-height: 280px;
     }
 
     .media-gallery-section {
       background-color: var(--color-white, #ffffff);
+      min-height: 580px;
     }
 
     .sponsors-section {
