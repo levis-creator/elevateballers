@@ -77,7 +77,7 @@ export default function NextMatchCarousel() {
                   <div className="team-entry team-home">
                     <div className="logo-wrap">
                       {team1Logo ? (
-                        <img src={team1Logo} alt={team1Name} />
+                        <img src={team1Logo} alt={team1Name || 'Home team logo'} />
                       ) : (
                         <div className="initials">{team1Name.substring(0, 2).toUpperCase()}</div>
                       )}
@@ -93,7 +93,7 @@ export default function NextMatchCarousel() {
                     <span className="name">{team2Name}</span>
                     <div className="logo-wrap">
                       {team2Logo ? (
-                        <img src={team2Logo} alt={team2Name} />
+                        <img src={team2Logo} alt={team2Name || 'Away team logo'} />
                       ) : (
                         <div className="initials">{team2Name.substring(0, 2).toUpperCase()}</div>
                       )}

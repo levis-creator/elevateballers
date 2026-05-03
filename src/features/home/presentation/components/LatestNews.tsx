@@ -333,7 +333,7 @@ function FeaturedCard({ item }: { item: NewsItem }) {
           <img
             className="ln-featured-img"
             src={imgSrc}
-            alt={item.title}
+            alt={item.title || 'News article image'}
             loading="eager"
             fetchPriority="high"
             onError={() => setImgSrc('/images/placeholder-350x250.gif')}
@@ -367,7 +367,7 @@ function SmallCard({ item }: { item: NewsItem }) {
           <img
             className="ln-card-img"
             src={imgSrc}
-            alt={item.title}
+            alt={item.title || 'News article image'}
             loading="lazy"
             onError={() => setImgSrc('/images/placeholder-350x250.gif')}
           />

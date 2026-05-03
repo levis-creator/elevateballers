@@ -136,7 +136,7 @@ export default function StatsLeadersCarousel({ category = 'points', setApi }: St
                 <div className="player-image-box">
                   <img 
                     src={getPlayerImageSrc(player.image)}
-                    alt={player.name}
+                    alt={player.name || 'Player photo'}
                     className="player-photo"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
