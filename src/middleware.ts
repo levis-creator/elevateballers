@@ -29,6 +29,15 @@ export const onRequest = defineMiddleware(async (_context, next) => {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
+  // Guarantee Content-Type charset on HTML responses. Astro/Vercel usually
+  // emits "text/html; charset=utf-8", but the parameter can be dropped at
+  // the edge — Seobility flags this. Only touches HTML; APIs and binary
+  // assets keep their own Content-Type untouched.
+  const contentType = response.headers.get('Content-Type');
+  if (contentType && contentType.toLowerCase().includes('text/html') && !/charset=/i.test(contentType)) {
+    response.headers.set('Content-Type', `${contentType}; charset=UTF-8`);
+  }
+
   if (process.env.NODE_ENV === 'production') {
     response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
