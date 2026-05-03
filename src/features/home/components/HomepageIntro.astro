@@ -1,0 +1,117 @@
+---
+import { getAllSiteSettings } from "../../cms/lib/queries";
+import { sanitizeHtml } from "../../../lib/sanitize";
+
+// Homepage-specific orientation prose. Distinct from /about-club/ on purpose:
+// the About page tells the league's story (mission, history); this section
+// tells visitors what they can DO on the site (find scores, follow players,
+// register, etc.). Different angle, different keywords, no duplicate content.
+const DEFAULT_HEADING = "Welcome to Elevate Ballers";
+const DEFAULT_SUBHEADING =
+  "Your home for live matches, standings, and player news from Kenya's premier basketball league.";
+const DEFAULT_BODY = `<p>This is the official site for Elevate Ballers, Kenya's premier basketball league. Use it to follow every game, every team, and every player. The homepage gives you a snapshot. Each section below dives deeper.</p>
+<p>The match carousel shows the next fixture on the schedule. Click any match for the live scoreboard, quarter-by-quarter scoring, and box scores. Recent results sit beside it for context. Want a wider view? Visit the matches page for the full season schedule.</p>
+<p>Standings update after every match. The standings page ranks every team in the league. Track the leaders, the chasers, and the teams fighting for playoff spots. Tie-breakers and head-to-head records are included.</p>
+<p>The Player of the Week highlights one standout performance from the past week. Browse the players page for the full roster. Each player profile carries stats, biography, and a game-by-game log. The stats leaders panel surfaces the season's top scorers, rebounders, and assist makers.</p>
+<p>News and announcements flow through the news ticker and the latest news section. Read recaps of recent matches. Watch highlight clips and follow club announcements. New articles publish throughout the season.</p>
+<p>Photo and video galleries capture the best moments from each game. The media gallery showcases on-court action, trophy lifts, and crowd shots. Share your favorites or save them for later.</p>
+<p>Want to be part of the action? The registration link further down opens to teams and individual players. Sign up before the season starts. Tryouts also run throughout the year for late entries.</p>
+<p>Sponsors keep the league running. Their logos sit in the sponsor band, and each link points to a partner who supports basketball in Kenya. If your business wants to join them, the contact page is the place to start.</p>
+<p>Our home court is at Pepo Lane, off Dagoretti Road. Match days bring fans, families, and players together every weekend. Doors open before tip-off, parking is free, and concessions stay open during games.</p>
+<p>Want to keep up between visits? Subscribe to the newsletter for weekly recaps. Follow the social links in the footer for highlights, behind-the-scenes content, and player spotlights. We post throughout the week, all season long.</p>
+<p>Looking for league rules, division information, or fixture schedules? The rules page covers playing rules and league policies. The fixtures page lists upcoming matches by date. The about page tells the full story of how Elevate Ballers started and where we are headed.</p>
+<p>Whatever brought you here — a player, a coach, a parent, a fan — there is something for you on this site. Welcome to Elevate Ballers. Let's play some basketball.</p>`;
+
+let heading = DEFAULT_HEADING;
+let subheading = DEFAULT_SUBHEADING;
+let body = DEFAULT_BODY;
+
+try {
+  const settings = await getAllSiteSettings("homepage");
+  console.log(
+    `[HomepageIntro] fetched ${settings.length} setting row(s) for category "homepage":`,
+    settings.map((s: any) => ({ key: s.key, valueLen: s.value?.length ?? 0 })),
+  );
+  for (const s of settings) {
+    if (s.key === "homepage_intro_heading" && s.value) heading = s.value;
+    if (s.key === "homepage_intro_subheading" && s.value) subheading = s.value;
+    if (s.key === "homepage_intro_body" && s.value) body = s.value;
+  }
+} catch (err) {
+  console.error("[HomepageIntro] failed to load settings, using defaults:", err);
+}
+
+const safeBody = sanitizeHtml(body);
+---
+
+<section class="homepage-intro-section section" aria-label="What you'll find on this site">
+  <div class="container">
+    <div class="homepage-intro-content">
+      <h2 class="homepage-intro-heading">{heading}</h2>
+      <p class="homepage-intro-subheading">{subheading}</p>
+      <div class="homepage-intro-body" set:html={safeBody} />
+      <div class="homepage-intro-actions">
+        <a class="homepage-intro-link" href="/about-club/" title="Learn more about Elevate Ballers">
+          Read the full story →
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .homepage-intro-section {
+    background-color: #ffffff;
+  }
+  .homepage-intro-content {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+  .homepage-intro-heading {
+    margin: 0 0 0.75rem 0;
+    text-align: center;
+  }
+  .homepage-intro-subheading {
+    text-align: center;
+    font-size: 1.125rem;
+    color: #4b5563;
+    margin: 0 0 2rem 0;
+    font-family: Rubik, sans-serif;
+  }
+  .homepage-intro-body :global(p) {
+    margin: 0 0 1rem 0;
+    line-height: 1.7;
+    font-size: 1rem;
+    color: #1f2937;
+    font-family: Rubik, sans-serif;
+  }
+  .homepage-intro-body :global(a) {
+    color: #dd3333;
+    text-decoration: underline;
+  }
+  .homepage-intro-body :global(ul),
+  .homepage-intro-body :global(ol) {
+    margin: 0 0 1rem 1.25rem;
+    line-height: 1.7;
+    color: #1f2937;
+    font-family: Rubik, sans-serif;
+  }
+  .homepage-intro-actions {
+    margin-top: 1.5rem;
+    text-align: center;
+  }
+  .homepage-intro-link {
+    display: inline-block;
+    color: #dd3333;
+    font-family: Rubik, sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 2px solid #dd3333;
+    padding-bottom: 2px;
+    transition: opacity 150ms;
+  }
+  .homepage-intro-link:hover,
+  .homepage-intro-link:focus {
+    opacity: 0.75;
+  }
+</style>

@@ -479,7 +479,7 @@ model PageContent {
 model SiteSetting {
   id          String   @id @default(cuid())
   key         String   @unique
-  value       String
+  value       String   @db.LongText
   type        String   @default("text")
   label       String
   description String?
