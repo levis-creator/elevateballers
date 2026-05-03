@@ -59,6 +59,19 @@ const SANITIZE_CONFIG: IOptions = {
       }
       return { tagName, attribs };
     },
+    // Ensure every rich-text image has a non-empty alt. Quill lets editors
+    // insert images without filling in alt text — those would render as
+    // <img src="..."> with no alt at all, which fails accessibility/SEO
+    // audits. Fall back to a generic descriptor so the page never ships
+    // a missing-alt image; admins should still write meaningful alt text
+    // for proper SEO when inserting images.
+    img: (tagName, attribs) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        alt: attribs.alt && attribs.alt.trim() ? attribs.alt : 'Content image',
+      },
+    }),
   },
 };
 
