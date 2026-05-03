@@ -23,6 +23,10 @@ export default defineConfig({
       webAnalytics: {
         enabled: true,
       },
+      // OG image generation (src/pages/api/matches/[id]/og.png.ts) reads
+      // these font files at runtime via fs.readFile, so they must be bundled
+      // into the serverless function output.
+      includeFiles: ['./src/assets/fonts/Rubik-Regular.ttf', './src/assets/fonts/Rubik-SemiBold.ttf', './src/assets/fonts/Rubik-Bold.ttf', './src/assets/fonts/Rubik-ExtraBold.ttf', './src/assets/fonts/Rubik-Black.ttf'],
     })
     : node({
       mode: 'standalone'
