@@ -30,6 +30,8 @@ import FeatureGate from "../components/FeatureGate.astro";
 import { isFeatureEnabled } from "../lib/feature-flags";
 import PageLoader from "../components/PageLoader";
 import { getAllSiteSettings } from "../features/cms/lib/queries";
+import { getFeaturedNewsArticles } from "../features/cms/lib/queries/news";
+import { optimizeImageUrl } from "../lib/image-cdn";
 
 // Editable in admin → Settings → SEO. Defaults match the previously
 // hardcoded values so behaviour is unchanged until an admin overrides them.
@@ -53,12 +55,28 @@ try {
 } catch (err) {
   console.error("[index.astro] failed to load SEO settings, using defaults:", err);
 }
+
+// LCP optimization: pre-fetch the first featured news article on the server
+// so we can preload its hero image during HTML parse — the PostSlider hero
+// is the LCP element and previously didn't start loading until React
+// hydrated and then fetched the API. Preloading shaves several seconds.
+let heroPreloadImage: string | undefined;
+try {
+  const featured = await getFeaturedNewsArticles();
+  const firstImage = featured[0]?.image;
+  if (firstImage) {
+    heroPreloadImage = optimizeImageUrl(firstImage, { width: 1600 });
+  }
+} catch (err) {
+  console.error("[index.astro] failed to fetch featured news for LCP preload:", err);
+}
 ---
 
 <Layout
   title={seoTitle}
   description={seoDescription}
   image={seoImage}
+  preloadImage={heroPreloadImage}
   canonicalURL={`${Astro.url.origin}/`}
   type="website"
 >
