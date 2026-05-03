@@ -3,6 +3,7 @@ import { useCarouselStore } from '../../stores/useCarouselStore';
 import type { PostSlide } from '../../types';
 import { reverseCategoryMap } from '../../../cms/types';
 import type { NewsArticleDTO } from '../../../cms/types';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 /**
  * PostSlider component - Hero post slider carousel
@@ -167,7 +168,7 @@ export default function PostSlider() {
             >
               <div
                 className="stm-post__slider__image"
-                style={{ backgroundImage: `url(${slide.image})` }}
+                style={{ backgroundImage: `url(${optimizeImageUrl(slide.image, { width: 1600 })})` }}
               />
               <div className="stm-post__slider__data container">
                 <div className="row">

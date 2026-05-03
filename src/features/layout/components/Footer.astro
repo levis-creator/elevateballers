@@ -2,6 +2,7 @@
 // Footer component - Footer with contact info, newsletter signup, and social links
 import { prisma } from "../../../lib/prisma";
 import SubscribeForm from './SubscribeForm';
+import { optimizeImageUrl } from "../../../lib/image-cdn";
 
 const DEFAULT_CONTACT = {
   address: 'Pepo Lane, off Dagoretti Road',
@@ -82,7 +83,7 @@ try {
               <div class="widget-wrapper">
                 <div class="footer-logo-wrapp">
                   <img
-                    src="/images/Elevate_Icon.png"
+                    src={optimizeImageUrl("/images/Elevate_Icon.png", { width: 200 })}
                     alt="Elevate Ballers Logo"
                   />
                 </div>

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import CountUp from 'react-countup';
 import { useInView } from 'react-intersection-observer';
 import { stats } from '../../data/homeData';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 /**
  * StatsSection component - Animated statistics section
@@ -23,7 +24,7 @@ export default function StatsSection() {
                 <div className="stm-stats-wrapp default">
                   {/* Lazy load icons with blur effect */}
                   <img
-                    src={stat.icon}
+                    src={optimizeImageUrl(stat.icon, { width: 160 })}
                     alt={stat.iconAlt || stat.label}
                     className="stm-stat-icon"
                     loading="eager"

@@ -18,9 +18,17 @@ interface Props {
 	modifiedTime?: string;
 	prevURL?: string;
 	nextURL?: string;
+	/**
+	 * URL of the page's LCP image. Emits a high-priority preload hint so the
+	 * browser starts downloading it during HTML parse — before any JS runs —
+	 * instead of waiting for React to hydrate and render an `<img>` or
+	 * background-image. Pass an already-optimized URL (e.g. one through
+	 * /_vercel/image) so the preloaded request matches what's later rendered.
+	 */
+	preloadImage?: string;
 }
 
-const { title, description, image, imageWidth, imageHeight, imageType, canonicalURL, type, robots, publishedTime, modifiedTime, prevURL, nextURL } = Astro.props;
+const { title, description, image, imageWidth, imageHeight, imageType, canonicalURL, type, robots, publishedTime, modifiedTime, prevURL, nextURL, preloadImage } = Astro.props;
 
 const externalStylesheets = [
 	"/css/select2.min.css",
@@ -87,6 +95,10 @@ const googleFonts = [
 			prevURL={prevURL}
 			nextURL={nextURL}
 		/>
+
+		{preloadImage && (
+			<link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
+		)}
 
 		<!-- Google Analytics -->
 		<script async src="https://www.googletagmanager.com/gtag/js?id=G-VVZ9P3XBLP"></script>
