@@ -23,6 +23,7 @@ import RecentResultsCarousel from "../features/home/components/RecentResultsCaro
 import Sponsors from "../features/home/components/Sponsors";
 import StatsLeadersSection from "../features/home/components/StatsLeadersSection";
 import MediaGallery from "../features/media/components/MediaGallery";
+import HomepageIntro from "../features/home/components/HomepageIntro.astro";
 import FeatureGate from "../components/FeatureGate.astro";
 import { isFeatureEnabled } from "../lib/feature-flags";
 import PageLoader from "../components/PageLoader";
@@ -202,6 +203,9 @@ import PageLoader from "../components/PageLoader";
         </div>
       </section>
 
+      <!-- Homepage Intro (editable in admin -> Settings -> Homepage Intro) -->
+      <HomepageIntro />
+
       <!-- Registration CTA Section -->
       <FeatureGate feature="home.registrationCta">
         <section
@@ -219,8 +223,8 @@ import PageLoader from "../components/PageLoader";
                 </a>
               </h2>
               <p class="registration-description">
-                Be part of the premier basketball league. Join us today and
-                elevate your game!
+                Be part of Elevate Ballers, Kenya's premier basketball league.
+                Join us today and elevate your game!
               </p>
               <a
                 class="btn btn-secondary btn-lg"
