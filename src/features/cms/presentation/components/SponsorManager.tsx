@@ -17,6 +17,18 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import ImageUpload from '@/components/ImageUpload';
 
+// Sponsor `link` may be saved without a protocol (e.g. "example.com") or as
+// junk text — both crash `new URL()`. Show the cleanest hostname we can,
+// falling back to the raw string instead of taking down the whole table.
+function safeHostname(link: string): string {
+  try {
+    const withProtocol = /^https?:\/\//i.test(link) ? link : `https://${link}`;
+    return new URL(withProtocol).hostname;
+  } catch {
+    return link;
+  }
+}
+
 export default function SponsorManager() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -320,7 +332,7 @@ export default function SponsorManager() {
                         {s.link && (
                           <div className="text-xs text-muted-foreground flex items-center gap-1">
                             {ExternalLinkIcon && <ExternalLinkIcon size={10} />}
-                            {new URL(s.link).hostname}
+                            {safeHostname(s.link)}
                           </div>
                         )}
                       </TableCell>
