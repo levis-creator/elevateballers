@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { sponsors as staticSponsors } from '../../data/homeData';
 
 interface Sponsor {
   id: string;
@@ -23,14 +22,13 @@ export default function Sponsors() {
         const response = await fetch('/api/highlights/sponsors?active=true');
         if (response.ok) {
           const data = await response.json();
-          // Map API data to component needs if necessary, otherwise use as is
-          setSponsors(data.length > 0 ? data : staticSponsors);
+          setSponsors(Array.isArray(data) ? data : []);
         } else {
-          setSponsors(staticSponsors as any);
+          setSponsors([]);
         }
       } catch (error) {
         console.error('Error fetching sponsors:', error);
-        setSponsors(staticSponsors as any);
+        setSponsors([]);
       } finally {
         setLoading(false);
       }
@@ -102,58 +100,56 @@ export default function Sponsors() {
     };
   }, [loading, sponsors]);
 
-  if (loading) {
-    return (
-      <div style={{ height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p>Loading sponsors...</p>
-      </div>
-    );
-  }
+  // Hide the entire section when there's nothing to show — including during the
+  // initial fetch — so the page never reserves empty grey space for sponsors.
+  if (loading || sponsors.length === 0) return null;
 
   return (
-    <>
-      <h2 style={{ fontSize: '50px', textAlign: 'center' }} className="vc_custom_heading">
-        Our Sponsors
-      </h2>
-      <div className="stm-image-carousel stm-images-carousel-sponsors">
-        <div className="clearfix">
-          <div className="stm-carousel-controls-right stm-image-controls" style={{ display: 'none' }}>
-            <div className="stm-carousel-control-prev">
-              <i className="fa fa-angle-left" />
-            </div>
-            <div className="stm-carousel-control-next">
-              <i className="fa fa-angle-right" />
+    <section className="sponsors-section section" aria-label="Our sponsors">
+      <div className="container">
+        <h2 style={{ fontSize: '50px', textAlign: 'center' }} className="vc_custom_heading">
+          Our Sponsors
+        </h2>
+        <div className="stm-image-carousel stm-images-carousel-sponsors">
+          <div className="clearfix">
+            <div className="stm-carousel-controls-right stm-image-controls" style={{ display: 'none' }}>
+              <div className="stm-carousel-control-prev">
+                <i className="fa fa-angle-left" />
+              </div>
+              <div className="stm-carousel-control-next">
+                <i className="fa fa-angle-right" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="stm-image-carousel-init-unit">
-          <div ref={carouselRef} className="stm-image-carousel-init">
-            {sponsors.map((sponsor) => (
-              <div key={sponsor.id} className="stm-single-image-carousel">
-                {sponsor.link ? (
-                  <a href={sponsor.link} target="_blank" rel="noopener noreferrer">
+          <div className="stm-image-carousel-init-unit">
+            <div ref={carouselRef} className="stm-image-carousel-init">
+              {sponsors.map((sponsor) => (
+                <div key={sponsor.id} className="stm-single-image-carousel">
+                  {sponsor.link ? (
+                    <a href={sponsor.link} target="_blank" rel="noopener noreferrer">
+                      <img
+                        decoding="async"
+                        src={sponsor.image}
+                        alt={sponsor.name}
+                        title={sponsor.name}
+                      />
+                    </a>
+                  ) : (
                     <img
                       decoding="async"
                       src={sponsor.image}
                       alt={sponsor.name}
                       title={sponsor.name}
                     />
-                  </a>
-                ) : (
-                  <img
-                    decoding="async"
-                    src={sponsor.image}
-                    alt={sponsor.name}
-                    title={sponsor.name}
-                  />
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </>
+    </section>
   );
 }
 

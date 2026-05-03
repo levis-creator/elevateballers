@@ -196,12 +196,8 @@ import PageLoader from "../components/PageLoader";
         </section>
       </FeatureGate>
 
-      <!-- Sponsors Section -->
-      <section class="sponsors-section section" aria-label="Our sponsors">
-        <div class="container">
-          <Sponsors client:load />
-        </div>
-      </section>
+      <!-- Sponsors Section (renders only if there are active sponsors) -->
+      <Sponsors client:load />
 
       <!-- Homepage Intro (editable in admin -> Settings -> Homepage Intro) -->
       <HomepageIntro />
