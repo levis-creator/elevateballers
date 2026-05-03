@@ -27,11 +27,36 @@ import HomepageIntro from "../features/home/components/HomepageIntro.astro";
 import FeatureGate from "../components/FeatureGate.astro";
 import { isFeatureEnabled } from "../lib/feature-flags";
 import PageLoader from "../components/PageLoader";
+import { getAllSiteSettings } from "../features/cms/lib/queries";
+
+// Editable in admin → Settings → SEO. Defaults match the previously
+// hardcoded values so behaviour is unchanged until an admin overrides them.
+const DEFAULT_SEO_TITLE =
+  "Elevate Ballers - Kenya's Premier Basketball League";
+const DEFAULT_SEO_DESCRIPTION =
+  "Elevate Ballers is Kenya's premier basketball league. Follow live standings, rising stars, match results, and join our growing basketball community in Nairobi.";
+const DEFAULT_SEO_IMAGE = "/images/Elevate_Icon-200x200.png";
+
+let seoTitle = DEFAULT_SEO_TITLE;
+let seoDescription = DEFAULT_SEO_DESCRIPTION;
+let seoImage = DEFAULT_SEO_IMAGE;
+
+try {
+  const seoSettings = await getAllSiteSettings("seo");
+  for (const s of seoSettings) {
+    if (s.key === "seo_homepage_title" && s.value) seoTitle = s.value;
+    if (s.key === "seo_homepage_description" && s.value) seoDescription = s.value;
+    if (s.key === "seo_homepage_image" && s.value) seoImage = s.value;
+  }
+} catch (err) {
+  console.error("[index.astro] failed to load SEO settings, using defaults:", err);
+}
 ---
 
 <Layout
-  title="Elevate Ballers - Kenya's Premier Basketball League"
-  description="Elevate Ballers is Kenya's premier basketball league. Follow live standings, rising stars, match results, and join our growing basketball community."
+  title={seoTitle}
+  description={seoDescription}
+  image={seoImage}
   canonicalURL={`${Astro.url.origin}/`}
   type="website"
 >
@@ -45,10 +70,9 @@ import PageLoader from "../components/PageLoader";
           "@type": "WebPage",
           "@id": `${Astro.url.origin}/`,
           url: `${Astro.url.origin}/`,
-          name: "Elevate Ballers - Kenya's Premier Basketball League",
+          name: seoTitle,
           isPartOf: { "@id": `${Astro.url.origin}/#website` },
-          description:
-            "Elevate Ballers is Kenya's premier basketball league. Follow live standings, rising stars, match results, and join our growing basketball community.",
+          description: seoDescription,
           breadcrumb: { "@id": `${Astro.url.origin}/#breadcrumb` },
           inLanguage: "en-US",
         },

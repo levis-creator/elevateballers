@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon } from 'lucide-react';
+import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, SearchIcon } from 'lucide-react';
 import { PermissionProvider } from '@/features/rbac/usePermissions';
 import BannerSettingsEditor from './BannerSettingsEditor';
 import ContactSettingsEditor from './ContactSettingsEditor';
 import AboutPageEditor from './AboutPageEditor';
 import HomepageIntroEditor from './HomepageIntroEditor';
+import SeoSettingsEditor from './SeoSettingsEditor';
 import RulesSettingsEditor from './RulesSettingsEditor';
 import MatchSettingsEditor from './MatchSettingsEditor';
 
-type Tab = 'header' | 'contact' | 'homepage' | 'about' | 'rules' | 'matches';
+type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches';
 
 const NAV_ITEMS: { value: Tab; label: string; Icon: React.ElementType }[] = [
   { value: 'header',   label: 'Header',           Icon: ImageIcon    },
   { value: 'contact',  label: 'Contact & Social', Icon: PhoneIcon    },
   { value: 'homepage', label: 'Homepage Intro',   Icon: HomeIcon     },
+  { value: 'seo',      label: 'SEO',              Icon: SearchIcon   },
   { value: 'about',    label: 'About Page',       Icon: InfoIcon     },
   { value: 'rules',    label: 'Rules Page',       Icon: BookOpenIcon },
   { value: 'matches',  label: 'Matches',          Icon: TrophyIcon   },
@@ -53,6 +55,7 @@ export default function SettingsTabs() {
           {active === 'header'   && <BannerSettingsEditor />}
           {active === 'contact'  && <ContactSettingsEditor />}
           {active === 'homepage' && <HomepageIntroEditor />}
+          {active === 'seo'      && <SeoSettingsEditor />}
           {active === 'about'    && <AboutPageEditor />}
           {active === 'rules'    && <RulesSettingsEditor />}
           {active === 'matches'  && <MatchSettingsEditor />}

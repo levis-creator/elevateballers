@@ -165,7 +165,7 @@ export default function MediaGallery() {
                     <div className={styles.unsplashImageWrapper}>
                       <img
                         src={item.thumbnail || item.url}
-                        alt={item.title}
+                        alt={item.title || 'Media gallery item'}
                         className={styles.unsplashImage}
                         loading="lazy"
                       />
