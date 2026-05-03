@@ -307,11 +307,12 @@ try {
     <div class="sportspress"><div class="sp-sponsors"></div></div>
   </div>
 
-  <!-- Legacy Scripts -->
+  <!-- Legacy Scripts (jQuery is loaded with `defer` in Layout.astro, so we
+       must wait for DOMContentLoaded before assuming it's available.) -->
   <script is:inline type="text/javascript">
-    (function () {
+    document.addEventListener("DOMContentLoaded", function () {
       if (typeof jQuery !== "undefined") {
-        jQuery(document).ready(function ($) {
+        jQuery(function ($) {
           var header = $(".sp-header");
           var sponsors = $(".sp-header-sponsors");
           if (header.length && sponsors.length) {
@@ -319,7 +320,7 @@ try {
           }
         });
       }
-    })();
+    });
   </script>
 
   <script is:inline>

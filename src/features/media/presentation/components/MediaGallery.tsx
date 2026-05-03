@@ -5,6 +5,7 @@ import MasonryGrid from '../../../../shared/components/ui/MasonryGrid';
 import { useMediaStore } from '../../stores/useMediaStore';
 import styles from './MediaGallery.module.css';
 import { Play, Music, Image as ImageIcon } from 'lucide-react';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 interface FeaturedMediaItem {
   id: string;
@@ -164,7 +165,7 @@ export default function MediaGallery() {
                   >
                     <div className={styles.unsplashImageWrapper}>
                       <img
-                        src={item.thumbnail || item.url}
+                        src={optimizeImageUrl(item.thumbnail || item.url, { width: 600 })}
                         alt={item.title || 'Media gallery item'}
                         className={styles.unsplashImage}
                         loading="lazy"

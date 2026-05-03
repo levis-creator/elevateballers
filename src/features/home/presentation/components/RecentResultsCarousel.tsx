@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { formatMatchDate } from '@/features/matches/lib/utils';
 import { getLeagueName } from '@/features/matches/lib/league-helpers';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 // The API includes the full team relation so logos/names from the relation
 // take priority over the denormalised match-level fields.
@@ -103,7 +104,7 @@ export default function RecentResultsCarousel() {
               <div className="team-entry team-home">
                 <div className="logo-wrap">
                   {logo1 ? (
-                    <img src={logo1} alt={name1 || 'Home team logo'} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={optimizeImageUrl(logo1, { width: 160 })} alt={name1 || 'Home team logo'} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     <div className="initials">{name1.substring(0, 2).toUpperCase()}</div>
                   )}
@@ -125,7 +126,7 @@ export default function RecentResultsCarousel() {
                 <span className="name">{name2}</span>
                 <div className="logo-wrap">
                   {logo2 ? (
-                    <img src={logo2} alt={name2 || 'Away team logo'} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={optimizeImageUrl(logo2, { width: 160 })} alt={name2 || 'Away team logo'} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     <div className="initials">{name2.substring(0, 2).toUpperCase()}</div>
                   )}

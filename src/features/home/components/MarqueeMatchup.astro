@@ -8,6 +8,7 @@ import {
   getTeamInitials,
 } from "@/features/matches/lib/team-helpers";
 import { getChampionships, getNextMatch } from "@/features/matches/lib/queries";
+import { optimizeImageUrl } from "@/lib/image-cdn";
 
 let match: any = null;
 
@@ -44,7 +45,7 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
         <div class="mq-team mq-team--home">
           <div class="mq-logo-wrap">
             {team1Logo
-              ? <img src={team1Logo} alt={team1Name || 'Home team logo'} loading="lazy" />
+              ? <img src={optimizeImageUrl(team1Logo, { width: 200 })} alt={team1Name || 'Home team logo'} loading="lazy" />
               : <span class="mq-initials">{team1Initials}</span>
             }
           </div>
@@ -63,7 +64,7 @@ const team2Initials = team2Name ? getTeamInitials(team2Name) : "";
         <div class="mq-team mq-team--away">
           <div class="mq-logo-wrap">
             {team2Logo
-              ? <img src={team2Logo} alt={team2Name || 'Away team logo'} loading="lazy" />
+              ? <img src={optimizeImageUrl(team2Logo, { width: 200 })} alt={team2Name || 'Away team logo'} loading="lazy" />
               : <span class="mq-initials">{team2Initials}</span>
             }
           </div>
