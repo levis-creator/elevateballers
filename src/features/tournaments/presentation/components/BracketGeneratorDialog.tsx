@@ -74,6 +74,7 @@ export default function BracketGeneratorDialog({
     if (isOpen) {
       fetchTeams();
       fetchSeason();
+      fetchSeasonParticipants();
       // Set default to tomorrow
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -100,6 +101,22 @@ export default function BracketGeneratorDialog({
       }
     } catch (err) {
       console.error('Failed to fetch season:', err);
+    }
+  };
+
+  // Pre-select the season's registered teams so the admin doesn't re-pick them.
+  const fetchSeasonParticipants = async () => {
+    if (!seasonId) return;
+    try {
+      const response = await fetch(`/api/seasons/${seasonId}/teams`);
+      if (response.ok) {
+        const participants = (await response.json()) as Team[];
+        if (participants.length > 0) {
+          setSelectedTeamIds(new Set(participants.map((t) => t.id)));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch season participants:', err);
     }
   };
 

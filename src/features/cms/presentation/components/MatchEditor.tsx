@@ -8,6 +8,7 @@ import MatchPlayersManager from './MatchPlayersManager';
 import MatchEventsManager from './MatchEventsManager';
 import MatchImagesManager from './MatchImagesManager';
 import TeamSelect from './TeamSelect';
+import CreateSeasonDialog from './CreateSeasonDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Save, X, AlertCircle, Trophy, Calendar, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, X, AlertCircle, Trophy, Calendar, RefreshCw, Loader2, Plus, CheckCircle2, Users } from 'lucide-react';
 
 // Constants moved outside component to prevent recreation on each render
 const MATCH_STATUSES: MatchStatus[] = ['UPCOMING', 'LIVE', 'COMPLETED'];
@@ -124,7 +125,24 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
   const [leaguesLoading, setLeaguesLoading] = useState(false);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonsLoading, setSeasonsLoading] = useState(false);
+  // Teams registered to the selected season. When present, the team pickers
+  // narrow to these instead of the full team list. Editing an existing match
+  // defaults to showing all teams so a non-participant/guest selection stays
+  // visible; creating defaults to the narrowed list.
+  const [seasonTeams, setSeasonTeams] = useState<Team[]>([]);
+  const [showAllTeams, setShowAllTeams] = useState(!!matchId);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Tracks which submit button was pressed: 'close' redirects after saving,
+  // 'again' resets the form in place so the admin can add the next fixture
+  // without a page reload. Both buttons are type="submit"; each sets this ref
+  // before the form's onSubmit fires.
+  const submitModeRef = useRef<'close' | 'again'>('close');
+  // Number of matches created via "Save & add another" this session, shown as
+  // a lightweight progress indicator above the form.
+  const [addedCount, setAddedCount] = useState(0);
+  // Controls the inline "create season" modal opened from the + button next to
+  // the season selector (Filament-style createOptionForm).
+  const [seasonDialogOpen, setSeasonDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     team1Id: '',
     team1Name: '',
@@ -156,6 +174,20 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
       logError('Failed to fetch seasons:', err);
     } finally {
       setSeasonsLoading(false);
+    }
+  }, []);
+
+  const fetchSeasonTeams = useCallback(async (seasonId: string) => {
+    try {
+      const response = await fetch(`/api/seasons/${seasonId}/teams`);
+      if (response.ok) {
+        setSeasonTeams((await response.json()) as Team[]);
+      } else {
+        setSeasonTeams([]);
+      }
+    } catch (err: unknown) {
+      logError('Failed to fetch season teams:', err);
+      setSeasonTeams([]);
     }
   }, []);
 
@@ -417,16 +449,47 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.leagueId]);
 
+  // Load the season's registered teams whenever the selected season changes.
+  useEffect(() => {
+    if (formData.seasonId) {
+      fetchSeasonTeams(formData.seasonId);
+    } else {
+      setSeasonTeams([]);
+    }
+  }, [formData.seasonId, fetchSeasonTeams]);
+
+  // Base team list for the pickers: narrow to the season's registered teams
+  // when a season is selected and has participants (and "Show all" is off).
+  // Always keep any already-selected team visible so editing never hides a
+  // current pick, and fall back to the full list if the season has no teams.
+  const baseTeams = useMemo(() => {
+    const useAll = showAllTeams || !formData.seasonId || seasonTeams.length === 0;
+    if (useAll) return teams;
+
+    const byId = new Map<string, Team | TeamWithPlayerCount>(
+      seasonTeams.map((t) => [t.id, t])
+    );
+    for (const id of [formData.team1Id, formData.team2Id]) {
+      if (id && !byId.has(id)) {
+        const selected = teams.find((t) => t.id === id);
+        if (selected) byId.set(id, selected);
+      }
+    }
+    return [...byId.values()];
+  }, [showAllTeams, formData.seasonId, formData.team1Id, formData.team2Id, teams, seasonTeams]);
+
+  const isNarrowed = !showAllTeams && !!formData.seasonId && seasonTeams.length > 0;
+
   // Filter teams to exclude the selected team from the other team's options
   const team1Options = useMemo(() => {
-    if (!formData.team2Id) return teams;
-    return teams.filter((team) => team.id !== formData.team2Id);
-  }, [teams, formData.team2Id]);
+    if (!formData.team2Id) return baseTeams;
+    return baseTeams.filter((team) => team.id !== formData.team2Id);
+  }, [baseTeams, formData.team2Id]);
 
   const team2Options = useMemo(() => {
-    if (!formData.team1Id) return teams;
-    return teams.filter((team) => team.id !== formData.team1Id);
-  }, [teams, formData.team1Id]);
+    if (!formData.team1Id) return baseTeams;
+    return baseTeams.filter((team) => team.id !== formData.team1Id);
+  }, [baseTeams, formData.team1Id]);
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
@@ -442,6 +505,11 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
     // League validation
     if (!formData.leagueId) {
       errors.push('League is required');
+    }
+
+    // Season validation
+    if (!formData.seasonId) {
+      errors.push('Season is required');
     }
 
     // Date validation
@@ -563,8 +631,35 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
         throw new Error(errorData.error || 'Failed to save match');
       }
 
-      // Redirect to matches list
-      window.location.href = '/admin/matches';
+      // "Save & add another" (create mode only): keep the admin on the page and
+      // reset just the per-match fields so they can enter the next fixture. The
+      // league, season, stage, status and date carry over as context.
+      if (!matchId && submitModeRef.current === 'again') {
+        setFormData((prev) => ({
+          ...prev,
+          team1Id: '',
+          team1Name: '',
+          team1Logo: '',
+          team2Id: '',
+          team2Name: '',
+          team2Logo: '',
+          team1Score: '',
+          team2Score: '',
+          duration: '',
+        }));
+        setAddedCount((count) => count + 1);
+        // Return focus to the first team picker for rapid sequential entry.
+        if (typeof document !== 'undefined') {
+          requestAnimationFrame(() => document.getElementById('team1Id')?.focus());
+        }
+        return;
+      }
+
+      // Normal save: return to the season's match list when a season is set so
+      // the admin keeps their place, otherwise fall back to the global list.
+      window.location.href = formData.seasonId
+        ? `/admin/seasons/${formData.seasonId}/matches`
+        : '/admin/matches';
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save match';
       setErrors((prev) => ({ ...prev, save: message }));
@@ -605,6 +700,17 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
         </Button>
       </div>
 
+      {addedCount > 0 && (
+        <Alert className="border-green-500/50 text-green-700 dark:text-green-400 [&>svg]:text-green-600">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>
+            {addedCount} {addedCount === 1 ? 'match' : 'matches'} added
+            {formData.seasonId ? ' to this season' : ''}. Enter the next fixture below, or use{' '}
+            <span className="font-medium">Create Match</span> to finish.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {(errors.teams || errors.leagues || errors.match || errors.save) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -631,8 +737,24 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
             <div className="flex items-center justify-between">
               <div>
             <CardTitle>Teams</CardTitle>
-            <CardDescription>Select teams or enter custom team information</CardDescription>
+            <CardDescription>
+              {isNarrowed
+                ? "Showing this season's teams"
+                : 'Select teams or enter custom team information'}
+            </CardDescription>
               </div>
+              {formData.seasonId && seasonTeams.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllTeams((v) => !v)}
+                  disabled={saving || loading}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {showAllTeams ? 'Show season teams' : 'Show all teams'}
+                </Button>
+              )}
               {!teamsLoading && (teams.length === 0 || errors.teams) && (
                 <Button
                   type="button"
@@ -756,24 +878,40 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="seasonId">Season</Label>
-              <Select
-                value={formData.seasonId || "__none"}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, seasonId: value === "__none" ? "" : value }))}
-                disabled={saving || loading || !formData.leagueId}
-              >
-                <SelectTrigger id="seasonId">
-                  <SelectValue placeholder={formData.leagueId ? "Select a season" : "Select a league first"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">No Season</SelectItem>
-                  {seasons.map((season) => (
-                    <SelectItem key={season.id} value={season.id}>
-                      {season.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="seasonId">
+                Season <span className="text-destructive">*</span>
+              </Label>
+              <div className="flex gap-2">
+                <Select
+                  value={formData.seasonId}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, seasonId: value }))}
+                  required
+                  disabled={saving || loading || !formData.leagueId}
+                >
+                  <SelectTrigger id="seasonId" className="flex-1">
+                    <SelectValue placeholder={formData.leagueId ? "Select a season" : "Select a league first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seasons.map((season) => (
+                      <SelectItem key={season.id} value={season.id}>
+                        {season.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => setSeasonDialogOpen(true)}
+                  disabled={saving || loading}
+                  title="Create a new season"
+                  aria-label="Create a new season"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
               {!formData.leagueId && (
                 <p className="text-sm text-muted-foreground">
                   Select a league first to choose a season
@@ -881,8 +1019,14 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
           </CardContent>
         </Card>
 
-        <div className="flex gap-3 pt-4">
-          <Button type="submit" disabled={saving || loading}>
+        <div className="flex flex-wrap gap-3 pt-4">
+          <Button
+            type="submit"
+            disabled={saving || loading}
+            onClick={() => {
+              submitModeRef.current = 'close';
+            }}
+          >
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -895,6 +1039,19 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
               </>
             )}
           </Button>
+          {!matchId && (
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={saving || loading}
+              onClick={() => {
+                submitModeRef.current = 'again';
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Save &amp; add another
+            </Button>
+          )}
           <Button type="button" variant="outline" asChild>
             <a href="/admin/matches" data-astro-prefetch>
               <X className="mr-2 h-4 w-4" />
@@ -926,6 +1083,19 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
           </div>
         </>
       )}
+
+      <CreateSeasonDialog
+        leagueId={formData.leagueId}
+        open={seasonDialogOpen}
+        onOpenChange={setSeasonDialogOpen}
+        onCreated={(season) => {
+          // Add the new season to the dropdown and select it immediately.
+          setSeasons((prev) =>
+            prev.some((s) => s.id === season.id) ? prev : [season, ...prev]
+          );
+          setFormData((prev) => ({ ...prev, seasonId: season.id }));
+        }}
+      />
     </div>
   );
 }
