@@ -35,7 +35,19 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
     leagueId: '',
     active: true,
     bracketType: '' as 'single' | 'double' | '',
+    registrationOpensAt: '',
+    registrationClosesAt: '',
   });
+
+  // Converts a stored ISO/Date value into the local "YYYY-MM-DDTHH:mm" string
+  // that a datetime-local input expects (empty string when unset).
+  const toDateTimeLocal = (value: string | Date | null | undefined) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  };
 
   useEffect(() => {
     fetchLeagues();
@@ -74,6 +86,8 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
         leagueId: leagueId,
         active: season.active,
         bracketType: (season as any).bracketType || '',
+        registrationOpensAt: toDateTimeLocal((season as any).registrationOpensAt),
+        registrationClosesAt: toDateTimeLocal((season as any).registrationClosesAt),
       });
     } catch (err: any) {
       setError(err.message || 'Failed to load season');
@@ -309,10 +323,42 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
               <div className="flex items-start gap-2 text-sm text-muted-foreground">
                 <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  This will be used as the default bracket type when generating tournament brackets for this season. 
+                  This will be used as the default bracket type when generating tournament brackets for this season.
                   You can override this when generating brackets.
                 </p>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="registrationOpensAt">Registration Opens At</Label>
+                <Input
+                  id="registrationOpensAt"
+                  type="datetime-local"
+                  value={formData.registrationOpensAt}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, registrationOpensAt: e.target.value }))}
+                  disabled={saving}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="registrationClosesAt">Registration Deadline</Label>
+                <Input
+                  id="registrationClosesAt"
+                  type="datetime-local"
+                  value={formData.registrationClosesAt}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, registrationClosesAt: e.target.value }))}
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <p>
+                Optional. These narrow the league's registration window for this season — registration must be
+                open at both the league and season level. Leave empty to use only the league's window.
+              </p>
             </div>
           </CardContent>
         </Card>

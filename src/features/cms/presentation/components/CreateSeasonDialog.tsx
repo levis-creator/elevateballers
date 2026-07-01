@@ -29,7 +29,7 @@ interface CreateSeasonDialogProps {
   onCreated: (season: Season) => void;
 }
 
-const EMPTY = { name: '', startDate: '', endDate: '', bracketType: '' };
+const EMPTY = { name: '', startDate: '', endDate: '', bracketType: '', registrationOpensAt: '', registrationClosesAt: '' };
 
 /**
  * Inline "create season" modal, in the spirit of Laravel Filament's
@@ -76,6 +76,8 @@ export default function CreateSeasonDialog({
           endDate: form.endDate,
           leagueId,
           bracketType: form.bracketType || undefined,
+          registrationOpensAt: form.registrationOpensAt || undefined,
+          registrationClosesAt: form.registrationClosesAt || undefined,
         }),
       });
 
@@ -183,6 +185,32 @@ export default function CreateSeasonDialog({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-season-reg-opens">Registration Opens At</Label>
+              <Input
+                id="new-season-reg-opens"
+                type="datetime-local"
+                value={form.registrationOpensAt}
+                onChange={(e) => setForm((p) => ({ ...p, registrationOpensAt: e.target.value }))}
+                disabled={saving}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-season-reg-closes">Registration Deadline</Label>
+              <Input
+                id="new-season-reg-closes"
+                type="datetime-local"
+                value={form.registrationClosesAt}
+                onChange={(e) => setForm((p) => ({ ...p, registrationClosesAt: e.target.value }))}
+                disabled={saving}
+              />
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Optional. Narrows the league's registration window for this season. Leave empty to inherit the league's window.
+          </p>
         </div>
 
         <DialogFooter>

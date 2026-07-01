@@ -224,6 +224,9 @@ export type CreateLeagueInput = {
   description?: string;
   logo?: string;
   active?: boolean;
+  registrationOpen?: boolean; // Master switch for public registration
+  registrationOpensAt?: Date | null; // Optional: registration opens at this time
+  registrationClosesAt?: Date | null; // Optional: registration deadline
 };
 
 export type UpdateLeagueInput = Partial<CreateLeagueInput>;
@@ -236,6 +239,8 @@ export type CreateSeasonInput = {
   endDate: Date;
   leagueId: string; // Required - Season must belong to a League
   active?: boolean;
+  registrationOpensAt?: Date | null; // Optional: narrows the league's window
+  registrationClosesAt?: Date | null; // Optional: season registration deadline
   bracketType?: 'single' | 'double'; // Tournament bracket format
 };
 

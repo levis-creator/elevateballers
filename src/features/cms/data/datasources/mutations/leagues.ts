@@ -8,6 +8,23 @@ function slugify(name: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+/**
+ * Normalizes a datetime input for the DB: `undefined` = leave unchanged,
+ * `null`/`''` = clear, anything else = a Date. Keeps out-of-format values
+ * (e.g. datetime-local "2026-07-02T12:00") from reaching Prisma raw.
+ */
+function toDbDate(value: Date | string | null | undefined): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  return new Date(value);
+}
+
+/** Coerces the registration window fields on a league input in place. */
+function normalizeRegistrationDates(data: { registrationOpensAt?: unknown; registrationClosesAt?: unknown }): void {
+  if ('registrationOpensAt' in data) data.registrationOpensAt = toDbDate(data.registrationOpensAt as any);
+  if ('registrationClosesAt' in data) data.registrationClosesAt = toDbDate(data.registrationClosesAt as any);
+}
+
 export async function createLeague(data: CreateLeagueInput): Promise<League> {
   let slug = data.slug || slugify(data.name);
   let uniqueSlug = slug;
@@ -17,6 +34,7 @@ export async function createLeague(data: CreateLeagueInput): Promise<League> {
     counter++;
   }
 
+  normalizeRegistrationDates(data);
   const league = await prisma.league.create({ data: { ...data, slug: uniqueSlug } });
 
   if (league.logo) {
@@ -44,6 +62,7 @@ export async function updateLeague(id: string, data: UpdateLeagueInput): Promise
       data.slug = uniqueSlug;
     }
 
+    normalizeRegistrationDates(data);
     const existing = await prisma.league.findUnique({ where: { id }, select: { logo: true } });
     const league = await prisma.league.update({ where: { id }, data });
 

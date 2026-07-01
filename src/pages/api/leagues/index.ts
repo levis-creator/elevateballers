@@ -43,10 +43,10 @@ export const POST: APIRoute = async ({ request }) => {
       slug: data.slug,
       description: data.description,
       logo: data.logo,
-      season: data.season,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
       active: data.active !== undefined ? data.active : true,
+      registrationOpen: data.registrationOpen,
+      registrationOpensAt: data.registrationOpensAt,
+      registrationClosesAt: data.registrationClosesAt,
     });
 
     await logAudit(request, 'LEAGUE_CREATED', {
