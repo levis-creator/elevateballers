@@ -55,6 +55,9 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
     description: '',
     logo: '',
     active: true,
+    registrationOpen: true,
+    registrationOpensAt: '',
+    registrationClosesAt: '',
   });
 
   // Seasons state
@@ -71,6 +74,8 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
     endDate: '',
     active: true,
     bracketType: '' as 'single' | 'double' | '',
+    registrationOpensAt: '',
+    registrationClosesAt: '',
   });
   const [seasonSaving, setSeasonSaving] = useState(false);
   const [seasonFormError, setSeasonFormError] = useState('');
@@ -96,6 +101,9 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
         description: league.description || '',
         logo: league.logo || '',
         active: league.active,
+        registrationOpen: (league as any).registrationOpen ?? true,
+        registrationOpensAt: toDateTimeLocal((league as any).registrationOpensAt),
+        registrationClosesAt: toDateTimeLocal((league as any).registrationClosesAt),
       });
     } catch (err: any) {
       setError(err.message || 'Failed to load league');
@@ -136,6 +144,10 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
         description: formData.description || undefined,
         logo: formData.logo || undefined,
         active: formData.active,
+        registrationOpen: formData.registrationOpen,
+        // '' clears the value on the server; a datetime-local string becomes a Date
+        registrationOpensAt: formData.registrationOpensAt,
+        registrationClosesAt: formData.registrationClosesAt,
       };
 
       const response = await fetch(url, {
@@ -169,6 +181,8 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
       endDate: '',
       active: true,
       bracketType: '',
+      registrationOpensAt: '',
+      registrationClosesAt: '',
     });
     setSeasonFormError('');
     setShowSeasonEditor(true);
@@ -188,6 +202,8 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
         endDate: new Date(season.endDate).toISOString().slice(0, 10),
         active: season.active,
         bracketType: (season as any).bracketType || '',
+        registrationOpensAt: toDateTimeLocal((season as any).registrationOpensAt),
+        registrationClosesAt: toDateTimeLocal((season as any).registrationClosesAt),
       });
       setEditingSeasonId(id);
       setSeasonFormError('');
@@ -265,6 +281,16 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  // Converts a stored ISO/Date value into the local "YYYY-MM-DDTHH:mm" string
+  // that a datetime-local input expects (empty string when unset).
+  const toDateTimeLocal = (value: string | Date | null | undefined) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
   };
 
   const handleViewSeasonMatches = (seasonId: string) => {
@@ -487,6 +513,63 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
                       <SelectItem value="false">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Registration</CardTitle>
+              <CardDescription>
+                Control whether the public can register for this league and set an optional window.
+                Seasons can narrow this window further.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="registrationOpen">Registration</Label>
+                <Select
+                  value={formData.registrationOpen ? 'true' : 'false'}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, registrationOpen: value === 'true' }))}
+                  disabled={saving}
+                >
+                  <SelectTrigger id="registrationOpen">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Open</SelectItem>
+                    <SelectItem value="false">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Master switch. When closed, registration is blocked regardless of the dates below.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="registrationOpensAt">Opens At</Label>
+                  <Input
+                    id="registrationOpensAt"
+                    type="datetime-local"
+                    value={formData.registrationOpensAt}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, registrationOpensAt: e.target.value }))}
+                    disabled={saving || !formData.registrationOpen}
+                  />
+                  <p className="text-sm text-muted-foreground">Optional. Leave empty for no start limit.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="registrationClosesAt">Deadline (Closes At)</Label>
+                  <Input
+                    id="registrationClosesAt"
+                    type="datetime-local"
+                    value={formData.registrationClosesAt}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, registrationClosesAt: e.target.value }))}
+                    disabled={saving || !formData.registrationOpen}
+                  />
+                  <p className="text-sm text-muted-foreground">Optional. Leave empty for no deadline.</p>
                 </div>
               </div>
             </CardContent>
@@ -800,10 +883,42 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
               <div className="flex items-start gap-2 text-sm text-muted-foreground">
                 <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <p>
-                  Bracket type will be used as the default when generating tournament brackets for this season. 
+                  Bracket type will be used as the default when generating tournament brackets for this season.
                   You can override this when generating brackets.
                 </p>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="season-reg-opens">Registration Opens At</Label>
+                <Input
+                  id="season-reg-opens"
+                  type="datetime-local"
+                  value={seasonFormData.registrationOpensAt}
+                  onChange={(e) => setSeasonFormData((prev) => ({ ...prev, registrationOpensAt: e.target.value }))}
+                  disabled={seasonSaving}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="season-reg-closes">Registration Deadline</Label>
+                <Input
+                  id="season-reg-closes"
+                  type="datetime-local"
+                  value={seasonFormData.registrationClosesAt}
+                  onChange={(e) => setSeasonFormData((prev) => ({ ...prev, registrationClosesAt: e.target.value }))}
+                  disabled={seasonSaving}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <p>
+                Optional. These narrow the league's registration window for this season — registration must be
+                open at both the league and season level. Leave empty to use only the league's window.
+              </p>
             </div>
 
             <DialogFooter>

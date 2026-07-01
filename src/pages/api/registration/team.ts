@@ -5,6 +5,7 @@ import { sendTeamRegistrationAutoReply, sendAdminNotificationEmail } from '../..
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
+import { checkRegistrationOpen } from '../../../lib/registrationGate';
 
 export const prerender = false;
 
@@ -58,6 +59,15 @@ export const POST: APIRoute = async ({ request }) => {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
         }
+      );
+    }
+
+    // Enforce the league/season registration window (authoritative check)
+    const gate = await checkRegistrationOpen(data.leagueId, data.seasonId);
+    if (!gate.open) {
+      return new Response(
+        JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

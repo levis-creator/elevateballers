@@ -8,6 +8,16 @@ function slugify(name: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+/**
+ * Normalizes a datetime input for the DB: `undefined` = leave unchanged,
+ * `null`/`''` = clear, anything else = a Date.
+ */
+function toDbDate(value: Date | string | null | undefined): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  return new Date(value);
+}
+
 export async function createSeason(data: CreateSeasonInput): Promise<Season> {
   if (!data.leagueId) throw new Error('League ID is required for creating a season');
 
@@ -26,6 +36,8 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
       leagueId: data.leagueId,
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
+      registrationOpensAt: toDbDate(data.registrationOpensAt) ?? null,
+      registrationClosesAt: toDbDate(data.registrationClosesAt) ?? null,
       bracketType: data.bracketType || null,
     },
   });
@@ -62,6 +74,8 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
     if (data.startDate) updateData.startDate = new Date(data.startDate);
     if (data.endDate) updateData.endDate = new Date(data.endDate);
     if (data.leagueId) updateData.leagueId = data.leagueId;
+    if ('registrationOpensAt' in data) updateData.registrationOpensAt = toDbDate(data.registrationOpensAt);
+    if ('registrationClosesAt' in data) updateData.registrationClosesAt = toDbDate(data.registrationClosesAt);
 
     return await prisma.season.update({ where: { id }, data: updateData });
   } catch (error) {

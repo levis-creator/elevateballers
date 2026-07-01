@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react';
 import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
+import { isRegistrationOpen, registrationClosedMessage } from '../../../../lib/registration';
 
 interface League {
   id: string;
   name: string;
   slug: string;
   active: boolean;
+  registrationOpen: boolean;
+  registrationOpensAt: string | null;
+  registrationClosesAt: string | null;
+}
+
+interface Season {
+  id: string;
+  name: string;
+  registrationOpensAt: string | null;
+  registrationClosesAt: string | null;
 }
 
 interface Team {
@@ -20,6 +31,7 @@ interface TeamFormData {
   contactEmail: string;
   contactPhone: string;
   leagueId: string;
+  seasonId: string;
   additionalInfo: string;
 }
 
@@ -50,12 +62,16 @@ export default function LeagueRegistrationForm() {
   const [teamTurnstileToken, setTeamTurnstileToken] = useState<string | null>(null);
   const [playerTurnstileToken, setPlayerTurnstileToken] = useState<string | null>(null);
 
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [seasonsLoading, setSeasonsLoading] = useState(false);
+
   const [teamFormData, setTeamFormData] = useState<TeamFormData>({
     name: '',
     coachName: '',
     contactEmail: '',
     contactPhone: '',
     leagueId: '',
+    seasonId: '',
     additionalInfo: '',
   });
 
@@ -112,8 +128,46 @@ export default function LeagueRegistrationForm() {
     fetchTeams();
   }, []);
 
+  // Fetch the selected league's seasons so their registration windows apply too
+  useEffect(() => {
+    if (!teamFormData.leagueId) {
+      setSeasons([]);
+      return;
+    }
+    let cancelled = false;
+    const fetchSeasons = async () => {
+      try {
+        setSeasonsLoading(true);
+        const response = await fetch(`/api/seasons?leagueId=${teamFormData.leagueId}&activeOnly=true`);
+        if (response.ok && !cancelled) {
+          setSeasons(await response.json());
+        }
+      } catch (err) {
+        console.error('Error fetching seasons:', err);
+      } finally {
+        if (!cancelled) setSeasonsLoading(false);
+      }
+    };
+    fetchSeasons();
+    return () => {
+      cancelled = true;
+    };
+  }, [teamFormData.leagueId]);
+
+  const selectedLeague = leagues.find((l) => l.id === teamFormData.leagueId) ?? null;
+  const selectedSeason = seasons.find((s) => s.id === teamFormData.seasonId) ?? null;
+  const registrationStatus = selectedLeague
+    ? isRegistrationOpen(selectedLeague, selectedSeason)
+    : { open: true };
+  const registrationBlocked = !registrationStatus.open;
+
   const handleTeamSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (registrationBlocked) {
+      setError(registrationClosedMessage(registrationStatus));
+      return;
+    }
 
     if (!teamTurnstileToken) {
       setError('Please complete the security check before submitting.');
@@ -136,6 +190,7 @@ export default function LeagueRegistrationForm() {
           contactEmail: teamFormData.contactEmail.trim(),
           contactPhone: teamFormData.contactPhone.trim(),
           leagueId: teamFormData.leagueId || undefined,
+          seasonId: teamFormData.seasonId || undefined,
           additionalInfo: teamFormData.additionalInfo.trim() || undefined,
           'cf-turnstile-token': teamTurnstileToken,
         }),
@@ -153,6 +208,7 @@ export default function LeagueRegistrationForm() {
         contactEmail: '',
         contactPhone: '',
         leagueId: '',
+        seasonId: '',
         additionalInfo: '',
       });
       setTeamTurnstileToken(null);
@@ -228,7 +284,12 @@ export default function LeagueRegistrationForm() {
 
   const handleTeamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setTeamFormData((prev) => ({ ...prev, [name]: value }));
+    setTeamFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      // Changing the league invalidates any previously chosen season
+      ...(name === 'leagueId' ? { seasonId: '' } : {}),
+    }));
   };
 
   const handlePlayerChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -426,6 +487,51 @@ export default function LeagueRegistrationForm() {
             </select>
           </div>
 
+          {/* Season selector — narrows the league's registration window (optional) */}
+          {teamFormData.leagueId && seasons.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#363f48', fontWeight: '600' }}>
+                Season
+              </label>
+              <select
+                name="seasonId"
+                value={teamFormData.seasonId}
+                onChange={handleTeamChange}
+                disabled={seasonsLoading}
+                className="disable-select2"
+                style={{ width: '100%', padding: '12px', border: '1px solid #d8d8d8', borderRadius: '3px', fontFamily: 'Rubik', fontSize: '14px' }}
+              >
+                <option value="">All / Not season-specific</option>
+                {seasons.map((season) => (
+                  <option key={season.id} value={season.id}>
+                    {season.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Registration closed / deadline notice */}
+          {registrationBlocked && (
+            <div style={{
+              padding: '1rem 1.25rem',
+              background: '#fef3c7',
+              color: '#92400e',
+              borderRadius: '8px',
+              marginBottom: '1.5rem',
+              border: '1px solid #fde68a',
+            }}>
+              <p style={{ margin: 0, fontWeight: 500 }}>{registrationClosedMessage(registrationStatus)}</p>
+            </div>
+          )}
+
+          {/* Upcoming deadline hint while registration is still open */}
+          {!registrationBlocked && registrationStatus.closesAt && (
+            <div style={{ marginBottom: '1.5rem', color: '#6b7280', fontSize: '13px' }}>
+              Registration deadline: {new Date(registrationStatus.closesAt).toLocaleString()}
+            </div>
+          )}
+
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', color: '#363f48', fontWeight: '600' }}>
               Additional Information
@@ -450,22 +556,22 @@ export default function LeagueRegistrationForm() {
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
-              disabled={submitting || !teamTurnstileToken}
+              disabled={submitting || !teamTurnstileToken || registrationBlocked}
               className="button btn-primary btn-lg"
               style={{
-                backgroundColor: (submitting || !teamTurnstileToken) ? '#999' : '#dd3333',
+                backgroundColor: (submitting || !teamTurnstileToken || registrationBlocked) ? '#999' : '#dd3333',
                 color: '#fff',
                 border: 'none',
                 padding: '15px 40px',
                 fontFamily: 'Teko',
                 fontSize: '18px',
                 textTransform: 'uppercase',
-                cursor: (submitting || !teamTurnstileToken) ? 'not-allowed' : 'pointer',
+                cursor: (submitting || !teamTurnstileToken || registrationBlocked) ? 'not-allowed' : 'pointer',
                 borderRadius: '3px',
-                opacity: (submitting || !teamTurnstileToken) ? 0.5 : 1,
+                opacity: (submitting || !teamTurnstileToken || registrationBlocked) ? 0.5 : 1,
               } as React.CSSProperties}
             >
-              {submitting ? 'Submitting...' : 'Submit Registration'}
+              {submitting ? 'Submitting...' : registrationBlocked ? 'Registration Closed' : 'Submit Registration'}
             </button>
           </div>
         </form>
