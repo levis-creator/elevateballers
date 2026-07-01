@@ -8,38 +8,38 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
-  passwordHash  String        @map("password_hash")
-  name          String
-  active               Boolean   @default(true)
-  activatedAt          DateTime? @map("activated_at")
-  tokenVersion         Int       @default(0) @map("token_version")
-  failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
-  lockedUntil          DateTime? @map("locked_until")
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  comments      Comment[]
-  uploadedMedia Media[]       @relation("MediaUploader")
-  newsArticles  NewsArticle[]
-  userRoles     UserRole[]
-  passwordResetTokens PasswordResetToken[]
+  id                   String                   @id @default(cuid())
+  email                String                   @unique
+  passwordHash         String                   @map("password_hash")
+  name                 String
+  active               Boolean                  @default(true)
+  activatedAt          DateTime?                @map("activated_at")
+  tokenVersion         Int                      @default(0) @map("token_version")
+  failedLoginAttempts  Int                      @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime?                @map("locked_until")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  comments             Comment[]
+  uploadedMedia        Media[]                  @relation("MediaUploader")
+  newsArticles         NewsArticle[]
+  userRoles            UserRole[]
+  passwordResetTokens  PasswordResetToken[]
   notificationSettings UserNotificationSetting?
-  twoFactorOtps    TwoFactorOtp[]
-  emailHistory     UserEmailHistory[]
+  twoFactorOtps        TwoFactorOtp[]
+  emailHistory         UserEmailHistory[]
 
   @@map("users")
 }
 
 model UserNotificationSetting {
-  id         String   @id @default(cuid())
-  userId     String   @unique @map("user_id")
-  enabled    Boolean  @default(true)
-  emailEnabled Boolean @default(true) @map("email_enabled")
-  emailPreferences Json? @map("email_preferences")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  enabled          Boolean  @default(true)
+  emailEnabled     Boolean  @default(true) @map("email_enabled")
+  emailPreferences Json?    @map("email_preferences")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_notification_settings")
 }
@@ -77,13 +77,13 @@ model UserAuditLog {
 }
 
 model UserEmailHistory {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  oldEmail   String   @map("old_email")
-  newEmail   String   @map("new_email")
-  changedBy  String   @map("changed_by")
-  createdAt  DateTime @default(now()) @map("created_at")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  oldEmail  String   @map("old_email")
+  newEmail  String   @map("new_email")
+  changedBy String   @map("changed_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("user_email_history")
@@ -102,13 +102,13 @@ model TwoFactorOtp {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  tokenHash String   @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
   usedAt    DateTime? @map("used_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
@@ -219,19 +219,20 @@ model League {
 }
 
 model Season {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   slug        String
   description String?
-  startDate   DateTime @map("start_date")
-  endDate     DateTime @map("end_date")
-  active      Boolean  @default(true)
-  bracketType String?  @map("bracket_type")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  leagueId    String   @map("league_id")
+  startDate   DateTime     @map("start_date")
+  endDate     DateTime     @map("end_date")
+  active      Boolean      @default(true)
+  bracketType String?      @map("bracket_type")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  leagueId    String       @map("league_id")
   matches     Match[]
-  league      League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  league      League       @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  seasonTeams SeasonTeam[]
 
   @@unique([leagueId, slug])
   @@index([name])
@@ -342,11 +343,26 @@ model Team {
   staff              TeamStaff[]
   timeouts           Timeout[]
   teamHistory        PlayerTeamHistory[]
+  seasonTeams        SeasonTeam[]
 
   @@index([name])
   @@index([slug])
   @@index([approved])
   @@map("teams")
+}
+
+model SeasonTeam {
+  id        String   @id @default(cuid())
+  seasonId  String   @map("season_id")
+  teamId    String   @map("team_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, teamId])
+  @@index([seasonId])
+  @@index([teamId])
+  @@map("season_teams")
 }
 
 model Player {
@@ -660,13 +676,13 @@ model ContactMessage {
 }
 
 model Subscriber {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  name        String?
-  active      Boolean  @default(true)
-  token       String   @unique @default(cuid())
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  active    Boolean  @default(true)
+  token     String   @unique @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([active])
   @@index([createdAt])

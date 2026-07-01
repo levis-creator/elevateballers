@@ -21,11 +21,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, AlertCircle, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, Calendar, Clock, Trophy, Users, Eye, RefreshCw, Table2, Network } from 'lucide-react';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo } from '../../../matches/lib/team-helpers';
 import TeamLogo from '../../../matches/components/TeamLogo';
 import { getLeagueName } from '../../../matches/lib/league-helpers';
 import TournamentBracketView from './TournamentBracketView';
+import SeasonTeamsPanel from './SeasonTeamsPanel';
 
 interface SeasonMatchesListProps {
   seasonId: string;
@@ -39,6 +41,7 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [tab, setTab] = useState<'matches' | 'teams'>('matches');
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     // Load from localStorage if available
     if (typeof window !== 'undefined') {
@@ -208,32 +211,36 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
           </div>
         </div>
         <div className="flex gap-2">
-          <div className="flex gap-1 border rounded-md p-1">
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handleViewModeChange('table')}
-              className="gap-2"
-            >
-              <Table2 className="h-4 w-4" />
-              Table
-            </Button>
-            <Button
-              variant={viewMode === 'bracket' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handleViewModeChange('bracket')}
-              className="gap-2"
-            >
-              <Network className="h-4 w-4" />
-              Bracket
-            </Button>
-          </div>
-          <Button asChild>
-            <a href={`/admin/matches/new?seasonId=${seasonId}`} data-astro-prefetch>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Match
-            </a>
-          </Button>
+          {tab === 'matches' && (
+            <>
+              <div className="flex gap-1 border rounded-md p-1">
+                <Button
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleViewModeChange('table')}
+                  className="gap-2"
+                >
+                  <Table2 className="h-4 w-4" />
+                  Table
+                </Button>
+                <Button
+                  variant={viewMode === 'bracket' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleViewModeChange('bracket')}
+                  className="gap-2"
+                >
+                  <Network className="h-4 w-4" />
+                  Bracket
+                </Button>
+              </div>
+              <Button asChild>
+                <a href={`/admin/matches/new?seasonId=${seasonId}`} data-astro-prefetch>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Match
+                </a>
+              </Button>
+            </>
+          )}
           <Button variant="outline" asChild>
             <a href={season?.leagueId ? `/admin/leagues/${season.leagueId}/view` : '/admin/leagues'} data-astro-prefetch>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -243,6 +250,19 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
         </div>
       </div>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as 'matches' | 'teams')} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="matches" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            Matches
+          </TabsTrigger>
+          <TabsTrigger value="teams" className="gap-2">
+            <Users className="h-4 w-4" />
+            Teams
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="matches" className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -426,6 +446,12 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
       )}
         </>
       )}
+        </TabsContent>
+
+        <TabsContent value="teams">
+          <SeasonTeamsPanel seasonId={seasonId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

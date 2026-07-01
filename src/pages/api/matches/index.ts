@@ -158,9 +158,9 @@ export const POST: APIRoute = async ({ request }) => {
     const data = await request.json();
 
     // Validate required fields
-    if ((!data.team1Id && !data.team1Name) || (!data.team2Id && !data.team2Name) || !data.date || (!data.leagueId && !data.league)) {
+    if ((!data.team1Id && !data.team1Name) || (!data.team2Id && !data.team2Name) || !data.date || (!data.leagueId && !data.league) || !data.seasonId) {
       return new Response(
-        JSON.stringify({ error: 'Teams, date, and league are required' }),
+        JSON.stringify({ error: 'Teams, date, league, and season are required' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
