@@ -16,11 +16,13 @@ export async function getSeasonTeams(seasonId: string): Promise<Team[]> {
 
 /**
  * Teams in a league, derived as the union of participants across all of the
- * league's seasons. Deduplicated by team id and ordered by name.
+ * league's season rosters. Deduplicated by team id and ordered by name.
+ * Reads the league directly off SeasonTeam now that rosters are scoped to
+ * a (season, league, team).
  */
 export async function getLeagueTeams(leagueId: string): Promise<Team[]> {
   const rows = await prisma.seasonTeam.findMany({
-    where: { season: { leagueId } },
+    where: { leagueId },
     include: { team: true },
     orderBy: { team: { name: 'asc' } },
   });

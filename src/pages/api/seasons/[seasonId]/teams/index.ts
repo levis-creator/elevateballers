@@ -19,12 +19,20 @@ export const GET: APIRoute = async ({ params }) => {
   }
 };
 
-/** POST /api/seasons/[seasonId]/teams — add teams to the season. Body: { teamIds: string[] } */
+/** POST /api/seasons/[seasonId]/teams — add teams to a (season, league). Body: { leagueId: string, teamIds: string[] } */
 export const POST: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'seasons:update');
     const data = await request.json();
     const teamIds: unknown = data?.teamIds;
+    const leagueId: unknown = data?.leagueId;
+
+    if (typeof leagueId !== 'string' || !leagueId) {
+      return new Response(
+        JSON.stringify({ error: 'leagueId is required — teams join a specific league within the season' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!Array.isArray(teamIds) || teamIds.some((id) => typeof id !== 'string')) {
       return new Response(
@@ -33,9 +41,10 @@ export const POST: APIRoute = async ({ params, request }) => {
       );
     }
 
-    const added = await addSeasonTeams(params.seasonId!, teamIds as string[]);
+    const added = await addSeasonTeams(params.seasonId!, leagueId, teamIds as string[]);
     await logAudit(request, 'SEASON_TEAMS_ADDED', {
       seasonId: params.seasonId,
+      leagueId,
       requested: teamIds.length,
       added,
     });

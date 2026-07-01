@@ -242,7 +242,7 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
             </>
           )}
           <Button variant="outline" asChild>
-            <a href={season?.leagueId ? `/admin/leagues/${season.leagueId}/view` : '/admin/leagues'} data-astro-prefetch>
+            <a href={season?.leagueSeasons?.[0]?.leagueId ? `/admin/leagues/${season.leagueSeasons[0].leagueId}/view` : '/admin/leagues'} data-astro-prefetch>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to League
             </a>
@@ -272,7 +272,7 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
 
       {/* View Mode Content */}
       {viewMode === 'bracket' ? (
-        <TournamentBracketView seasonId={seasonId} leagueId={season?.leagueId} />
+        <TournamentBracketView seasonId={seasonId} leagueId={season?.leagueSeasons?.[0]?.leagueId} />
       ) : (
         <>
           {/* Search */}
@@ -449,7 +449,10 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
         </TabsContent>
 
         <TabsContent value="teams">
-          <SeasonTeamsPanel seasonId={seasonId} />
+          <SeasonTeamsPanel
+            seasonId={seasonId}
+            leagues={(season?.leagueSeasons ?? []).map((ls: any) => ({ id: ls.leagueId, name: ls.league.name }))}
+          />
         </TabsContent>
       </Tabs>
     </div>

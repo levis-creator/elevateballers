@@ -222,31 +222,29 @@ async function seedSeasons(leagues: any[]) {
   const currentYear = new Date().getFullYear();
 
   for (const league of leagues) {
-    const seasonData = {
-      name: `${currentYear} Season`,
-      slug: `${currentYear}-season`,
-      description: `${currentYear} basketball season for ${league.name}`,
-      startDate: new Date(`${currentYear}-01-01`),
-      endDate: new Date(`${currentYear}-12-31`),
-      active: true,
-      leagueId: league.id,
-    };
+    // Season slug is now globally unique, so scope it per league to avoid collisions.
+    const slug = `${currentYear}-season-${league.slug}`;
+    const name = `${currentYear} Season`;
 
-    const existing = await prisma.season.findFirst({
-      where: {
-        leagueId: league.id,
-        slug: seasonData.slug,
-      },
-    });
+    const existing = await prisma.season.findFirst({ where: { slug } });
 
     if (existing) {
-      console.log(`   ⚠️  Season "${seasonData.name}" for "${league.name}" already exists`);
+      console.log(`   ⚠️  Season "${name}" for "${league.name}" already exists`);
       seasons.push(existing);
     } else {
       const created = await prisma.season.create({
-        data: seasonData,
+        data: {
+          name,
+          slug,
+          description: `${currentYear} basketball season for ${league.name}`,
+          startDate: new Date(`${currentYear}-01-01`),
+          endDate: new Date(`${currentYear}-12-31`),
+          active: true,
+          // Attach the season to its league via the many-to-many join.
+          leagueSeasons: { create: [{ leagueId: league.id }] },
+        },
       });
-      console.log(`   ✅ Created season: ${seasonData.name} for ${league.name}`);
+      console.log(`   ✅ Created season: ${name} for ${league.name}`);
       seasons.push(created);
     }
   }

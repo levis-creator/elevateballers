@@ -373,8 +373,8 @@ export default function SeasonList() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {season.league ? (
-                      <span className="text-sm">{season.league.name}</span>
+                    {season.leagueSeasons && season.leagueSeasons.length > 0 ? (
+                      <span className="text-sm">{season.leagueSeasons.map((ls) => ls.league.name).join(', ')}</span>
                     ) : (
                       <span className="text-muted-foreground text-sm">Not set</span>
                     )}

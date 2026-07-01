@@ -212,8 +212,9 @@ model League {
   registrationClosesAt DateTime? @map("registration_closes_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  matches     Match[]
-  seasons     Season[]
+  matches       Match[]
+  leagueSeasons LeagueSeason[]
+  seasonTeams   SeasonTeam[]
 
   @@index([name])
   @@index([slug])
@@ -234,20 +235,31 @@ model Season {
   bracketType String?      @map("bracket_type")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
-  leagueId    String       @map("league_id")
-  matches     Match[]
-  league      League       @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  seasonTeams SeasonTeam[]
+  matches       Match[]
+  leagueSeasons LeagueSeason[]
+  seasonTeams   SeasonTeam[]
 
-  @@unique([leagueId, slug])
+  @@unique([slug])
   @@index([name])
-  @@index([slug])
   @@index([active])
   @@index([startDate])
   @@index([endDate])
-  @@index([leagueId])
   @@index([bracketType])
   @@map("seasons")
+}
+
+// Join table: a season can run in many leagues and a league runs many seasons.
+// Cascades on both sides delete only the link — the season survives league deletion.
+model LeagueSeason {
+  leagueId  String   @map("league_id")
+  seasonId  String   @map("season_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@id([leagueId, seasonId])
+  @@index([seasonId])
+  @@map("league_seasons")
 }
 
 model Match {
@@ -359,13 +371,16 @@ model Team {
 model SeasonTeam {
   id        String   @id @default(cuid())
   seasonId  String   @map("season_id")
+  leagueId  String   @map("league_id")
   teamId    String   @map("team_id")
   createdAt DateTime @default(now()) @map("created_at")
   season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([seasonId, teamId])
   @@index([seasonId])
+  @@index([leagueId])
   @@index([teamId])
   @@map("season_teams")
 }

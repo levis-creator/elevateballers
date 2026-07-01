@@ -164,14 +164,14 @@ export default function BracketMatchDialog({
     if (currentLeagueId && currentLeagueId !== prevLeagueId && isOpen) {
       prevLeagueIdRef.current = currentLeagueId;
       fetchSeasons(currentLeagueId).then(() => {
-        // Check if current season belongs to new league
+        // fetchSeasons returns only the seasons that run in this league, so if
+        // the selected season isn't among them it no longer applies — reset it.
         setSeasons(prevSeasons => {
-          const currentSeason = prevSeasons.find(s => s.id === formData.seasonId);
-          if (currentSeason && currentSeason.leagueId !== currentLeagueId) {
-            // Season doesn't belong to new league, reset to prop seasonId or empty
-            setFormData(prev => ({ 
-              ...prev, 
-              seasonId: seasonId || '' 
+          const stillValid = prevSeasons.some(s => s.id === formData.seasonId);
+          if (formData.seasonId && !stillValid) {
+            setFormData(prev => ({
+              ...prev,
+              seasonId: seasonId || ''
             }));
           }
           return prevSeasons;
@@ -470,9 +470,10 @@ export default function BracketMatchDialog({
                     await fetchSeasons(value);
                     // After seasons are fetched, check if current season belongs to new league
                     setSeasons(prevSeasons => {
-                      const currentSeason = prevSeasons.find(s => s.id === formData.seasonId);
-                      if (!currentSeason || currentSeason.leagueId !== value) {
-                        // Season doesn't belong to new league, reset to prop seasonId or empty
+                      // Only the new league's seasons are fetched, so reset the
+                      // selection if the current season isn't among them.
+                      const stillValid = prevSeasons.some(s => s.id === formData.seasonId);
+                      if (formData.seasonId && !stillValid) {
                         setFormData(prev => ({
                           ...prev,
                           seasonId: seasonId || '',

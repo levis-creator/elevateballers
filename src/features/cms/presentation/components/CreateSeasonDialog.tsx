@@ -74,7 +74,7 @@ export default function CreateSeasonDialog({
           name: form.name.trim(),
           startDate: form.startDate,
           endDate: form.endDate,
-          leagueId,
+          leagueIds: [leagueId],
           bracketType: form.bracketType || undefined,
           registrationOpensAt: form.registrationOpensAt || undefined,
           registrationClosesAt: form.registrationClosesAt || undefined,

@@ -26,9 +26,9 @@ export const POST: APIRoute = async ({ request }) => {
     await requirePermission(request, 'seasons:create');
     const data = await request.json();
 
-    if (!data.name || !data.startDate || !data.endDate || !data.leagueId) {
+    if (!data.name || !data.startDate || !data.endDate) {
       return new Response(
-        JSON.stringify({ error: 'Season name, start date, end date, and league ID are required' }),
+        JSON.stringify({ error: 'Season name, start date, and end date are required' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request }) => {
     await logAudit(request, 'SEASON_CREATED', {
       seasonId: season.id,
       name: season.name,
-      leagueId: season.leagueId,
+      leagueIds: data.leagueIds ?? [],
     });
     return new Response(JSON.stringify(season), {
       status: 201,

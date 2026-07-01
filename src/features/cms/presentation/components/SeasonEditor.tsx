@@ -74,8 +74,9 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
       if (!response.ok) throw new Error('Failed to fetch season');
       const season: Season = await response.json();
 
-      const seasonWithLeague = season as Season & { league: League };
-      const leagueId = seasonWithLeague.league?.id || (season as any).leagueId || '';
+      // Seasons are many-to-many with leagues; this standalone editor manages a
+      // single league, defaulting to the first one the season is attached to.
+      const leagueId = (season as any).leagueSeasons?.[0]?.leagueId || '';
       setCurrentLeagueId(leagueId);
       setFormData({
         name: season.name,
@@ -105,12 +106,14 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
       const url = seasonId ? `/api/seasons/${seasonId}` : '/api/seasons';
       const method = seasonId ? 'PUT' : 'POST';
 
+      const { leagueId, ...seasonFields } = formData;
       const payload = {
-        ...formData,
+        ...seasonFields,
         slug: formData.slug || undefined,
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
-        leagueId: formData.leagueId,
+        // Attach the chosen league (single-select here). Sends set-semantics on edit.
+        leagueIds: leagueId ? [leagueId] : [],
         bracketType: formData.bracketType || undefined,
       };
 

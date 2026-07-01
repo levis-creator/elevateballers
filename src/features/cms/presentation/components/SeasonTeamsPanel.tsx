@@ -29,9 +29,11 @@ import { AlertCircle, Plus, Users, X, Loader2, RefreshCw, Search } from 'lucide-
 
 interface SeasonTeamsPanelProps {
   seasonId: string;
+  // The leagues this season runs in — a team joins one specific league.
+  leagues?: { id: string; name: string }[];
 }
 
-export default function SeasonTeamsPanel({ seasonId }: SeasonTeamsPanelProps) {
+export default function SeasonTeamsPanel({ seasonId, leagues = [] }: SeasonTeamsPanelProps) {
   const [participants, setParticipants] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,8 +44,14 @@ export default function SeasonTeamsPanel({ seasonId }: SeasonTeamsPanelProps) {
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [allTeamsLoading, setAllTeamsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedLeagueId, setSelectedLeagueId] = useState('');
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState(false);
+
+  // Default the league selection to the season's first (or only) league.
+  useEffect(() => {
+    if (!selectedLeagueId && leagues.length > 0) setSelectedLeagueId(leagues[0].id);
+  }, [leagues, selectedLeagueId]);
 
   // Remove-confirmation state
   const [teamToRemove, setTeamToRemove] = useState<Team | null>(null);
@@ -109,13 +117,17 @@ export default function SeasonTeamsPanel({ seasonId }: SeasonTeamsPanelProps) {
 
   const handleAdd = async () => {
     if (selectedIds.size === 0) return;
+    if (!selectedLeagueId) {
+      setError('Select a league for these teams first.');
+      return;
+    }
     try {
       setAdding(true);
       setError('');
       const res = await fetch(`/api/seasons/${seasonId}/teams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamIds: [...selectedIds] }),
+        body: JSON.stringify({ leagueId: selectedLeagueId, teamIds: [...selectedIds] }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -264,6 +276,24 @@ export default function SeasonTeamsPanel({ seasonId }: SeasonTeamsPanelProps) {
               Select the teams that participate. Teams already in the season are hidden.
             </DialogDescription>
           </DialogHeader>
+
+          {leagues.length > 0 && (
+            <div className="space-y-1.5">
+              <label htmlFor="season-team-league" className="text-sm font-medium">League</label>
+              <select
+                id="season-team-league"
+                value={selectedLeagueId}
+                onChange={(e) => setSelectedLeagueId(e.target.value)}
+                disabled={leagues.length === 1}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                {leagues.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Teams join this league within the season.</p>
+            </div>
+          )}
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

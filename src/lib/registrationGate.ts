@@ -39,9 +39,11 @@ export async function checkRegistrationOpen(
   // Unknown league: don't block here — field validation handles bad IDs.
   if (!league) return { open: true };
 
+  // A season is shared across leagues (many-to-many). Only apply its window if
+  // the season actually runs in this league; otherwise the pairing is invalid.
   const season = seasonId
-    ? await prisma.season.findUnique({
-        where: { id: seasonId },
+    ? await prisma.season.findFirst({
+        where: { id: seasonId, leagueSeasons: { some: { leagueId } } },
         select: { registrationOpensAt: true, registrationClosesAt: true },
       })
     : null;
