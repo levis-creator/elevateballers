@@ -17,6 +17,7 @@ import type {
   Comment,
   League,
   Season,
+  LeagueSeason,
   Folder,
   FileUsage,
   Role,
@@ -53,6 +54,7 @@ export type {
   Comment,
   League,
   Season,
+  LeagueSeason,
   Folder,
   FileUsage,
   Role,
@@ -82,12 +84,13 @@ export type NewsArticleWithAuthor = NewsArticle & {
 export type LeagueWithMatchCount = League & {
   _count: {
     matches: number;
-    seasons: number;
+    leagueSeasons: number;
   };
 };
 
 export type SeasonWithCounts = Season & {
-  league: League;
+  // The leagues this season runs in (many-to-many). Replaces the old single `league`.
+  leagueSeasons: (LeagueSeason & { league: League })[];
   _count: {
     matches: number;
   };
@@ -237,9 +240,9 @@ export type CreateSeasonInput = {
   description?: string;
   startDate: Date;
   endDate: Date;
-  leagueId: string; // Required - Season must belong to a League
+  leagueIds?: string[]; // Leagues this season runs in (many-to-many). Optional; can be attached later.
   active?: boolean;
-  registrationOpensAt?: Date | null; // Optional: narrows the league's window
+  registrationOpensAt?: Date | null; // Optional: shared registration window for this season
   registrationClosesAt?: Date | null; // Optional: season registration deadline
   bracketType?: 'single' | 'double'; // Tournament bracket format
 };

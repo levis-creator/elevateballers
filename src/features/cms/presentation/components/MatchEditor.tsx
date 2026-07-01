@@ -410,14 +410,16 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
       fetchMatch();
     }
     
-    // If initialSeasonId is provided, fetch the season to get the leagueId
+    // If initialSeasonId is provided, fetch the season to default the league.
+    // A season can now run in multiple leagues — default to the first attached one.
     if (initialSeasonId && !matchId) {
       fetch(`/api/seasons/${initialSeasonId}`)
         .then(res => res.json())
         .then((season: any) => {
-          if (season?.leagueId) {
-            setFormData(prev => ({ ...prev, leagueId: season.leagueId, seasonId: initialSeasonId }));
-            fetchSeasons(season.leagueId);
+          const leagueId = season?.leagueSeasons?.[0]?.leagueId;
+          if (leagueId) {
+            setFormData(prev => ({ ...prev, leagueId, seasonId: initialSeasonId }));
+            fetchSeasons(leagueId);
           }
         })
         .catch(err => logError('Failed to fetch season:', err));

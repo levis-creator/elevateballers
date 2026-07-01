@@ -16,12 +16,13 @@ if (!allowed) {
 
 const { id } = Astro.params;
 
-// Try to fetch season to get leagueId for redirect
+// Redirect a season to one of its leagues (seasons are many-to-many now).
 let redirectUrl = '/admin/leagues';
 if (id) {
   const season = await getSeasonById(id);
-  if (season?.leagueId) {
-    redirectUrl = `/admin/leagues/${season.leagueId}`;
+  const leagueId = season?.leagueSeasons?.[0]?.leagueId;
+  if (leagueId) {
+    redirectUrl = `/admin/leagues/${leagueId}`;
   }
 }
 

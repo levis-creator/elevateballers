@@ -19,26 +19,31 @@ function toDbDate(value: Date | string | null | undefined): Date | null | undefi
 }
 
 export async function createSeason(data: CreateSeasonInput): Promise<Season> {
-  if (!data.leagueId) throw new Error('League ID is required for creating a season');
+  const { leagueIds, slug: providedSlug, name, startDate, endDate, ...rest } = data;
 
-  let slug = data.slug || slugify(data.name);
-  let uniqueSlug = slug;
+  // Slug is now globally unique across all seasons.
+  let uniqueSlug = providedSlug || slugify(name);
+  const base = uniqueSlug;
   let counter = 1;
-  while (await prisma.season.findFirst({ where: { slug: uniqueSlug, leagueId: data.leagueId } })) {
-    uniqueSlug = `${slug}-${counter}`;
+  while (await prisma.season.findFirst({ where: { slug: uniqueSlug } })) {
+    uniqueSlug = `${base}-${counter}`;
     counter++;
   }
 
   return await prisma.season.create({
     data: {
-      ...data,
+      ...rest,
+      name,
       slug: uniqueSlug,
-      leagueId: data.leagueId,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
       registrationOpensAt: toDbDate(data.registrationOpensAt) ?? null,
       registrationClosesAt: toDbDate(data.registrationClosesAt) ?? null,
       bracketType: data.bracketType || null,
+      // Attach the season to its leagues via the join table (optional).
+      ...(leagueIds && leagueIds.length
+        ? { leagueSeasons: { create: leagueIds.map((leagueId) => ({ leagueId })) } }
+        : {}),
     },
   });
 }
@@ -48,34 +53,33 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
     const existing = await prisma.season.findUnique({ where: { id } });
     if (!existing) return null;
 
-    const leagueId = data.leagueId || existing.leagueId;
+    const { leagueIds, ...fields } = data;
 
-    if (data.name && !data.slug) {
-      const newSlug = slugify(data.name);
-      let uniqueSlug = newSlug;
+    // Regenerate a globally-unique slug when name/slug changes.
+    const desiredSlug = fields.slug || (fields.name && !fields.slug ? slugify(fields.name) : undefined);
+    if (desiredSlug) {
+      let uniqueSlug = desiredSlug;
       let counter = 1;
-      while (await prisma.season.findFirst({ where: { slug: uniqueSlug, leagueId, NOT: { id } } })) {
-        uniqueSlug = `${newSlug}-${counter}`;
+      while (await prisma.season.findFirst({ where: { slug: uniqueSlug, NOT: { id } } })) {
+        uniqueSlug = `${desiredSlug}-${counter}`;
         counter++;
       }
-      data.slug = uniqueSlug;
-    } else if (data.slug) {
-      let uniqueSlug = data.slug;
-      let counter = 1;
-      const base = data.slug;
-      while (await prisma.season.findFirst({ where: { slug: uniqueSlug, leagueId, NOT: { id } } })) {
-        uniqueSlug = `${base}-${counter}`;
-        counter++;
-      }
-      data.slug = uniqueSlug;
+      fields.slug = uniqueSlug;
     }
 
-    const updateData: any = { ...data };
-    if (data.startDate) updateData.startDate = new Date(data.startDate);
-    if (data.endDate) updateData.endDate = new Date(data.endDate);
-    if (data.leagueId) updateData.leagueId = data.leagueId;
-    if ('registrationOpensAt' in data) updateData.registrationOpensAt = toDbDate(data.registrationOpensAt);
-    if ('registrationClosesAt' in data) updateData.registrationClosesAt = toDbDate(data.registrationClosesAt);
+    const updateData: any = { ...fields };
+    if (fields.startDate) updateData.startDate = new Date(fields.startDate);
+    if (fields.endDate) updateData.endDate = new Date(fields.endDate);
+    if ('registrationOpensAt' in fields) updateData.registrationOpensAt = toDbDate(fields.registrationOpensAt);
+    if ('registrationClosesAt' in fields) updateData.registrationClosesAt = toDbDate(fields.registrationClosesAt);
+
+    // When leagueIds is provided, replace the season's league attachments (set semantics).
+    if (leagueIds) {
+      updateData.leagueSeasons = {
+        deleteMany: {},
+        create: leagueIds.map((leagueId) => ({ leagueId })),
+      };
+    }
 
     return await prisma.season.update({ where: { id }, data: updateData });
   } catch (error) {

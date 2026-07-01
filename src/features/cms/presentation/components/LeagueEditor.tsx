@@ -248,7 +248,9 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
         slug: seasonFormData.slug || undefined,
         startDate: new Date(seasonFormData.startDate).toISOString(),
         endDate: new Date(seasonFormData.endDate).toISOString(),
-        leagueId: leagueId!,
+        // On create, attach this league. On edit, omit leagueIds so the season's
+        // other league attachments are left untouched (a season is many-to-many now).
+        ...(editingSeasonId ? {} : { leagueIds: [leagueId!] }),
         bracketType: seasonFormData.bracketType || undefined,
       };
 

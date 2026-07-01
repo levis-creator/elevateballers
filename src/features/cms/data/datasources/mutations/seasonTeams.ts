@@ -1,16 +1,16 @@
 import { prisma } from '../../../../../lib/prisma';
 
 /**
- * Register teams into a season. Idempotent — the (seasonId, teamId) unique
- * constraint means already-present teams are skipped. Returns how many new
- * rows were created.
+ * Register teams into a specific (season, league). Idempotent — the
+ * (seasonId, teamId) unique constraint means already-present teams are
+ * skipped. Returns how many new rows were created.
  */
-export async function addSeasonTeams(seasonId: string, teamIds: string[]): Promise<number> {
+export async function addSeasonTeams(seasonId: string, leagueId: string, teamIds: string[]): Promise<number> {
   const unique = [...new Set(teamIds.filter(Boolean))];
   if (unique.length === 0) return 0;
 
   const result = await prisma.seasonTeam.createMany({
-    data: unique.map((teamId) => ({ seasonId, teamId })),
+    data: unique.map((teamId) => ({ seasonId, leagueId, teamId })),
     skipDuplicates: true,
   });
   return result.count;
@@ -32,15 +32,24 @@ export async function removeSeasonTeam(seasonId: string, teamId: string): Promis
  */
 export async function backfillSeasonTeamsFromMatches(seasonId: string): Promise<number> {
   const matches = await prisma.match.findMany({
-    where: { seasonId },
-    select: { team1Id: true, team2Id: true },
+    where: { seasonId, leagueId: { not: null } },
+    select: { leagueId: true, team1Id: true, team2Id: true },
   });
 
-  const teamIds = new Set<string>();
+  // Roster rows are scoped to a league, so key each team by the league it
+  // played in within this season. `pairs` is keyed to dedupe (league, team).
+  const pairs = new Map<string, { leagueId: string; teamId: string }>();
   for (const m of matches) {
-    if (m.team1Id) teamIds.add(m.team1Id);
-    if (m.team2Id) teamIds.add(m.team2Id);
+    if (!m.leagueId) continue;
+    for (const teamId of [m.team1Id, m.team2Id]) {
+      if (teamId) pairs.set(`${m.leagueId}:${teamId}`, { leagueId: m.leagueId, teamId });
+    }
   }
+  if (pairs.size === 0) return 0;
 
-  return addSeasonTeams(seasonId, [...teamIds]);
+  const result = await prisma.seasonTeam.createMany({
+    data: [...pairs.values()].map(({ leagueId, teamId }) => ({ seasonId, leagueId, teamId })),
+    skipDuplicates: true,
+  });
+  return result.count;
 }

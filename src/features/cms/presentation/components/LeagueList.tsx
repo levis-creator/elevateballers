@@ -367,7 +367,7 @@ export default function LeagueList() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{league._count.seasons}</span>
+                    <span className="text-sm">{league._count.leagueSeasons}</span>
                   </TableCell>
                   <TableCell>
                     {league.active ? (
