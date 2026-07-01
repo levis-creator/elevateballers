@@ -86,12 +86,20 @@ export default function MatchList() {
 
   useEffect(() => {
     fetchMatches();
-  }, []);
+  }, [statusFilter]);
 
   const fetchMatches = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/matches');
+      // Filter by status server-side. Without this, the API returns only the
+      // earliest 50 matches across all statuses (date-asc), so future-dated
+      // upcoming matches get truncated out and never reach the admin list.
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') {
+        params.set('status', statusFilter);
+      }
+      params.set('limit', '200');
+      const response = await fetch(`/api/matches?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch matches');
       const data = await response.json();
       setMatches(data);
