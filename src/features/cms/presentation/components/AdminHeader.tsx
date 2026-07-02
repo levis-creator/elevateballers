@@ -1,6 +1,7 @@
 import { useState, useEffect, type ComponentType } from 'react';
 import { navigate } from 'astro:transitions/client';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
+import { usePathname } from '../hooks/usePathname';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -53,6 +54,7 @@ interface NotificationItem {
 export default function AdminHeader() {
   const { user, roles, can, loading } = usePermissions();
   const { sidebarShown, toggleSidebar } = useAdminShell();
+  const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -91,9 +93,11 @@ export default function AdminHeader() {
     });
   }, []);
 
+  // Recompute breadcrumbs whenever the path changes. The header lives in the
+  // persisted shell, so this must track `pathname` (which updates on client-side
+  // navigation) rather than run only on mount.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const pathname = window.location.pathname;
+    if (!pathname) return;
     const segments = pathname.split('/').filter(Boolean);
 
     const crumbs: { label: string; href: string }[] = [];
@@ -115,7 +119,7 @@ export default function AdminHeader() {
     }
 
     setBreadcrumbs(crumbs);
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     const fetchSettings = async () => {

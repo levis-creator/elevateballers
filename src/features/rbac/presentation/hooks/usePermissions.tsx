@@ -1,4 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+
+// useLayoutEffect on the client, useEffect on the server — avoids React's
+// "useLayoutEffect does nothing on the server" warning during SSR.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import type { ReactNode } from 'react';
 
 /**
@@ -85,9 +89,12 @@ export function clearPermissionCache() {
  * - Cache expires after 5 minutes, forcing a fresh blocking fetch
  */
 export function PermissionProvider({ children }: { children: ReactNode }) {
-  const cached = readCache();
-  const [user, setUser] = useState<UserWithPermissions | null>(cached);
-  const [loading, setLoading] = useState(!cached);
+  // Start with a deterministic, SSR-safe initial state (loading, no user) so the
+  // server render and the client's first hydration render match. The cached
+  // permissions are applied in a layout effect below — before the browser
+  // paints — so there is still no visible loading flash on the client.
+  const [user, setUser] = useState<UserWithPermissions | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchPermissions = async (background = false) => {
@@ -127,12 +134,15 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
+    const cached = readCache();
     if (cached) {
-      // We have cached data — revalidate in background
+      // Apply cached data before paint (no flash), then revalidate in background.
+      setUser(cached);
+      setLoading(false);
       fetchPermissions(true);
     } else {
-      // No cache — blocking fetch
+      // No cache — blocking fetch.
       fetchPermissions(false);
     }
   }, []);

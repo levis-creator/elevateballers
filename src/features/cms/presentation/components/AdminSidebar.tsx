@@ -2,6 +2,7 @@ import { useState, useEffect, type ComponentType } from 'react';
 import { cn } from '@/lib/utils';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
 import { useAdminShell } from './AdminShellContext';
+import { usePathname } from '../hooks/usePathname';
 
 interface NavItem {
   href: string;
@@ -16,9 +17,7 @@ export default function AdminSidebar() {
   const { can, canAny, canAll, user, roles } = usePermissions();
   const { isSidebarOpen, setSidebarOpen, isCollapsed, isMobile } = useAdminShell();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activePath, setActivePath] = useState(() =>
-    typeof window !== 'undefined' ? window.location.pathname : ''
-  );
+  const activePath = usePathname();
   const [icons, setIcons] = useState<{
     LayoutDashboard?: ComponentType<any>;
     Newspaper?: ComponentType<any>;
@@ -71,6 +70,12 @@ export default function AdminSidebar() {
       .then((data: unknown[]) => setUnreadCount(Array.isArray(data) ? data.length : 0))
       .catch(() => {});
   }, []);
+
+  // The persisted shell never remounts, so close the mobile drawer whenever the
+  // path changes (i.e. after a client-side navigation).
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [activePath, isMobile, setSidebarOpen]);
 
   const canAccess = (p?: string) => !p || can(p);
   const getActive = (href: string) => {

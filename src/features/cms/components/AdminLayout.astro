@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import { checkAuth } from '../../cms/lib/auth-astro';
 import AdminShell from './AdminShell';
 import { hasPermission, hasAnyPermission, hasAllPermissions } from '../../rbac/permissions';
@@ -52,6 +53,7 @@ if (redirectUrl) {
     <meta name="robots" content="noindex, nofollow" />
     {redirectUrl && <meta http-equiv="refresh" content={`0;url=${redirectUrl}`} />}
     <title>{title}</title>
+    <ClientRouter />
 
     <!-- Resolve sidebar collapsed state before paint. Stored preference wins; match-detail auto-hides by default. -->
     <script is:inline>
@@ -128,7 +130,7 @@ if (redirectUrl) {
       </script>
     ) : (
       <div class="flex min-h-screen bg-[#f9fafb] relative w-full font-sans">
-        <AdminShell client:only="react" />
+        <AdminShell client:load transition:persist />
         <main class="flex-1 ml-[var(--admin-sidebar-width)] pt-[var(--admin-header-height)] min-h-screen w-[calc(100%-var(--admin-sidebar-width))] transition-[margin,width] duration-[280ms] ease-out max-md:ml-0 max-md:w-full max-md:pt-14">
           <div class="p-8 max-w-[1400px] mx-auto w-full max-md:p-4 max-[480px]:p-3 admin-page scroll-smooth">
             <slot />
