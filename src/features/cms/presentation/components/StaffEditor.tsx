@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { Staff, StaffRole } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,7 +101,7 @@ export default function StaffEditor({ staffId }: StaffEditorProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = '/admin/staff';
+        navigate('/admin/staff');
       }, 1500);
     } catch (err: any) {
       setError(err.message || 'Failed to save staff');

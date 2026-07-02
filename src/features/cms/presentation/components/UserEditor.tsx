@@ -1,4 +1,5 @@
 import { useState, useEffect, type ComponentType } from 'react';
+import { navigate } from 'astro:transitions/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -192,7 +193,7 @@ function UserEditorForm({ userId }: UserEditorProps) {
         throw new Error('Failed to assign roles');
       }
 
-      window.location.href = '/admin/users';
+      navigate('/admin/users');
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

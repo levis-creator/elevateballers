@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { Match, MatchStatus, Team, League, Season, TeamWithPlayerCount } from '../../types';
 import type { MatchStage } from '@prisma/client';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../../matches/lib/team-helpers';
@@ -659,9 +660,9 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
 
       // Normal save: return to the season's match list when a season is set so
       // the admin keeps their place, otherwise fall back to the global list.
-      window.location.href = formData.seasonId
+      navigate(formData.seasonId
         ? `/admin/seasons/${formData.seasonId}/matches`
-        : '/admin/matches';
+        : '/admin/matches');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save match';
       setErrors((prev) => ({ ...prev, save: message }));

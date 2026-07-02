@@ -32,6 +32,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getWinnerName, isWinner, getTeam1Id, getTeam2Id } from '../../../matches/lib/team-helpers';
 import TeamLogo from '../../../matches/components/TeamLogo';
 import { getLeagueName } from '../../../matches/lib/league-helpers';
+import { getSeasonName } from '../../../matches/lib/season-helpers';
 
 export default function MatchList() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -40,6 +41,8 @@ export default function MatchList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [seasonFilter, setSeasonFilter] = useState<string>('all');
+  const [seasons, setSeasons] = useState<{ id: string; name: string }[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [icons, setIcons] = useState<{
@@ -86,7 +89,15 @@ export default function MatchList() {
 
   useEffect(() => {
     fetchMatches();
-  }, [statusFilter]);
+  }, [statusFilter, seasonFilter]);
+
+  // Load the season list once to populate the season filter dropdown.
+  useEffect(() => {
+    fetch('/api/seasons')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setSeasons(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   const fetchMatches = async () => {
     try {
@@ -97,6 +108,9 @@ export default function MatchList() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') {
         params.set('status', statusFilter);
+      }
+      if (seasonFilter !== 'all') {
+        params.set('seasonId', seasonFilter);
       }
       params.set('limit', '200');
       const response = await fetch(`/api/matches?${params.toString()}`);
@@ -168,13 +182,18 @@ export default function MatchList() {
     const team1Name = getTeam1Name(match);
     const team2Name = getTeam2Name(match);
     const leagueName = getLeagueName(match) ?? '';
+    const seasonName = getSeasonName(match) ?? '';
+    const term = searchTerm.toLowerCase();
     const matchesSearch =
-      team1Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team2Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      leagueName.toLowerCase().includes(searchTerm.toLowerCase());
+      team1Name.toLowerCase().includes(term) ||
+      team2Name.toLowerCase().includes(term) ||
+      leagueName.toLowerCase().includes(term) ||
+      seasonName.toLowerCase().includes(term);
     const matchesStatus = statusFilter === 'all' || match.status === statusFilter.toUpperCase();
     return matchesSearch && matchesStatus;
   });
+
+  const hasActiveFilters = Boolean(searchTerm) || statusFilter !== 'all' || seasonFilter !== 'all';
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -307,7 +326,7 @@ export default function MatchList() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
-              aria-label="Search matches by teams or league"
+              aria-label="Search matches by teams, league, or season"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -319,6 +338,19 @@ export default function MatchList() {
               <SelectItem value="upcoming">Upcoming</SelectItem>
               <SelectItem value="live">Live</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={seasonFilter} onValueChange={setSeasonFilter}>
+            <SelectTrigger className="w-[180px]" aria-label="Filter by season">
+              <SelectValue placeholder="Filter by season" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Seasons</SelectItem>
+              {seasons.map((season) => (
+                <SelectItem key={season.id} value={season.id}>
+                  {season.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <div className="flex gap-2 bg-background p-1 rounded-lg border">
@@ -384,7 +416,7 @@ export default function MatchList() {
           <CardContent className="p-12 text-center">
             <div className="flex flex-col items-center gap-4">
               <div className="text-muted-foreground">
-                {searchTerm || statusFilter !== 'all' ? (
+                {hasActiveFilters ? (
                   SearchIcon ? <SearchIcon size={64} /> : null
                 ) : (
                   TrophyIcon ? <TrophyIcon size={64} /> : null
@@ -392,15 +424,15 @@ export default function MatchList() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold mb-2">
-                  {searchTerm || statusFilter !== 'all' ? 'No matches found' : 'No matches yet'}
+                  {hasActiveFilters ? 'No matches found' : 'No matches yet'}
                 </h3>
                 <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== 'all'
+                  {hasActiveFilters
                     ? 'Try adjusting your search or filters'
                     : 'Create your first match to get started'}
                 </p>
               </div>
-              {!searchTerm && statusFilter === 'all' && (
+              {!hasActiveFilters && (
                 <Button asChild>
                   <a href="/admin/matches/new" data-astro-prefetch>
                     {PlusIcon ? <PlusIcon size={18} className="mr-2" /> : null}
@@ -434,6 +466,12 @@ export default function MatchList() {
                   <div className="flex items-center gap-2">
                     {TrophyIcon ? <TrophyIcon size={16} /> : null}
                     League
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    {CalendarIcon ? <CalendarIcon size={16} /> : null}
+                    Season
                   </div>
                 </TableHead>
                 <TableHead>
@@ -502,6 +540,13 @@ export default function MatchList() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{getLeagueName(match)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {getSeasonName(match) ? (
+                        <Badge variant="outline">{getSeasonName(match)}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {StatusIcon && (
@@ -600,7 +645,12 @@ export default function MatchList() {
               <Card key={match.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex justify-between items-center mb-4 pb-4 border-b">
-                    <Badge variant="secondary">{getLeagueName(match)}</Badge>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary">{getLeagueName(match)}</Badge>
+                      {getSeasonName(match) ? (
+                        <Badge variant="outline">{getSeasonName(match)}</Badge>
+                      ) : null}
+                    </div>
                     {StatusIcon && (
                       <Badge
                         variant="outline"

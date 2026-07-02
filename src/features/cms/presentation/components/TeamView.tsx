@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { TeamWithPlayers, TeamStaffWithStaff, StaffRole } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -514,7 +515,7 @@ export default function TeamView({ teamId }: TeamViewProps) {
                   key={player.id} 
                   className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full"
                   onClick={() => {
-                    window.location.href = `/admin/players/view/${player.id}`;
+                    navigate(`/admin/players/view/${player.id}`);
                   }}
                 >
                   {player.image ? (

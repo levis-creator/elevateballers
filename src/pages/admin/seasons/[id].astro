@@ -1,31 +1,17 @@
 ---
 export const prerender = false;
-import { checkAuth } from '../../../features/cms/lib/auth-astro';
-import { hasPermission } from '../../../features/rbac/permissions';
-import { getSeasonById } from '../../../features/cms/lib/queries';
+export const ssr = false;
 
-const user = await checkAuth(Astro.request);
-if (!user) {
-  return Astro.redirect('/admin/login', 302);
-}
-
-const allowed = await hasPermission(user.id, 'seasons:read');
-if (!allowed) {
-  return Astro.redirect('/unauthorized', 302);
-}
+import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
+import SeasonEditor from '../../../features/cms/components/SeasonEditor';
 
 const { id } = Astro.params;
 
-// Redirect a season to one of its leagues (seasons are many-to-many now).
-let redirectUrl = '/admin/leagues';
-if (id) {
-  const season = await getSeasonById(id);
-  const leagueId = season?.leagueSeasons?.[0]?.leagueId;
-  if (leagueId) {
-    redirectUrl = `/admin/leagues/${leagueId}`;
-  }
+if (!id) {
+  return Astro.redirect('/admin/seasons', 302);
 }
-
-return Astro.redirect(redirectUrl, 302);
 ---
 
+<AdminLayout title="Edit Season - Admin" permission="seasons:update">
+  <SeasonEditor seasonId={id} client:load />
+</AdminLayout>

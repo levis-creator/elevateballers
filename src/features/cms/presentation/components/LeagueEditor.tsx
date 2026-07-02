@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { League, SeasonWithCounts } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -37,7 +39,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, AlertCircle, Loader2, Save, X, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, CalendarRange, Eye, Trophy, Info } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2, Save, X, Plus, Edit, Trash2, MoreVertical, CheckCircle, XCircle, CalendarRange, Eye, Trophy, Info, Link2 } from 'lucide-react';
 
 interface LeagueEditorProps {
   leagueId?: string;
@@ -79,6 +81,14 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
   });
   const [seasonSaving, setSeasonSaving] = useState(false);
   const [seasonFormError, setSeasonFormError] = useState('');
+
+  // "Link existing season" dialog state.
+  const [showLinkSeason, setShowLinkSeason] = useState(false);
+  const [allSeasons, setAllSeasons] = useState<SeasonWithCounts[]>([]);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkSaving, setLinkSaving] = useState(false);
+  const [linkError, setLinkError] = useState('');
+  const [linkSelectedIds, setLinkSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (leagueId) {
@@ -163,7 +173,14 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
         throw new Error(errorData.error || 'Failed to save league');
       }
 
-      window.location.href = '/admin/leagues';
+      // On create, go to the new league's edit page so its seasons can be
+      // managed right away; on edit, return to the list.
+      if (!leagueId) {
+        const created = await response.json();
+        navigate(created?.id ? `/admin/leagues/${created.id}` : '/admin/leagues');
+      } else {
+        navigate('/admin/leagues');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to save league');
     } finally {
@@ -276,6 +293,69 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
     }
   };
 
+  // Opens the "link existing season" dialog and loads every season so we can
+  // offer the ones not already attached to this league.
+  const openLinkSeason = async () => {
+    setLinkSelectedIds([]);
+    setLinkError('');
+    setShowLinkSeason(true);
+    try {
+      setLinkLoading(true);
+      const response = await fetch('/api/seasons');
+      if (!response.ok) throw new Error('Failed to load seasons');
+      const data = await response.json();
+      setAllSeasons(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setLinkError(err.message || 'Failed to load seasons');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const toggleLinkSeason = (id: string, checked: boolean) => {
+    setLinkSelectedIds((prev) =>
+      checked ? [...new Set([...prev, id])] : prev.filter((s) => s !== id)
+    );
+  };
+
+  // Seasons not yet attached to this league — the candidates for linking.
+  const linkedIds = new Set(seasons.map((s) => s.id));
+  const availableSeasons = allSeasons.filter((s) => !linkedIds.has(s.id));
+
+  // Attaches each selected season to this league. Seasons are many-to-many, and
+  // the season update API replaces the whole set — so we send the union of each
+  // season's existing leagues plus this one, preserving other attachments.
+  const handleLinkSeasons = async () => {
+    if (!leagueId || linkSelectedIds.length === 0) return;
+
+    setLinkSaving(true);
+    setLinkError('');
+    try {
+      for (const id of linkSelectedIds) {
+        const season = allSeasons.find((s) => s.id === id);
+        const existing = season?.leagueSeasons?.map((ls) => ls.leagueId) ?? [];
+        const leagueIds = [...new Set([...existing, leagueId])];
+
+        const response = await fetch(`/api/seasons/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leagueIds }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to link season');
+        }
+      }
+
+      setShowLinkSeason(false);
+      fetchSeasons();
+    } catch (err: any) {
+      setLinkError(err.message || 'Failed to link seasons');
+    } finally {
+      setLinkSaving(false);
+    }
+  };
+
   const formatDate = (date: string | Date | null) => {
     if (!date) return 'Not set';
     return new Date(date).toLocaleDateString('en-US', {
@@ -296,7 +376,7 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
   };
 
   const handleViewSeasonMatches = (seasonId: string) => {
-    window.location.href = `/admin/seasons/${seasonId}/matches`;
+    navigate(`/admin/seasons/${seasonId}/matches`);
   };
 
   if (loading) {
@@ -615,10 +695,16 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
                   {isViewMode ? 'Seasons for this league' : 'Manage seasons for this league'}
                 </CardDescription>
               </div>
-              <Button onClick={handleCreateSeason} size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Season
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={openLinkSeason} size="sm" variant="outline">
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Link Existing
+                </Button>
+                <Button onClick={handleCreateSeason} size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Season
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -640,12 +726,18 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
                 <CalendarRange className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-xl font-semibold mb-2">No seasons yet</h3>
                 <p className="text-muted-foreground mb-4">
-                  {isViewMode ? 'This league has no seasons yet' : 'Create your first season for this league'}
+                  {isViewMode ? 'This league has no seasons yet' : 'Create a new season or link an existing one to this league'}
                 </p>
-                <Button onClick={handleCreateSeason} size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Season
-                </Button>
+                <div className="flex gap-2 justify-center">
+                  <Button onClick={openLinkSeason} size="sm" variant="outline">
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Link Existing
+                  </Button>
+                  <Button onClick={handleCreateSeason} size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Season
+                  </Button>
+                </div>
               </div>
             ) : (
               <Table>
@@ -942,6 +1034,84 @@ export default function LeagueEditor({ leagueId, mode = 'edit' }: LeagueEditorPr
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Existing Season Dialog */}
+      <Dialog open={showLinkSeason} onOpenChange={setShowLinkSeason}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Existing Seasons</DialogTitle>
+            <DialogDescription>
+              Attach seasons that already exist to this league. A season can run in more than one league.
+            </DialogDescription>
+          </DialogHeader>
+
+          {linkError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{linkError}</AlertDescription>
+            </Alert>
+          )}
+
+          {linkLoading ? (
+            <div className="space-y-2 py-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : availableSeasons.length === 0 ? (
+            <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4 my-2">
+              No unlinked seasons available. Every season is already linked to this league, or none exist yet —
+              use "Create Season" to add one.
+            </p>
+          ) : (
+            <div className="max-h-72 overflow-y-auto rounded-md border divide-y my-2">
+              {availableSeasons.map((season) => (
+                <label
+                  key={season.id}
+                  htmlFor={`link-season-${season.id}`}
+                  className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50"
+                >
+                  <Checkbox
+                    id={`link-season-${season.id}`}
+                    checked={linkSelectedIds.includes(season.id)}
+                    onCheckedChange={(checked) => toggleLinkSeason(season.id, checked as boolean)}
+                    disabled={linkSaving}
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{season.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(season.startDate)} – {formatDate(season.endDate)}
+                    </span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowLinkSeason(false)} disabled={linkSaving}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleLinkSeasons}
+              disabled={linkSaving || linkSelectedIds.length === 0}
+            >
+              {linkSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Linking...
+                </>
+              ) : (
+                <>
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Link {linkSelectedIds.length > 0 ? `(${linkSelectedIds.length})` : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

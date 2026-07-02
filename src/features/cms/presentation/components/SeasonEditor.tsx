@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { Season, League } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -14,7 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, AlertCircle, Loader2, Save, X, Trophy, Info } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { ArrowLeft, AlertCircle, Loader2, Save, X, Trophy, Info, Plus } from 'lucide-react';
 
 interface SeasonEditorProps {
   seasonId?: string;
@@ -25,19 +35,26 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [currentLeagueId, setCurrentLeagueId] = useState<string>('');
+  // Leagues this season is linked to (many-to-many). A season can run in zero,
+  // one, or many leagues.
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     description: '',
     startDate: '',
     endDate: '',
-    leagueId: '',
     active: true,
     bracketType: '' as 'single' | 'double' | '',
     registrationOpensAt: '',
     registrationClosesAt: '',
   });
+
+  // Inline "create a new league" dialog state.
+  const [showCreateLeague, setShowCreateLeague] = useState(false);
+  const [creatingLeague, setCreatingLeague] = useState(false);
+  const [leagueError, setLeagueError] = useState('');
+  const [newLeague, setNewLeague] = useState({ name: '', description: '' });
 
   // Converts a stored ISO/Date value into the local "YYYY-MM-DDTHH:mm" string
   // that a datetime-local input expects (empty string when unset).
@@ -74,17 +91,18 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
       if (!response.ok) throw new Error('Failed to fetch season');
       const season: Season = await response.json();
 
-      // Seasons are many-to-many with leagues; this standalone editor manages a
-      // single league, defaulting to the first one the season is attached to.
-      const leagueId = (season as any).leagueSeasons?.[0]?.leagueId || '';
-      setCurrentLeagueId(leagueId);
+      // Seasons are many-to-many with leagues; preload every league this
+      // season is currently linked to.
+      const leagueIds: string[] = ((season as any).leagueSeasons ?? [])
+        .map((ls: any) => ls.leagueId)
+        .filter(Boolean);
+      setSelectedLeagueIds(leagueIds);
       setFormData({
         name: season.name,
         slug: season.slug,
         description: season.description || '',
         startDate: new Date(season.startDate).toISOString().slice(0, 10),
         endDate: new Date(season.endDate).toISOString().slice(0, 10),
-        leagueId: leagueId,
         active: season.active,
         bracketType: (season as any).bracketType || '',
         registrationOpensAt: toDateTimeLocal((season as any).registrationOpensAt),
@@ -106,14 +124,14 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
       const url = seasonId ? `/api/seasons/${seasonId}` : '/api/seasons';
       const method = seasonId ? 'PUT' : 'POST';
 
-      const { leagueId, ...seasonFields } = formData;
       const payload = {
-        ...seasonFields,
+        ...formData,
         slug: formData.slug || undefined,
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
-        // Attach the chosen league (single-select here). Sends set-semantics on edit.
-        leagueIds: leagueId ? [leagueId] : [],
+        // Attach the linked leagues (many-to-many). Sends set-semantics on edit:
+        // an empty array clears all links.
+        leagueIds: selectedLeagueIds,
         bracketType: formData.bracketType || undefined,
       };
 
@@ -130,17 +148,50 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
         throw new Error(errorData.error || 'Failed to save season');
       }
 
-      // Redirect to league editor if we have leagueId, otherwise to leagues list
-      const redirectLeagueId = formData.leagueId || currentLeagueId;
-      if (redirectLeagueId) {
-        window.location.href = `/admin/leagues/${redirectLeagueId}`;
-      } else {
-        window.location.href = '/admin/leagues';
-      }
+      navigate('/admin/seasons');
     } catch (err: any) {
       setError(err.message || 'Failed to save season');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleLeague = (leagueId: string, checked: boolean) => {
+    setSelectedLeagueIds((prev) =>
+      checked ? [...new Set([...prev, leagueId])] : prev.filter((id) => id !== leagueId)
+    );
+  };
+
+  // Creates a league inline and links it to this season, without leaving the form.
+  const handleCreateLeague = async () => {
+    const name = newLeague.name.trim();
+    if (!name) {
+      setLeagueError('League name is required');
+      return;
+    }
+
+    setCreatingLeague(true);
+    setLeagueError('');
+    try {
+      const response = await fetch('/api/leagues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: newLeague.description || undefined }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create league');
+      }
+
+      setLeagues((prev) => [...prev, data]);
+      setSelectedLeagueIds((prev) => [...new Set([...prev, data.id])]);
+      setNewLeague({ name: '', description: '' });
+      setShowCreateLeague(false);
+    } catch (err: any) {
+      setLeagueError(err.message || 'Failed to create league');
+    } finally {
+      setCreatingLeague(false);
     }
   };
 
@@ -167,9 +218,9 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
           </p>
         </div>
         <Button variant="outline" asChild>
-          <a href={currentLeagueId ? `/admin/leagues/${currentLeagueId}` : '/admin/leagues'} data-astro-prefetch>
+          <a href="/admin/seasons" data-astro-prefetch>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to {currentLeagueId ? 'League' : 'Leagues'}
+            Back to Seasons
           </a>
         </Button>
       </div>
@@ -232,46 +283,67 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="leagueId">
-                  League <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.leagueId}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, leagueId: value }))}
-                  required
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Leagues</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setLeagueError(''); setShowCreateLeague(true); }}
                   disabled={saving}
                 >
-                  <SelectTrigger id="leagueId">
-                    <SelectValue placeholder="Select a league" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leagues.map((league) => (
-                      <SelectItem key={league.id} value={league.id}>
-                        {league.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New League
+                </Button>
               </div>
+              {leagues.length === 0 ? (
+                <p className="text-sm text-muted-foreground rounded-md border border-dashed p-4">
+                  No leagues yet. Create one to link this season to it.
+                </p>
+              ) : (
+                <div className="max-h-52 overflow-y-auto rounded-md border divide-y">
+                  {leagues.map((league) => (
+                    <label
+                      key={league.id}
+                      htmlFor={`league-${league.id}`}
+                      className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        id={`league-${league.id}`}
+                        checked={selectedLeagueIds.includes(league.id)}
+                        onCheckedChange={(checked) => toggleLeague(league.id, checked as boolean)}
+                        disabled={saving}
+                      />
+                      <span className="text-sm">{league.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>
+                  Link this season to one or more existing leagues, or create a new league above.
+                  A season can also be left unlinked and attached later.
+                </p>
+              </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="active">Status</Label>
-                <Select
-                  value={formData.active ? 'true' : 'false'}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, active: value === 'true' }))}
-                  disabled={saving}
-                >
-                  <SelectTrigger id="active">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Active</SelectItem>
-                    <SelectItem value="false">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="active">Status</Label>
+              <Select
+                value={formData.active ? 'true' : 'false'}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, active: value === 'true' }))}
+                disabled={saving}
+              >
+                <SelectTrigger id="active" className="w-full md:w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Active</SelectItem>
+                  <SelectItem value="false">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -381,13 +453,88 @@ export default function SeasonEditor({ seasonId }: SeasonEditorProps) {
             )}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <a href={currentLeagueId || formData.leagueId ? `/admin/leagues/${currentLeagueId || formData.leagueId}` : '/admin/leagues'} data-astro-prefetch>
+            <a href="/admin/seasons" data-astro-prefetch>
               <X className="mr-2 h-4 w-4" />
               Cancel
             </a>
           </Button>
         </div>
       </form>
+
+      {/* Inline league creation — create a league and link it without leaving. */}
+      <Dialog open={showCreateLeague} onOpenChange={setShowCreateLeague}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create League</DialogTitle>
+            <DialogDescription>
+              Add a new league. It will be linked to this season automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          {leagueError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{leagueError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-league-name">
+                League Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="new-league-name"
+                value={newLeague.name}
+                onChange={(e) => setNewLeague((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., Under-16 Division"
+                disabled={creatingLeague}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCreateLeague();
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-league-description">Description</Label>
+              <Textarea
+                id="new-league-description"
+                rows={3}
+                value={newLeague.description}
+                onChange={(e) => setNewLeague((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Optional description"
+                disabled={creatingLeague}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCreateLeague(false)}
+              disabled={creatingLeague}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleCreateLeague} disabled={creatingLeague}>
+              {creatingLeague ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create &amp; Link
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

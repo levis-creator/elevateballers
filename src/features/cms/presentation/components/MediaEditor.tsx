@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { Media, MediaType } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -326,7 +327,7 @@ export default function MediaEditor({ mediaId }: MediaEditorProps) {
       }
 
       // Redirect to media gallery
-      window.location.href = '/admin/media';
+      navigate('/admin/media');
     } catch (err: any) {
       setError(err.message || 'Failed to save media');
     } finally {

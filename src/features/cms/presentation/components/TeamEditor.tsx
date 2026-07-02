@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { Team } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,7 +85,7 @@ export default function TeamEditor({ teamId }: TeamEditorProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = '/admin/teams';
+        navigate('/admin/teams');
       }, 1500);
     } catch (err: any) {
       setError(err.message || 'Failed to save team');

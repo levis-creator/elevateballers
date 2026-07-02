@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { navigate } from 'astro:transitions/client';
 import type { NewsArticleWithAuthor } from '../../types';
 import { categoryMap, reverseCategoryMap } from '../../types';
 import { generateSlug } from '../../lib/utils';
@@ -416,7 +417,7 @@ export default function NewsEditor({ articleId }: NewsEditorProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = '/admin/news';
+        navigate('/admin/news');
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to save article');
