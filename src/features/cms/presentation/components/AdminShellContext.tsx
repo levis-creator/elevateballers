@@ -1,4 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { usePathname } from '../hooks/usePathname';
+
+// useLayoutEffect on the client, useEffect on the server (avoids the SSR warning).
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import {
   MOBILE_BREAKPOINT_PX,
   SIDEBAR_COLLAPSE_STORAGE_KEY,
@@ -44,10 +48,19 @@ const AdminShellContext = createContext<AdminShellContextValue | null>(null);
 export function AdminShellProvider({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isCollapsed, setCollapsedState] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return resolveInitialCollapsed(window.location.pathname, readStoredCollapsed());
-  });
+  // Deterministic SSR-safe default (avoids a hydration mismatch); the real value
+  // is applied before paint in the layout effect below, so there's no flash. The
+  // sidebar width itself is resolved pre-paint by an inline script in the layout.
+  const [isCollapsed, setCollapsedState] = useState(false);
+  const pathname = usePathname();
+
+  // Re-evaluate on navigation: a stored preference always wins, otherwise
+  // match-detail pages auto-hide the sidebar. The shell is persisted across
+  // <ClientRouter /> navigations, so this tracks `pathname` rather than mount.
+  useIsomorphicLayoutEffect(() => {
+    if (!pathname) return;
+    setCollapsedState(resolveInitialCollapsed(pathname, readStoredCollapsed()));
+  }, [pathname]);
 
   const setCollapsed = (collapsed: boolean) => {
     setCollapsedState(collapsed);
