@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type ComponentType } from 'react';
+import { navigate } from 'astro:transitions/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -557,7 +558,7 @@ export default function MediaGallery() {
         <MediaPreviewPanel
           media={previewMedia}
           onClose={() => setPreviewMedia(null)}
-          onEdit={(id) => { window.location.href = `/admin/media/${id}`; }}
+          onEdit={(id) => { navigate(`/admin/media/${id}`); }}
           onDelete={handleDelete}
         />
       )}

@@ -18,6 +18,9 @@ export default defineConfig({
   site: 'https://elevateballers.com',
   integrations: [react(), tailwind(), sitemap()],
   output: 'server',
+  // Enable link prefetching so `data-astro-prefetch` hints actually fetch.
+  // Default strategy is hover; the admin uses <ClientRouter /> for SPA-style nav.
+  prefetch: true,
   adapter: deployTarget === 'vercel'
     ? vercel({
       webAnalytics: {

@@ -32,6 +32,7 @@ export default function AdminSidebar() {
     ExternalLink?: ComponentType<any>;
     Dribbble?: ComponentType<any>;
     Trophy?: ComponentType<any>;
+    CalendarRange?: ComponentType<any>;
     Star?: ComponentType<any>;
     Handshake?: ComponentType<any>;
     ShieldCheck?: ComponentType<any>;
@@ -55,6 +56,7 @@ export default function AdminSidebar() {
         ExternalLink: mod.ExternalLink,
         Dribbble: mod.Dribbble,
         Trophy: mod.Trophy,
+        CalendarRange: mod.CalendarRange,
         Star: mod.Star,
         Handshake: mod.Handshake,
         ShieldCheck: mod.ShieldCheck,
@@ -87,7 +89,7 @@ export default function AdminSidebar() {
     } catch { window.location.href = '/admin/login'; }
   };
 
-  const navGroups: { label: string; items: NavItem[] }[] = [
+  const navSource: { label: string; items: NavItem[] }[] = [
     {
       label: 'General',
       items: [
@@ -104,8 +106,9 @@ export default function AdminSidebar() {
     {
       label: 'Competition',
       items: [
-        { href: '/admin/leagues', icon: icons.Trophy,    label: 'Leagues', permission: 'leagues:read' },
-        { href: '/admin/matches', icon: icons.Calendar,  label: 'Matches', permission: 'matches:read' },
+        { href: '/admin/leagues', icon: icons.Trophy,        label: 'Leagues', permission: 'leagues:read' },
+        { href: '/admin/seasons', icon: icons.CalendarRange, label: 'Seasons', permission: 'seasons:read' },
+        { href: '/admin/matches', icon: icons.Calendar,      label: 'Matches', permission: 'matches:read' },
         { href: '/admin/teams',   icon: icons.Shield,    label: 'Teams',   permission: 'teams:read' },
       ],
     },
@@ -139,7 +142,9 @@ export default function AdminSidebar() {
         { href: '/admin/settings',   icon: icons.Settings,    label: 'Settings',            permissionsAny: ['site_settings:read','site_settings:manage'] },
       ],
     },
-  ]
+  ];
+
+  const navGroups = navSource
     .map((g) => ({
       ...g,
       items: g.items.filter((item) => {

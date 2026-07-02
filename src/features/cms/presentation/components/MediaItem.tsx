@@ -1,4 +1,5 @@
 import { useState, useEffect, type ComponentType } from 'react';
+import { navigate } from 'astro:transitions/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -84,7 +85,7 @@ export default function MediaItem({
     <MediaContextMenu
       media={item}
       onEdit={(id) => {
-        window.location.href = `/admin/media/${id}`;
+        navigate(`/admin/media/${id}`);
       }}
       onDelete={onDelete}
       onDuplicate={onDuplicate}

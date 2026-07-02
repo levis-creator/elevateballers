@@ -1,4 +1,5 @@
 import { useState, useEffect, type ComponentType } from 'react';
+import { navigate } from 'astro:transitions/client';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -200,16 +201,16 @@ export default function AdminHeader() {
 
       // Navigate based on type
       if (notification.type === 'TEAM_REGISTERED' && notification.team) {
-        window.location.href = `/admin/teams/${notification.team.id}`;
+        navigate(`/admin/teams/${notification.team.id}`);
       } else if (notification.type === 'PLAYER_REGISTERED' && notification.player) {
-         window.location.href = `/admin/players/${notification.player.id}`;
+         navigate(`/admin/players/${notification.player.id}`);
       } else if (notification.type === 'PLAYER_AUTO_LINKED' && notification.player) {
-         window.location.href = `/admin/players/${notification.player.id}`;
+         navigate(`/admin/players/${notification.player.id}`);
       } else if (notification.type === 'CONTACT_MESSAGE') {
          const targetId = notification.metadata?.contactMessageId;
-         window.location.href = targetId ? `/admin/messages?id=${targetId}` : '/admin/messages';
+         navigate(targetId ? `/admin/messages?id=${targetId}` : '/admin/messages');
       } else {
-         window.location.href = '/admin/notifications'; 
+         navigate('/admin/notifications');
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
