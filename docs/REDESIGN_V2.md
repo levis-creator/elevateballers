@@ -48,20 +48,52 @@ find src -path '*/v2/*' | grep -v node_modules   # every v2 file
 git log --oneline -- 'src/**/v2/**'              # every redesign commit
 ```
 
-Each route stays a **thin switch** — data fetching is shared, only the UI branches:
+### CRITICAL: isolate the two UIs by route, not by an in-page ternary
+
+An in-page `{usePublicV2 ? <LayoutV2/> : <Layout/>}` ternary **does NOT work** —
+Astro links **every** stylesheet in a page's module graph onto the page, whether
+or not the branch renders (dynamic `import()` doesn't help either — verified in a
+production build). So a ternary ships v1's global CSS (admin.css `body{}` /
+`*{border-color}` / `:root` tokens, design-system.css's `a::after` link-underline
+hover) onto the v2 page. That was the "lingering v1 hover/colours on v2" bug.
+
+The fix: give each UI its **own route** so their module graphs never meet, and
+have the real route **rewrite** (URL unchanged) to the legacy one when the flag
+is off. The route that serves v2 imports **only** v2 modules.
 
 ```astro
-{usePublicV2
-  ? <LayoutV2 ...><FeatureV2 data={data} /></LayoutV2>
-  : <Layout ...><!-- existing v1 body --></Layout>}
+---
+// src/pages/index.astro — serves v2, imports ONLY the v2 tree
+import { usePublicV2 } from "@/lib/ui-version";
+import HomeV2 from "@/features/home/presentation/v2/HomeV2.astro";
+if (!usePublicV2) return Astro.rewrite("/home-v1");  // URL stays "/"
+---
+<HomeV2 />
 ```
+
+```astro
+---
+// src/pages/home-v1.astro — the legacy body on its own route (own CSS graph)
+export const prerender = false;
+import { usePublicV2 } from "@/lib/ui-version";
+if (usePublicV2) return Astro.rewrite("/404");       // not a 2nd copy when v2 is live
+import Layout from "@/layouts/Layout.astro";
+// ...existing v1 body...
+---
+```
+
+Verify isolation with a production build (not `dev` — dev injects all styles):
+`npm run build && node ./dist/server/entry.mjs`, then confirm the v2 page's
+linked CSS contains no global v1 rules (`body{…hsl(var(--background))…}`,
+`a::after`). Inert Tailwind utility classes carrying v1 palette values are fine —
+they only apply to elements that use those classes, and v2 uses none.
 
 ## Page migration status
 
 | Page                   | Route                     | v2 body                                        | Status |
 | ---------------------- | ------------------------- | ---------------------------------------------- | ------ |
-| Standings              | `src/pages/standings.astro` | `src/features/standings/presentation/v2/StandingsPage.astro` | 🚧 scaffold (reference pattern) |
-| Home                   | `src/pages/index.astro`     | —                                              | ⬜ pending |
+| Home                   | `src/pages/index.astro` → `HomeV2.astro`, legacy at `src/pages/home-v1.astro` | `src/features/home/presentation/v2/HomePage.astro` | ✅ built + CSS-isolated (design port; demo data, wire to CMS/DB) |
+| Standings              | `src/pages/standings.astro` | `src/features/standings/presentation/v2/StandingsPage.astro` | 🚧 scaffold — ⚠️ still uses the leaky in-page ternary; migrate to the route+rewrite pattern before real work |
 | Players                | `src/pages/players/`        | —                                              | ⬜ pending |
 | News                   | `src/pages/news/`           | —                                              | ⬜ pending |
 | Stats / Leaders        | `src/pages/stats/`          | —                                              | ⬜ pending |

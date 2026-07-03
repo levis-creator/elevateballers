@@ -4,7 +4,18 @@
 // Layout.astro pulls in — the v2 UI is built fresh on Tailwind. Keep the Props
 // shape identical to Layout.astro so route files can swap between them with no
 // prop changes.
-import "@/styles/admin.css"; // Tailwind entrypoint
+// v2-only Tailwind entrypoint — NO v1 CSS (admin.css / design-system.css /
+// legacy WordPress styles). See src/styles/v2.css.
+import "@/styles/v2.css";
+// v2 design fonts, self-hosted via Fontsource (no external Google Fonts request).
+import "@fontsource/anton"; // 400 (display headings)
+import "@fontsource/archivo/400.css";
+import "@fontsource/archivo/500.css";
+import "@fontsource/archivo/600.css";
+import "@fontsource/archivo/700.css";
+import "@fontsource/archivo/800.css";
+import "@fontsource/space-mono/400.css";
+import "@fontsource/space-mono/700.css";
 import SEO from "@/components/SEO.astro";
 
 interface Props {
@@ -42,10 +53,6 @@ const {
 	nextURL,
 	preloadImage,
 } = Astro.props;
-
-const googleFonts = [
-	"https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600&display=swap",
-];
 ---
 
 <!doctype html>
@@ -82,18 +89,18 @@ const googleFonts = [
 			gtag('config', 'G-VVZ9P3XBLP');
 		</script>
 
-		<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<!-- Fonts are self-hosted via Fontsource (imported above) — no external
+		     Google Fonts request. Supabase serves most images. -->
 		<link rel="preconnect" href="https://zjnlvnyjsidnelgciqmz.supabase.co" crossorigin />
-
-		{googleFonts.map((href) => <link rel="stylesheet" href={href} />)}
 
 		<!-- Favicons -->
 		<link rel="icon" href="/images/Elevate_Icon-32x32.png" sizes="32x32" />
 		<link rel="icon" href="/images/Elevate_Icon-200x200.png" sizes="192x192" />
 		<link rel="apple-touch-icon" href="/images/Elevate_Icon-200x200.png" />
 	</head>
-	<body class="min-h-screen bg-[#0f0d18] text-white antialiased">
+	<!-- Theme-neutral: each v2 page owns its own background/text colour on its
+	     root wrapper (e.g. the home page uses cream #f5f3ef). -->
+	<body class="min-h-screen antialiased">
 		<slot />
 	</body>
 </html>

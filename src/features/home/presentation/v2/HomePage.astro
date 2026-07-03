@@ -1,0 +1,488 @@
+---
+// v2 public home page — faithful port of the standalone design.
+// Static sections render server-side; the four interactive parts (news filter,
+// league-leaders tabs, featured-media tabs, count-up) run on Alpine.js.
+//
+// NOTE: this ports the design's demo data verbatim. Wire these arrays to real
+// CMS/DB queries later — the markup won't need to change.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+
+// Single source of truth for the registration state. Replace with a real
+// source when ready: a CMS flag, a date window, or a live API value. Drives the
+// nav CTA, the hero CTA and the registration band together.
+const registrationOpen = true;
+
+const heroCtaLabel = registrationOpen ? "Register Your Team" : "Join the Waitlist";
+
+const ticker = [
+	"Queens storm into the EWBL final",
+	"City Hawks host Alliance Queens this Saturday",
+	"Travious Kitondo named Player of the Week",
+	"Coast Waves climb to 2nd in the standings",
+	"2026 League registration now open",
+];
+
+const upcoming = [
+	{ day: "05", mon: "Jul", home: "City Hawks", away: "Alliance Queens", venue: "Nyayo Stadium", time: "4:00 PM" },
+	{ day: "06", mon: "Jul", home: "Nairobi Thunder", away: "Coast Waves", venue: "Aga Khan Court", time: "2:30 PM" },
+	{ day: "08", mon: "Jul", home: "CBA Jets", away: "Rift Valley Rangers", venue: "Nyayo Stadium", time: "6:00 PM" },
+];
+
+const results = [
+	{ home: "CBA Jets", hs: 78, away: "City Hawks", as: 74 },
+	{ home: "Alliance Queens", hs: 65, away: "Eldoret Blaze", as: 52 },
+	{ home: "Coast Waves", hs: 81, away: "Kisumu Lakers", as: 69 },
+].map((r) => ({
+	...r,
+	homeColor: r.hs > r.as ? "#141009" : "#a49a8d",
+	awayColor: r.as > r.hs ? "#141009" : "#a49a8d",
+}));
+
+// --- Interactive data (handed to Alpine) ---
+const allNews = [
+	{ cat: "Championships", title: "Queens Storm Into the EWBL Final", excerpt: "A dominant fourth quarter sealed a spot in the championship game for the reigning favorites.", date: "Jul 1, 2026" },
+	{ cat: "Match report", title: "City Hawks Edge CBA Jets in Overtime Thriller", excerpt: "Two clutch free throws in the final seconds decided a game that had everything.", date: "Jun 29, 2026" },
+	{ cat: "Interviews", title: "Travious Kitondo on Ice-Cold Shooting", excerpt: "The Player of the Week sits down to talk footwork, confidence, and big dreams.", date: "Jun 28, 2026" },
+	{ cat: "Analysis", title: "Why the Three Is Reshaping the League", excerpt: "The math behind the shot that is changing how every team builds its offense.", date: "Jun 26, 2026" },
+	{ cat: "Match report", title: "Coast Waves Sink Rift Valley Rangers", excerpt: "A wire-to-wire performance keeps the Waves firmly in the playoff hunt.", date: "Jun 24, 2026" },
+	{ cat: "Championships", title: "Road to the 2026 Finals: What to Watch", excerpt: "The storylines, the matchups, and the players who will decide the title.", date: "Jun 22, 2026" },
+];
+const newsCategories = ["All", "Interviews", "Championships", "Match report", "Analysis"];
+
+const leaderData = {
+	Points: [
+		{ name: "Travious Kitondo", team: "CBA Jets", val: 24.8 },
+		{ name: "Brian Otieno", team: "City Hawks", val: 22.1 },
+		{ name: "Faith Mwangi", team: "Alliance Queens", val: 20.6 },
+		{ name: "Kevin Barasa", team: "Nairobi Thunder", val: 19.4 },
+		{ name: "Aisha Noor", team: "Coast Waves", val: 18.9 },
+	],
+	Rebounds: [
+		{ name: "Kevin Barasa", team: "Nairobi Thunder", val: 12.7 },
+		{ name: "Mercy Achieng", team: "Alliance Queens", val: 11.4 },
+		{ name: "Samuel Kiptoo", team: "Rift Valley Rangers", val: 10.8 },
+		{ name: "Brian Otieno", team: "City Hawks", val: 9.6 },
+		{ name: "Grace Wanjiru", team: "Coast Waves", val: 9.1 },
+	],
+	Assists: [
+		{ name: "Faith Mwangi", team: "Alliance Queens", val: 8.9 },
+		{ name: "Dennis Mutua", team: "City Hawks", val: 7.7 },
+		{ name: "Aisha Noor", team: "Coast Waves", val: 6.8 },
+		{ name: "Travious Kitondo", team: "CBA Jets", val: 6.2 },
+		{ name: "John Kamau", team: "Eldoret Blaze", val: 5.9 },
+	],
+};
+const leaderTabs = ["Points", "Rebounds", "Assists"];
+
+const countTargets = { matches: 214, players: 372, teams: 24, awards: 18 };
+
+const allMedia = [
+	{ type: "Images", label: "game photo", span: true },
+	{ type: "Audio", label: "podcast clip", span: false },
+	{ type: "Images", label: "court shot", span: false },
+	{ type: "Images", label: "action photo", span: false },
+	{ type: "Audio", label: "post-game audio", span: false },
+	{ type: "Images", label: "crowd photo", span: true },
+];
+const mediaTabs = ["All", "Images", "Audio"];
+---
+
+<div style="background:#f5f3ef;color:#1a1712;font-family:'Archivo',sans-serif;min-height:100vh;overflow-x:hidden;">
+	<Header registrationOpen={registrationOpen} active="home" />
+
+	<!-- HERO -->
+	<section style="position:relative;border-bottom:1px solid rgba(0,0,0,0.08);overflow:hidden;">
+		<div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+		<div style="position:absolute;right:-140px;top:-80px;width:520px;height:520px;border-radius:50%;border:1px solid rgba(228,0,43,0.14);"></div>
+		<div style="position:absolute;right:-40px;top:20px;width:340px;height:340px;border-radius:50%;border:1px solid rgba(228,0,43,0.1);"></div>
+		<div class="eb-hero eb-pad" style="position:relative;max-width:1280px;margin:0 auto;padding:72px 32px 60px;display:grid;grid-template-columns:1.15fr 0.85fr;gap:56px;align-items:center;">
+			<div>
+				<div style="display:inline-flex;align-items:center;gap:10px;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#e4002b;margin-bottom:22px;">
+					<span style="width:26px;height:1px;background:#e4002b;"></span>Kenya's Premier Basketball League
+				</div>
+				<h1 style="font-family:'Anton',sans-serif;font-size:clamp(56px,7vw,104px);line-height:0.86;letter-spacing:0.01em;text-transform:uppercase;margin-bottom:24px;color:#141009;">
+					Elevate<br />your <span style="color:#e4002b;">game</span>
+				</h1>
+				<p style="font-size:17px;line-height:1.6;color:#6f665c;max-width:460px;margin-bottom:34px;">
+					Live matches, standings, and rising stars from the courts of Nairobi. Follow every game, every team, every player — all season long.
+				</p>
+				<div class="eb-cta" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+					<a href="#register" class="eb-btn-primary" style="background:#e4002b;color:#fff;text-decoration:none;font-weight:800;font-size:14px;letter-spacing:0.04em;text-transform:uppercase;padding:16px 28px;border-radius:4px;">{heroCtaLabel}</a>
+					<a href="#standings" class="eb-btn-outline" style="border:1px solid rgba(0,0,0,0.22);color:#1a1712;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.04em;text-transform:uppercase;padding:16px 28px;border-radius:4px;">View Standings</a>
+				</div>
+			</div>
+
+			<!-- NEXT MATCH CARD -->
+			<div style="background:#111010;border:1px solid rgba(0,0,0,0.1);border-radius:12px;overflow:hidden;box-shadow:0 26px 50px rgba(20,16,9,0.22);">
+				<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#000;border-bottom:1px solid rgba(255,255,255,0.08);">
+					<span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#e4002b;">Next Match</span>
+					<span style="font-family:'Space Mono',monospace;font-size:11px;color:#8a817a;">Jul 5, 2026 · 4:00 PM</span>
+				</div>
+				<div style="padding:26px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;">
+					<div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
+						<div style="width:64px;height:64px;border-radius:50%;background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:22px;color:#e4002b;">CH</div>
+						<div>
+							<div style="font-family:'Anton',sans-serif;font-size:16px;text-transform:uppercase;color:#f3efe9;">City Hawks</div>
+							<div style="font-family:'Space Mono',monospace;font-size:10px;color:#8a817a;letter-spacing:0.1em;">HOME</div>
+						</div>
+					</div>
+					<div style="font-family:'Anton',sans-serif;font-size:20px;color:#6b635a;">VS</div>
+					<div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
+						<div style="width:64px;height:64px;border-radius:50%;background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:22px;color:#f3efe9;">AG</div>
+						<div>
+							<div style="font-family:'Anton',sans-serif;font-size:15px;text-transform:uppercase;line-height:1;color:#f3efe9;">Alliance Queens</div>
+							<div style="font-family:'Space Mono',monospace;font-size:10px;color:#8a817a;letter-spacing:0.1em;">AWAY</div>
+						</div>
+					</div>
+				</div>
+				<div style="padding:0 18px 18px;">
+					<a href="#fixtures" class="eb-chip" style="display:block;text-align:center;background:rgba(228,0,43,0.14);color:#ff5a72;text-decoration:none;font-weight:700;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;padding:13px;border-radius:6px;border:1px solid rgba(228,0,43,0.3);">View Match · Nyayo Stadium</a>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- NEWS TICKER -->
+	<div style="background:#e4002b;color:#fff;overflow:hidden;white-space:nowrap;display:flex;align-items:center;">
+		<span style="flex-shrink:0;background:#0c0b0a;color:#fff;font-family:'Anton',sans-serif;font-size:14px;letter-spacing:0.1em;text-transform:uppercase;padding:12px 20px;">Elevate News</span>
+		<div style="overflow:hidden;flex:1;">
+			<div style="display:inline-flex;animation:marquee 34s linear infinite;font-family:'Space Mono',monospace;font-size:13px;font-weight:700;">
+				<div style="display:inline-flex;">
+					{ticker.map((t) => (
+						<span style="padding:12px 28px;display:inline-flex;align-items:center;gap:28px;">{t}<span style="width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block;"></span></span>
+					))}
+				</div>
+				<div style="display:inline-flex;" aria-hidden="true">
+					{ticker.map((t) => (
+						<span style="padding:12px 28px;display:inline-flex;align-items:center;gap:28px;">{t}<span style="width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block;"></span></span>
+					))}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- FIXTURES & RESULTS -->
+	<section id="fixtures" class="eb-two eb-pad eb-sec" style="max-width:1280px;margin:0 auto;padding:72px 32px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+		<div>
+			<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;">
+				<h2 style="font-family:'Anton',sans-serif;font-size:30px;text-transform:uppercase;letter-spacing:0.01em;color:#141009;">Upcoming Matches</h2>
+				<a href="#fixtures" style="font-family:'Space Mono',monospace;font-size:12px;color:#e4002b;text-decoration:none;letter-spacing:0.06em;">All fixtures →</a>
+			</div>
+			<div style="display:flex;flex-direction:column;gap:12px;">
+				{upcoming.map((m) => (
+					<div class="eb-card" style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:10px;padding:14px 18px 16px;display:flex;flex-direction:column;gap:12px;min-height:142px;justify-content:space-between;box-shadow:0 1px 2px rgba(20,16,9,0.04);">
+						<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+							<span style="font-family:'Space Mono',monospace;font-size:10px;color:#e4002b;letter-spacing:0.12em;text-transform:uppercase;background:rgba(228,0,43,0.08);padding:3px 9px;border-radius:4px;">{m.day} {m.mon} · {m.time}</span>
+							<span style="font-family:'Space Mono',monospace;font-size:11px;color:#8a817a;">{m.venue}</span>
+						</div>
+						<div style="display:flex;flex-direction:column;gap:11px;">
+							<div style="display:flex;align-items:center;gap:12px;">
+								<div style="width:30px;height:30px;border-radius:50%;background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);flex-shrink:0;"></div>
+								<span style="flex:1;font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:#1a1712;">{m.home}</span>
+								<span style="font-family:'Space Mono',monospace;font-size:10px;color:#a49a8d;letter-spacing:0.1em;">HOME</span>
+							</div>
+							<div style="display:flex;align-items:center;gap:12px;">
+								<div style="width:30px;height:30px;border-radius:50%;background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);flex-shrink:0;"></div>
+								<span style="flex:1;font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:#1a1712;">{m.away}</span>
+								<span style="font-family:'Space Mono',monospace;font-size:10px;color:#a49a8d;letter-spacing:0.1em;">AWAY</span>
+							</div>
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+		<div id="standings">
+			<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;">
+				<h2 style="font-family:'Anton',sans-serif;font-size:30px;text-transform:uppercase;letter-spacing:0.01em;color:#141009;">Recent Results</h2>
+				<a href="/standings" style="font-family:'Space Mono',monospace;font-size:12px;color:#e4002b;text-decoration:none;letter-spacing:0.06em;">All results →</a>
+			</div>
+			<div style="display:flex;flex-direction:column;gap:12px;">
+				{results.map((r) => (
+					<div class="eb-card" style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:10px;padding:14px 18px 16px;display:flex;flex-direction:column;gap:12px;min-height:142px;justify-content:space-between;box-shadow:0 1px 2px rgba(20,16,9,0.04);">
+						<span style="align-self:flex-start;font-family:'Space Mono',monospace;font-size:10px;color:#a49a8d;letter-spacing:0.12em;text-transform:uppercase;background:#f0ede7;padding:3px 9px;border-radius:4px;">Final</span>
+						<div style="display:flex;flex-direction:column;gap:11px;">
+							<div style="display:flex;align-items:center;gap:12px;">
+								<div style="width:30px;height:30px;border-radius:50%;background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);flex-shrink:0;"></div>
+								<span style={`flex:1;font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:${r.homeColor};`}>{r.home}</span>
+								<span style={`font-family:'Anton',sans-serif;font-size:22px;color:${r.homeColor};`}>{r.hs}</span>
+							</div>
+							<div style="display:flex;align-items:center;gap:12px;">
+								<div style="width:30px;height:30px;border-radius:50%;background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);flex-shrink:0;"></div>
+								<span style={`flex:1;font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:${r.awayColor};`}>{r.away}</span>
+								<span style={`font-family:'Anton',sans-serif;font-size:22px;color:${r.awayColor};`}>{r.as}</span>
+							</div>
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	</section>
+
+	<!-- PLAYER OF THE WEEK -->
+	<section style="background:#0c0b0a;color:#f3efe9;border-top:1px solid rgba(0,0,0,0.08);position:relative;overflow:hidden;">
+		<div style="position:absolute;inset:0;background:radial-gradient(90% 120% at 10% 50%,rgba(228,0,43,0.16),transparent 55%);"></div>
+		<div class="eb-potw eb-pad" style="position:relative;max-width:1280px;margin:0 auto;padding:72px 32px;display:grid;grid-template-columns:0.85fr 1.15fr;gap:56px;align-items:center;">
+			<div style="position:relative;">
+				<div class="eb-potw-img" style="aspect-ratio:4/5;border-radius:14px;background:repeating-linear-gradient(45deg,#1a1714,#1a1714 12px,#151210 12px,#151210 24px);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+					<span style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.14em;color:#6b635a;text-transform:uppercase;">player photo</span>
+				</div>
+				<div style="position:absolute;bottom:-14px;left:-14px;background:#e4002b;color:#fff;font-family:'Anton',sans-serif;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;padding:10px 16px;border-radius:6px;">CBA Jets · #7</div>
+			</div>
+			<div>
+				<div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#ff5a72;margin-bottom:16px;">Player of the Week</div>
+				<h2 style="font-family:'Anton',sans-serif;font-size:clamp(40px,5vw,68px);line-height:0.9;text-transform:uppercase;margin-bottom:10px;color:#f6f2ec;">Travious<br />Kitondo</h2>
+				<div style="font-family:'Anton',sans-serif;font-size:20px;color:#e4002b;letter-spacing:0.06em;margin-bottom:22px;">DYNAMITE.</div>
+				<p style="font-size:16px;line-height:1.7;color:#b8afa6;max-width:520px;margin-bottom:18px;">
+					Size, physicality, strength — none of which Travious has. But inside that lean frame is a mean competitor, a silent assassin afraid of no one on the court. All game long she was quiet, calculating and methodical as she tore City Hawks to shreds.
+				</p>
+				<p style="font-size:16px;line-height:1.7;color:#b8afa6;max-width:520px;margin-bottom:28px;">
+					Spot-up three, contested catch-and-shoot three, and a deadly side-step three closed out CBA Jets' final 14 points — officially slamming the door on a much-needed win.
+				</p>
+				<div style="display:flex;gap:40px;">
+					<div><div style="font-family:'Anton',sans-serif;font-size:34px;color:#f3efe9;">27</div><div style="font-family:'Space Mono',monospace;font-size:11px;color:#8a817a;letter-spacing:0.08em;text-transform:uppercase;">Points</div></div>
+					<div><div style="font-family:'Anton',sans-serif;font-size:34px;color:#f3efe9;">6</div><div style="font-family:'Space Mono',monospace;font-size:11px;color:#8a817a;letter-spacing:0.08em;text-transform:uppercase;">Threes</div></div>
+					<div><div style="font-family:'Anton',sans-serif;font-size:34px;color:#f3efe9;">5</div><div style="font-family:'Space Mono',monospace;font-size:11px;color:#8a817a;letter-spacing:0.08em;text-transform:uppercase;">Assists</div></div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- LATEST NEWS (Alpine: category filter) -->
+	<section class="eb-pad eb-sec" style="max-width:1280px;margin:0 auto;padding:72px 32px;" x-data={`{ cat: 'All', news: ${JSON.stringify(allNews)} }`}>
+		<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px;">
+			<div>
+				<div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#e4002b;margin-bottom:10px;">From around the league</div>
+				<h2 style="font-family:'Anton',sans-serif;font-size:38px;text-transform:uppercase;color:#141009;">Latest News</h2>
+			</div>
+			<div style="display:flex;gap:8px;flex-wrap:wrap;">
+				{newsCategories.map((c) => (
+					<button
+						class="eb-chipbtn"
+						@click={`cat = '${c}'`}
+						:style={`cat === '${c}' ? 'background:#e4002b;color:#fff;border:1px solid #e4002b;font-family:\\'Archivo\\',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;padding:9px 15px;border-radius:6px;cursor:pointer;' : 'background:#fff;color:#6f665c;border:1px solid rgba(0,0,0,0.15);font-family:\\'Archivo\\',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;padding:9px 15px;border-radius:6px;cursor:pointer;'`}
+					>{c}</button>
+				))}
+			</div>
+		</div>
+		<div class="eb-news" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+			<template x-for="n in (cat === 'All' ? news : news.filter(x => x.cat === cat))" :key="n.title">
+				<a href="/news" class="eb-newscard" style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;overflow:hidden;text-decoration:none;color:inherit;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(20,16,9,0.04);">
+					<div style="aspect-ratio:16/10;background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 10px,#f0ece5 10px,#f0ece5 20px);display:flex;align-items:center;justify-content:center;">
+						<span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.12em;color:#a49a8d;text-transform:uppercase;">article image</span>
+					</div>
+					<div style="padding:20px;flex:1;display:flex;flex-direction:column;">
+						<span style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#e4002b;margin-bottom:10px;" x-text="n.cat"></span>
+						<h3 style="font-family:'Archivo',sans-serif;font-weight:800;font-size:18px;line-height:1.25;margin-bottom:10px;color:#1a1712;" x-text="n.title"></h3>
+						<p style="font-size:13.5px;line-height:1.55;color:#6f665c;flex:1;" x-text="n.excerpt"></p>
+						<span style="font-family:'Space Mono',monospace;font-size:11px;color:#a49a8d;margin-top:14px;" x-text="n.date"></span>
+					</div>
+				</a>
+			</template>
+		</div>
+	</section>
+
+	<!-- LEAGUE LEADERS + BY THE NUMBERS (Alpine: tabs + count-up) -->
+	<section style="background:#efece5;border-top:1px solid rgba(0,0,0,0.08);border-bottom:1px solid rgba(0,0,0,0.08);">
+		<div class="eb-two eb-pad eb-sec" style="max-width:1280px;margin:0 auto;padding:72px 32px;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;">
+			<div x-data={`{
+				tab: 'Points',
+				data: ${JSON.stringify(leaderData)},
+				get list() {
+					const arr = this.data[this.tab];
+					const max = Math.max(...arr.map(p => p.val));
+					return arr.map((p, i) => ({ name: p.name, team: p.team, rank: i + 1, first: i === 0, pct: Math.round((p.val / max) * 100), val: p.val.toFixed(1) }));
+				}
+			}`}>
+				<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;">
+					<h2 style="font-family:'Anton',sans-serif;font-size:32px;text-transform:uppercase;color:#141009;">League Leaders</h2>
+					<a href="/stats/leaders" style="font-family:'Space Mono',monospace;font-size:12px;color:#e4002b;text-decoration:none;">All stats →</a>
+				</div>
+				<div style="display:flex;gap:8px;margin-bottom:20px;">
+					{leaderTabs.map((t) => (
+						<button
+							@click={`tab = '${t}'`}
+							:style={`tab === '${t}' ? 'background:#e4002b;color:#fff;border:1px solid #e4002b;font-family:\\'Archivo\\',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;padding:9px 15px;border-radius:6px;cursor:pointer;' : 'background:#fff;color:#6f665c;border:1px solid rgba(0,0,0,0.15);font-family:\\'Archivo\\',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;padding:9px 15px;border-radius:6px;cursor:pointer;'`}
+						>{t}</button>
+					))}
+				</div>
+				<div style="display:flex;flex-direction:column;gap:2px;">
+					<template x-for="p in list" :key="p.name">
+						<div style="display:flex;align-items:center;gap:16px;padding:14px 4px;border-bottom:1px solid rgba(0,0,0,0.08);">
+							<span style="font-family:'Anton',sans-serif;font-size:20px;width:26px;" :style="`color:${p.first ? '#e4002b' : '#b3a99c'}`" x-text="p.rank"></span>
+							<div style="width:40px;height:40px;border-radius:50%;background:#ddd7cd;flex-shrink:0;"></div>
+							<div style="flex:1;">
+								<div style="font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:#1a1712;" x-text="p.name"></div>
+								<div style="font-family:'Space Mono',monospace;font-size:11px;color:#8a817a;" x-text="p.team"></div>
+							</div>
+							<div style="flex:1.2;max-width:160px;">
+								<div style="height:6px;background:rgba(0,0,0,0.08);border-radius:3px;overflow:hidden;">
+									<div style="height:100%;border-radius:3px;" :style="`width:${p.pct}%;background:${p.first ? '#e4002b' : 'rgba(228,0,43,0.4)'}`"></div>
+								</div>
+							</div>
+							<span style="font-family:'Anton',sans-serif;font-size:22px;color:#141009;width:56px;text-align:right;" x-text="p.val"></span>
+						</div>
+					</template>
+				</div>
+			</div>
+
+			<div x-data={`{
+				counts: { matches: 0, players: 0, teams: 0, awards: 0 },
+				init() {
+					const targets = ${JSON.stringify(countTargets)};
+					const start = performance.now();
+					const dur = 1400;
+					const tick = (now) => {
+						const p = Math.min(1, (now - start) / dur);
+						const e = 1 - Math.pow(1 - p, 3);
+						this.counts = {
+							matches: Math.round(targets.matches * e),
+							players: Math.round(targets.players * e),
+							teams: Math.round(targets.teams * e),
+							awards: Math.round(targets.awards * e),
+						};
+						if (p < 1) requestAnimationFrame(tick);
+					};
+					requestAnimationFrame(tick);
+				}
+			}`}>
+				<h2 style="font-family:'Anton',sans-serif;font-size:32px;text-transform:uppercase;margin-bottom:22px;color:#141009;">By The Numbers</h2>
+				<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+					<div style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:26px;box-shadow:0 1px 2px rgba(20,16,9,0.04);">
+						<div style="font-family:'Anton',sans-serif;font-size:52px;color:#e4002b;line-height:1;" x-text="counts.matches"></div>
+						<div style="font-family:'Space Mono',monospace;font-size:12px;color:#6f665c;letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">Matches Played</div>
+					</div>
+					<div style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:26px;box-shadow:0 1px 2px rgba(20,16,9,0.04);">
+						<div style="font-family:'Anton',sans-serif;font-size:52px;color:#141009;line-height:1;" x-text="counts.players"></div>
+						<div style="font-family:'Space Mono',monospace;font-size:12px;color:#6f665c;letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">Players</div>
+					</div>
+					<div style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:26px;box-shadow:0 1px 2px rgba(20,16,9,0.04);">
+						<div style="font-family:'Anton',sans-serif;font-size:52px;color:#141009;line-height:1;" x-text="counts.teams"></div>
+						<div style="font-family:'Space Mono',monospace;font-size:12px;color:#6f665c;letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">Teams</div>
+					</div>
+					<div style="background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:26px;box-shadow:0 1px 2px rgba(20,16,9,0.04);">
+						<div style="font-family:'Anton',sans-serif;font-size:52px;color:#e4002b;line-height:1;" x-text="counts.awards"></div>
+						<div style="font-family:'Space Mono',monospace;font-size:12px;color:#6f665c;letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">Awards Won</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- FEATURED MEDIA (Alpine: tabs + empty state) -->
+	<section class="eb-pad eb-sec" style="max-width:1280px;margin:0 auto;padding:72px 32px;" x-data={`{
+		tab: 'All',
+		all: ${JSON.stringify(allMedia)},
+		get items() { return this.tab === 'All' ? this.all : this.all.filter(m => m.type === this.tab); },
+		get emptyTitle() { return this.tab === 'All' ? 'No featured media yet' : (this.tab === 'Audio' ? 'No audio clips yet' : 'No images yet'); },
+		get emptyBody() { return this.tab === 'All' ? 'Photos, audio and highlights from match days will appear here as the season plays out.' : ('Nothing tagged ' + this.tab.toLowerCase() + ' right now — check back after the next match day.'); }
+	}`}>
+		<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px;">
+			<div>
+				<div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#e4002b;margin-bottom:10px;">Visual highlights from across the league</div>
+				<h2 style="font-family:'Anton',sans-serif;font-size:38px;text-transform:uppercase;color:#141009;">Featured Media</h2>
+			</div>
+			<div style="display:flex;gap:8px;">
+				{mediaTabs.map((t) => (
+					<button
+						@click={`tab = '${t}'`}
+						:style={`tab === '${t}' ? 'background:#e4002b;color:#fff;border:1px solid #e4002b;font-family:\\'Archivo\\',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;padding:9px 15px;border-radius:6px;cursor:pointer;' : 'background:#fff;color:#6f665c;border:1px solid rgba(0,0,0,0.15);font-family:\\'Archivo\\',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;padding:9px 15px;border-radius:6px;cursor:pointer;'`}
+					>{t}</button>
+				))}
+			</div>
+		</div>
+		<div class="eb-media" style="display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:180px;gap:14px;" x-show="items.length > 0">
+			<template x-for="mi in items" :key="mi.label">
+				<div :style="`background:${mi.type === 'Audio' ? 'linear-gradient(135deg,#ece7df,#f4f0ea)' : 'repeating-linear-gradient(45deg,#e7e2da,#e7e2da 10px,#f0ece5 10px,#f0ece5 20px)'};border:1px solid rgba(0,0,0,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;${mi.span ? 'grid-column:span 2;' : ''}`">
+					<span style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.12em;color:#a49a8d;text-transform:uppercase;" x-text="mi.label"></span>
+				</div>
+			</template>
+		</div>
+		<div x-show="items.length === 0" style="border:1px dashed rgba(0,0,0,0.16);border-radius:14px;background:#faf8f4;padding:56px 32px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;">
+			<div style="width:52px;height:52px;border-radius:50%;background:#efece5;display:flex;align-items:center;justify-content:center;">
+				<div style="width:20px;height:16px;border:2px solid #b3a99c;border-radius:3px;position:relative;">
+					<div style="position:absolute;width:6px;height:6px;border-radius:50%;background:#b3a99c;top:2px;left:2px;"></div>
+				</div>
+			</div>
+			<div style="font-family:'Anton',sans-serif;font-size:22px;text-transform:uppercase;color:#141009;" x-text="emptyTitle"></div>
+			<p style="font-size:14px;color:#6f665c;max-width:360px;line-height:1.5;" x-text="emptyBody"></p>
+		</div>
+	</section>
+
+	<!-- ABOUT -->
+	<section id="about" style="background:#fff;border-top:1px solid rgba(0,0,0,0.08);">
+		<div class="eb-pad eb-sec" style="max-width:1000px;margin:0 auto;padding:80px 32px;text-align:center;">
+			<div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#e4002b;margin-bottom:18px;">Welcome to Elevate Ballers</div>
+			<h2 style="font-family:'Anton',sans-serif;font-size:clamp(34px,4.5vw,56px);text-transform:uppercase;line-height:0.95;margin-bottom:24px;color:#141009;">Your home for the game<br />we live for</h2>
+			<p style="font-size:17px;line-height:1.7;color:#6f665c;max-width:640px;margin:0 auto 32px;">
+				The official home of Kenya's premier basketball league. Follow every game, every team, and every player. Standings update after every match, and the Player of the Week highlights one standout performance from the past week.
+			</p>
+			<a href="#about" class="eb-btn-outline" style="border:1px solid rgba(0,0,0,0.22);color:#1a1712;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.04em;text-transform:uppercase;padding:15px 30px;border-radius:4px;">Read the full story →</a>
+		</div>
+	</section>
+
+	<!-- REGISTER CTA -->
+	<section id="register" style="background:#e4002b;color:#fff;position:relative;overflow:hidden;">
+		<div style="position:absolute;right:-100px;bottom:-140px;width:420px;height:420px;border-radius:50%;border:2px solid rgba(255,255,255,0.18);"></div>
+		<div style="position:absolute;right:40px;bottom:-40px;width:220px;height:220px;border-radius:50%;border:2px solid rgba(255,255,255,0.18);"></div>
+		<div class="eb-pad" style="position:relative;max-width:1280px;margin:0 auto;padding:70px 32px;">
+			<div style="display:flex;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap;">
+				<div>
+					<div style="display:inline-flex;align-items:center;gap:9px;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:16px;">
+						<span style="width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;"></span>{registrationOpen ? "Registration Open" : "Registration Closed"}
+					</div>
+					{registrationOpen ? (
+						<Fragment>
+							<h2 style="font-family:'Anton',sans-serif;font-size:clamp(36px,5vw,64px);text-transform:uppercase;line-height:0.9;margin-bottom:14px;">Register to<br />join the league</h2>
+							<p style="font-size:17px;font-weight:600;max-width:440px;">Be part of Elevate Ballers. Tryouts run throughout the year for late entries — sign up your team or yourself today.</p>
+						</Fragment>
+					) : (
+						<Fragment>
+							<h2 style="font-family:'Anton',sans-serif;font-size:clamp(36px,5vw,64px);text-transform:uppercase;line-height:0.9;margin-bottom:14px;">2026 entries<br />are closed</h2>
+							<p style="font-size:17px;font-weight:600;max-width:460px;">The season is underway. Tryouts still run year-round for late entries — join the waitlist and we'll reach out the moment a spot or the 2027 window opens.</p>
+						</Fragment>
+					)}
+				</div>
+				<a href="/league-registration" class="eb-register-btn" style="background:#0c0b0a;color:#fff;text-decoration:none;font-family:'Anton',sans-serif;font-size:16px;letter-spacing:0.06em;text-transform:uppercase;padding:20px 36px;border-radius:6px;flex-shrink:0;">{registrationOpen ? "Open Registration Form →" : "Join the Waitlist →"}</a>
+			</div>
+		</div>
+	</section>
+
+	<Footer />
+</div>
+
+<style is:global>
+	/* v2 home design base — scoped to pages that render this component. */
+	*{box-sizing:border-box;margin:0;padding:0;}
+	body{background:#f5f3ef;}
+	@keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+	::selection{background:#e4002b;color:#fff;}
+
+	/* Hover states (ported from the design's style-hover hints) */
+	.eb-btn-primary:hover{background:#ff2d43 !important;}
+	.eb-btn-outline:hover{border-color:#e4002b !important;color:#e4002b !important;}
+	.eb-chip:hover{background:rgba(228,0,43,0.24) !important;}
+	.eb-card:hover,.eb-newscard:hover{border-color:rgba(228,0,43,0.4) !important;}
+	.eb-chipbtn:hover{border-color:#e4002b !important;}
+	.eb-register-btn:hover{background:#000 !important;}
+
+	@media (max-width:960px){
+		.eb-hero{grid-template-columns:1fr !important;gap:36px !important;padding-top:48px !important;}
+		.eb-two{grid-template-columns:1fr !important;gap:36px !important;}
+		.eb-potw{grid-template-columns:1fr !important;gap:36px !important;}
+		.eb-news{grid-template-columns:repeat(2,1fr) !important;}
+		.eb-foot{grid-template-columns:1fr 1fr !important;gap:32px !important;}
+		.eb-nav{display:none !important;}
+		.eb-pad{padding-left:24px !important;padding-right:24px !important;}
+		.eb-sec{padding-top:52px !important;padding-bottom:52px !important;}
+	}
+	@media (max-width:600px){
+		.eb-news{grid-template-columns:1fr !important;}
+		.eb-media{grid-template-columns:1fr !important;}
+		.eb-foot{grid-template-columns:1fr !important;}
+		.eb-potw-img{max-width:320px;}
+		.eb-cta{flex-direction:column !important;align-items:flex-start !important;}
+		.eb-cta a{width:100%;text-align:center;}
+		.eb-util{flex-wrap:wrap !important;gap:6px 16px !important;}
+	}
+</style>

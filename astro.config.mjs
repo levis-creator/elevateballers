@@ -2,6 +2,7 @@
 import { defineConfig, envField } from 'astro/config';
 import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
+import alpinejs from '@astrojs/alpinejs';
 import node from '@astrojs/node';
 import vercel from '@astrojs/vercel';
 import { fileURLToPath } from 'url';
@@ -16,7 +17,7 @@ const deployTarget = process.env.DEPLOY_TARGET || 'cpanel';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://elevateballers.com',
-  integrations: [react(), tailwind(), sitemap()],
+  integrations: [react(), tailwind(), alpinejs(), sitemap()],
   output: 'server',
   // Enable link prefetching so `data-astro-prefetch` hints actually fetch.
   // Default strategy is hover; the admin uses <ClientRouter /> for SPA-style nav.

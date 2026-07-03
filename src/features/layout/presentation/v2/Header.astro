@@ -1,0 +1,72 @@
+---
+// v2 public site header — top utility bar + sticky nav.
+// Reusable across v2 pages. Faithful port of the design (inline styles);
+// hover states are provided by the scoped <style> below.
+interface NavLink {
+	label: string;
+	href: string;
+	key: string;
+}
+
+interface Props {
+	/** Drives the nav CTA label/style. When false, registration reads "closed". */
+	registrationOpen?: boolean;
+	/** Key of the active nav link (matches NavLink.key). */
+	active?: string;
+}
+
+const { registrationOpen = true, active = "home" } = Astro.props;
+
+const navLinks: NavLink[] = [
+	{ label: "Home", href: "/", key: "home" },
+	{ label: "Teams", href: "/teams", key: "teams" },
+	{ label: "Standings", href: "#standings", key: "standings" },
+	{ label: "Fixtures", href: "#fixtures", key: "fixtures" },
+	{ label: "Results", href: "#fixtures", key: "results" },
+	{ label: "About", href: "#about", key: "about" },
+	{ label: "Rules", href: "/rules", key: "rules" },
+	{ label: "Contacts", href: "#footer", key: "contacts" },
+];
+
+const navCtaStyle = registrationOpen
+	? "flex-shrink:0;background:#e4002b;color:#fff;text-decoration:none;font-weight:800;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:12px 20px;border-radius:4px;"
+	: "flex-shrink:0;background:transparent;color:#6f665c;border:1px solid rgba(0,0,0,0.2);text-decoration:none;font-weight:700;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;padding:11px 20px;border-radius:4px;";
+const navCtaLabel = registrationOpen ? "2026 Registration" : "Registration Closed";
+---
+
+<!-- TOP UTILITY BAR -->
+<div style="background:#0c0b0a;border-bottom:1px solid rgba(255,255,255,0.06);">
+	<div class="eb-util eb-pad" style="max-width:1280px;margin:0 auto;padding:8px 32px;display:flex;align-items:center;justify-content:space-between;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#8a817a;">
+		<span>Nairobi, Kenya · Season 2026</span>
+		<div style="display:flex;align-items:center;gap:20px;">
+			<span style="display:flex;align-items:center;gap:8px;">
+				<span style="width:7px;height:7px;border-radius:50%;background:#e4002b;display:inline-block;"></span>Live standings updating
+			</span>
+			<a href="/admin/login" style="color:#f3efe9;text-decoration:none;">Log In</a>
+		</div>
+	</div>
+</div>
+
+<!-- NAV -->
+<header style="position:sticky;top:0;z-index:50;background:rgba(245,243,239,0.9);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,0,0,0.1);">
+	<div class="eb-pad" style="max-width:1280px;margin:0 auto;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;gap:32px;">
+		<a href="/" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;flex-shrink:0;">
+			<img src="/images/Elevate_Icon.png" alt="Elevate Ballers" width="40" height="40" style="width:40px;height:40px;flex-shrink:0;object-fit:contain;" />
+			<span style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:0.02em;line-height:0.9;text-transform:uppercase;color:#1a1712;">Elevate<br /><span style="color:#e4002b;">Ballers</span></span>
+		</a>
+		<nav class="eb-nav" style="display:flex;align-items:center;gap:26px;font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">
+			{navLinks.map((link) => (
+				<a
+					href={link.href}
+					class="eb-navlink"
+					style={`text-decoration:none;color:${link.key === active ? "#1a1712" : "#6f665c"};`}
+				>{link.label}</a>
+			))}
+		</nav>
+		<a href="#register" class="eb-navcta" style={navCtaStyle}>{navCtaLabel}</a>
+	</div>
+</header>
+
+<style>
+	.eb-navlink:hover { color: #e4002b !important; }
+</style>

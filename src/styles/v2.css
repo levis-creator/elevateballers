@@ -1,0 +1,11 @@
+/*
+ * v2 redesign stylesheet — fully independent of v1.
+ *
+ * Deliberately contains ONLY Tailwind's own layers. It does NOT pull in any
+ * v1 CSS: not admin.css (with its --primary/#dd3333 admin design tokens),
+ * design-system.css, landing-enhancements.css, or the legacy WordPress
+ * stylesheets. The v2 UI defines its own colours inline / per-component.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
