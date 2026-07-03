@@ -1,11 +1,19 @@
 /*
  * v2 redesign stylesheet — fully independent of v1.
  *
- * Deliberately contains ONLY Tailwind's own layers. It does NOT pull in any
- * v1 CSS: not admin.css (with its --primary/#dd3333 admin design tokens),
- * design-system.css, landing-enhancements.css, or the legacy WordPress
- * stylesheets. The v2 UI defines its own colours inline / per-component.
+ * `@config` points Tailwind at the v2-only config (design tokens: brand/ink/
+ * paper/night/cream, fonts display/body/mono) so v2 utilities never collide with
+ * v1's shared config (which defines brand/muted/accent differently). Contains
+ * ONLY Tailwind layers — no v1 CSS (admin.css / design-system.css / WP styles).
  */
+@config "../../tailwind.v2.config.mjs";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Hide x-cloak elements until Alpine initializes (mobile menu). */
+[x-cloak] { display: none !important; }
+
+/* Brand text selection (design detail). */
+::selection { background: #e4002b; color: #fff; }
