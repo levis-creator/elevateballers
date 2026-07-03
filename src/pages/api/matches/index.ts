@@ -5,6 +5,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import type { MatchFilter, MatchSortOption, MatchDTO, MatchStage } from '../../../features/matches/types';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rules';
 
 export const prerender = false;
 
@@ -166,6 +167,34 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' },
         }
       );
+    }
+
+    // Normalise the stage the same way createMatch does so enforcement sees the
+    // real value (not '' or the '__none' placeholder).
+    const stageValue =
+      data.stage && data.stage !== '__none' && data.stage.trim() !== '' ? data.stage : undefined;
+
+    // Every match must be categorised with a stage.
+    if (!stageValue) {
+      return new Response(JSON.stringify({ error: 'Match stage is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Playoff matches must reference a season and two real teams — the bracket
+    // and standings can't advance free-typed names.
+    const playoffError = validatePlayoffMatch({
+      stage: stageValue,
+      seasonId: data.seasonId,
+      team1Id: data.team1Id,
+      team2Id: data.team2Id,
+    });
+    if (playoffError) {
+      return new Response(JSON.stringify({ error: playoffError }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const match = await createMatch({

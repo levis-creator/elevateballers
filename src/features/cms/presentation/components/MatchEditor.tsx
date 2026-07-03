@@ -515,6 +515,11 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
       errors.push('Season is required');
     }
 
+    // Stage validation — every match must be categorised.
+    if (!formData.stage) {
+      errors.push('Match stage is required');
+    }
+
     // Date validation
     if (!formData.date) {
       errors.push('Date & Time is required');
@@ -923,17 +928,18 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stage">Match Stage</Label>
+                <Label htmlFor="stage">
+                  Match Stage <span className="text-destructive">*</span>
+                </Label>
                 <Select
-                  value={formData.stage || "__none"}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, stage: (value === "__none" ? "" : value) as MatchStage || '' }))}
+                  value={formData.stage || undefined}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, stage: value as MatchStage }))}
                   disabled={saving || loading}
                 >
                   <SelectTrigger id="stage">
-                    <SelectValue placeholder="Select stage (optional)" />
+                    <SelectValue placeholder="Select stage" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none">Regular Match</SelectItem>
                     {MATCH_STAGES.map((stage) => (
                       <SelectItem key={stage} value={stage}>
                         {stage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -942,7 +948,7 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  Select the stage or round of the match
+                  Every match needs a stage — use Regular Season for ordinary league games.
                 </p>
               </div>
             </div>

@@ -252,6 +252,7 @@ export async function updateMatchWinner(
         team2Score: true,
         team1Id: true,
         team2Id: true,
+        winnerId: true,
       },
     });
 
@@ -286,6 +287,21 @@ export async function updateMatchWinner(
       where: { id: matchId },
       data: { winnerId },
     });
+
+    // Audit genuine auto-assignments only: a decided result whose winner is new
+    // or changed. Skips draws (null) and idempotent re-runs so the log stays
+    // meaningful. Fire-and-forget and self-contained, so it never blocks or
+    // breaks the score update.
+    if (winnerId && winnerId !== match.winnerId) {
+      const { logAuditSystem } = await import('../../../cms/lib/audit');
+      logAuditSystem('MATCH_WINNER_ASSIGNED', {
+        matchId,
+        winnerId,
+        previousWinnerId: match.winnerId ?? null,
+        team1Score: match.team1Score,
+        team2Score: match.team2Score,
+      });
+    }
 
     return winnerId;
   } catch (error) {
