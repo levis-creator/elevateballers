@@ -1,0 +1,46 @@
+---
+// v2 home shell. Rendered only when PUBLIC_UI_VERSION === 'v2'.
+// Dynamically imported by src/pages/index.astro so it never pulls in any v1
+// CSS — the only styles on the page are v2.css (Tailwind) + the components'
+// own inline/scoped styles.
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import HomePageV2 from "@/features/home/presentation/v2/HomePage.astro";
+import { getAllSiteSettings } from "@/features/cms/lib/queries";
+
+// SEO defaults mirror the v1 page so metadata is unchanged. Admin → Settings → SEO overrides.
+const DEFAULT_SEO_TITLE =
+  "Elevate Ballers - Kenya's Premier Basketball League & Championships";
+const DEFAULT_SEO_DESCRIPTION =
+  "Elevate Ballers is Kenya's premier basketball league hosting championships in Nairobi. Follow live standings, rising stars, and match results from our basketball community.";
+const DEFAULT_SEO_IMAGE = "/images/Elevate_Icon-200x200.png";
+const DEFAULT_SEO_KEYWORDS =
+  "basketball, basketball league, Kenya basketball, Elevate Ballers, championships, Nairobi basketball, basketball news, basketball standings, basketball fixtures";
+
+let seoTitle = DEFAULT_SEO_TITLE;
+let seoDescription = DEFAULT_SEO_DESCRIPTION;
+let seoImage = DEFAULT_SEO_IMAGE;
+let seoKeywords = DEFAULT_SEO_KEYWORDS;
+
+try {
+  const seoSettings = await getAllSiteSettings("seo");
+  for (const s of seoSettings) {
+    if (s.key === "seo_homepage_title" && s.value) seoTitle = s.value;
+    if (s.key === "seo_homepage_description" && s.value) seoDescription = s.value;
+    if (s.key === "seo_homepage_image" && s.value) seoImage = s.value;
+    if (s.key === "seo_homepage_keywords" && s.value) seoKeywords = s.value;
+  }
+} catch (err) {
+  console.error("[HomeV2.astro] failed to load SEO settings, using defaults:", err);
+}
+---
+
+<LayoutV2
+  title={seoTitle}
+  description={seoDescription}
+  image={seoImage}
+  keywords={seoKeywords}
+  canonicalURL={`${Astro.url.origin}/`}
+  type="website"
+>
+  <HomePageV2 />
+</LayoutV2>
