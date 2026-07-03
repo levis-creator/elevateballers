@@ -16,13 +16,15 @@ import PageLoader from '../../components/PageLoader';
 import SeasonSelector from '../../features/tournaments/components/SeasonSelector';
 import ParticipatingTeams from '../../features/tournaments/components/ParticipatingTeams';
 import PlayoffBracket from '../../features/tournaments/components/PlayoffBracket';
+import LeagueSelector from '../../features/tournaments/components/LeagueSelector';
 import { getPlayoffPageData } from '../../features/tournaments/data/datasources/getPlayoffPageData';
 
 const { season: slug } = Astro.params;
+const leagueParam = Astro.url.searchParams.get('league') ?? undefined;
 
 let data = null;
 try {
-  data = slug ? await getPlayoffPageData(slug) : null;
+  data = slug ? await getPlayoffPageData(slug, leagueParam) : null;
 } catch (error) {
   console.error('Failed to load playoff data:', error);
 }
@@ -32,7 +34,8 @@ if (!data) {
   return Astro.redirect('/playoffs/');
 }
 
-const { season, seasons, viewModel } = data;
+const { season, seasons, leagues, currentLeagueValue, currentLeagueName, viewModel } = data;
+const subtitle = currentLeagueName ? `${season.name} · ${currentLeagueName}` : season.name;
 const { teams, stats, bracket, bracketType } = viewModel;
 const title = `${season.name} Playoffs - Elevate Basketball`;
 const description = `Follow the ${season.name} playoff bracket for Elevate Basketball — see which teams are participating, who's advancing, and the road to the championship.`;
@@ -77,15 +80,20 @@ const description = `Follow the ${season.name} playoff bracket for Elevate Baske
                   <p
                     style="text-align: center; color: #64748b; margin-bottom: 28px; font-weight: 600;"
                   >
-                    {season.name}
+                    {subtitle}
                   </p>
 
                   <div
-                    style="display: flex; justify-content: center; margin-bottom: 32px;"
+                    style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px 24px; margin-bottom: 32px;"
                   >
                     <SeasonSelector
                       seasons={seasons}
                       currentSlug={season.slug}
+                      client:load
+                    />
+                    <LeagueSelector
+                      options={leagues}
+                      currentValue={currentLeagueValue}
                       client:load
                     />
                   </div>

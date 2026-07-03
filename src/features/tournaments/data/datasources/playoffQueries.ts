@@ -10,14 +10,17 @@ export { PLAYOFF_STAGES };
 /**
  * All bracket-stage matches for a season, ordered chronologically so the
  * converter can group them into rounds. Includes both teams and the winner.
+ * When `leagueId` is given, only that league's matches are returned.
  */
 export async function getPlayoffMatchesBySeason(
-  seasonId: string
+  seasonId: string,
+  leagueId?: string
 ): Promise<MatchWithTeamsAndLeagueAndSeason[]> {
   const matches = await (prisma.match.findMany({
     where: {
       seasonId,
       stage: { in: PLAYOFF_STAGES },
+      ...(leagueId ? { leagueId } : {}),
     },
     include: {
       team1: true,
@@ -30,6 +33,20 @@ export async function getPlayoffMatchesBySeason(
   }) as Promise<MatchWithTeamsAndLeagueAndSeason[]>);
 
   return matches;
+}
+
+/**
+ * The league ids that have at least one bracket-stage match within a season —
+ * i.e. the leagues that actually have a playoff to show. Used to build the
+ * league filter on the playoffs page.
+ */
+export async function getPlayoffLeagueIdsBySeason(seasonId: string): Promise<string[]> {
+  const rows = await prisma.match.findMany({
+    where: { seasonId, stage: { in: PLAYOFF_STAGES }, leagueId: { not: null } },
+    distinct: ['leagueId'],
+    select: { leagueId: true },
+  });
+  return rows.map((r: { leagueId: string | null }) => r.leagueId).filter((id): id is string => Boolean(id));
 }
 
 /**

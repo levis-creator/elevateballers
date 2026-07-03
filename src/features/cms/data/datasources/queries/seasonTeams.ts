@@ -3,11 +3,12 @@ import type { Team } from '../../../types';
 
 /**
  * Teams participating in a season, ordered by name. Returns the Team rows
- * (not the join rows) since callers want the teams themselves.
+ * (not the join rows) since callers want the teams themselves. When `leagueId`
+ * is given, only that league's roster within the season is returned.
  */
-export async function getSeasonTeams(seasonId: string): Promise<Team[]> {
+export async function getSeasonTeams(seasonId: string, leagueId?: string): Promise<Team[]> {
   const rows = await prisma.seasonTeam.findMany({
-    where: { seasonId },
+    where: { seasonId, ...(leagueId ? { leagueId } : {}) },
     include: { team: true },
     orderBy: { team: { name: 'asc' } },
   });

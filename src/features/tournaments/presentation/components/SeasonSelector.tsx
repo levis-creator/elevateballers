@@ -15,7 +15,12 @@ interface SeasonSelectorProps {
 }
 
 export default function SeasonSelector({ seasons, currentSlug }: SeasonSelectorProps) {
-  if (seasons.length <= 1) return null;
+  if (seasons.length === 0) return null;
+
+  // Shown alongside the league filter even with a single season, so both
+  // filters are always present; it's just non-interactive until there's a
+  // second season to switch to.
+  const onlyOne = seasons.length <= 1;
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const slug = event.target.value;
@@ -40,6 +45,7 @@ export default function SeasonSelector({ seasons, currentSlug }: SeasonSelectorP
       <select
         value={currentSlug}
         onChange={handleChange}
+        disabled={onlyOne}
         style={{
           padding: '8px 12px',
           borderRadius: '8px',
@@ -48,7 +54,7 @@ export default function SeasonSelector({ seasons, currentSlug }: SeasonSelectorP
           fontSize: '0.95rem',
           fontWeight: 600,
           color: '#1f2733',
-          cursor: 'pointer',
+          cursor: onlyOne ? 'default' : 'pointer',
         }}
       >
         {seasons.map((season) => (
