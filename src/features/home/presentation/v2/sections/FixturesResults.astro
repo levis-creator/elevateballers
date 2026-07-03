@@ -1,0 +1,66 @@
+---
+// Two-column Upcoming Matches + Recent Results.
+import type { Match, Result } from "@/features/home/presentation/v2/data";
+
+interface Props {
+	upcoming: Match[];
+	results: Result[];
+}
+const { upcoming, results } = Astro.props;
+---
+
+<section id="fixtures" class="mx-auto grid max-w-[1280px] grid-cols-2 gap-10 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:py-[52px]">
+	<div>
+		<div class="mb-6 flex items-baseline justify-between">
+			<h2 class="font-display text-[30px] uppercase tracking-[0.01em] text-ink">Upcoming Matches</h2>
+			<a href="#fixtures" class="font-mono text-[12px] tracking-[0.06em] text-brand no-underline">All fixtures →</a>
+		</div>
+		<div class="flex flex-col gap-3">
+			{upcoming.map((m) => (
+				<div class="flex min-h-[142px] flex-col justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+					<div class="flex items-center justify-between gap-2">
+						<span class="rounded bg-brand/[0.08] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-brand">{m.day} {m.mon} · {m.time}</span>
+						<span class="font-mono text-[11px] text-muted2">{m.venue}</span>
+					</div>
+					<div class="flex flex-col gap-[11px]">
+						<div class="flex items-center gap-3">
+							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
+							<span class="flex-1 font-body text-[15px] font-bold text-ink2">{m.home}</span>
+							<span class="font-mono text-[10px] tracking-[0.1em] text-[#a49a8d]">HOME</span>
+						</div>
+						<div class="flex items-center gap-3">
+							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
+							<span class="flex-1 font-body text-[15px] font-bold text-ink2">{m.away}</span>
+							<span class="font-mono text-[10px] tracking-[0.1em] text-[#a49a8d]">AWAY</span>
+						</div>
+					</div>
+				</div>
+			))}
+		</div>
+	</div>
+	<div id="standings">
+		<div class="mb-6 flex items-baseline justify-between">
+			<h2 class="font-display text-[30px] uppercase tracking-[0.01em] text-ink">Recent Results</h2>
+			<a href="/standings" class="font-mono text-[12px] tracking-[0.06em] text-brand no-underline">All results →</a>
+		</div>
+		<div class="flex flex-col gap-3">
+			{results.map((r) => (
+				<div class="flex min-h-[142px] flex-col justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+					<span class="self-start rounded bg-[#f0ede7] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-[#a49a8d]">Final</span>
+					<div class="flex flex-col gap-[11px]">
+						<div class="flex items-center gap-3">
+							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
+							<span class="flex-1 font-body text-[15px] font-bold" style={`color:${r.homeColor};`}>{r.home}</span>
+							<span class="font-display text-[22px]" style={`color:${r.homeColor};`}>{r.hs}</span>
+						</div>
+						<div class="flex items-center gap-3">
+							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
+							<span class="flex-1 font-body text-[15px] font-bold" style={`color:${r.awayColor};`}>{r.away}</span>
+							<span class="font-display text-[22px]" style={`color:${r.awayColor};`}>{r.as}</span>
+						</div>
+					</div>
+				</div>
+			))}
+		</div>
+	</div>
+</section>

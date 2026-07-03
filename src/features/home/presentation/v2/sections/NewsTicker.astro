@@ -1,0 +1,26 @@
+---
+// Infinite scrolling news ticker (CSS marquee — the list is duplicated so the
+// loop is seamless).
+interface Props {
+	items: string[];
+}
+const { items } = Astro.props;
+---
+
+<div class="flex items-center overflow-hidden whitespace-nowrap bg-brand text-white">
+	<span class="flex-shrink-0 bg-night px-5 py-3 font-display text-[14px] uppercase tracking-[0.1em] text-white">Elevate News</span>
+	<div class="flex-1 overflow-hidden">
+		<div class="inline-flex animate-marquee font-mono text-[13px] font-bold">
+			<div class="inline-flex">
+				{items.map((t) => (
+					<span class="inline-flex items-center gap-7 px-7 py-3">{t}<span class="inline-block h-1.5 w-1.5 rounded-full bg-white"></span></span>
+				))}
+			</div>
+			<div class="inline-flex" aria-hidden="true">
+				{items.map((t) => (
+					<span class="inline-flex items-center gap-7 px-7 py-3">{t}<span class="inline-block h-1.5 w-1.5 rounded-full bg-white"></span></span>
+				))}
+			</div>
+		</div>
+	</div>
+</div>

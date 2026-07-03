@@ -1,0 +1,47 @@
+---
+// Featured Media grid with an Alpine type filter + empty state.
+import type { MediaItem } from "@/features/home/presentation/v2/data";
+import { TAB_ACTIVE, TAB_INACTIVE } from "@/features/home/presentation/v2/lib/tab-styles";
+
+interface Props {
+	media: MediaItem[];
+	tabs: string[];
+}
+const { media, tabs } = Astro.props;
+---
+
+<section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-[52px]" x-data={`{
+	tab: 'All',
+	all: ${JSON.stringify(media)},
+	get items() { return this.tab === 'All' ? this.all : this.all.filter(m => m.type === this.tab); },
+	get emptyTitle() { return this.tab === 'All' ? 'No featured media yet' : (this.tab === 'Audio' ? 'No audio clips yet' : 'No images yet'); },
+	get emptyBody() { return this.tab === 'All' ? 'Photos, audio and highlights from match days will appear here as the season plays out.' : ('Nothing tagged ' + this.tab.toLowerCase() + ' right now — check back after the next match day.'); }
+}`}>
+	<div class="mb-7 flex flex-wrap items-end justify-between gap-6">
+		<div>
+			<div class="mb-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Visual highlights from across the league</div>
+			<h2 class="font-display text-[38px] uppercase text-ink">Featured Media</h2>
+		</div>
+		<div class="flex gap-2">
+			{tabs.map((t) => (
+				<button @click={`tab = '${t}'`} :style={`tab === '${t}' ? '${TAB_ACTIVE}' : '${TAB_INACTIVE}'`}>{t}</button>
+			))}
+		</div>
+	</div>
+	<div class="grid grid-cols-4 gap-3.5 max-[600px]:grid-cols-1" style="grid-auto-rows:180px;" x-show="items.length > 0">
+		<template x-for="mi in items" :key="mi.label">
+			<div class="flex items-center justify-center rounded-xl border border-black/10" :class="mi.span ? 'col-span-2' : ''" :style="`background:${mi.type === 'Audio' ? 'linear-gradient(135deg,#ece7df,#f4f0ea)' : 'repeating-linear-gradient(45deg,#e7e2da,#e7e2da 10px,#f0ece5 10px,#f0ece5 20px)'};`">
+				<span class="font-mono text-[11px] uppercase tracking-[0.12em] text-[#a49a8d]" x-text="mi.label"></span>
+			</div>
+		</template>
+	</div>
+	<div x-show="items.length === 0" class="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-14 text-center">
+		<div class="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-panel">
+			<div class="relative h-4 w-5 rounded-[3px] border-2 border-[#b3a99c]">
+				<div class="absolute left-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[#b3a99c]"></div>
+			</div>
+		</div>
+		<div class="font-display text-[22px] uppercase text-ink" x-text="emptyTitle"></div>
+		<p class="max-w-[360px] text-[14px] leading-[1.5] text-muted" x-text="emptyBody"></p>
+	</div>
+</section>

@@ -1,0 +1,95 @@
+---
+// League Leaders (Alpine tabs + bars) alongside By The Numbers (Alpine count-up).
+import type { LeaderData, CountTargets } from "@/features/home/presentation/v2/data";
+import { TAB_ACTIVE, TAB_INACTIVE } from "@/features/home/presentation/v2/lib/tab-styles";
+
+interface Props {
+	leaderData: LeaderData;
+	leaderTabs: string[];
+	countTargets: CountTargets;
+}
+const { leaderData, leaderTabs, countTargets } = Astro.props;
+---
+
+<section class="border-y border-black/[0.08] bg-panel">
+	<div class="mx-auto grid max-w-[1280px] grid-cols-2 items-start gap-14 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:py-[52px]">
+		<div x-data={`{
+			tab: 'Points',
+			data: ${JSON.stringify(leaderData)},
+			get list() {
+				const arr = this.data[this.tab];
+				const max = Math.max(...arr.map(p => p.val));
+				return arr.map((p, i) => ({ name: p.name, team: p.team, rank: i + 1, first: i === 0, pct: Math.round((p.val / max) * 100), val: p.val.toFixed(1) }));
+			}
+		}`}>
+			<div class="mb-[22px] flex items-baseline justify-between">
+				<h2 class="font-display text-[32px] uppercase text-ink">League Leaders</h2>
+				<a href="/stats/leaders" class="font-mono text-[12px] text-brand no-underline">All stats →</a>
+			</div>
+			<div class="mb-5 flex gap-2">
+				{leaderTabs.map((t) => (
+					<button @click={`tab = '${t}'`} :style={`tab === '${t}' ? '${TAB_ACTIVE}' : '${TAB_INACTIVE}'`}>{t}</button>
+				))}
+			</div>
+			<div class="flex flex-col gap-0.5">
+				<template x-for="p in list" :key="p.name">
+					<div class="flex items-center gap-4 border-b border-black/[0.08] px-1 py-3.5">
+						<span class="w-[26px] font-display text-[20px]" :style="`color:${p.first ? '#e4002b' : '#b3a99c'}`" x-text="p.rank"></span>
+						<div class="h-10 w-10 flex-shrink-0 rounded-full bg-[#ddd7cd]"></div>
+						<div class="flex-1">
+							<div class="font-body text-[15px] font-bold text-ink2" x-text="p.name"></div>
+							<div class="font-mono text-[11px] text-muted2" x-text="p.team"></div>
+						</div>
+						<div class="max-w-[160px] flex-[1.2]">
+							<div class="h-1.5 overflow-hidden rounded-[3px] bg-black/[0.08]">
+								<div class="h-full rounded-[3px]" :style="`width:${p.pct}%;background:${p.first ? '#e4002b' : 'rgba(228,0,43,0.4)'}`"></div>
+							</div>
+						</div>
+						<span class="w-14 text-right font-display text-[22px] text-ink" x-text="p.val"></span>
+					</div>
+				</template>
+			</div>
+		</div>
+
+		<div x-data={`{
+			counts: { matches: 0, players: 0, teams: 0, awards: 0 },
+			init() {
+				const targets = ${JSON.stringify(countTargets)};
+				const start = performance.now();
+				const dur = 1400;
+				const tick = (now) => {
+					const p = Math.min(1, (now - start) / dur);
+					const e = 1 - Math.pow(1 - p, 3);
+					this.counts = {
+						matches: Math.round(targets.matches * e),
+						players: Math.round(targets.players * e),
+						teams: Math.round(targets.teams * e),
+						awards: Math.round(targets.awards * e),
+					};
+					if (p < 1) requestAnimationFrame(tick);
+				};
+				requestAnimationFrame(tick);
+			}
+		}`}>
+			<h2 class="mb-[22px] font-display text-[32px] uppercase text-ink">By The Numbers</h2>
+			<div class="grid grid-cols-2 gap-4">
+				<div class="rounded-xl border border-black/10 bg-white p-[26px] shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="font-display text-[52px] leading-none text-brand" x-text="counts.matches"></div>
+					<div class="mt-2 font-mono text-[12px] uppercase tracking-[0.08em] text-muted">Matches Played</div>
+				</div>
+				<div class="rounded-xl border border-black/10 bg-white p-[26px] shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="font-display text-[52px] leading-none text-ink" x-text="counts.players"></div>
+					<div class="mt-2 font-mono text-[12px] uppercase tracking-[0.08em] text-muted">Players</div>
+				</div>
+				<div class="rounded-xl border border-black/10 bg-white p-[26px] shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="font-display text-[52px] leading-none text-ink" x-text="counts.teams"></div>
+					<div class="mt-2 font-mono text-[12px] uppercase tracking-[0.08em] text-muted">Teams</div>
+				</div>
+				<div class="rounded-xl border border-black/10 bg-white p-[26px] shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="font-display text-[52px] leading-none text-brand" x-text="counts.awards"></div>
+					<div class="mt-2 font-mono text-[12px] uppercase tracking-[0.08em] text-muted">Awards Won</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
