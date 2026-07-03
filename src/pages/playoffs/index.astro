@@ -1,0 +1,68 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import TopBar from '../../features/layout/components/TopBar.astro';
+import Header from '../../features/layout/components/Header';
+import Footer from '../../features/layout/components/Footer.astro';
+import Spacing from '../../shared/components/ui/Spacing.astro';
+import PageLoader from '../../components/PageLoader';
+import { getDefaultPlayoffSeasonSlug } from '../../features/tournaments/data/datasources/getPlayoffPageData';
+
+let defaultSlug: string | null = null;
+try {
+  defaultSlug = await getDefaultPlayoffSeasonSlug();
+} catch (error) {
+  console.error('Failed to resolve default playoff season:', error);
+}
+
+// Send visitors straight to the most recent season that has a bracket.
+if (defaultSlug) {
+  return Astro.redirect(`/playoffs/${defaultSlug}/`);
+}
+---
+
+<Layout
+  title="Playoffs - Elevate Basketball"
+  description="Elevate Basketball playoff brackets — teams, results, and the road to the championship."
+  canonicalURL={`${Astro.url.origin}/playoffs/`}
+  type="website"
+>
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header client:load currentPath={Astro.url.pathname} />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      >
+      </div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing id="stm-spacing-playoffs-empty" lg="80" md="70" sm="60" xs="50" />
+                  <h1
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 20px; color: #dd3333; font-size: 40px; text-transform: uppercase;"
+                  >
+                    PLAYOFFS
+                  </h1>
+                  <p style="text-align: center; color: #64748b; font-size: 1.05rem;">
+                    No playoff brackets have been published yet. Check back once the
+                    postseason gets underway.
+                  </p>
+                  <Spacing id="stm-spacing-playoffs-empty-footer" lg="80" md="70" sm="60" xs="50" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+  </div>
+</Layout>

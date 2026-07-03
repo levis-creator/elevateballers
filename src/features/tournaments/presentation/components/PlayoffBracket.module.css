@@ -1,0 +1,180 @@
+.wrapper {
+  --pb-line: #d9dee5;
+  --pb-red: #dd3333;
+  --pb-ink: #1f2733;
+  --pb-muted: #8a94a3;
+  --pb-win-bg: #fff5f5;
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.section + .section {
+  margin-top: 40px;
+}
+
+.sectionTitle {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.85rem;
+  color: var(--pb-red);
+  margin: 0 0 16px;
+}
+
+.rounds {
+  display: flex;
+  align-items: stretch;
+  min-width: min-content;
+}
+
+.round {
+  flex: 1 1 240px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+}
+
+.round:not(:last-child) {
+  padding-right: 22px;
+}
+
+.round:not(:first-child) {
+  padding-left: 22px;
+  position: relative;
+}
+
+/* Vertical rail sitting in the gutter between two rounds. */
+.round:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2.75rem;
+  bottom: 0;
+  width: 2px;
+  background: var(--pb-line);
+}
+
+.roundHeading {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--pb-muted);
+  padding: 0 0 12px;
+  min-height: 1.75rem;
+}
+
+.games {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 12px;
+}
+
+.game {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+/* Horizontal stub leaving each match toward the next round. */
+.round:not(:last-child) .game::after {
+  content: '';
+  position: absolute;
+  right: -22px;
+  top: 50%;
+  width: 22px;
+  height: 2px;
+  background: var(--pb-line);
+}
+
+/* Horizontal stub entering each match from the previous round. */
+.round:not(:first-child) .game::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  width: 22px;
+  height: 2px;
+  background: var(--pb-line);
+}
+
+.card {
+  width: 100%;
+  border: 1px solid var(--pb-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.roundLabelInline {
+  display: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--pb-line);
+}
+
+.winner {
+  background: var(--pb-win-bg);
+}
+
+.winner .name {
+  font-weight: 800;
+  color: var(--pb-ink);
+}
+
+.winner .score {
+  color: var(--pb-red);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--pb-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tbd {
+  color: var(--pb-muted);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--pb-ink);
+  min-width: 1.5rem;
+  text-align: right;
+}
+
+.meta {
+  padding: 6px 12px 0;
+  font-size: 0.7rem;
+  color: var(--pb-muted);
+}
+
+.empty {
+  color: var(--pb-muted);
+  font-size: 0.95rem;
+  padding: 24px;
+  text-align: center;
+}
