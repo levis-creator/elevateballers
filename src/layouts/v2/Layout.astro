@@ -1,0 +1,99 @@
+---
+// Clean-slate layout for the public redesign (PUBLIC_UI_VERSION=v2).
+// Deliberately does NOT import the ~40 legacy WordPress stylesheets that
+// Layout.astro pulls in — the v2 UI is built fresh on Tailwind. Keep the Props
+// shape identical to Layout.astro so route files can swap between them with no
+// prop changes.
+import "@/styles/admin.css"; // Tailwind entrypoint
+import SEO from "@/components/SEO.astro";
+
+interface Props {
+	title?: string;
+	description?: string;
+	image?: string;
+	imageWidth?: number;
+	imageHeight?: number;
+	imageType?: string;
+	canonicalURL?: string;
+	type?: string;
+	robots?: string;
+	keywords?: string;
+	publishedTime?: string;
+	modifiedTime?: string;
+	prevURL?: string;
+	nextURL?: string;
+	preloadImage?: string;
+}
+
+const {
+	title,
+	description,
+	image,
+	imageWidth,
+	imageHeight,
+	imageType,
+	canonicalURL,
+	type,
+	robots,
+	keywords,
+	publishedTime,
+	modifiedTime,
+	prevURL,
+	nextURL,
+	preloadImage,
+} = Astro.props;
+
+const googleFonts = [
+	"https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600&display=swap",
+];
+---
+
+<!doctype html>
+<html lang="en-US">
+	<head>
+		<meta name="format-detection" content="telephone=no" />
+		<SEO
+			title={title}
+			description={description}
+			image={image}
+			imageWidth={imageWidth}
+			imageHeight={imageHeight}
+			imageType={imageType}
+			canonicalURL={canonicalURL}
+			type={type}
+			robots={robots}
+			keywords={keywords}
+			publishedTime={publishedTime}
+			modifiedTime={modifiedTime}
+			prevURL={prevURL}
+			nextURL={nextURL}
+		/>
+
+		{preloadImage && (
+			<link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
+		)}
+
+		<!-- Google Analytics -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-VVZ9P3XBLP"></script>
+		<script is:inline>
+			window.dataLayer = window.dataLayer || [];
+			function gtag(){dataLayer.push(arguments);}
+			gtag('js', new Date());
+			gtag('config', 'G-VVZ9P3XBLP');
+		</script>
+
+		<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="preconnect" href="https://zjnlvnyjsidnelgciqmz.supabase.co" crossorigin />
+
+		{googleFonts.map((href) => <link rel="stylesheet" href={href} />)}
+
+		<!-- Favicons -->
+		<link rel="icon" href="/images/Elevate_Icon-32x32.png" sizes="32x32" />
+		<link rel="icon" href="/images/Elevate_Icon-200x200.png" sizes="192x192" />
+		<link rel="apple-touch-icon" href="/images/Elevate_Icon-200x200.png" />
+	</head>
+	<body class="min-h-screen bg-[#0f0d18] text-white antialiased">
+		<slot />
+	</body>
+</html>

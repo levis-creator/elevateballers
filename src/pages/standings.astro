@@ -7,7 +7,10 @@ Astro.response.headers.set(
   'public, s-maxage=60, stale-while-revalidate=300'
 );
 
+import { usePublicV2 } from "@/lib/ui-version";
 import Layout from "../layouts/Layout.astro";
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import StandingsV2 from "@/features/standings/presentation/v2/StandingsPage.astro";
 import TopBar from "../features/layout/components/TopBar.astro";
 import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
@@ -24,6 +27,16 @@ try {
 }
 ---
 
+{usePublicV2 ? (
+  <LayoutV2
+    title="League Standings - Elevate Basketball"
+    description="Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions."
+    canonicalURL={`${Astro.url.origin}/standings/`}
+    type="website"
+  >
+    <StandingsV2 initialStandings={standings} />
+  </LayoutV2>
+) : (
 <Layout
   title="League Standings - Elevate Basketball"
   description="Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions."
@@ -223,4 +236,5 @@ try {
     }
   </style>
 </Layout>
+)}
 <!-- wrapper -->
