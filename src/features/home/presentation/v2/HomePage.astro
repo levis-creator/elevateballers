@@ -1,48 +1,37 @@
 ---
 // v2 public home page — thin composition layer.
-// Data comes from ./data.ts (the seam for wiring real CMS/DB later); each visual
-// section is its own component under ./sections/. Keep this file about *what*
-// renders and in what order, not *how* each section looks.
+// Data is loaded server-side via the getHomeData use-case (Clean Architecture:
+// domain use-case → data datasource → real queries, with demo fallbacks).
+// Interactive sections (LatestNews, StatsSection, FeaturedMedia) are React
+// islands backed by Zustand stores; the rest are server-rendered .astro.
 import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import Hero from "./sections/Hero.astro";
 import NewsTicker from "./sections/NewsTicker.astro";
 import FixturesResults from "./sections/FixturesResults.astro";
 import PlayerOfTheWeek from "./sections/PlayerOfTheWeek.astro";
-import LatestNews from "./sections/LatestNews.astro";
+import LatestNews from "./sections/LatestNews.tsx";
 import StatsSection from "./sections/StatsSection.astro";
-import FeaturedMedia from "./sections/FeaturedMedia.astro";
+import FeaturedMedia from "./sections/FeaturedMedia.tsx";
 import About from "./sections/About.astro";
 import RegisterCta from "./sections/RegisterCta.astro";
-import {
-	ticker,
-	upcoming,
-	results,
-	news,
-	newsCategories,
-	leaderData,
-	leaderTabs,
-	countTargets,
-	media,
-	mediaTabs,
-} from "./data";
+import { getHomeData } from "@/features/home/domain/usecases/get-home-data";
 
-// Single source of truth for registration state. Replace with a CMS flag, a date
-// window, or a live API value. Drives the nav CTA, hero CTA and register band.
-const registrationOpen = true;
-const heroCtaLabel = registrationOpen ? "Register Your Team" : "Join the Waitlist";
+const home = await getHomeData();
+const heroCtaLabel = home.registrationOpen ? "Register Your Team" : "Join the Waitlist";
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
-	<Header registrationOpen={registrationOpen} active="home" />
-	<Hero heroCtaLabel={heroCtaLabel} />
-	<NewsTicker items={ticker} />
-	<FixturesResults upcoming={upcoming} results={results} />
-	<PlayerOfTheWeek />
-	<LatestNews news={news} categories={newsCategories} />
-	<StatsSection leaderData={leaderData} leaderTabs={leaderTabs} countTargets={countTargets} />
-	<FeaturedMedia media={media} tabs={mediaTabs} />
+	<Header registrationOpen={home.registrationOpen} active="home" />
+	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} />
+	<NewsTicker items={home.ticker} />
+	<FixturesResults upcoming={home.upcoming} results={home.results} />
+	<PlayerOfTheWeek potw={home.potw} />
+	<LatestNews news={home.news} categories={home.newsCategories} client:visible />
+	<StatsSection leaderData={home.leaderData} leaderTabs={home.leaderTabs} counts={home.counts} />
+	<FeaturedMedia media={home.media} tabs={home.mediaTabs} client:visible />
 	<About />
-	<RegisterCta registrationOpen={registrationOpen} />
+	<RegisterCta registrationOpen={home.registrationOpen} />
 	<Footer />
 </div>
+

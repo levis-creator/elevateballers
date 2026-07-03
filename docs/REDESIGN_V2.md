@@ -92,7 +92,7 @@ they only apply to elements that use those classes, and v2 uses none.
 
 | Page                   | Route                     | v2 body                                        | Status |
 | ---------------------- | ------------------------- | ---------------------------------------------- | ------ |
-| Home                   | `src/pages/index.astro` → `HomeV2.astro`, legacy at `src/pages/home-v1.astro` | `src/features/home/presentation/v2/HomePage.astro` | ✅ built + CSS-isolated (design port; demo data, wire to CMS/DB) |
+| Home                   | `src/pages/index.astro` → `HomeV2.astro`, legacy at `src/pages/home-v1.astro` | `src/features/home/presentation/v2/HomePage.astro` | ✅ built + CSS-isolated + **wired to live data** (Clean Arch: `home/domain/usecases/get-home-data` → `home/data/datasources/home-v2` → real v1 queries, demo fallbacks). Interactive sections are React islands w/ Zustand (`home/presentation/stores/v2/`). |
 | Standings              | `src/pages/standings.astro` | `src/features/standings/presentation/v2/StandingsPage.astro` | 🚧 scaffold — ⚠️ still uses the leaky in-page ternary; migrate to the route+rewrite pattern before real work |
 | Players                | `src/pages/players/`        | —                                              | ⬜ pending |
 | News                   | `src/pages/news/`           | —                                              | ⬜ pending |
