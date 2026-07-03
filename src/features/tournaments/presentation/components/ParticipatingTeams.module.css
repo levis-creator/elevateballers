@@ -1,0 +1,171 @@
+.panel {
+  --pt-line: #e2e8f0;
+  --pt-red: #dd3333;
+  --pt-ink: #1f2733;
+  --pt-muted: #8a94a3;
+  --pt-green: #1a9d5a;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .statsStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat {
+  background: #fff;
+  border: 1px solid var(--pt-line);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--pt-red);
+  line-height: 1.1;
+}
+
+.statLabel {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pt-muted);
+  font-weight: 700;
+}
+
+.championBanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #fff5f5, #fff);
+  border: 1px solid var(--pt-red);
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.championLabel {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: var(--pt-red);
+}
+
+.championName {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--pt-ink);
+  line-height: 1.15;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  background: #fff;
+  border: 1px solid var(--pt-line);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.columnTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--pt-ink);
+  margin: 0 0 12px;
+}
+
+.count {
+  color: var(--pt-muted);
+  font-weight: 700;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotAlive {
+  background: var(--pt-green);
+}
+
+.dotOut {
+  background: var(--pt-muted);
+}
+
+.teamList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.teamRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 6px;
+}
+
+.teamRow:hover {
+  background: #f8fafc;
+}
+
+.teamName {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--pt-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eliminated .teamName {
+  color: var(--pt-muted);
+}
+
+.record {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--pt-muted);
+}
+
+.emptyNote {
+  color: var(--pt-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 4px 6px;
+}

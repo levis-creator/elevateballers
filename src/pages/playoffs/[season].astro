@@ -1,0 +1,153 @@
+---
+export const prerender = false;
+
+// Edge-cache the bracket briefly — results change only when matches are decided.
+Astro.response.headers.set(
+  'Cache-Control',
+  'public, s-maxage=60, stale-while-revalidate=300'
+);
+
+import Layout from '../../layouts/Layout.astro';
+import TopBar from '../../features/layout/components/TopBar.astro';
+import Header from '../../features/layout/components/Header';
+import Footer from '../../features/layout/components/Footer.astro';
+import Spacing from '../../shared/components/ui/Spacing.astro';
+import PageLoader from '../../components/PageLoader';
+import SeasonSelector from '../../features/tournaments/components/SeasonSelector';
+import ParticipatingTeams from '../../features/tournaments/components/ParticipatingTeams';
+import PlayoffBracket from '../../features/tournaments/components/PlayoffBracket';
+import { getPlayoffPageData } from '../../features/tournaments/data/datasources/getPlayoffPageData';
+
+const { season: slug } = Astro.params;
+
+let data = null;
+try {
+  data = slug ? await getPlayoffPageData(slug) : null;
+} catch (error) {
+  console.error('Failed to load playoff data:', error);
+}
+
+// Unknown season → send them to the index, which resolves a valid default.
+if (!data) {
+  return Astro.redirect('/playoffs/');
+}
+
+const { season, seasons, viewModel } = data;
+const { teams, stats, bracket, bracketType } = viewModel;
+const title = `${season.name} Playoffs - Elevate Basketball`;
+const description = `Follow the ${season.name} playoff bracket for Elevate Basketball — see which teams are participating, who's advancing, and the road to the championship.`;
+---
+
+<Layout
+  title={title}
+  description={description}
+  canonicalURL={`${Astro.url.origin}/playoffs/${season.slug}/`}
+  type="website"
+>
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header client:load currentPath={Astro.url.pathname} />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      >
+      </div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-playoffs-header"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
+                  />
+
+                  <h1
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 12px; color: #dd3333;"
+                  >
+                    PLAYOFFS
+                  </h1>
+                  <p
+                    style="text-align: center; color: #64748b; margin-bottom: 28px; font-weight: 600;"
+                  >
+                    {season.name}
+                  </p>
+
+                  <div
+                    style="display: flex; justify-content: center; margin-bottom: 32px;"
+                  >
+                    <SeasonSelector
+                      seasons={seasons}
+                      currentSlug={season.slug}
+                      client:load
+                    />
+                  </div>
+
+                  <ParticipatingTeams
+                    all={teams.all}
+                    alive={teams.alive}
+                    eliminated={teams.eliminated}
+                    champion={teams.champion}
+                    stats={stats}
+                    client:load
+                  />
+
+                  <Spacing
+                    id="stm-spacing-playoffs-bracket"
+                    lg="40"
+                    md="40"
+                    sm="30"
+                    xs="30"
+                  />
+
+                  <h2
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 28px; color: #dd3333; font-size: 28px;"
+                  >
+                    BRACKET
+                  </h2>
+
+                  <div
+                    class="bracket-container"
+                    style="background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"
+                  >
+                    <PlayoffBracket
+                      bracket={bracket}
+                      bracketType={bracketType}
+                      client:load
+                    />
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-playoffs-footer"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+  </div>
+</Layout>
+
+<style is:inline type="text/css">
+  .heading-font {
+    font-size: 40px;
+    line-height: 44px;
+    color: #dd3333 !important;
+    text-transform: uppercase;
+  }
+</style>

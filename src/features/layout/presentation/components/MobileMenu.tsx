@@ -102,6 +102,11 @@ export default function MobileMenu() {
                   <span>Standings</span>
                 </a>
               </li>
+              <li className="menu-item menu-item-type-post_type menu-item-object-page menu-item-playoffs">
+                <a href="/playoffs/" onClick={closeMobileMenu}>
+                  <span>Playoffs</span>
+                </a>
+              </li>
               <li className="menu-item menu-item-type-post_type menu-item-object-page menu-item-4656">
                 <a href="/upcoming-fixtures/" onClick={closeMobileMenu}>
                   <span>Fixtures</span>
