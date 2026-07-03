@@ -4,6 +4,7 @@ import { updateMatch, deleteMatch } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { json, handleApiError } from '../../../lib/apiError';
+import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rules';
 
 export const prerender = false;
 
@@ -67,6 +68,22 @@ export const PUT: APIRoute = async ({ params, request }) => {
       const s = typeof data.stage === 'string' ? data.stage.trim() : data.stage;
       if (s === '__none' || s === '') data.stage = undefined;
     }
+
+    // Enforce playoff rules against the match's effective state — a partial edit
+    // (e.g. just a score) still has to satisfy them, so fall back to the stored
+    // values for any field the request doesn't touch.
+    const effective = {
+      stage: data.stage !== undefined ? data.stage : existingMatch?.stage,
+      seasonId: data.seasonId !== undefined ? data.seasonId : existingMatch?.seasonId,
+      team1Id: data.team1Id !== undefined ? data.team1Id : existingMatch?.team1Id,
+      team2Id: data.team2Id !== undefined ? data.team2Id : existingMatch?.team2Id,
+    };
+
+    // Every match must be categorised with a stage.
+    if (!effective.stage) return json({ error: 'Match stage is required' }, 400);
+
+    const playoffError = validatePlayoffMatch(effective);
+    if (playoffError) return json({ error: playoffError }, 400);
 
     const match = await updateMatch(params.id!, data);
     if (!match) return json({ error: 'Match not found' }, 404);

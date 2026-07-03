@@ -68,6 +68,20 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
     console.warn('createMatch: failed to generate slug', err);
   }
 
+  // A match created already marked COMPLETED (e.g. backfilling a played playoff
+  // result) needs its winner resolved from the scores and, if bracket
+  // automation is on, the winner advanced — mirroring updateMatch's behaviour so
+  // the bracket works whether a result is entered on create or on edit.
+  if (created.status === 'COMPLETED') {
+    const { updateMatchWinner } = await import('../../../../game-tracking/lib/score-calculation');
+    await updateMatchWinner(created.id, prisma);
+
+    if (getEnvBoolean('ENABLE_AUTOMATCHING', true)) {
+      const { advanceWinnerToNextMatch } = await import('../../../../tournaments/lib/bracket-automation');
+      await advanceWinnerToNextMatch(created.id, prisma);
+    }
+  }
+
   return created;
 }
 

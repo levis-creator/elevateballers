@@ -34,6 +34,7 @@
     "create-admin": "node scripts/create-admin.js",
     "db:migrate-to-production": "tsx scripts/migrate-db-to-production.ts",
     "fix:dates": "node scripts/fix-invalid-dates.js",
+    "backfill:match-stages": "tsx scripts/backfill-match-stages.ts",
     "cleanup:private": "tsx scripts/cleanup-private-info.ts",
     "test": "vitest run",
     "test:watch": "vitest",

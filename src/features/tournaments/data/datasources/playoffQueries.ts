@@ -1,18 +1,11 @@
 import { prisma } from '../../../../lib/prisma';
-import type { MatchStage } from '@prisma/client';
 import type { MatchWithTeamsAndLeagueAndSeason } from '../../../cms/types';
 
-/**
- * Stages that make up a playoff bracket. Regular season, preseason, and
- * exhibition games are intentionally excluded — this feeds the bracket view.
- */
-export const PLAYOFF_STAGES: MatchStage[] = [
-  'QUALIFIER',
-  'PLAYOFF',
-  'QUARTER_FINALS',
-  'SEMI_FINALS',
-  'CHAMPIONSHIP',
-];
+// Single source of truth for which stages are playoffs — shared with the match
+// form and API so the bracket query and the enforcement rules never drift.
+import { PLAYOFF_STAGES } from '../../../matches/lib/playoff-rules';
+
+export { PLAYOFF_STAGES };
 
 /**
  * All bracket-stage matches for a season, ordered chronologically so the
