@@ -1,0 +1,58 @@
+---
+// Hero + Next Match card. The next match is demo content for now.
+interface Props {
+	heroCtaLabel: string;
+}
+const { heroCtaLabel } = Astro.props;
+---
+
+<section class="relative overflow-hidden border-b border-black/[0.08]">
+	<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+	<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
+	<div class="absolute right-[-40px] top-5 h-[340px] w-[340px] rounded-full border border-brand/10"></div>
+	<div class="relative mx-auto grid max-w-[1280px] grid-cols-[1.15fr_0.85fr] items-center gap-14 px-8 pb-[60px] pt-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:pt-12">
+		<div>
+			<div class="mb-[22px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
+				<span class="h-px w-[26px] bg-brand"></span>Kenya's Premier Basketball League
+			</div>
+			<h1 class="mb-6 font-display text-[clamp(56px,7vw,104px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">
+				Elevate<br />your <span class="text-brand">game</span>
+			</h1>
+			<p class="mb-[34px] max-w-[460px] text-[17px] leading-[1.6] text-muted">
+				Live matches, standings, and rising stars from the courts of Nairobi. Follow every game, every team, every player — all season long.
+			</p>
+			<div class="flex flex-wrap items-center gap-4 max-[600px]:flex-col max-[600px]:items-start">
+				<a href="#register" class="rounded bg-brand px-7 py-4 text-[14px] font-extrabold uppercase tracking-[0.04em] text-white no-underline hover:bg-brandlt max-[600px]:w-full max-[600px]:text-center">{heroCtaLabel}</a>
+				<a href="#standings" class="rounded border border-black/20 px-7 py-4 text-[14px] font-bold uppercase tracking-[0.04em] text-ink2 no-underline hover:border-brand hover:text-brand max-[600px]:w-full max-[600px]:text-center">View Standings</a>
+			</div>
+		</div>
+
+		<!-- NEXT MATCH CARD -->
+		<div class="overflow-hidden rounded-xl border border-black/10 bg-night2 shadow-[0_26px_50px_rgba(20,16,9,0.22)]">
+			<div class="flex items-center justify-between border-b border-white/[0.08] bg-black px-[18px] py-[14px]">
+				<span class="font-mono text-[11px] uppercase tracking-[0.12em] text-brand">Next Match</span>
+				<span class="font-mono text-[11px] text-muted2">Jul 5, 2026 · 4:00 PM</span>
+			</div>
+			<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-[18px] py-[26px]">
+				<div class="flex flex-col items-center gap-3 text-center">
+					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-brand" style="background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);">CH</div>
+					<div>
+						<div class="font-display text-[16px] uppercase text-cream">City Hawks</div>
+						<div class="font-mono text-[10px] tracking-[0.1em] text-muted2">HOME</div>
+					</div>
+				</div>
+				<div class="font-display text-[20px] text-[#6b635a]">VS</div>
+				<div class="flex flex-col items-center gap-3 text-center">
+					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-cream" style="background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);">AG</div>
+					<div>
+						<div class="font-display text-[15px] uppercase leading-none text-cream">Alliance Queens</div>
+						<div class="font-mono text-[10px] tracking-[0.1em] text-muted2">AWAY</div>
+					</div>
+				</div>
+			</div>
+			<div class="px-[18px] pb-[18px]">
+				<a href="#fixtures" class="block rounded-md border border-brand/30 bg-brand/[0.14] py-[13px] text-center text-[12px] font-bold uppercase tracking-[0.08em] text-brandsoft no-underline hover:bg-brand/[0.24]">View Match · Nyayo Stadium</a>
+			</div>
+		</div>
+	</div>
+</section>

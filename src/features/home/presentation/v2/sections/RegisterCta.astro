@@ -1,0 +1,33 @@
+---
+// Registration call-to-action band. Content switches on registrationOpen.
+interface Props {
+	registrationOpen: boolean;
+}
+const { registrationOpen } = Astro.props;
+---
+
+<section id="register" class="relative overflow-hidden bg-brand text-white">
+	<div class="absolute -bottom-[140px] right-[-100px] h-[420px] w-[420px] rounded-full border-2 border-white/[0.18]"></div>
+	<div class="absolute -bottom-10 right-10 h-[220px] w-[220px] rounded-full border-2 border-white/[0.18]"></div>
+	<div class="relative mx-auto max-w-[1280px] px-8 py-[70px] max-[960px]:px-6">
+		<div class="flex flex-wrap items-center justify-between gap-10">
+			<div>
+				<div class="mb-4 inline-flex items-center gap-[9px] font-mono text-[12px] uppercase tracking-[0.12em]">
+					<span class="inline-block h-2 w-2 rounded-full bg-white"></span>{registrationOpen ? "Registration Open" : "Registration Closed"}
+				</div>
+				{registrationOpen ? (
+					<Fragment>
+						<h2 class="mb-3.5 font-display text-[clamp(36px,5vw,64px)] uppercase leading-[0.9]">Register to<br />join the league</h2>
+						<p class="max-w-[440px] text-[17px] font-semibold">Be part of Elevate Ballers. Tryouts run throughout the year for late entries — sign up your team or yourself today.</p>
+					</Fragment>
+				) : (
+					<Fragment>
+						<h2 class="mb-3.5 font-display text-[clamp(36px,5vw,64px)] uppercase leading-[0.9]">2026 entries<br />are closed</h2>
+						<p class="max-w-[460px] text-[17px] font-semibold">The season is underway. Tryouts still run year-round for late entries — join the waitlist and we'll reach out the moment a spot or the 2027 window opens.</p>
+					</Fragment>
+				)}
+			</div>
+			<a href="/league-registration" class="flex-shrink-0 rounded-md bg-night px-9 py-5 font-display text-[16px] uppercase tracking-[0.06em] text-white no-underline hover:bg-black">{registrationOpen ? "Open Registration Form →" : "Join the Waitlist →"}</a>
+		</div>
+	</div>
+</section>
