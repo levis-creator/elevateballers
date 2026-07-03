@@ -49,6 +49,11 @@ export default defineConfig({
     schema: {
       PUBLIC_TURNSTILE_SITE_KEY: envField.string({ context: 'client', access: 'public' }),
       TURNSTILE_SECRET_KEY: envField.string({ context: 'server', access: 'secret' }),
+      // Public UI toggle. 'v1' = current site, 'v2' = redesign.
+      // Defaults to 'v1' so the new UI ships dormant and is opt-in per environment.
+      // NOTE: PUBLIC_* vars are inlined at build time — flipping this requires a
+      // rebuild/redeploy (a zero-code, one-click revert), not a live env change.
+      PUBLIC_UI_VERSION: envField.string({ context: 'client', access: 'public', default: 'v1', optional: true }),
     },
   },
   image: {
