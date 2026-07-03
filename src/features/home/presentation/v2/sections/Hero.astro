@@ -1,9 +1,13 @@
 ---
-// Hero + Next Match card. The next match is demo content for now.
+// Hero + dynamic Next Match card.
+import type { NextMatch } from "@/features/home/domain/entities/home-v2";
+
 interface Props {
 	heroCtaLabel: string;
+	nextMatch: NextMatch;
 }
-const { heroCtaLabel } = Astro.props;
+const { heroCtaLabel, nextMatch } = Astro.props;
+const TEAM_BG = "background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);";
 ---
 
 <section class="relative overflow-hidden border-b border-black/[0.08]">
@@ -31,27 +35,27 @@ const { heroCtaLabel } = Astro.props;
 		<div class="overflow-hidden rounded-xl border border-black/10 bg-night2 shadow-[0_26px_50px_rgba(20,16,9,0.22)]">
 			<div class="flex items-center justify-between border-b border-white/[0.08] bg-black px-[18px] py-[14px]">
 				<span class="font-mono text-[11px] uppercase tracking-[0.12em] text-brand">Next Match</span>
-				<span class="font-mono text-[11px] text-muted2">Jul 5, 2026 · 4:00 PM</span>
+				<span class="font-mono text-[11px] text-muted2">{nextMatch.when}</span>
 			</div>
 			<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-[18px] py-[26px]">
 				<div class="flex flex-col items-center gap-3 text-center">
-					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-brand" style="background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);">CH</div>
+					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-brand" style={TEAM_BG}>{nextMatch.homeAbbr}</div>
 					<div>
-						<div class="font-display text-[16px] uppercase text-cream">City Hawks</div>
+						<div class="font-display text-[16px] uppercase text-cream">{nextMatch.home}</div>
 						<div class="font-mono text-[10px] tracking-[0.1em] text-muted2">HOME</div>
 					</div>
 				</div>
 				<div class="font-display text-[20px] text-[#6b635a]">VS</div>
 				<div class="flex flex-col items-center gap-3 text-center">
-					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-cream" style="background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);">AG</div>
+					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-cream" style={TEAM_BG}>{nextMatch.awayAbbr}</div>
 					<div>
-						<div class="font-display text-[15px] uppercase leading-none text-cream">Alliance Queens</div>
+						<div class="font-display text-[15px] uppercase leading-none text-cream">{nextMatch.away}</div>
 						<div class="font-mono text-[10px] tracking-[0.1em] text-muted2">AWAY</div>
 					</div>
 				</div>
 			</div>
 			<div class="px-[18px] pb-[18px]">
-				<a href="#fixtures" class="block rounded-md border border-brand/30 bg-brand/[0.14] py-[13px] text-center text-[12px] font-bold uppercase tracking-[0.08em] text-brandsoft no-underline hover:bg-brand/[0.24]">View Match · Nyayo Stadium</a>
+				<a href="#fixtures" class="block rounded-md border border-brand/30 bg-brand/[0.14] py-[13px] text-center text-[12px] font-bold uppercase tracking-[0.08em] text-brandsoft no-underline hover:bg-brand/[0.24]">View Match{nextMatch.venue ? ` · ${nextMatch.venue}` : ""}</a>
 			</div>
 		</div>
 	</div>

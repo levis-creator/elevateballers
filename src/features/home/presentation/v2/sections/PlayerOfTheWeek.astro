@@ -1,31 +1,43 @@
 ---
-// Player of the Week spotlight (dark). Static demo content for now.
+// Player of the Week spotlight (dark). Dynamic content.
+import type { Potw } from "@/features/home/domain/entities/home-v2";
+
+interface Props {
+	potw: Potw;
+}
+const { potw } = Astro.props;
+const PHOTO_BG = "background:repeating-linear-gradient(45deg,#1a1714,#1a1714 12px,#151210 12px,#151210 24px);";
 ---
 
 <section class="relative overflow-hidden border-t border-black/[0.08] bg-night text-cream">
 	<div class="absolute inset-0" style="background:radial-gradient(90% 120% at 10% 50%,rgba(228,0,43,0.16),transparent 55%);"></div>
 	<div class="relative mx-auto grid max-w-[1280px] grid-cols-[0.85fr_1.15fr] items-center gap-14 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:py-[52px]">
 		<div class="relative">
-			<div class="flex aspect-[4/5] items-center justify-center rounded-[14px] border border-white/10 max-[600px]:max-w-[320px]" style="background:repeating-linear-gradient(45deg,#1a1714,#1a1714 12px,#151210 12px,#151210 24px);">
-				<span class="font-mono text-[12px] uppercase tracking-[0.14em] text-[#6b635a]">player photo</span>
-			</div>
-			<div class="absolute -bottom-3.5 -left-3.5 rounded-md bg-brand px-4 py-2.5 font-display text-[14px] uppercase tracking-[0.06em] text-white">CBA Jets · #7</div>
+			{potw.image ? (
+				<img src={potw.image} alt={potw.name} class="aspect-[4/5] w-full rounded-[14px] border border-white/10 object-cover max-[600px]:max-w-[320px]" />
+			) : (
+				<div class="flex aspect-[4/5] items-center justify-center rounded-[14px] border border-white/10 max-[600px]:max-w-[320px]" style={PHOTO_BG}>
+					<span class="font-mono text-[12px] uppercase tracking-[0.14em] text-[#6b635a]">player photo</span>
+				</div>
+			)}
+			{potw.teamLabel && (
+				<div class="absolute -bottom-3.5 -left-3.5 rounded-md bg-brand px-4 py-2.5 font-display text-[14px] uppercase tracking-[0.06em] text-white">{potw.teamLabel}</div>
+			)}
 		</div>
 		<div>
 			<div class="mb-4 font-mono text-[12px] uppercase tracking-[0.14em] text-brandsoft">Player of the Week</div>
-			<h2 class="mb-2.5 font-display text-[clamp(40px,5vw,68px)] uppercase leading-[0.9] text-[#f6f2ec]">Travious<br />Kitondo</h2>
-			<div class="mb-[22px] font-display text-[20px] tracking-[0.06em] text-brand">DYNAMITE.</div>
-			<p class="mb-[18px] max-w-[520px] text-[16px] leading-[1.7] text-creamdim">
-				Size, physicality, strength — none of which Travious has. But inside that lean frame is a mean competitor, a silent assassin afraid of no one on the court. All game long she was quiet, calculating and methodical as she tore City Hawks to shreds.
-			</p>
-			<p class="mb-7 max-w-[520px] text-[16px] leading-[1.7] text-creamdim">
-				Spot-up three, contested catch-and-shoot three, and a deadly side-step three closed out CBA Jets' final 14 points — officially slamming the door on a much-needed win.
-			</p>
-			<div class="flex gap-10">
-				<div><div class="font-display text-[34px] text-cream">27</div><div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">Points</div></div>
-				<div><div class="font-display text-[34px] text-cream">6</div><div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">Threes</div></div>
-				<div><div class="font-display text-[34px] text-cream">5</div><div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">Assists</div></div>
-			</div>
+			<h2 class="mb-2.5 font-display text-[clamp(40px,5vw,68px)] uppercase leading-[0.9] text-[#f6f2ec]">{potw.name}</h2>
+			<p class="mb-7 max-w-[520px] text-[16px] leading-[1.7] text-creamdim">{potw.description}</p>
+			{potw.stats.length > 0 && (
+				<div class="flex gap-10">
+					{potw.stats.map((s) => (
+						<div>
+							<div class="font-display text-[34px] text-cream">{s.value}</div>
+							<div class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">{s.label}</div>
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	</div>
 </section>
