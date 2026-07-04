@@ -1,0 +1,104 @@
+---
+// v2 Rules page composition. Reuses the shared Header/Footer. All server-rendered
+// (no islands): hero + rulebook download, sticky section side-nav, quick-reference
+// tiles, numbered rule sections, and a conduct callout. Content comes from
+// `getRulesData` (CMS-editable hero + PDF, transcribed rulebook sections).
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import { getRulesData } from "@/features/rules/domain/usecases/get-rules-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const [data, footer] = await Promise.all([getRulesData(), getFooterData()]);
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="rules" />
+
+	<!-- HERO -->
+	<section class="relative overflow-hidden border-b border-black/[0.08]">
+		<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+		<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
+		<div class="relative mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-6 px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
+			<div>
+				<div class="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
+					<span class="h-px w-[26px] bg-brand"></span>{data.hero.eyebrow}
+				</div>
+				<h1 class="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">{data.hero.title}</h1>
+				<p class="mt-5 max-w-[540px] text-[16px] leading-[1.7] text-muted">{data.hero.intro}</p>
+			</div>
+			{data.hero.pdfUrl && (
+				<a href={data.hero.pdfUrl} target="_blank" rel="noopener" class="flex items-center gap-2.5 rounded-md bg-brand px-6 py-4 text-[13px] font-extrabold uppercase tracking-[0.05em] text-white no-underline hover:bg-brandlt">
+					↓ {data.hero.downloadLabel}
+				</a>
+			)}
+		</div>
+	</section>
+
+	<!-- BODY: sticky section-nav + content -->
+	<section class="mx-auto grid max-w-[1280px] grid-cols-[240px_1fr] gap-14 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-8 max-[960px]:px-6">
+		<!-- SIDEBAR -->
+		<aside class="max-[960px]:hidden">
+			<div class="sticky top-[96px]">
+				<div class="mb-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">On this page</div>
+				<nav class="flex flex-col gap-0.5">
+					{data.sections.map((s) => (
+						<a href={s.anchor} class="flex items-center gap-3 rounded-md px-3 py-2.5 text-[13.5px] font-semibold text-muted no-underline hover:bg-white hover:text-brand">
+							<span class="font-mono text-[11px] text-brand">{s.no}</span>{s.title}
+						</a>
+					))}
+				</nav>
+				<div class="mt-6 rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">Questions?</div>
+					<p class="mt-2 text-[13px] leading-[1.5] text-muted">Reach the competitions desk for clarifications.</p>
+					<a href="/contacts" class="mt-3 inline-block font-mono text-[12px] text-brand no-underline">Contact us →</a>
+				</div>
+			</div>
+		</aside>
+
+		<!-- CONTENT -->
+		<div class="min-w-0">
+			<!-- Quick reference -->
+			<div class="mb-10 grid grid-cols-4 gap-3 max-[600px]:grid-cols-2">
+				{data.quickRef.map((q) => (
+					<div class="rounded-xl border border-black/10 bg-white p-4 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+						<div class="font-display text-[30px] leading-none text-brand">{q.value}</div>
+						<div class="mt-1.5 font-mono text-[10px] uppercase tracking-[0.06em] text-muted">{q.label}</div>
+					</div>
+				))}
+			</div>
+
+			<div class="flex flex-col gap-12">
+				{data.sections.map((s) => (
+					<div id={s.id} class="scroll-mt-[96px]">
+						<div class="mb-4 flex items-baseline gap-4">
+							<span class="font-display text-[34px] leading-none text-brand">{s.no}</span>
+							<h2 class="font-display text-[28px] uppercase text-ink">{s.title}</h2>
+						</div>
+						<div class="rounded-2xl border border-black/10 bg-white p-7 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-5">
+							<div class="flex flex-col gap-4">
+								{s.rules.map((r) => (
+									<div class="flex gap-4 border-b border-black/[0.06] pb-4 last:border-0 last:pb-0">
+										<span class="flex-shrink-0 font-mono text-[12px] text-brand">{r.tag}</span>
+										<div>
+											<div class="font-body text-[15.5px] font-bold text-ink2">{r.title}</div>
+											<p class="mt-1 text-[14.5px] leading-[1.65] text-muted">{r.body}</p>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
+				))}
+			</div>
+
+			<!-- Conduct callout -->
+			<div class="mt-12 overflow-hidden rounded-2xl border border-brand/20 bg-brand/[0.05] p-7 max-[600px]:p-5">
+				<div class="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-brand">{data.conduct.eyebrow}</div>
+				<h3 class="font-display text-[22px] uppercase text-ink">{data.conduct.heading}</h3>
+				<p class="mt-3 max-w-[680px] text-[15px] leading-[1.7] text-muted">{data.conduct.body}</p>
+			</div>
+		</div>
+	</section>
+
+	<Footer footer={footer} />
+</div>
