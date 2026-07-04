@@ -1,0 +1,18 @@
+---
+// v2 Fixtures page composition. Reuses the shared Header/Footer; the board
+// (hero season selector + Upcoming/Results toggle + league filter + date-grouped
+// match list) is a React+Zustand island.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import FixtureBoard from "./sections/FixtureBoard.tsx";
+import { getFixturesData } from "@/features/fixtures/domain/usecases/get-fixtures-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const [data, footer] = await Promise.all([getFixturesData(), getFooterData()]);
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="fixtures" />
+	<FixtureBoard matches={data.matches} seasons={data.seasons} defaultSeason={data.defaultSeason} client:load />
+	<Footer footer={footer} />
+</div>

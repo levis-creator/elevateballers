@@ -1,0 +1,18 @@
+---
+// v2 Results page composition. Reuses the shared Header/Footer and the Fixtures
+// data layer (completed matches only); the board (hero + featured latest result
+// + league filter + date-grouped final scores) is a React+Zustand island.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import ResultsBoard from "./sections/ResultsBoard.tsx";
+import { getFixturesData } from "@/features/fixtures/domain/usecases/get-fixtures-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const [data, footer] = await Promise.all([getFixturesData(), getFooterData()]);
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="results" />
+	<ResultsBoard matches={data.matches} seasons={data.seasons} defaultSeason={data.defaultSeason} client:load />
+	<Footer footer={footer} />
+</div>

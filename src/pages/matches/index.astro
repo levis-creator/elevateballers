@@ -1,0 +1,24 @@
+---
+export const prerender = false;
+
+// Edge cache results for 60s — they change rarely.
+Astro.response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+
+import { usePublicV2 } from "@/lib/ui-version";
+
+// v2-only route (imports only the v2 tree). Rewrite to the legacy results page
+// when the flag is off — URL stays /matches.
+if (!usePublicV2) return Astro.rewrite("/matches/results");
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import ResultsPage from "@/features/fixtures/presentation/v2/ResultsPage.astro";
+---
+
+<LayoutV2
+	title="Results - Elevate Ballers | Final Scores"
+	description="Elevate Ballers results — final scores by season and league, with the latest result featured and every completed match grouped by date."
+	canonicalURL={`${Astro.url.origin}/matches/`}
+	type="website"
+>
+	<ResultsPage />
+</LayoutV2>

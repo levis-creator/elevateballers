@@ -26,7 +26,7 @@ interface ZonedDateParts {
   minute: number;
 }
 
-function getZonedDateParts(date: Date | string): ZonedDateParts {
+export function getZonedDateParts(date: Date | string): ZonedDateParts {
   const d = typeof date === 'string' ? new Date(date) : date;
   const fixedOffset = FIXED_TIMEZONE_OFFSETS_MIN[MATCH_TIMEZONE];
 
