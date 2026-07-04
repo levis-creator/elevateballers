@@ -1,0 +1,22 @@
+---
+// v2 match-detail page composition. Reuses the shared Header/Footer; the whole
+// scoreboard + stats/preview body is a React+Zustand island. `view` is resolved
+// in the route.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import MatchDetailBoard from "./sections/MatchDetailBoard.tsx";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import type { MatchView } from "@/features/matches/domain/entities/match-detail-v2";
+
+interface Props {
+	view: MatchView;
+}
+const { view } = Astro.props;
+const footer = await getFooterData();
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active={view.state === "upcoming" ? "fixtures" : "results"} />
+	<MatchDetailBoard view={view} client:load />
+	<Footer footer={footer} />
+</div>
