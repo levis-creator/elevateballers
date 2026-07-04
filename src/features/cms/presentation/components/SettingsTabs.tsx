@@ -4,6 +4,7 @@ import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, Sea
 import { PermissionProvider } from '@/features/rbac/usePermissions';
 import BannerSettingsEditor from './BannerSettingsEditor';
 import ContactSettingsEditor from './ContactSettingsEditor';
+import ContactContentEditor from './ContactContentEditor';
 import AboutPageEditor from './AboutPageEditor';
 import HomepageIntroEditor from './HomepageIntroEditor';
 import SeoSettingsEditor from './SeoSettingsEditor';
@@ -54,7 +55,7 @@ export default function SettingsTabs() {
         {/* Content panel — only the active editor is mounted */}
         <div className="flex-1 min-w-0">
           {active === 'header'   && <BannerSettingsEditor />}
-          {active === 'contact'  && <ContactSettingsEditor />}
+          {active === 'contact'  && <><ContactSettingsEditor /><ContactContentEditor /></>}
           {active === 'homepage' && <HomepageIntroEditor />}
           {active === 'seo'      && <SeoSettingsEditor />}
           {active === 'about'    && <AboutPageEditor />}

@@ -1,0 +1,119 @@
+---
+// v2 Contact page composition. Reuses the shared Header/Footer. The message form
+// is a React+Turnstile island posting to /api/contact-messages; channels, visit
+// info and socials come from the CMS-managed contact settings. Channel icons are
+// inlined lucide SVGs (Phone / Mail / MapPin) — no client JS.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import ContactFormV2 from "./ContactFormV2.tsx";
+import { getContactData } from "@/features/contact/domain/usecases/get-contact-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const [data, footer] = await Promise.all([getContactData(), getFooterData()]);
+
+// lucide icon inner markup, keyed by channel.icon.
+const ICONS: Record<string, string> = {
+	phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+	mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+	pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+};
+const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="contacts" />
+
+	<!-- HERO -->
+	<section class="relative overflow-hidden border-b border-black/[0.08]">
+		<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+		<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
+		<div class="relative mx-auto max-w-[1280px] px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
+			<div class="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
+				<span class="h-px w-[26px] bg-brand"></span>{data.hero.eyebrow}
+			</div>
+			<h1 class="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">{data.hero.title}</h1>
+			<p class="mt-5 max-w-[520px] text-[16px] leading-[1.7] text-muted">{data.hero.blurb}</p>
+		</div>
+	</section>
+
+	<!-- QUICK CONTACT CARDS -->
+	<section class="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
+		<div class="grid grid-cols-3 gap-5 max-[600px]:grid-cols-1">
+			{data.channels.map((c) => (
+				<a href={c.href} class="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-6 no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+					<span class="flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-brand">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={iconFor(c.icon)} />
+					</span>
+					<div class="font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{c.label}</div>
+					<div class="font-body text-[16px] font-bold text-ink2">{c.value}</div>
+					<div class="mt-auto font-mono text-[11px] text-brand">{c.action} →</div>
+				</a>
+			))}
+		</div>
+	</section>
+
+	<!-- FORM + INFO -->
+	<section class="mx-auto grid max-w-[1280px] grid-cols-[1.15fr_0.85fr] gap-14 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6">
+		<!-- FORM -->
+		<div class="rounded-2xl border border-black/10 bg-white p-8 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-5">
+			<h2 class="font-display text-[26px] uppercase text-ink">{data.form.heading}</h2>
+			<p class="mt-2 text-[14px] leading-[1.6] text-muted">{data.form.intro}</p>
+			<ContactFormV2 topics={data.topics} client:load />
+		</div>
+
+		<!-- INFO -->
+		<div class="flex flex-col gap-5">
+			<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Visit Us</div>
+				<div class="flex flex-col gap-4">
+					{data.info.map((i) => (
+						<div class="flex items-start gap-3">
+							<span class="mt-0.5 w-[52px] flex-shrink-0 font-mono text-[11px] uppercase tracking-[0.08em] text-brand">{i.k}</span>
+							<span class="font-body text-[14.5px] leading-[1.5] text-ink2">{i.v}</span>
+						</div>
+					))}
+				</div>
+			</div>
+
+			{data.mapImage ? (
+				<img src={data.mapImage} alt="Elevate Ballers venue" loading="lazy" class="min-h-[200px] w-full rounded-2xl border border-black/10 object-cover" />
+			) : (
+				<div class="rounded-2xl border border-black/10" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 12px,#f0ece5 12px,#f0ece5 24px);min-height:200px;"></div>
+			)}
+
+			{data.socials.length > 0 && (
+				<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Follow the League</div>
+					<div class="flex gap-2.5">
+						{data.socials.map((s) => (
+							<a href={s.url} target="_blank" rel="noopener" class="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-white/[0.14] font-mono text-[12px] text-[#c9c1b8] no-underline hover:border-brand hover:text-brand">
+								{s.label}
+							</a>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	</section>
+
+	<!-- DEPARTMENTS -->
+	<section class="border-t border-black/[0.08] bg-white">
+		<div class="mx-auto max-w-[1280px] px-8 py-[56px] max-[960px]:px-6">
+			<div class="mb-8">
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Reach the Right Desk</div>
+				<h2 class="font-display text-[clamp(28px,3.2vw,40px)] uppercase text-ink">Departments</h2>
+			</div>
+			<div class="grid grid-cols-3 gap-5 max-[600px]:grid-cols-1 max-[960px]:grid-cols-2">
+				{data.departments.map((dept) => (
+					<div class="rounded-2xl border border-black/10 bg-paper2 p-6">
+						<h3 class="font-display text-[19px] uppercase text-ink2">{dept.name}</h3>
+						<p class="mt-2 text-[13.5px] leading-[1.6] text-muted">{dept.desc}</p>
+						<a href={dept.href} class="mt-4 inline-block font-mono text-[12.5px] text-brand no-underline">{dept.email}</a>
+					</div>
+				))}
+			</div>
+		</div>
+	</section>
+
+	<Footer footer={footer} />
+</div>
