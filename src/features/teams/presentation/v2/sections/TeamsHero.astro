@@ -1,0 +1,36 @@
+---
+// Teams directory hero — same visual language as the home hero (radial glow +
+// decorative rings), with two stat cards.
+interface Props {
+	totalCount: number;
+	leagueCount: number;
+}
+const { totalCount, leagueCount } = Astro.props;
+---
+
+<section class="relative overflow-hidden border-b border-black/[0.08]">
+	<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+	<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
+	<div class="absolute right-[-40px] top-5 h-[340px] w-[340px] rounded-full border border-brand/10"></div>
+	<div class="relative mx-auto grid max-w-[1280px] grid-cols-[1.2fr_0.8fr] items-end gap-12 px-8 pb-[52px] pt-[64px] max-[960px]:grid-cols-1 max-[960px]:items-start max-[960px]:gap-8 max-[960px]:px-6">
+		<div>
+			<div class="mb-[22px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
+				<span class="h-px w-[26px] bg-brand"></span>Club Directory
+			</div>
+			<h1 class="mb-6 font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Teams</h1>
+			<p class="max-w-[520px] text-[17px] leading-[1.6] text-muted">
+				Explore every club in Elevate Ballers through a competitive, scoreboard-inspired directory built to feel at home beside results and standings.
+			</p>
+		</div>
+		<div class="flex gap-4 max-[960px]:w-full">
+			<div class="flex-1 rounded-xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="font-display text-[52px] leading-none text-brand">{totalCount}</div>
+				<div class="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Clubs Listed</div>
+			</div>
+			<div class="flex-1 rounded-xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="font-display text-[52px] leading-none text-ink">{leagueCount}</div>
+				<div class="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Leagues</div>
+			</div>
+		</div>
+	</div>
+</section>

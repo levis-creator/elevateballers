@@ -1,0 +1,32 @@
+---
+// v2 Teams page — composition. Reuses the home Header/Footer; the directory is a
+// React island (Zustand). Data via the getTeamsData use-case (Clean Arch).
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import TeamsHero from "./sections/TeamsHero.astro";
+import TeamsDirectory from "./sections/TeamsDirectory.tsx";
+import { getTeamsData } from "@/features/teams/domain/usecases/get-teams-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const [teams, footer] = await Promise.all([getTeamsData(), getFooterData()]);
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="teams" />
+	<TeamsHero totalCount={teams.totalCount} leagueCount={teams.leagueCount} />
+	<TeamsDirectory teams={teams.teams} leagues={teams.leagues} client:visible />
+
+	<!-- REGISTER STRIP -->
+	<section class="relative overflow-hidden bg-brand text-white">
+		<div class="absolute -bottom-[140px] right-[-100px] h-[420px] w-[420px] rounded-full border-2 border-white/[0.18]"></div>
+		<div class="relative mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-8 px-8 py-[54px] max-[960px]:px-6">
+			<div>
+				<h2 class="mb-2.5 font-display text-[clamp(30px,4vw,48px)] uppercase leading-[0.9]">Don't see your club?</h2>
+				<p class="max-w-[440px] text-[16px] font-semibold">Register your team for the 2026 season and join the directory alongside Kenya's best.</p>
+			</div>
+			<a href="/league-registration" class="flex-shrink-0 rounded-md bg-night px-8 py-4 font-display text-[15px] uppercase tracking-[0.06em] text-white no-underline hover:bg-black">Register a Team →</a>
+		</div>
+	</section>
+
+	<Footer footer={footer} />
+</div>

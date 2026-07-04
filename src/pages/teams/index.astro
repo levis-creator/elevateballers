@@ -1,0 +1,28 @@
+---
+export const prerender = false;
+
+// Edge cache the teams directory for 2 min.
+Astro.response.headers.set("Cache-Control", "public, s-maxage=120, stale-while-revalidate=300");
+
+import { usePublicV2 } from "@/lib/ui-version";
+
+// v2-only route: imports ONLY the v2 tree so no v1 CSS can leak. When the flag
+// is off we internally rewrite to the legacy directory (URL stays /teams).
+if (!usePublicV2) return Astro.rewrite("/teams-v1");
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import TeamsPage from "@/features/teams/presentation/v2/TeamsPage.astro";
+
+const seoTitle = "Teams - Elevate Ballers | Club Directory";
+const seoDescription =
+	"Browse every club in Elevate Ballers — Kenya's premier basketball league. Filter by league, search by team or coach, and explore rosters.";
+---
+
+<LayoutV2
+	title={seoTitle}
+	description={seoDescription}
+	canonicalURL={`${Astro.url.origin}/teams/`}
+	type="website"
+>
+	<TeamsPage />
+</LayoutV2>
