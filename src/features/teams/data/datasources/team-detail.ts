@@ -74,6 +74,7 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 		const result = teamScore > oppScore ? "win" : teamScore < oppScore ? "loss" : "draw";
 		return {
 			id: m.id,
+			href: `/matches/${m.slug || m.id}`,
 			tag: result === "win" ? "Win" : result === "loss" ? "Loss" : "Draw",
 			result,
 			date: fmtDate(m.date),
@@ -89,6 +90,7 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 
 	const upcoming: UpcomingMatch[] = (upcomingMs as any[]).map((m) => ({
 		id: m.id,
+		href: `/matches/${m.slug || m.id}`,
 		when: fmtWhen(m.date),
 		league: leagueOf(m),
 		home: homeName(m),

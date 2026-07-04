@@ -63,7 +63,7 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 				{pageItems.length > 0 ? (
 					<div className="flex flex-col gap-3">
 						{pageItems.map((m) => (
-							<div key={m.id} className="rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+							<a key={m.id} href={m.href} className="block rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
 								<div className="mb-3 flex items-center justify-between">
 									<span className="rounded px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em]" style={tagStyle(m.result)}>
 										{m.tag}
@@ -82,7 +82,7 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 										<span className="font-display text-[22px]" style={{ color: m.awayColor }}>{m.as}</span>
 									</div>
 								</div>
-							</div>
+							</a>
 						))}
 					</div>
 				) : (
@@ -115,7 +115,7 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 				{upcoming.length > 0 ? (
 					<div className="flex flex-col gap-3">
 						{upcoming.map((m) => (
-							<div key={m.id} className="rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+							<a key={m.id} href={m.href} className="block rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
 								<div className="mb-3 flex items-center justify-between gap-2">
 									<span className="rounded bg-brand/[0.08] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-brand">{m.when}</span>
 									<span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{m.league}</span>
@@ -125,7 +125,7 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 									<span className="font-display text-[15px] text-[#a49a8d]">VS</span>
 									<span className="flex-1 text-right font-body text-[15px] font-bold text-ink2">{m.away}</span>
 								</div>
-							</div>
+							</a>
 						))}
 					</div>
 				) : (
