@@ -1,21 +1,27 @@
 ---
 export const prerender = false;
 
+// Legacy Teams directory on its own route (own CSS graph). `/teams` rewrites
+// here when PUBLIC_UI_VERSION !== 'v2'. Guard against serving a duplicate when
+// the v2 page is live.
+import { usePublicV2 } from "@/lib/ui-version";
+if (usePublicV2) return Astro.rewrite("/404");
+
 // Edge cache teams directory for 2 min
 Astro.response.headers.set(
   'Cache-Control',
   'public, s-maxage=120, stale-while-revalidate=300'
 );
 
-import Layout from "../../layouts/Layout.astro";
-import TopBar from "../../features/layout/components/TopBar.astro";
-import Header from "../../features/layout/components/Header";
-import Footer from "../../features/layout/components/Footer.astro";
-import { getTeamsPaginated } from "../../features/cms/lib/queries";
-import { resolveAssetUrl, getDisplayImageUrl } from "../../lib/asset-url";
-import Spacing from "../../shared/components/ui/Spacing.astro";
-import PageLoader from "../../components/PageLoader";
-import ContentLoader from "../../components/ContentLoader";
+import Layout from "@/layouts/Layout.astro";
+import TopBar from "@/features/layout/components/TopBar.astro";
+import Header from "@/features/layout/components/Header";
+import Footer from "@/features/layout/components/Footer.astro";
+import { getTeamsPaginated } from "@/features/cms/lib/queries";
+import { resolveAssetUrl, getDisplayImageUrl } from "@/lib/asset-url";
+import Spacing from "@/shared/components/ui/Spacing.astro";
+import PageLoader from "@/components/PageLoader";
+import ContentLoader from "@/components/ContentLoader";
 
 const PER_PAGE = 12;
 const pageParam = Astro.url.searchParams.get("page");
