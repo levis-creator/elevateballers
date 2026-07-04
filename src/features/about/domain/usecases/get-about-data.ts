@@ -1,43 +1,17 @@
 /**
- * getAboutData — composes the v2 About page: real quantitative data (stats,
- * league counts, contacts) merged with static editorial content (values,
- * timeline, leadership). Falls back to demo values for the dynamic parts so the
- * page always renders.
+ * getAboutData — composes the v2 About page:
+ *  - editorial copy (hero, story, section headings, values, timeline, people,
+ *    venue, CTA) from the CMS-editable `about_v2_content` setting, merged over
+ *    defaults so the page always renders;
+ *  - quantitative data (stat counts, per-league counts, venue contacts) from
+ *    live queries, with demo fallbacks.
  */
-import type {
-	AboutData,
-	AboutStat,
-	AboutLeague,
-	AboutContact,
-	AboutValue,
-	AboutMilestone,
-	AboutPerson,
-} from "@/features/about/domain/entities/about-v2";
-import { fetchAboutDynamic } from "@/features/about/data/datasources/about-v2";
+import type { AboutData, AboutStat, AboutLeague, AboutContact } from "@/features/about/domain/entities/about-v2";
+import { fetchAboutDynamic, fetchAboutContent } from "@/features/about/data/datasources/about-v2";
+import { splitParagraphs } from "@/features/about/lib/about-content";
+import { getDisplayImageUrl } from "@/lib/asset-url";
 
-// --- editorial content (static; edit here, not in the DB) ---
-const VALUES: AboutValue[] = [
-	{ num: "01", title: "Competition", body: "Real fixtures, real standings, real stakes. Every game counts toward the season." },
-	{ num: "02", title: "Community", body: "A welcoming space for players and fans of every level to belong." },
-	{ num: "03", title: "Development", body: "Reps, coaching, and a platform for the next generation of Kenyan talent." },
-	{ num: "04", title: "Fair Play", body: "Clear rules, consistent officiating, and respect on and off the court." },
-];
-
-const TIMELINE: AboutMilestone[] = [
-	{ year: "2024", title: "The First Tip-Off", body: "Elevate Ballers launches with a handful of clubs and a shared love of the game." },
-	{ year: "2025", title: "The Women’s League Arrives", body: "The EWBL is founded, opening a dedicated stage for women’s basketball." },
-	{ year: "2025", title: "Standings Go Live", body: "Weekly standings, Player of the Week, and league stats become part of every matchday." },
-	{ year: "2026", title: "A Growing Community", body: "Two leagues and clubs from across Nairobi competing every weekend." },
-];
-
-const PEOPLE: AboutPerson[] = [
-	{ name: "League Commissioner", role: "Operations", image: null },
-	{ name: "Competitions Lead", role: "Fixtures & Results", image: null },
-	{ name: "Head of Officiating", role: "Referees", image: null },
-	{ name: "Community Manager", role: "Clubs & Players", image: null },
-];
-
-// --- fallbacks for the dynamic parts (used only when the query fails) ---
+// Fallbacks for the dynamic parts (used only when the query fails).
 const FALLBACK_STATS: AboutStat[] = [
 	{ value: "24", label: "Clubs", accent: true },
 	{ value: "370+", label: "Players", accent: false },
@@ -71,13 +45,34 @@ const FALLBACK_CONTACTS: AboutContact[] = [
 ];
 
 export async function getAboutData(): Promise<AboutData> {
-	const dyn = await fetchAboutDynamic();
+	const [content, dyn] = await Promise.all([fetchAboutContent(), fetchAboutDynamic()]);
+
 	return {
+		hero: {
+			eyebrow: content.heroEyebrow,
+			titleLead: content.heroTitleLead,
+			titleAccent: content.heroTitleAccent,
+			blurb: content.heroBlurb,
+		},
+		story: {
+			eyebrow: content.storyEyebrow,
+			heading: content.storyHeading,
+			paragraphs: splitParagraphs(content.storyBody),
+			image: getDisplayImageUrl(content.storyImage),
+		},
+		leaguesIntro: { eyebrow: content.leaguesEyebrow, heading: content.leaguesHeading },
+		valuesIntro: { eyebrow: content.valuesEyebrow, heading: content.valuesHeading },
+		timelineIntro: { eyebrow: content.timelineEyebrow, heading: content.timelineHeading },
+		peopleIntro: { eyebrow: content.peopleEyebrow, heading: content.peopleHeading },
+		venue: { eyebrow: content.venueEyebrow, heading: content.venueHeading, body: content.venueBody, image: getDisplayImageUrl(content.venueImage) },
+		cta: { heading: content.ctaHeading, body: content.ctaBody },
+
 		stats: dyn?.stats ?? FALLBACK_STATS,
 		leagues: dyn?.leagues.length ? dyn.leagues : FALLBACK_LEAGUES,
 		contacts: dyn?.contacts ?? FALLBACK_CONTACTS,
-		values: VALUES,
-		timeline: TIMELINE,
-		people: PEOPLE,
+
+		values: content.values.map((v, i) => ({ num: String(i + 1).padStart(2, "0"), title: v.title, body: v.body })),
+		timeline: content.timeline.map((t) => ({ year: t.year, title: t.title, body: t.body })),
+		people: content.people.map((p) => ({ name: p.name, role: p.role, image: getDisplayImageUrl(p.image) })),
 	};
 }
