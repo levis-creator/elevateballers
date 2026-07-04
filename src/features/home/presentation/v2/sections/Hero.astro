@@ -26,8 +26,8 @@ const TEAM_BG = "background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,
 				Live matches, standings, and rising stars from the courts of Nairobi. Follow every game, every team, every player — all season long.
 			</p>
 			<div class="flex flex-wrap items-center gap-4 max-[600px]:flex-col max-[600px]:items-start">
-				<a href="#register" class="rounded bg-brand px-7 py-4 text-[14px] font-extrabold uppercase tracking-[0.04em] text-white no-underline hover:bg-brandlt max-[600px]:w-full max-[600px]:text-center">{heroCtaLabel}</a>
-				<a href="#standings" class="rounded border border-black/20 px-7 py-4 text-[14px] font-bold uppercase tracking-[0.04em] text-ink2 no-underline hover:border-brand hover:text-brand max-[600px]:w-full max-[600px]:text-center">View Standings</a>
+				<a href="/league-registration" class="rounded bg-brand px-7 py-4 text-[14px] font-extrabold uppercase tracking-[0.04em] text-white no-underline hover:bg-brandlt max-[600px]:w-full max-[600px]:text-center">{heroCtaLabel}</a>
+				<a href="/standings" class="rounded border border-black/20 px-7 py-4 text-[14px] font-bold uppercase tracking-[0.04em] text-ink2 no-underline hover:border-brand hover:text-brand max-[600px]:w-full max-[600px]:text-center">View Standings</a>
 			</div>
 		</div>
 
@@ -55,7 +55,7 @@ const TEAM_BG = "background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,
 				</div>
 			</div>
 			<div class="px-[18px] pb-[18px]">
-				<a href="#fixtures" class="block rounded-md border border-brand/30 bg-brand/[0.14] py-[13px] text-center text-[12px] font-bold uppercase tracking-[0.08em] text-brandsoft no-underline hover:bg-brand/[0.24]">View Match{nextMatch.venue ? ` · ${nextMatch.venue}` : ""}</a>
+				<a href="/upcoming-fixtures" class="block rounded-md border border-brand/30 bg-brand/[0.14] py-[13px] text-center text-[12px] font-bold uppercase tracking-[0.08em] text-brandsoft no-underline hover:bg-brand/[0.24]">View Match{nextMatch.venue ? ` · ${nextMatch.venue}` : ""}</a>
 			</div>
 		</div>
 	</div>

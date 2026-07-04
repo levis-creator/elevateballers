@@ -19,12 +19,12 @@ const { registrationOpen = true, active = "home" } = Astro.props;
 const navLinks: NavLink[] = [
 	{ label: "Home", href: "/", key: "home" },
 	{ label: "Teams", href: "/teams", key: "teams" },
-	{ label: "Standings", href: "#standings", key: "standings" },
-	{ label: "Fixtures", href: "#fixtures", key: "fixtures" },
-	{ label: "Results", href: "#fixtures", key: "results" },
-	{ label: "About", href: "#about", key: "about" },
+	{ label: "Standings", href: "/standings", key: "standings" },
+	{ label: "Fixtures", href: "/upcoming-fixtures", key: "fixtures" },
+	{ label: "Results", href: "/matches", key: "results" },
+	{ label: "About", href: "/about-club", key: "about" },
 	{ label: "Rules", href: "/rules", key: "rules" },
-	{ label: "Contacts", href: "#footer", key: "contacts" },
+	{ label: "Contacts", href: "/contacts", key: "contacts" },
 ];
 
 const navCtaClass = registrationOpen
@@ -56,7 +56,7 @@ const navCtaLabel = registrationOpen ? "2026 Registration" : "Registration Close
 				<a href={link.href} class={`no-underline hover:text-brand ${link.key === active ? "text-ink2" : "text-muted"}`}>{link.label}</a>
 			))}
 		</nav>
-		<a href="#register" class={`max-[960px]:hidden ${navCtaClass}`}>{navCtaLabel}</a>
+		<a href="/league-registration" class={`max-[960px]:hidden ${navCtaClass}`}>{navCtaLabel}</a>
 		<!-- Mobile menu toggle (hamburger → X) -->
 		<button
 			type="button"
@@ -90,7 +90,7 @@ const navCtaLabel = registrationOpen ? "2026 Registration" : "Registration Close
 				</a>
 			))}
 			<a
-				href="#register"
+				href="/league-registration"
 				@click="menuOpen = false"
 				class="mt-4 rounded-md bg-brand px-4 py-[15px] text-center text-[13px] font-extrabold uppercase tracking-[0.06em] text-white no-underline"
 			>{navCtaLabel}</a>

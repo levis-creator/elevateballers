@@ -1,29 +1,17 @@
 ---
-// v2 redesign body for the Standings page. Reuses the existing StandingsPage
-// data component so the new UI is a fresh *shell*, not a data rewrite.
-// This is a starter — replace the markup below with the real redesign.
-// v2 is a PRESENTATION-layer concern: it reuses the domain/data layers
-// unchanged and only re-skins the view. Import from the real presentation
-// component, not the legacy `components/` shim (which will be removed).
-import { StandingsPage } from "@/features/standings/presentation/components/StandingsPage";
-import type { TeamStanding } from "@/features/standings/data/standingsData";
+// v2 Standings page composition. Reuses the home Header/Footer; the board
+// (hero season selector + podium + table + search) is a React+Zustand island.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import StandingsBoard from "./sections/StandingsBoard.tsx";
+import { getStandingsData } from "@/features/standings/domain/usecases/get-standings-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 
-interface Props {
-	initialStandings: TeamStanding[];
-}
-
-const { initialStandings } = Astro.props;
+const [data, footer] = await Promise.all([getStandingsData(), getFooterData()]);
 ---
 
-<main class="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-	<header class="mb-10 text-center">
-		<p class="text-sm font-semibold uppercase tracking-[0.2em] text-[#ffba00]">
-			Elevate Basketball
-		</p>
-		<h1 class="mt-2 font-[Teko] text-6xl font-bold leading-none sm:text-7xl">
-			Standings
-		</h1>
-	</header>
-
-	<StandingsPage initialStandings={initialStandings} client:load />
-</main>
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="standings" />
+	<StandingsBoard rows={data.rows} leagues={data.leagues} seasonLabel={data.seasonLabel} playoffSpots={data.playoffSpots} client:load />
+	<Footer footer={footer} />
+</div>
