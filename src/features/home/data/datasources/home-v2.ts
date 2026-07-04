@@ -86,6 +86,7 @@ function toFixture(m: any): Match {
 		away: awayName(m),
 		venue: venueOf(m),
 		time: fmtTime(d),
+		startDate: d.toISOString(),
 	};
 }
 function toNextMatch(m: any): NextMatch {
@@ -140,13 +141,15 @@ export async function fetchNews(): Promise<{ news: NewsItem[]; categories: strin
 		const news: NewsItem[] = articles.slice(0, 9).map((a: any) => {
 			const rawImg = typeof a.image === "string" ? a.image : a.image?.url || a.image?.src;
 			const resolved = resolveAssetUrl(rawImg);
+			const published = a.publishedAt ?? a.createdAt;
 			return {
 				cat: catDisplay(a.category),
 				title: a.title,
 				excerpt: excerptOf(a),
-				date: fmtDate(a.publishedAt ?? a.createdAt),
+				date: fmtDate(published),
 				url: `/news/${a.slug}`,
 				image: resolved ? optimizeImageUrl(resolved, { width: 600 }) : null,
+				datePublished: published ? new Date(published).toISOString() : null,
 			};
 		});
 		const present = new Set(articles.map((a: any) => catDisplay(a.category)));

@@ -6,7 +6,8 @@
  * Prisma type. Kept intentionally small and view-oriented.
  */
 
-/** A fixture card in "Upcoming Matches". */
+/** A fixture card in "Upcoming Matches". `startDate` is an ISO string for
+ *  structured data (null for demo/fallback rows, which are excluded from schema). */
 export interface Match {
 	day: string;
 	mon: string;
@@ -14,6 +15,7 @@ export interface Match {
 	away: string;
 	venue: string;
 	time: string;
+	startDate: string | null;
 }
 
 /** A completed-match card in "Recent Results". */
@@ -45,6 +47,8 @@ export interface NewsItem {
 	date: string;
 	url: string;
 	image: string | null;
+	/** ISO published date for structured data; null for demo/fallback rows. */
+	datePublished: string | null;
 }
 
 /** A single league-leader row. */
