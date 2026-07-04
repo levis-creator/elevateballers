@@ -29,12 +29,10 @@ const palette = (dark: boolean) =>
 		<div class="absolute right-[-20px] top-10 h-[320px] w-[320px] rounded-full border border-brand/10"></div>
 		<div class="relative mx-auto max-w-[1280px] px-8 py-[84px] max-[960px]:px-6 max-[960px]:py-14">
 			<div class="mb-[22px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brandsoft">
-				<span class="h-px w-[26px] bg-brandsoft"></span>About the Club
+				<span class="h-px w-[26px] bg-brandsoft"></span>{data.hero.eyebrow}
 			</div>
-			<h1 class="max-w-[880px] font-display text-[clamp(48px,7vw,104px)] uppercase leading-[0.88] tracking-[0.01em]">Built for the<br />love of the <span class="text-brand">game</span></h1>
-			<p class="mt-7 max-w-[560px] text-[17px] leading-[1.7] text-creamdim">
-				Elevate Ballers is Kenya's home for competitive basketball — a community league in Nairobi where clubs, players, and fans come together every week to compete, grow, and celebrate the game.
-			</p>
+			<h1 class="max-w-[880px] font-display text-[clamp(48px,7vw,104px)] uppercase leading-[0.88] tracking-[0.01em]">{data.hero.titleLead} <span class="text-brand">{data.hero.titleAccent}</span></h1>
+			<p class="mt-7 max-w-[560px] text-[17px] leading-[1.7] text-creamdim">{data.hero.blurb}</p>
 		</div>
 	</section>
 
@@ -53,14 +51,16 @@ const palette = (dark: boolean) =>
 	<!-- STORY -->
 	<section class="mx-auto grid max-w-[1280px] grid-cols-[0.9fr_1.1fr] gap-16 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:py-12">
 		<div>
-			<div class="mb-4 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Our Story</div>
-			<h2 class="font-display text-[clamp(32px,4vw,52px)] uppercase leading-[0.95] text-ink">From a weekend<br />run to a league</h2>
-			<div class="mt-6 aspect-[4/3] rounded-2xl border border-black/10 max-[600px]:aspect-[16/10]" style={`background:${STRIPE_LG};`}></div>
+			<div class="mb-4 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.story.eyebrow}</div>
+			<h2 class="font-display text-[clamp(32px,4vw,52px)] uppercase leading-[0.95] text-ink">{data.story.heading}</h2>
+			{data.story.image ? (
+				<img src={data.story.image} alt={data.story.heading} loading="lazy" class="mt-6 aspect-[4/3] w-full rounded-2xl border border-black/10 object-cover max-[600px]:aspect-[16/10]" />
+			) : (
+				<div class="mt-6 aspect-[4/3] rounded-2xl border border-black/10 max-[600px]:aspect-[16/10]" style={`background:${STRIPE_LG};`}></div>
+			)}
 		</div>
 		<div class="flex flex-col gap-5 text-[16px] leading-[1.8] text-muted max-[960px]:justify-center">
-			<p>What started as a handful of friends looking for organised, competitive hoops has grown into one of Nairobi's most active basketball communities. Elevate Ballers was founded to give players a real stage — proper fixtures, standings that matter, and the structure to turn casual runs into a genuine season.</p>
-			<p>Today the club runs competitive leagues side by side — bringing together school teams, academies, corporate sides, and community clubs from across the city, all chasing the same title.</p>
-			<p>Every week, standings update after each game, a Player of the Week is crowned, and the next generation of Kenyan talent gets the reps, the competition, and the spotlight they deserve.</p>
+			{data.story.paragraphs.map((p) => <p>{p}</p>)}
 		</div>
 	</section>
 
@@ -68,8 +68,8 @@ const palette = (dark: boolean) =>
 	<section class="border-y border-black/[0.08] bg-white">
 		<div class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 			<div class="mb-10 text-center">
-				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Our Leagues, One Community</div>
-				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">Where everyone plays</h2>
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.leaguesIntro.eyebrow}</div>
+				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.leaguesIntro.heading}</h2>
 			</div>
 			<div class="grid grid-cols-2 gap-6 max-[600px]:grid-cols-1">
 				{data.leagues.map((l) => {
@@ -95,8 +95,8 @@ const palette = (dark: boolean) =>
 	<!-- VALUES -->
 	<section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 		<div class="mb-10">
-			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">What We Stand For</div>
-			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">Our values</h2>
+			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.valuesIntro.eyebrow}</div>
+			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.valuesIntro.heading}</h2>
 		</div>
 		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-1 max-[960px]:grid-cols-2">
 			{data.values.map((v) => (
@@ -113,8 +113,8 @@ const palette = (dark: boolean) =>
 	<section class="border-y border-black/[0.08] bg-panel">
 		<div class="mx-auto max-w-[1000px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 			<div class="mb-10">
-				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">The Journey</div>
-				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">How we got here</h2>
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.timelineIntro.eyebrow}</div>
+				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.timelineIntro.heading}</h2>
 			</div>
 			<div class="flex flex-col">
 				{data.timeline.map((t) => (
@@ -134,8 +134,8 @@ const palette = (dark: boolean) =>
 	<!-- LEADERSHIP -->
 	<section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 		<div class="mb-10">
-			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">The People</div>
-			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">Who runs it</h2>
+			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.peopleIntro.eyebrow}</div>
+			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.peopleIntro.heading}</h2>
 		</div>
 		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-2">
 			{data.people.map((person) => (
@@ -158,9 +158,9 @@ const palette = (dark: boolean) =>
 	<section class="border-t border-black/[0.08] bg-white">
 		<div class="mx-auto grid max-w-[1280px] grid-cols-[1.1fr_0.9fr] gap-14 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:py-12">
 			<div>
-				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Home Court</div>
-				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase leading-[0.95] text-ink">Come watch<br />a game</h2>
-				<p class="mt-6 max-w-[440px] text-[16px] leading-[1.7] text-muted">Our home base sits off Dagoretti Road in Nairobi, with fixtures across the city's top courts. Games run on weekends — free to attend, and always worth the trip.</p>
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.venue.eyebrow}</div>
+				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase leading-[0.95] text-ink">{data.venue.heading}</h2>
+				<p class="mt-6 max-w-[440px] text-[16px] leading-[1.7] text-muted">{data.venue.body}</p>
 				<div class="mt-8 flex flex-col gap-4">
 					{data.contacts.map((c) => (
 						<div class="flex items-start gap-3">
@@ -170,7 +170,11 @@ const palette = (dark: boolean) =>
 					))}
 				</div>
 			</div>
-			<div class="rounded-2xl border border-black/10" style={`background:${STRIPE_LG};min-height:280px;`}></div>
+			{data.venue.image ? (
+				<img src={data.venue.image} alt={data.venue.heading} loading="lazy" class="min-h-[280px] w-full rounded-2xl border border-black/10 object-cover" />
+			) : (
+				<div class="rounded-2xl border border-black/10" style={`background:${STRIPE_LG};min-height:280px;`}></div>
+			)}
 		</div>
 	</section>
 
@@ -180,8 +184,8 @@ const palette = (dark: boolean) =>
 		<div class="absolute -bottom-10 right-10 h-[220px] w-[220px] rounded-full border-2 border-white/[0.18]"></div>
 		<div class="relative mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-10 px-8 py-[70px] max-[960px]:px-6">
 			<div>
-				<h2 class="mb-3.5 font-display text-[clamp(34px,5vw,60px)] uppercase leading-[0.9]">Be part of it</h2>
-				<p class="max-w-[440px] text-[17px] font-semibold">Register a team, join as a player, or just come support. There's a place for everyone at Elevate Ballers.</p>
+				<h2 class="mb-3.5 font-display text-[clamp(34px,5vw,60px)] uppercase leading-[0.9]">{data.cta.heading}</h2>
+				<p class="max-w-[440px] text-[17px] font-semibold">{data.cta.body}</p>
 			</div>
 			<div class="flex flex-wrap gap-3">
 				<a href="/league-registration" class="rounded-md bg-night px-8 py-5 font-display text-[15px] uppercase tracking-[0.06em] text-white no-underline hover:bg-black">Register →</a>

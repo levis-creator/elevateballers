@@ -6,8 +6,9 @@
  * Returns null on failure so the use case can fall back to static content.
  */
 import { prisma } from "@/lib/prisma";
-import { getLeagues } from "@/features/cms/lib/queries";
+import { getLeagues, getSiteSettingByKey } from "@/features/cms/lib/queries";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { ABOUT_CONTENT_KEY, ABOUT_DEFAULTS, parseAboutContent, type AboutContent } from "@/features/about/lib/about-content";
 import type { AboutStat, AboutLeague, AboutContact } from "@/features/about/domain/entities/about-v2";
 
 export interface AboutDynamic {
@@ -25,6 +26,17 @@ const abbrOf = (name: string): string =>
 		.join("")
 		.toUpperCase()
 		.slice(0, 5) || "—";
+
+/** Editable editorial content from the `about_v2_content` site setting, merged
+ *  over the defaults. Never throws — returns the defaults on any failure. */
+export async function fetchAboutContent(): Promise<AboutContent> {
+	try {
+		const setting = await getSiteSettingByKey(ABOUT_CONTENT_KEY);
+		return parseAboutContent(setting?.value);
+	} catch {
+		return { ...ABOUT_DEFAULTS };
+	}
+}
 
 export async function fetchAboutDynamic(): Promise<AboutDynamic | null> {
 	try {

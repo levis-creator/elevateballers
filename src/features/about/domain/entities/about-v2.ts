@@ -47,7 +47,22 @@ export interface AboutContact {
 	v: string;
 }
 
+/** A section's eyebrow + heading. */
+export interface AboutIntro {
+	eyebrow: string;
+	heading: string;
+}
+
 export interface AboutData {
+	hero: { eyebrow: string; titleLead: string; titleAccent: string; blurb: string };
+	story: { eyebrow: string; heading: string; paragraphs: string[]; image: string | null };
+	leaguesIntro: AboutIntro;
+	valuesIntro: AboutIntro;
+	timelineIntro: AboutIntro;
+	peopleIntro: AboutIntro;
+	venue: { eyebrow: string; heading: string; body: string; image: string | null };
+	cta: { heading: string; body: string };
+
 	stats: AboutStat[];
 	leagues: AboutLeague[];
 	values: AboutValue[];
