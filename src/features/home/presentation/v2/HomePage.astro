@@ -16,14 +16,15 @@ import FeaturedMedia from "./sections/FeaturedMedia.tsx";
 import About from "./sections/About.astro";
 import RegisterCta from "./sections/RegisterCta.astro";
 import { getHomeData } from "@/features/home/domain/usecases/get-home-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { buildHomeJsonLd } from "./lib/structured-data";
 
-const home = await getHomeData();
+const [home, footer] = await Promise.all([getHomeData(), getFooterData()]);
 const heroCtaLabel = home.registrationOpen ? "Register Your Team" : "Join the Waitlist";
 // Use the canonical site URL (matches SEO.astro's WebSite @id and keeps schema
 // URLs on the canonical domain regardless of the request host).
 const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
-const jsonLd = buildHomeJsonLd(siteBase, home);
+const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url));
 ---
 
 <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
@@ -39,6 +40,6 @@ const jsonLd = buildHomeJsonLd(siteBase, home);
 	<FeaturedMedia media={home.media} tabs={home.mediaTabs} client:visible />
 	<About />
 	<RegisterCta registrationOpen={home.registrationOpen} />
-	<Footer />
+	<Footer footer={footer} />
 </div>
 

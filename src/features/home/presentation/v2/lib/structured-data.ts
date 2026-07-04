@@ -16,7 +16,7 @@ const ORG_DESCRIPTION =
 
 const abs = (origin: string, url: string) => (url.startsWith("http") ? url : `${origin}${url}`);
 
-export function buildHomeJsonLd(origin: string, home: HomeData) {
+export function buildHomeJsonLd(origin: string, home: HomeData, sameAs: string[] = []) {
 	const orgRef = { "@id": `${origin}/#organization` };
 	const graph: Record<string, unknown>[] = [
 		{
@@ -63,6 +63,7 @@ export function buildHomeJsonLd(origin: string, home: HomeData) {
 			sport: "Basketball",
 			description: ORG_DESCRIPTION,
 			logo: { "@id": `${origin}/#logo` },
+			...(sameAs.length ? { sameAs } : {}),
 			address: {
 				"@type": "PostalAddress",
 				streetAddress: "Pepo Lane, off Dagoretti Road",
