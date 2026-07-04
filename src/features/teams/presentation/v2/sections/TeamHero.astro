@@ -1,0 +1,61 @@
+---
+// Dark scoreboard hero for a single team.
+import type { TeamDetail } from "@/features/teams/domain/entities/team-detail";
+interface Props {
+	detail: TeamDetail;
+}
+const { detail } = Astro.props;
+const CREST_BG = "background:repeating-linear-gradient(45deg,#1a1714,#1a1714 10px,#151210 10px,#151210 20px);";
+const words = detail.name.split(" ");
+const lastWord = words.length > 1 ? words.pop() : "";
+const firstWords = words.join(" ");
+const formStyle = (r: string) =>
+	r === "win"
+		? "background:rgba(63,191,111,0.16);color:#3fbf6f;"
+		: r === "loss"
+			? "background:rgba(228,0,43,0.16);color:#ff5a72;"
+			: "background:rgba(255,255,255,0.08);color:#b8afa6;";
+---
+
+<section class="relative overflow-hidden bg-night text-cream">
+	<div class="absolute inset-0" style="background:radial-gradient(90% 130% at 12% 20%,rgba(228,0,43,0.18),transparent 55%);"></div>
+	<div class="relative mx-auto max-w-[1280px] px-8 pb-9 pt-8 max-[960px]:px-6">
+		<div class="mb-7 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">
+			<a href="/teams" class="text-muted2 no-underline hover:text-brand">Teams</a><span>/</span><span class="text-creamdim">{detail.name}</span>
+		</div>
+		<div class="flex items-center gap-7 max-[600px]:flex-col max-[600px]:items-start max-[600px]:gap-5">
+			<div class="flex h-[120px] w-[120px] flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 font-display text-[40px] text-brand" style={CREST_BG}>{detail.initials}</div>
+			<div>
+				<div class="mb-3 flex flex-wrap items-center gap-2.5">
+					<span class="rounded bg-brand/[0.14] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-brandsoft">{detail.leagueAbbr}</span>
+					<span class="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">{detail.league}</span>
+				</div>
+				<h1 class="mb-3 font-display text-[clamp(40px,6vw,80px)] uppercase leading-[0.88] text-[#f6f2ec]">
+					{firstWords}{lastWord ? " " : ""}{lastWord && <span class="text-brand">{lastWord}</span>}
+				</h1>
+				<div class="flex items-center gap-2 font-mono text-[13px] text-creamdim"><span class="text-muted2">Head Coach</span> · {detail.headCoach}</div>
+			</div>
+			{detail.form.length > 0 && (
+				<div class="ml-auto flex items-center gap-2.5 max-[960px]:ml-0">
+					{detail.form.map((f) => (
+						<span class="flex h-8 w-8 items-center justify-center rounded-md font-display text-[14px]" style={formStyle(f.result)}>{f.label}</span>
+					))}
+				</div>
+			)}
+		</div>
+
+		<div class="mt-9">
+			<div class="mb-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-brandsoft">
+				{detail.currentSeason ? `${detail.currentSeason} Record` : "All-Time Record"}
+			</div>
+			<div class="grid grid-cols-5 gap-3 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
+				{detail.heroStats.map((s) => (
+					<div class="rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 py-4">
+						<div class="font-display text-[30px] leading-none" style={`color:${s.color};`}>{s.value}</div>
+						<div class="mt-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">{s.label}</div>
+					</div>
+				))}
+			</div>
+		</div>
+	</div>
+</section>

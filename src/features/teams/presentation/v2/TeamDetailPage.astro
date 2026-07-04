@@ -1,0 +1,27 @@
+---
+// v2 single-team page composition. Reuses the home Header/Footer; matches and
+// squad are React+Zustand islands. `detail` is fetched in the route.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import TeamHero from "./sections/TeamHero.astro";
+import TeamMatches from "./sections/TeamMatches.tsx";
+import TeamSquad from "./sections/TeamSquad.tsx";
+import TeamStaff from "./sections/TeamStaff.astro";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import type { TeamDetail } from "@/features/teams/domain/entities/team-detail";
+
+interface Props {
+	detail: TeamDetail;
+}
+const { detail } = Astro.props;
+const footer = await getFooterData();
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="teams" />
+	<TeamHero detail={detail} />
+	<TeamMatches recent={detail.recent} upcoming={detail.upcoming} seasons={detail.seasons} client:visible />
+	<TeamSquad players={detail.players} playerCount={detail.playerCount} client:visible />
+	<TeamStaff staff={detail.staff} />
+	<Footer footer={footer} />
+</div>
