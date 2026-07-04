@@ -12,6 +12,8 @@ export interface HeroStat {
 
 export interface ResultMatch {
 	id: string;
+	/** Link to the match detail page. */
+	href: string;
 	tag: string; // Win / Loss / Draw
 	result: "win" | "loss" | "draw";
 	date: string;
@@ -26,6 +28,8 @@ export interface ResultMatch {
 
 export interface UpcomingMatch {
 	id: string;
+	/** Link to the match detail page. */
+	href: string;
 	when: string;
 	league: string;
 	home: string;
