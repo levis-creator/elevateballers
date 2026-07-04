@@ -10,6 +10,9 @@ declare global {
           callback?: (token: string) => void;
           'expired-callback'?: () => void;
           'error-callback'?: () => void;
+          theme?: 'light' | 'dark' | 'auto';
+          size?: 'normal' | 'flexible' | 'compact';
+          appearance?: 'always' | 'execute' | 'interaction-only';
         }
       ) => string;
       reset: (widgetId: string) => void;
@@ -23,11 +26,15 @@ interface Props {
   onSuccess: (token: string) => void;
   onExpire?: () => void;
   onError?: () => void;
+  /** Optional Cloudflare render options (default to the widget's defaults). */
+  theme?: 'light' | 'dark' | 'auto';
+  size?: 'normal' | 'flexible' | 'compact';
+  appearance?: 'always' | 'execute' | 'interaction-only';
 }
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
 
-export default function TurnstileWidget({ siteKey, onSuccess, onExpire, onError }: Props) {
+export default function TurnstileWidget({ siteKey, onSuccess, onExpire, onError, theme, size, appearance }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -43,6 +50,9 @@ export default function TurnstileWidget({ siteKey, onSuccess, onExpire, onError 
         callback: onSuccess,
         'expired-callback': onExpire ?? (() => {}),
         'error-callback': onError ?? (() => {}),
+        ...(theme ? { theme } : {}),
+        ...(size ? { size } : {}),
+        ...(appearance ? { appearance } : {}),
       });
     };
 
