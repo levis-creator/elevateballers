@@ -26,9 +26,9 @@ export const FALLBACK_NEXT_MATCH: NextMatch = {
 };
 
 export const FALLBACK_UPCOMING: Match[] = [
-	{ day: "05", mon: "Jul", home: "City Hawks", away: "Alliance Queens", venue: "Nyayo Stadium", time: "4:00 PM" },
-	{ day: "06", mon: "Jul", home: "Nairobi Thunder", away: "Coast Waves", venue: "Aga Khan Court", time: "2:30 PM" },
-	{ day: "08", mon: "Jul", home: "CBA Jets", away: "Rift Valley Rangers", venue: "Nyayo Stadium", time: "6:00 PM" },
+	{ day: "05", mon: "Jul", home: "City Hawks", away: "Alliance Queens", venue: "Nyayo Stadium", time: "4:00 PM", startDate: null },
+	{ day: "06", mon: "Jul", home: "Nairobi Thunder", away: "Coast Waves", venue: "Aga Khan Court", time: "2:30 PM", startDate: null },
+	{ day: "08", mon: "Jul", home: "CBA Jets", away: "Rift Valley Rangers", venue: "Nyayo Stadium", time: "6:00 PM", startDate: null },
 ];
 
 export const FALLBACK_RESULTS: Result[] = [
@@ -58,7 +58,7 @@ const RAW_FALLBACK_NEWS = [
 	{ cat: "Championships", title: "Road to the 2026 Finals: What to Watch", excerpt: "The storylines, the matchups, and the players who will decide the title.", date: "Jun 22, 2026", url: "/news" },
 ];
 
-export const FALLBACK_NEWS: NewsItem[] = RAW_FALLBACK_NEWS.map((n) => ({ ...n, image: null }));
+export const FALLBACK_NEWS: NewsItem[] = RAW_FALLBACK_NEWS.map((n) => ({ ...n, image: null, datePublished: null }));
 
 export const FALLBACK_NEWS_CATEGORIES: string[] = ["All", "Interviews", "Championships", "Match report", "Analysis"];
 
