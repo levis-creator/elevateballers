@@ -8,6 +8,7 @@ import AboutPageEditor from './AboutPageEditor';
 import HomepageIntroEditor from './HomepageIntroEditor';
 import SeoSettingsEditor from './SeoSettingsEditor';
 import RulesSettingsEditor from './RulesSettingsEditor';
+import RulesContentEditor from './RulesContentEditor';
 import MatchSettingsEditor from './MatchSettingsEditor';
 
 type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches';
@@ -57,7 +58,7 @@ export default function SettingsTabs() {
           {active === 'homepage' && <HomepageIntroEditor />}
           {active === 'seo'      && <SeoSettingsEditor />}
           {active === 'about'    && <AboutPageEditor />}
-          {active === 'rules'    && <RulesSettingsEditor />}
+          {active === 'rules'    && <><RulesSettingsEditor /><RulesContentEditor /></>}
           {active === 'matches'  && <MatchSettingsEditor />}
         </div>
       </div>
