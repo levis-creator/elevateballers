@@ -36,6 +36,8 @@ export interface SquadPlayer {
 	id: string;
 	jersey: string;
 	initials: string;
+	/** Resolved photo URL, or null → render the initials avatar. */
+	image: string | null;
 	name: string;
 	pos: string;
 	height: string;
@@ -52,6 +54,8 @@ export interface SquadPlayer {
 
 export interface StaffMember {
 	initials: string;
+	/** Resolved photo URL, or null → render the initials avatar. */
+	image: string | null;
 	name: string;
 	role: string;
 }
@@ -60,6 +64,8 @@ export interface TeamDetail {
 	name: string;
 	slug: string;
 	initials: string;
+	/** Resolved logo URL, or null → render the initials crest. */
+	logo: string | null;
 	league: string;
 	leagueAbbr: string;
 	headCoach: string;

@@ -20,6 +20,7 @@ const FALLBACK_TEAMS: TeamCard[] = DEMO.map(([name, initials, league, players, c
 	slug: name.toLowerCase().replace(/\s+/g, "-"),
 	name,
 	initials,
+	logo: null,
 	league,
 	leagueColor: DEMO_COLORS[i % DEMO_COLORS.length],
 	coach,

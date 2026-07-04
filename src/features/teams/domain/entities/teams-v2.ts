@@ -7,6 +7,8 @@ export interface TeamCard {
 	slug: string;
 	name: string;
 	initials: string;
+	/** Resolved logo URL, or null → render the initials crest. */
+	logo: string | null;
 	/** League display name, or "Unaffiliated". */
 	league: string;
 	/** Hex colour assigned to the league (stable per league). */

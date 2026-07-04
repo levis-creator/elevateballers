@@ -83,12 +83,21 @@ export default function TeamsDirectory({ teams, leagues, perPage = 9 }: Props) {
 									className="flex flex-col rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)] no-underline hover:border-brand/40"
 								>
 									<div className="flex items-center gap-4">
-										<div
-											className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full font-display text-[18px]"
-											style={{ background: tint(t.leagueColor, 0.12), color: t.leagueColor }}
-										>
-											{t.initials}
-										</div>
+										{t.logo ? (
+											<img
+												src={t.logo}
+												alt={`${t.name} logo`}
+												loading="lazy"
+												className="h-14 w-14 flex-shrink-0 rounded-full border border-black/10 bg-white object-contain"
+											/>
+										) : (
+											<div
+												className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full font-display text-[18px]"
+												style={{ background: tint(t.leagueColor, 0.12), color: t.leagueColor }}
+											>
+												{t.initials}
+											</div>
+										)}
 										<div className="min-w-0 flex-1">
 											<div className="truncate font-body text-[16px] font-extrabold uppercase leading-tight text-ink2">{t.name}</div>
 											<span

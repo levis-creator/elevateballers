@@ -5,6 +5,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { getTeams, getLeagues } from "@/features/cms/lib/queries";
+import { getDisplayImageUrl } from "@/lib/asset-url";
 import type { TeamCard, LeagueTab, TeamsData } from "@/features/teams/domain/entities/teams-v2";
 
 // Stable colour palette assigned per league (by sorted order).
@@ -61,6 +62,7 @@ export async function fetchTeamsData(): Promise<TeamsData | null> {
 				slug: t.slug,
 				name: t.name,
 				initials: initialsOf(t.name),
+				logo: getDisplayImageUrl(t.logo),
 				league,
 				leagueColor: leagueColor.get(league) ?? "#8a817a",
 				coach: teamCoach.get(t.id) ?? "—",
