@@ -9,6 +9,7 @@ import { getTeamBySlug, getStaffByTeam } from "@/features/cms/lib/queries";
 import { getTeamPlayerStats } from "@/features/player/lib/queries";
 import { getFilteredMatches } from "@/features/matches/lib/queries";
 import { calculateTeamStatistics } from "@/features/team/lib/teamStats";
+import { getDisplayImageUrl } from "@/lib/asset-url";
 import type {
 	TeamDetail,
 	ResultMatch,
@@ -143,6 +144,7 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 				id: p.id,
 				jersey: p.jerseyNumber != null ? String(p.jerseyNumber) : "—",
 				initials: initialsOf(name),
+				image: getDisplayImageUrl(p.image),
 				name,
 				pos: p.position || "—",
 				height: p.height || "—",
@@ -162,7 +164,7 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 	// --- staff ---
 	const staff: StaffMember[] = (staffRows as any[]).map((ts) => {
 		const name = `${ts.staff?.firstName ?? ""} ${ts.staff?.lastName ?? ""}`.trim() || "Staff";
-		return { initials: initialsOf(name), name, role: formatRole(ts.role) };
+		return { initials: initialsOf(name), image: getDisplayImageUrl(ts.staff?.image), name, role: formatRole(ts.role) };
 	});
 	const headCoach = staff.find((s) => s.role.toLowerCase() === "coach")?.name || "—";
 
@@ -170,6 +172,7 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 		name: team.name,
 		slug: team.slug,
 		initials: initialsOf(team.name),
+		logo: getDisplayImageUrl(team.logo),
 		league,
 		leagueAbbr: abbrOf(league),
 		headCoach,
