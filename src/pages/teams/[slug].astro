@@ -1,0 +1,33 @@
+---
+export const prerender = false;
+
+Astro.response.headers.set("Cache-Control", "public, s-maxage=120, stale-while-revalidate=300");
+
+import { usePublicV2 } from "@/lib/ui-version";
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect("/404", 302);
+
+// v2-only route (imports only the v2 tree). Rewrite to the legacy page when the
+// flag is off — URL stays /teams/<slug>.
+if (!usePublicV2) return Astro.rewrite(`/teams-v1/${slug}`);
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import TeamDetailPage from "@/features/teams/presentation/v2/TeamDetailPage.astro";
+import { getTeamDetail } from "@/features/teams/domain/usecases/get-team-detail";
+
+const detail = await getTeamDetail(slug);
+if (!detail) return Astro.redirect("/404", 302);
+
+const seoTitle = `${detail.name} - Teams - Elevate Ballers`;
+const seoDescription = `${detail.name} — roster, results, upcoming fixtures and player stats in Elevate Ballers.`;
+---
+
+<LayoutV2
+	title={seoTitle}
+	description={seoDescription}
+	canonicalURL={`${Astro.url.origin}/teams/${detail.slug}/`}
+	type="website"
+>
+	<TeamDetailPage detail={detail} />
+</LayoutV2>

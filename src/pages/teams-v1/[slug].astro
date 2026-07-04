@@ -1,6 +1,11 @@
 ---
 export const prerender = false;
 
+// Legacy single-team page on its own route. `/teams/<slug>` rewrites here when
+// PUBLIC_UI_VERSION !== 'v2'. Guard so it isn't served directly under v2.
+import { usePublicV2 } from "@/lib/ui-version";
+if (usePublicV2) return Astro.rewrite("/404");
+
 import Layout from "../../layouts/Layout.astro";
 import TopBar from "../../features/layout/components/TopBar.astro";
 import Header from "../../features/layout/components/Header";
