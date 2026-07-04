@@ -98,6 +98,7 @@ they only apply to elements that use those classes, and v2 uses none.
 | Team (single)          | `src/pages/teams/[slug].astro` → `TeamDetailPage.astro`, legacy at `src/pages/teams-v1/[slug].astro` | `src/features/teams/presentation/v2/TeamDetailPage.astro` | ✅ built + CSS-isolated + live data (hero stats/form, season-filterable results + pager, Roster/Stats tabs — React+Zustand; reuses v1 stat computations) |
 | Players                | `src/pages/players/`        | —                                              | ⬜ pending |
 | News                   | `src/pages/news/`           | —                                              | ⬜ pending |
+| Standings              | `src/pages/standings.astro` → `StandingsPage.astro`, legacy at `src/pages/standings-v1.astro` | `src/features/standings/presentation/v2/StandingsPage.astro` | ✅ built + CSS-isolated + live data (Clean Arch; podium + table + playoff cut-line + season/search is a React+Zustand island; reuses `getStandings`, home Header/Footer) |
 | Stats / Leaders        | `src/pages/stats/`          | —                                              | ⬜ pending |
 | Upcoming Fixtures      | `src/pages/upcoming-fixtures.astro` | —                                      | ⬜ pending |
 | Rules                  | `src/pages/rules.astro`     | —                                              | ⬜ pending |

@@ -1,0 +1,119 @@
+---
+export const prerender = false;
+
+// Legacy standings page on its own route. `/standings` rewrites here when
+// PUBLIC_UI_VERSION !== 'v2'. Guard so it isn't served directly under v2.
+import { usePublicV2 } from "@/lib/ui-version";
+if (usePublicV2) return Astro.rewrite("/404");
+
+// Edge cache standings for 60s — they change rarely
+Astro.response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+
+import Layout from "../layouts/Layout.astro";
+import TopBar from "../features/layout/components/TopBar.astro";
+import Header from "../features/layout/components/Header";
+import Footer from "../features/layout/components/Footer.astro";
+import Spacing from "../shared/components/ui/Spacing.astro";
+import { StandingsPage } from "../features/standings/components/StandingsPage";
+import { getStandings } from "../features/standings/lib/getStandings";
+import PageLoader from "../components/PageLoader";
+
+let standings = [];
+try {
+  standings = await getStandings();
+} catch (error) {
+  console.error("Failed to fetch standings from database:", error);
+}
+---
+
+<Layout
+  title="League Standings - Elevate Basketball"
+  description="Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions."
+  canonicalURL={`${Astro.url.origin}/standings/`}
+  type="website"
+>
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${Astro.url.origin}/standings/`,
+          url: `${Astro.url.origin}/standings/`,
+          name: "League Standings - Elevate Basketball",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions.",
+          breadcrumb: { "@id": `${Astro.url.origin}/standings/#breadcrumb` },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/standings/#breadcrumb`,
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: `${Astro.url.origin}/` },
+            { "@type": "ListItem", position: 2, name: "Standings" },
+          ],
+        },
+      ],
+    })}
+  />
+  <PageLoader client:load />
+  <div id="wrapper" class="standings-page-shell">
+    <TopBar />
+    <Header client:load currentPath={Astro.url.pathname} />
+    <div id="main">
+      <div class="stm-title-box-unit transparent-header_on title_box-357" style="padding-top: 0; padding-bottom: 0px;"></div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing id="stm-spacing-standings-header" lg="80" md="70" sm="60" xs="50" />
+                  <h1 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">STANDINGS</h1>
+                  <div class="sp-template sp-template-league-table">
+                    <StandingsPage initialStandings={standings} client:load />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+  </div>
+
+  <style is:inline type="text/css">
+    html { scroll-behavior: smooth; }
+    #main {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%);
+    }
+    html:has(#wrapper.standings-page-shell),
+    body:has(#wrapper.standings-page-shell) {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
+    }
+    .standings-page-shell {
+      background:
+        radial-gradient(circle at top center, rgba(255, 186, 0, 0.08), transparent 30%),
+        linear-gradient(180deg, #0f0d18 0%, #14111f 100%) !important;
+      min-height: 100vh;
+    }
+    h1.heading-font {
+      color: #ffffff !important;
+      font-size: clamp(3rem, 7vw, 4.75rem);
+      letter-spacing: 0.04em;
+      margin-bottom: 2rem !important;
+      text-shadow: 0 8px 28px rgba(0, 0, 0, 0.24);
+    }
+    .sp-template-league-table { margin-top: 20px; margin-bottom: 0; }
+    .grecaptcha-badge { visibility: hidden !important; }
+  </style>
+</Layout>
