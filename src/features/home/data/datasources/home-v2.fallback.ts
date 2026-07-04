@@ -26,9 +26,9 @@ export const FALLBACK_NEXT_MATCH: NextMatch = {
 };
 
 export const FALLBACK_UPCOMING: Match[] = [
-	{ day: "05", mon: "Jul", home: "City Hawks", away: "Alliance Queens", venue: "Nyayo Stadium", time: "4:00 PM", startDate: null },
-	{ day: "06", mon: "Jul", home: "Nairobi Thunder", away: "Coast Waves", venue: "Aga Khan Court", time: "2:30 PM", startDate: null },
-	{ day: "08", mon: "Jul", home: "CBA Jets", away: "Rift Valley Rangers", venue: "Nyayo Stadium", time: "6:00 PM", startDate: null },
+	{ day: "05", mon: "Jul", home: "City Hawks", away: "Alliance Queens", venue: "Nyayo Stadium", time: "4:00 PM", startDate: null, href: null },
+	{ day: "06", mon: "Jul", home: "Nairobi Thunder", away: "Coast Waves", venue: "Aga Khan Court", time: "2:30 PM", startDate: null, href: null },
+	{ day: "08", mon: "Jul", home: "CBA Jets", away: "Rift Valley Rangers", venue: "Nyayo Stadium", time: "6:00 PM", startDate: null, href: null },
 ];
 
 export const FALLBACK_RESULTS: Result[] = [
@@ -39,6 +39,7 @@ export const FALLBACK_RESULTS: Result[] = [
 	...r,
 	homeColor: r.hs > r.as ? "#141009" : "#a49a8d",
 	awayColor: r.as > r.hs ? "#141009" : "#a49a8d",
+	href: null,
 }));
 
 export const FALLBACK_TICKER: string[] = [

@@ -16,6 +16,8 @@ export interface Match {
 	venue: string;
 	time: string;
 	startDate: string | null;
+	/** Link to the match detail page, or null for demo/fallback rows. */
+	href: string | null;
 }
 
 /** A completed-match card in "Recent Results". */
@@ -26,6 +28,8 @@ export interface Result {
 	as: number | string;
 	homeColor: string;
 	awayColor: string;
+	/** Link to the match detail page, or null for demo/fallback rows. */
+	href: string | null;
 }
 
 /** The hero "Next Match" card. */

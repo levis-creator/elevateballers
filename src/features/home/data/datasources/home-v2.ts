@@ -77,6 +77,10 @@ function awayName(m: any): string {
 function venueOf(m: any): string {
 	return m.leagueName || m.league?.name || "";
 }
+/** Detail-page link for a match — canonical slug when present, else the cuid. */
+function matchHref(m: any): string {
+	return `/matches/${m.slug || m.id}`;
+}
 function toFixture(m: any): Match {
 	const d = new Date(m.date);
 	return {
@@ -87,6 +91,7 @@ function toFixture(m: any): Match {
 		venue: venueOf(m),
 		time: fmtTime(d),
 		startDate: d.toISOString(),
+		href: matchHref(m),
 	};
 }
 function toNextMatch(m: any): NextMatch {
@@ -110,6 +115,7 @@ function toResult(m: any): Result {
 		as,
 		homeColor: hs > as ? "#141009" : "#a49a8d",
 		awayColor: as > hs ? "#141009" : "#a49a8d",
+		href: matchHref(m),
 	};
 }
 
