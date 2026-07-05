@@ -60,6 +60,8 @@ export interface Leader {
 	name: string;
 	team: string;
 	val: number;
+	/** Link to the player detail page, or null for demo/fallback rows. */
+	href: string | null;
 }
 
 /** Leaders grouped by category tab (e.g. Points/Rebounds/Assists). */
@@ -94,6 +96,8 @@ export interface Potw {
 	image: string | null;
 	description: string;
 	stats: PotwStat[];
+	/** Link to the player's detail page, or null for demo/fallback. */
+	href: string | null;
 }
 
 /** Everything the v2 home page needs, assembled by the use-case. */

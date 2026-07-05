@@ -63,28 +63,32 @@ export const FALLBACK_NEWS: NewsItem[] = RAW_FALLBACK_NEWS.map((n) => ({ ...n, i
 
 export const FALLBACK_NEWS_CATEGORIES: string[] = ["All", "Interviews", "Championships", "Match report", "Analysis"];
 
+// Demo rows are not clickable (no real player), so href is null.
+const demoLeaders = (rows: Array<{ name: string; team: string; val: number }>): LeaderData[string] =>
+	rows.map((r) => ({ ...r, href: null }));
+
 export const FALLBACK_LEADER_DATA: LeaderData = {
-	Points: [
+	Points: demoLeaders([
 		{ name: "Travious Kitondo", team: "CBA Jets", val: 24.8 },
 		{ name: "Brian Otieno", team: "City Hawks", val: 22.1 },
 		{ name: "Faith Mwangi", team: "Alliance Queens", val: 20.6 },
 		{ name: "Kevin Barasa", team: "Nairobi Thunder", val: 19.4 },
 		{ name: "Aisha Noor", team: "Coast Waves", val: 18.9 },
-	],
-	Rebounds: [
+	]),
+	Rebounds: demoLeaders([
 		{ name: "Kevin Barasa", team: "Nairobi Thunder", val: 12.7 },
 		{ name: "Mercy Achieng", team: "Alliance Queens", val: 11.4 },
 		{ name: "Samuel Kiptoo", team: "Rift Valley Rangers", val: 10.8 },
 		{ name: "Brian Otieno", team: "City Hawks", val: 9.6 },
 		{ name: "Grace Wanjiru", team: "Coast Waves", val: 9.1 },
-	],
-	Assists: [
+	]),
+	Assists: demoLeaders([
 		{ name: "Faith Mwangi", team: "Alliance Queens", val: 8.9 },
 		{ name: "Dennis Mutua", team: "City Hawks", val: 7.7 },
 		{ name: "Aisha Noor", team: "Coast Waves", val: 6.8 },
 		{ name: "Travious Kitondo", team: "CBA Jets", val: 6.2 },
 		{ name: "John Kamau", team: "Eldoret Blaze", val: 5.9 },
-	],
+	]),
 };
 
 export const FALLBACK_LEADER_TABS: string[] = ["Points", "Rebounds", "Assists"];
@@ -113,4 +117,5 @@ export const FALLBACK_POTW: Potw = {
 		{ value: "6", label: "Threes" },
 		{ value: "5", label: "Assists" },
 	],
+	href: null,
 };
