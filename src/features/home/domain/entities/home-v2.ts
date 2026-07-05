@@ -12,7 +12,11 @@ export interface Match {
 	day: string;
 	mon: string;
 	home: string;
+	homeNickname?: string | null;
+	homeLogo?: string | null;
 	away: string;
+	awayNickname?: string | null;
+	awayLogo?: string | null;
 	venue: string;
 	time: string;
 	startDate: string | null;
@@ -23,8 +27,12 @@ export interface Match {
 /** A completed-match card in "Recent Results". */
 export interface Result {
 	home: string;
+	homeNickname?: string | null;
+	homeLogo?: string | null;
 	hs: number | string;
 	away: string;
+	awayNickname?: string | null;
+	awayLogo?: string | null;
 	as: number | string;
 	homeColor: string;
 	awayColor: string;
@@ -36,8 +44,12 @@ export interface Result {
 export interface NextMatch {
 	homeAbbr: string;
 	home: string;
+	homeNickname?: string | null;
+	homeLogo?: string | null;
 	awayAbbr: string;
 	away: string;
+	awayNickname?: string | null;
+	awayLogo?: string | null;
 	venue: string;
 	when: string;
 }

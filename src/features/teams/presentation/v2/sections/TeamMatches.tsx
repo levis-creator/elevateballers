@@ -1,4 +1,5 @@
 import { useTeamViewStore } from "@/features/teams/presentation/stores/v2/useTeamViewStore";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { ResultMatch, UpcomingMatch } from "@/features/teams/domain/entities/team-detail";
 
 interface Props {
@@ -71,14 +72,24 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 									<span className="font-mono text-[11px] text-muted2">{m.date}</span>
 								</div>
 								<div className="flex flex-col gap-[11px]">
-									<div className="flex items-center gap-3">
-										<div className="h-[30px] w-[30px] flex-shrink-0 rounded-full" style={{ background: "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px)" }} />
-										<span className="flex-1 font-body text-[15px] font-bold" style={{ color: m.homeColor }}>{m.home}</span>
+									<div className="flex min-w-0 items-center gap-3">
+										<TeamName
+											team={{ name: m.home, nickname: m.homeNickname, logo: m.homeLogo }}
+											variant="compact"
+											withCrest
+											className="flex-1 font-body text-[15px] font-bold"
+											textStyle={{ color: m.homeColor }}
+										/>
 										<span className="font-display text-[22px]" style={{ color: m.homeColor }}>{m.hs}</span>
 									</div>
-									<div className="flex items-center gap-3">
-										<div className="h-[30px] w-[30px] flex-shrink-0 rounded-full" style={{ background: "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px)" }} />
-										<span className="flex-1 font-body text-[15px] font-bold" style={{ color: m.awayColor }}>{m.away}</span>
+									<div className="flex min-w-0 items-center gap-3">
+										<TeamName
+											team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo }}
+											variant="compact"
+											withCrest
+											className="flex-1 font-body text-[15px] font-bold"
+											textStyle={{ color: m.awayColor }}
+										/>
 										<span className="font-display text-[22px]" style={{ color: m.awayColor }}>{m.as}</span>
 									</div>
 								</div>
@@ -120,10 +131,22 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 									<span className="rounded bg-brand/[0.08] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-brand">{m.when}</span>
 									<span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{m.league}</span>
 								</div>
-								<div className="flex items-center gap-3">
-									<span className="flex-1 font-body text-[15px] font-bold text-ink2">{m.home}</span>
+								<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+									<TeamName
+										team={{ name: m.home, nickname: m.homeNickname, logo: m.homeLogo }}
+										variant="compact"
+										withCrest
+										crestPosition="end"
+										align="right"
+										className="font-body text-[15px] font-bold text-ink2"
+									/>
 									<span className="font-display text-[15px] text-[#a49a8d]">VS</span>
-									<span className="flex-1 text-right font-body text-[15px] font-bold text-ink2">{m.away}</span>
+									<TeamName
+										team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo }}
+										variant="compact"
+										withCrest
+										className="font-body text-[15px] font-bold text-ink2"
+									/>
 								</div>
 							</a>
 						))}

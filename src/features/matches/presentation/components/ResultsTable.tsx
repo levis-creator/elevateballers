@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatMatchDate } from '../../lib/utils';
+import TeamName from '@/features/teams/presentation/components/TeamName';
 
 interface Result {
   id: string;
@@ -7,7 +8,9 @@ interface Result {
   slug?: string | null;
   date: Date | string;
   team1Name: string;
+  team1Nickname?: string | null;
   team2Name: string;
+  team2Nickname?: string | null;
   team1Score: number | string;
   team2Score: number | string;
   league: string;
@@ -60,14 +63,13 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({ matches }) => {
             {/* Teams + scores row */}
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Team 1 */}
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-mid text-[0.6rem] font-bold text-gray-200 sm:h-9 sm:w-9 sm:text-[0.7rem]">
-                  {abbr(match.team1Name)}
-                </span>
-                <span className={`truncate text-sm font-semibold sm:text-[0.9rem] ${team1Won ? 'font-bold text-white' : 'text-gray-400'}`}>
-                  {match.team1Name}
-                </span>
-              </div>
+              <TeamName
+                team={{ name: match.team1Name, nickname: match.team1Nickname, initials: abbr(match.team1Name) }}
+                variant="compact"
+                withCrest
+                className={`flex-1 text-sm font-semibold sm:text-[0.9rem] ${team1Won ? 'font-bold text-white' : 'text-gray-400'}`}
+                crestClassName="h-7 w-7 bg-surface-mid text-[0.6rem] font-bold text-gray-200 sm:h-9 sm:w-9 sm:text-[0.7rem]"
+              />
 
               {/* Scores */}
               <div className="flex shrink-0 gap-1">
@@ -80,14 +82,15 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({ matches }) => {
               </div>
 
               {/* Team 2 */}
-              <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-mid text-[0.6rem] font-bold text-gray-200 sm:h-9 sm:w-9 sm:text-[0.7rem]">
-                  {abbr(match.team2Name)}
-                </span>
-                <span className={`truncate text-right text-sm font-semibold sm:text-[0.9rem] ${team2Won ? 'font-bold text-white' : 'text-gray-400'}`}>
-                  {match.team2Name}
-                </span>
-              </div>
+              <TeamName
+                team={{ name: match.team2Name, nickname: match.team2Nickname, initials: abbr(match.team2Name) }}
+                variant="compact"
+                withCrest
+                crestPosition="end"
+                align="right"
+                className={`flex-1 text-sm font-semibold sm:text-[0.9rem] ${team2Won ? 'font-bold text-white' : 'text-gray-400'}`}
+                crestClassName="h-7 w-7 bg-surface-mid text-[0.6rem] font-bold text-gray-200 sm:h-9 sm:w-9 sm:text-[0.7rem]"
+              />
             </div>
           </a>
         );

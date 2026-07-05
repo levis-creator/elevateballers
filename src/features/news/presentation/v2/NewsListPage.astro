@@ -1,0 +1,31 @@
+---
+// v2 News list page. Reuses the shared Header/Footer; the featured post, category
+// filter, search, grid, pagination and sidebar are a React+Zustand island.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import NewsBoard from "./sections/NewsBoard.tsx";
+import { getNewsListData } from "@/features/news/domain/usecases/get-news-list-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const [data, footer] = await Promise.all([getNewsListData(), getFooterData()]);
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="home" />
+
+	<!-- HERO -->
+	<section class="relative overflow-hidden border-b border-black/[0.08]">
+		<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+		<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
+		<div class="relative mx-auto max-w-[1280px] px-8 pb-[40px] pt-[52px] max-[960px]:px-6">
+			<div class="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
+				<span class="h-px w-[26px] bg-brand"></span>From Around the League
+			</div>
+			<h1 class="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">News</h1>
+		</div>
+	</section>
+
+	<NewsBoard data={data} client:load />
+
+	<Footer footer={footer} />
+</div>

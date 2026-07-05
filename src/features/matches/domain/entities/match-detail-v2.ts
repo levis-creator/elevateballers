@@ -10,6 +10,7 @@ export type MatchState = "upcoming" | "live" | "final";
 /** One team on the scoreboard. */
 export interface MatchSide {
 	name: string;
+	nickname?: string | null;
 	abbr: string;
 	logo: string | null;
 	href: string;
@@ -24,6 +25,7 @@ export interface MatchSide {
 /** A team's per-quarter line in the scoring table. */
 export interface QuarterRow {
 	name: string;
+	nickname?: string | null;
 	abbr: string;
 	color: string;
 	/** Points per period, aligned to `periodLabels`. */
@@ -74,6 +76,7 @@ export interface PbpEvent {
 /** Pre-game last-5 form for a team. */
 export interface FormGuide {
 	team: string;
+	nickname?: string | null;
 	abbr: string;
 	logo: string | null;
 	chips: Array<"W" | "L" | "D">;

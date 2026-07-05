@@ -6,6 +6,7 @@
 import { getLeagues, getSeasons } from "@/features/cms/lib/queries";
 import { getStandings } from "@/features/standings/lib/getStandings";
 import type { StandingsData, StandingRow } from "@/features/standings/domain/entities/standings-v2";
+import { getDisplayImageUrl } from "@/lib/asset-url";
 
 const PLAYOFF_SPOTS = 8;
 
@@ -16,7 +17,9 @@ const toRow = (e: any, league: string): StandingRow => ({
 	rank: 0,
 	teamId: e.teamId,
 	name: e.team,
+	nickname: e.nickname ?? null,
 	initials: initialsOf(e.team),
+	logo: getDisplayImageUrl(e.logo),
 	href: e.url || "/teams",
 	league,
 	p: e.played,

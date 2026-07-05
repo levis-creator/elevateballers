@@ -10,6 +10,7 @@ import {
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, isWinner } from '../../lib/team-helpers';
 import { getStageDisplayName } from '../../domain/usecases/stage-helpers';
 import TeamLogo from './TeamLogo';
+import TeamName from '@/features/teams/presentation/components/TeamName';
 import { getLeagueName } from '../../lib/league-helpers';
 import MatchImagesPublic from './MatchImagesPublic';
 
@@ -126,12 +127,13 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
   }, [match.clockSeconds, match.clockStartedAt, match.clockSecondsAtStart, match.clockRunning]);
 
   const statusLabel = getMatchStatusLabel(match.status);
-  const hasScore = match.team1Score !== null && match.team2Score !== null;
   const relativeTime = getRelativeTimeDescription(match.date);
   const team1Name = getTeam1Name(match);
   const team1Logo = getTeam1Logo(match);
+  const team1Nickname = (match as any).team1?.nickname ?? null;
   const team2Name = getTeam2Name(match);
   const team2Logo = getTeam2Logo(match);
+  const team2Nickname = (match as any).team2?.nickname ?? null;
   const team1Id = getTeam1Id(match);
   const team2Id = getTeam2Id(match);
   const team1Slug = (match as any).team1?.slug as string | undefined;
@@ -196,6 +198,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
   const renderTeamBlock = (
     side: 'home' | 'away',
     name: string,
+    nickname: string | null,
     logo: string | null,
     slug: string | undefined,
     score: number | null | undefined,
@@ -222,7 +225,13 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
         )}
       </div>
       <h2 className="md-team-name">
-        {slug ? <a href={`/teams/${slug}/`} className="md-team-link">{name}</a> : name}
+        {slug ? (
+          <a href={`/teams/${slug}/`} className="md-team-link">
+            <TeamName team={{ name, nickname, logo }} variant="full" />
+          </a>
+        ) : (
+          <TeamName team={{ name, nickname, logo }} variant="full" />
+        )}
       </h2>
       {score !== null && score !== undefined ? (
         <div className="md-team-score">{score}</div>
@@ -257,7 +266,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
         </div>
 
         <div className="md-scoreboard">
-          {renderTeamBlock('home', team1Name, team1Logo, team1Slug, match.team1Score, team1IsWinner, team1HasPossession)}
+          {renderTeamBlock('home', team1Name, team1Nickname, team1Logo, team1Slug, match.team1Score, team1IsWinner, team1HasPossession)}
 
           <div className="md-pylon">
             {isLive ? (
@@ -290,7 +299,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
             )}
           </div>
 
-          {renderTeamBlock('away', team2Name, team2Logo, team2Slug, match.team2Score, team2IsWinner, team2HasPossession)}
+          {renderTeamBlock('away', team2Name, team2Nickname, team2Logo, team2Slug, match.team2Score, team2IsWinner, team2HasPossession)}
         </div>
 
         {(isLive || isCompleted) && (

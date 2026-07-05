@@ -1,6 +1,7 @@
 ---
 // Two-column Upcoming Matches + Recent Results.
 import type { Match, Result } from "@/features/home/domain/entities/home-v2";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 
 interface Props {
 	upcoming: Match[];
@@ -25,14 +26,12 @@ const { upcoming, results } = Astro.props;
 						<span class="font-mono text-[11px] text-muted2">{m.venue}</span>
 					</div>
 					<div class="flex flex-col gap-[11px]">
-						<div class="flex items-center gap-3">
-							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
-							<span class="flex-1 font-body text-[15px] font-bold text-ink2">{m.home}</span>
+						<div class="flex min-w-0 items-center gap-3">
+							<TeamName team={{ name: m.home, nickname: m.homeNickname, logo: m.homeLogo }} variant="compact" withCrest className="flex-1 font-body text-[15px] font-bold text-ink2" />
 							<span class="font-mono text-[10px] tracking-[0.1em] text-[#a49a8d]">HOME</span>
 						</div>
-						<div class="flex items-center gap-3">
-							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
-							<span class="flex-1 font-body text-[15px] font-bold text-ink2">{m.away}</span>
+						<div class="flex min-w-0 items-center gap-3">
+							<TeamName team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo }} variant="compact" withCrest className="flex-1 font-body text-[15px] font-bold text-ink2" />
 							<span class="font-mono text-[10px] tracking-[0.1em] text-[#a49a8d]">AWAY</span>
 						</div>
 					</div>
@@ -53,14 +52,12 @@ const { upcoming, results } = Astro.props;
 				<Tag href={r.href ?? undefined} class="flex min-h-[142px] flex-col justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
 					<span class="self-start rounded bg-[#f0ede7] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-[#a49a8d]">Final</span>
 					<div class="flex flex-col gap-[11px]">
-						<div class="flex items-center gap-3">
-							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
-							<span class="flex-1 font-body text-[15px] font-bold" style={`color:${r.homeColor};`}>{r.home}</span>
+						<div class="flex min-w-0 items-center gap-3">
+							<TeamName team={{ name: r.home, nickname: r.homeNickname, logo: r.homeLogo }} variant="compact" withCrest className="flex-1 font-body text-[15px] font-bold" textStyle={{ color: r.homeColor }} />
 							<span class="font-display text-[22px]" style={`color:${r.homeColor};`}>{r.hs}</span>
 						</div>
-						<div class="flex items-center gap-3">
-							<div class="h-[30px] w-[30px] flex-shrink-0 rounded-full" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);"></div>
-							<span class="flex-1 font-body text-[15px] font-bold" style={`color:${r.awayColor};`}>{r.away}</span>
+						<div class="flex min-w-0 items-center gap-3">
+							<TeamName team={{ name: r.away, nickname: r.awayNickname, logo: r.awayLogo }} variant="compact" withCrest className="flex-1 font-body text-[15px] font-bold" textStyle={{ color: r.awayColor }} />
 							<span class="font-display text-[22px]" style={`color:${r.awayColor};`}>{r.as}</span>
 						</div>
 					</div>

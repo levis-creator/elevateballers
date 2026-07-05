@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMatchViewStore } from "@/features/matches/presentation/stores/v2/useMatchViewStore";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { MatchView } from "@/features/matches/domain/entities/match-detail-v2";
 
 const STRIPE = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 4px,#f0ece5 4px,#f0ece5 8px)";
-const HERO_CREST = "repeating-linear-gradient(45deg,#1a1714,#1a1714 6px,#151210 6px,#151210 12px)";
 
 /** Segmented tab (box team / play-by-play period). */
 const seg = (active: boolean) =>
@@ -11,33 +11,11 @@ const seg = (active: boolean) =>
 		active ? "border-none bg-brand font-bold text-white" : "border border-black/15 bg-white font-semibold text-muted hover:border-brand"
 	}`;
 
-/** Big scoreboard crest: team logo on white, else coloured initials on dark. */
-function HeroCrest({ logo, abbr, color }: { logo: string | null; abbr: string; color: string }) {
-	if (logo) {
-		return <img src={logo} alt={abbr} className="h-[84px] w-[84px] rounded-full bg-white object-contain max-[600px]:h-16 max-[600px]:w-16" />;
-	}
-	return (
-		<div className="flex h-[84px] w-[84px] items-center justify-center rounded-full font-display text-[28px] max-[600px]:h-16 max-[600px]:w-16" style={{ background: HERO_CREST, color }}>
-			{abbr}
-		</div>
-	);
-}
-
 /** Round player/team avatar — image when present, else a neutral stripe. */
 function Avatar({ image, size }: { image: string | null; size: number }) {
 	const cls = "flex-shrink-0 rounded-full object-cover";
 	if (image) return <img src={image} alt="" loading="lazy" className={cls} style={{ width: size, height: size }} />;
 	return <div className={cls} style={{ width: size, height: size, background: STRIPE }} />;
-}
-
-/** Small crest with initials fallback (quarter + form rows). */
-function MiniCrest({ logo, abbr }: { logo: string | null; abbr: string }) {
-	if (logo) return <img src={logo} alt={abbr} className="h-8 w-8 flex-shrink-0 rounded-full border border-black/10 bg-white object-contain" />;
-	return (
-		<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-mono text-[10px] text-muted2" style={{ background: STRIPE }}>
-			{abbr}
-		</span>
-	);
 }
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -92,12 +70,17 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 						<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-brandsoft">{view.league} · {view.scoreboardTag}</span>
 					</div>
 					<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-[600px]:gap-2">
-						<a href={view.home.href} className="flex flex-col items-center gap-3 text-center no-underline">
-							<HeroCrest logo={view.home.logo} abbr={view.home.abbr} color={view.home.color} />
-							<div>
-								<div className="font-display text-[20px] uppercase leading-none max-[600px]:text-[15px]" style={{ color: view.home.color }}>{view.home.name}</div>
-								<div className="mt-1 font-mono text-[11px] text-muted2">{view.home.record ? `${view.home.record} · ` : ""}Home</div>
-							</div>
+						<a href={view.home.href} className="flex min-w-0 flex-col items-center gap-3 text-center no-underline">
+							<TeamName
+								team={{ name: view.home.name, nickname: view.home.nickname, logo: view.home.logo, initials: view.home.abbr }}
+								variant="full"
+								withCrest
+								align="center"
+								className="flex-col font-display text-[20px] uppercase leading-none max-[600px]:text-[15px]"
+								crestClassName="h-[84px] w-[84px] font-display text-[28px] max-[600px]:h-16 max-[600px]:w-16"
+								textStyle={{ color: view.home.color }}
+							/>
+							<div className="mt-1 font-mono text-[11px] text-muted2">{view.home.record ? `${view.home.record} · ` : ""}Home</div>
 						</a>
 						<div className="flex flex-col items-center gap-1.5">
 							{view.hasScore ? (
@@ -121,12 +104,17 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 								</span>
 							)}
 						</div>
-						<a href={view.away.href} className="flex flex-col items-center gap-3 text-center no-underline">
-							<HeroCrest logo={view.away.logo} abbr={view.away.abbr} color={view.away.color} />
-							<div>
-								<div className="font-display text-[20px] uppercase leading-none max-[600px]:text-[15px]" style={{ color: view.away.color }}>{view.away.name}</div>
-								<div className="mt-1 font-mono text-[11px] text-muted2">{view.away.record ? `${view.away.record} · ` : ""}Away</div>
-							</div>
+						<a href={view.away.href} className="flex min-w-0 flex-col items-center gap-3 text-center no-underline">
+							<TeamName
+								team={{ name: view.away.name, nickname: view.away.nickname, logo: view.away.logo, initials: view.away.abbr }}
+								variant="full"
+								withCrest
+								align="center"
+								className="flex-col font-display text-[20px] uppercase leading-none max-[600px]:text-[15px]"
+								crestClassName="h-[84px] w-[84px] font-display text-[28px] max-[600px]:h-16 max-[600px]:w-16"
+								textStyle={{ color: view.away.color }}
+							/>
+							<div className="mt-1 font-mono text-[11px] text-muted2">{view.away.record ? `${view.away.record} · ` : ""}Away</div>
 						</a>
 					</div>
 					<div className="mt-7 flex flex-wrap items-center justify-center gap-2 border-t border-white/10 pt-4 font-mono text-[11px] text-muted2">
@@ -151,10 +139,13 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 									</div>
 									{view.quarters.map((row) => (
 										<div key={row.name} className="grid items-center gap-2 border-b border-black/[0.06] px-5 py-3.5 last:border-0" style={{ gridTemplateColumns: `1fr repeat(${view.periodLabels.length},52px) 72px` }}>
-											<span className="flex items-center gap-3">
-												<MiniCrest logo={null} abbr={row.abbr} />
-												<span className="font-body text-[14px] font-bold" style={{ color: row.color }}>{row.name}</span>
-											</span>
+											<TeamName
+												team={{ name: row.name, nickname: row.nickname, initials: row.abbr }}
+												variant="table"
+												withCrest
+												className="font-body text-[14px] font-bold"
+												textStyle={{ color: row.color }}
+											/>
 											{row.scores.map((s, i) => (<span key={i} className="text-center font-mono text-[13px] text-muted">{s}</span>))}
 											<span className="text-right font-display text-[20px]" style={{ color: row.color }}>{row.total}</span>
 										</div>
@@ -303,10 +294,12 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 							<div className="grid grid-cols-2 gap-4 max-[600px]:grid-cols-1">
 								{view.formGuide.map((f) => (
 									<div key={f.team} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
-										<div className="mb-4 flex items-center gap-3">
-											<MiniCrest logo={f.logo} abbr={f.abbr} />
-											<span className="font-body text-[15px] font-extrabold uppercase text-ink2">{f.team}</span>
-										</div>
+										<TeamName
+											team={{ name: f.team, nickname: f.nickname, logo: f.logo, initials: f.abbr }}
+											variant="compact"
+											withCrest
+											className="mb-4 font-body text-[15px] font-extrabold uppercase text-ink2"
+										/>
 										<div className="flex items-center gap-2">
 											<span className="mr-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">Last {f.chips.length}</span>
 											{f.chips.map((c, i) => (

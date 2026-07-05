@@ -1,5 +1,6 @@
 import { useFixturesStore } from "@/features/fixtures/presentation/stores/v2/useFixturesStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { FixtureMatch } from "@/features/fixtures/domain/entities/fixtures-v2";
 
 interface Props {
@@ -179,11 +180,16 @@ export default function FixtureBoard({ matches, seasons, defaultSeason }: Props)
 														{statusText}
 													</span>
 												</div>
-												<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-													<div className="flex items-center gap-3 justify-self-end text-right">
-														<span className="font-body text-[15px] font-bold" style={{ color: homeColor }}>{m.home}</span>
-														<Crest logo={m.homeLogo} abbr={m.homeAbbr} alt={m.home} />
-													</div>
+												<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+													<TeamName
+														team={{ name: m.home, nickname: m.homeNickname, logo: m.homeLogo, initials: m.homeAbbr }}
+														variant="compact"
+														withCrest
+														crestPosition="end"
+														align="right"
+														className="justify-self-stretch font-body text-[15px] font-bold"
+														textStyle={{ color: homeColor }}
+													/>
 													<div className="flex flex-col items-center">
 														{scored ? (
 															<span className="font-display text-[24px] leading-none text-ink">{m.score}</span>
@@ -191,10 +197,13 @@ export default function FixtureBoard({ matches, seasons, defaultSeason }: Props)
 															<span className="font-display text-[16px] leading-none text-[#6b635a]">VS</span>
 														)}
 													</div>
-													<div className="flex items-center gap-3">
-														<Crest logo={m.awayLogo} abbr={m.awayAbbr} alt={m.away} />
-														<span className="font-body text-[15px] font-bold" style={{ color: awayColor }}>{m.away}</span>
-													</div>
+													<TeamName
+														team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo, initials: m.awayAbbr }}
+														variant="compact"
+														withCrest
+														className="justify-self-stretch font-body text-[15px] font-bold"
+														textStyle={{ color: awayColor }}
+													/>
 												</div>
 												<div className="mt-3 flex items-center justify-center gap-2 border-t border-black/[0.06] pt-3 font-mono text-[11px] text-muted2">
 													<span>{m.time}</span>

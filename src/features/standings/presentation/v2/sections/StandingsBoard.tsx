@@ -1,5 +1,6 @@
 import { useStandingsStore } from "@/features/standings/presentation/stores/v2/useStandingsStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { StandingRow } from "@/features/standings/domain/entities/standings-v2";
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
 	playoffSpots: number;
 }
 
-const GRID = "grid-cols-[60px_1fr_44px_44px_44px_44px_60px_60px_64px_56px]";
+const GRID = "grid-cols-[60px_minmax(0,1fr)_44px_44px_44px_44px_60px_60px_64px_56px]";
 const diffLabel = (d: number) => `${d > 0 ? "+" : ""}${d}`;
 const diffColor = (d: number) => (d > 0 ? "#2f9e44" : d < 0 ? "#e4002b" : "#a49a8d");
 const PLACE = ["1st Place", "2nd Place", "3rd Place"];
@@ -84,10 +85,16 @@ export default function StandingsBoard({ rows, leagues, seasonLabel, playoffSpot
 											<span className="font-display text-[40px] leading-none" style={{ color: first ? "#e4002b" : "#a49a8d" }}>#{p.rank}</span>
 											<span className="rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em]" style={first ? { background: "rgba(228,0,43,0.16)", color: "#ff5a72" } : { background: "#f0ede7", color: "#6f665c" }}>{PLACE[i]}</span>
 										</div>
-										<div className="mb-5 flex items-center gap-3">
-											<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full font-display text-[16px]" style={first ? { background: "repeating-linear-gradient(45deg,#221d18,#221d18 5px,#1b1712 5px,#1b1712 10px)", color: "#e4002b" } : { background: "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px)", color: "#6f665c" }}>{p.initials}</div>
-											<div>
-												<div className="font-body text-[17px] font-extrabold uppercase leading-tight" style={{ color: first ? "#f6f2ec" : "#1a1712" }}>{p.name}</div>
+										<div className="mb-5 flex min-w-0 items-center gap-3">
+											<TeamName
+												team={{ name: p.name, nickname: p.nickname, logo: p.logo, initials: p.initials }}
+												variant="compact"
+												withCrest
+												className="font-body text-[17px] font-extrabold uppercase leading-tight"
+												crestClassName="h-12 w-12 font-display text-[16px]"
+												textStyle={{ color: first ? "#f6f2ec" : "#1a1712" }}
+											/>
+											<div className="flex-shrink-0">
 												<div className="mt-0.5 font-mono text-[11px]" style={{ color: "#8a817a" }}>{p.w}-{p.l}{p.d ? `-${p.d}` : ""}</div>
 											</div>
 										</div>
@@ -134,10 +141,12 @@ export default function StandingsBoard({ rows, leagues, seasonLabel, playoffSpot
 											<div key={t.teamId}>
 												<a href={t.href} className={`grid ${GRID} items-center gap-2 border-b border-black/[0.06] px-5 py-3 no-underline hover:bg-paper2`} style={t.rank <= playoffSpots ? { background: "rgba(228,0,43,0.04)" } : undefined}>
 													<span className="font-display text-[16px]" style={{ color: t.rank <= 3 ? "#e4002b" : "#1a1712" }}>{t.rank}</span>
-													<span className="flex items-center gap-3">
-														<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-mono text-[10px] text-muted2" style={{ background: "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 4px,#f0ece5 4px,#f0ece5 8px)" }}>{t.initials}</span>
-														<span className="truncate font-body text-[14px] font-bold text-ink2">{t.name}</span>
-													</span>
+													<TeamName
+														team={{ name: t.name, nickname: t.nickname, logo: t.logo, initials: t.initials }}
+														variant="table"
+														withCrest
+														className="font-body text-[14px] font-bold text-ink2"
+													/>
 													<span className="text-center font-mono text-[13px] text-muted">{t.p}</span>
 													<span className="text-center font-mono text-[13px] text-ink2">{t.w}</span>
 													<span className="text-center font-mono text-[13px] text-muted">{t.d}</span>
