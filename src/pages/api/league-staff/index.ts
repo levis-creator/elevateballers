@@ -37,6 +37,7 @@ export const POST: APIRoute = async ({ request }) => {
 			department: String(data.department).trim(),
 			email: data.email ? String(data.email).trim() : undefined,
 			photo: data.photo ? String(data.photo).trim() : undefined,
+			bio: data.bio ? String(data.bio).trim() : undefined,
 			active: data.active ?? true,
 			sortOrder: Number(data.sortOrder ?? 0),
 		});

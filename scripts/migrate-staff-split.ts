@@ -37,6 +37,7 @@ interface LeagueStaffSeed {
 	department: string;
 	email?: string;
 	photo?: string;
+	bio?: string;
 	sortOrder?: number;
 	active?: boolean;
 }
@@ -272,6 +273,7 @@ async function apply() {
 				department: item.department,
 				email: item.email,
 				photo: item.photo,
+				bio: item.bio,
 				sortOrder: item.sortOrder ?? 0,
 				active: item.active ?? true,
 			},

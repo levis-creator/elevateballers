@@ -1,6 +1,6 @@
 [
-  { "name": "Anthony Njenga", "role": "League Founder & Director", "department": "Leadership", "sortOrder": 0 },
-  { "name": "Naomi Achieng", "role": "League Operations Lead", "department": "Leadership", "sortOrder": 1 },
+  { "name": "Anthony Njenga", "role": "League Founder & Director", "department": "Leadership", "bio": "Founded Elevate Ballers to build a professional, community-driven home for basketball in Kenya.", "sortOrder": 0 },
+  { "name": "Naomi Achieng", "role": "League Operations Lead", "department": "Leadership", "bio": "Oversees fixtures, results, registration and the day-to-day running of the EBL and EWBL.", "sortOrder": 1 },
 
   { "name": "Grace Wanjiru", "role": "Registrations & Transfers", "department": "League Management", "email": "elevateballers@gmail.com", "sortOrder": 0 },
   { "name": "Daniel Kimani", "role": "Fixtures & Scheduling", "department": "League Management", "email": "ballers@elevateballers.com", "sortOrder": 1 },
