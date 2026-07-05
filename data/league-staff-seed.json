@@ -1,0 +1,20 @@
+[
+  { "name": "Anthony Njenga", "role": "League Founder & Director", "department": "Leadership", "sortOrder": 0 },
+  { "name": "Naomi Achieng", "role": "League Operations Lead", "department": "Leadership", "sortOrder": 1 },
+
+  { "name": "Grace Wanjiru", "role": "Registrations & Transfers", "department": "League Management", "email": "elevateballers@gmail.com", "sortOrder": 0 },
+  { "name": "Daniel Kimani", "role": "Fixtures & Scheduling", "department": "League Management", "email": "ballers@elevateballers.com", "sortOrder": 1 },
+  { "name": "Susan Achieng", "role": "Finance & Accounts", "department": "League Management", "email": "ballers@elevateballers.com", "sortOrder": 2 },
+  { "name": "Paul Otieno", "role": "Disciplinary Panel Chair", "department": "League Management", "email": "ballers@elevateballers.com", "sortOrder": 3 },
+
+  { "name": "James Mwangi", "role": "Head of Referees", "department": "Officiating", "sortOrder": 0 },
+  { "name": "Kevin Odhiambo", "role": "Crew Chief — EBL", "department": "Officiating", "sortOrder": 1 },
+  { "name": "Mercy Njeri", "role": "Crew Chief — EWBL", "department": "Officiating", "sortOrder": 2 },
+  { "name": "Brian Kamau", "role": "Lead Table Official", "department": "Officiating", "sortOrder": 3 },
+  { "name": "Alex Mutua", "role": "Shot-Clock Lead", "department": "Officiating", "sortOrder": 4 },
+
+  { "name": "Faith Nyambura", "role": "Venue Coordinator", "department": "Operations & Media", "sortOrder": 0 },
+  { "name": "Collins Barasa", "role": "Stats & Analytics Lead", "department": "Operations & Media", "sortOrder": 1 },
+  { "name": "Aisha Hassan", "role": "Media & Content", "department": "Operations & Media", "email": "ballers@elevateballers.com", "sortOrder": 2 },
+  { "name": "Victor Ochieng", "role": "Broadcast & AV", "department": "Operations & Media", "sortOrder": 3 }
+]

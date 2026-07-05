@@ -1,8 +1,33 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
-const prisma = new PrismaClient();
+// Prisma 7 requires a driver adapter. Build it from DATABASE_URL (the same
+// connection the app uses). Fail fast if it's unset so this migration can never
+// silently run against the wrong / a default database — the operator MUST point
+// DATABASE_URL at the intended target before running apply/rollback.
+function makePrisma(): PrismaClient {
+	const connectionString = process.env.DATABASE_URL;
+	if (!connectionString) {
+		throw new Error(
+			"DATABASE_URL is not set. Refusing to run — export DATABASE_URL for the TARGET database first.",
+		);
+	}
+	const url = new URL(connectionString);
+	const adapter = new PrismaMariaDb({
+		host: url.hostname,
+		port: parseInt(url.port) || 3306,
+		user: decodeURIComponent(url.username),
+		password: decodeURIComponent(url.password),
+		database: url.pathname.slice(1),
+		connectionLimit: 5,
+		allowPublicKeyRetrieval: process.env.DB_ALLOW_PUBLIC_KEY_RETRIEVAL === "true" || process.env.NODE_ENV !== "production",
+	});
+	return new PrismaClient({ adapter });
+}
+
+const prisma = makePrisma();
 
 type Mode = "dry-run" | "apply" | "rollback";
 

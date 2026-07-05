@@ -1,22 +1,16 @@
 /**
- * Static Staff-page content. Placeholder names/roles from the design — swap this
- * datasource for a CMS/DB-backed one later (the `getStaffData` use-case is the
- * seam). Contact addresses route to the league inbox.
+ * Static League-Staff fallback. Used only when the `league_staff` table is empty
+ * or unavailable (e.g. before the split migration + seed have run), so the /staff
+ * page never renders blank. Once `league_staff` is seeded, the live datasource
+ * takes over. This is also the source the seed file mirrors — org-wide people
+ * only (NO team coaches).
  */
-import type { StaffPageData, StaffLeader, StaffMember } from "@/features/staff/domain/entities/staff-v2";
+import type { StaffPageData, StaffMember } from "@/features/staff/domain/entities/staff-v2";
 
 const initialsOf = (name: string): string => {
 	const w = name.trim().split(/\s+/).filter(Boolean);
 	return ((w[0]?.[0] || "") + (w[1]?.[0] || "")).toUpperCase() || "?";
 };
-
-const leader = (name: string, role: string, badge: string, bio: string): StaffLeader => ({
-	name,
-	role,
-	badge,
-	bio,
-	initials: initialsOf(name),
-});
 
 const member = (name: string, role: string, email: string | null = null): StaffMember => ({
 	name,
@@ -25,24 +19,19 @@ const member = (name: string, role: string, email: string | null = null): StaffM
 	email,
 });
 
+export const STAFF_INTRO =
+	"The organisers, officials, and volunteers who keep Elevate Ballers running — from tip-off to final buzzer, every match day of the season.";
+
 export const STAFF_PAGE_DATA: StaffPageData = {
-	intro:
-		"The organisers, officials, and volunteers who keep Elevate Ballers running — from tip-off to final buzzer, every match day of the season.",
-	leaders: [
-		leader(
-			"Anthony Njenga",
-			"League Founder & Director",
-			"Leadership",
-			"Founded Elevate Ballers to build a professional, community-driven home for basketball in Kenya.",
-		),
-		leader(
-			"Naomi Achieng",
-			"League Operations Lead",
-			"Leadership",
-			"Oversees fixtures, results, registration and the day-to-day running of the EBL and EWBL.",
-		),
-	],
+	intro: STAFF_INTRO,
 	departments: [
+		{
+			name: "Leadership",
+			members: [
+				member("Anthony Njenga", "League Founder & Director"),
+				member("Naomi Achieng", "League Operations Lead"),
+			],
+		},
 		{
 			name: "League Management",
 			members: [

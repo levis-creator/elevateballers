@@ -20,6 +20,7 @@ import "@fontsource/space-mono/700.css";
 import "@/features/loading/lib/loading.css";
 import SEO from "@/components/SEO.astro";
 import LoadingSplash from "@/features/loading/presentation/v2/LoadingSplash.astro";
+import CookieConsent from "@/components/CookieConsent.astro";
 
 interface Props {
 	title?: string;
@@ -83,15 +84,6 @@ const {
 			<link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
 		)}
 
-		<!-- Google Analytics -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=G-VVZ9P3XBLP"></script>
-		<script is:inline>
-			window.dataLayer = window.dataLayer || [];
-			function gtag(){dataLayer.push(arguments);}
-			gtag('js', new Date());
-			gtag('config', 'G-VVZ9P3XBLP');
-		</script>
-
 		<!-- Fonts are self-hosted via Fontsource (imported above) — no external
 		     Google Fonts request. Supabase serves most images. -->
 		<link rel="preconnect" href="https://zjnlvnyjsidnelgciqmz.supabase.co" crossorigin />
@@ -107,5 +99,6 @@ const {
 		<!-- Boot splash: shown once per session on first paint, then removed on load. -->
 		<LoadingSplash />
 		<slot />
+		<CookieConsent />
 	</body>
 </html>
