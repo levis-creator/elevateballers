@@ -1,0 +1,34 @@
+---
+// B · Table skeleton — Standings / Leaders / Box score.
+import Skel from "./Skel.astro";
+interface Props {
+	/** Number of placeholder rows. */
+	rows?: number;
+}
+const { rows = 8 } = Astro.props;
+const items = Array.from({ length: rows });
+---
+
+<section class="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+	<div class="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+		<div class="flex items-center gap-4 border-b border-black/[0.08] bg-paper2 px-5 py-3.5">
+			<Skel class="h-3 w-8" />
+			<Skel class="h-3 flex-1" />
+			<Skel class="h-3 w-10" />
+			<Skel class="h-3 w-10" />
+			<Skel class="h-3 w-10" />
+		</div>
+		{items.map(() => (
+			<div class="flex items-center gap-4 border-b border-black/[0.06] px-5 py-3.5 last:border-0">
+				<Skel class="h-4 w-6" />
+				<div class="flex flex-1 items-center gap-3">
+					<Skel class="h-8 w-8 rounded-full" />
+					<Skel class="h-4 w-[45%]" />
+				</div>
+				<Skel class="h-4 w-8" />
+				<Skel class="h-4 w-8" />
+				<Skel class="h-4 w-8" />
+			</div>
+		))}
+	</div>
+</section>

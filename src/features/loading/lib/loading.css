@@ -1,0 +1,40 @@
+/*
+ * v2 loading-UI animations, shared by the boot SPLASH and the SKELETON
+ * placeholders. Imported once by the v2 Layout so `.eb-skel` and the keyframes
+ * are globally available to every v2 page/skeleton. Pure CSS — no JS to animate.
+ */
+
+@keyframes eb-spin { to { transform: rotate(360deg); } }
+@keyframes eb-bounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-22px) scale(1.04); } }
+@keyframes eb-squash { 0%, 100% { transform: scaleX(1); opacity: 0.5; } 50% { transform: scaleX(0.55); opacity: 0.22; } }
+@keyframes eb-indet { 0% { left: -40%; width: 40%; } 50% { width: 55%; } 100% { left: 100%; width: 40%; } }
+@keyframes eb-dots { 0%, 20% { opacity: 0.2; } 50% { opacity: 1; } 80%, 100% { opacity: 0.2; } }
+@keyframes eb-shimmer { 0% { background-position: -500px 0; } 100% { background-position: 500px 0; } }
+
+/* One status line lit at a time (5 lines × 1.2s slots = 6s loop). */
+@keyframes eb-status { 0% { opacity: 0; } 4% { opacity: 1; } 16% { opacity: 1; } 20%, 100% { opacity: 0; } }
+
+/* Skeleton shimmer block — every placeholder is `<div class="eb-skel …">`. */
+.eb-skel {
+	background: linear-gradient(90deg, #e9e4dc 0px, #f2eee7 60px, #e9e4dc 120px);
+	background-size: 600px 100%;
+	animation: eb-shimmer 1.3s linear infinite;
+	border-radius: 8px;
+}
+
+/* Boot splash overlay: fades out (then the inline script removes it). */
+.eb-splash { transition: opacity 0.4s ease; }
+.eb-splash--hide { opacity: 0; pointer-events: none; }
+
+/* Cycling status lines are stacked; each fades in on its slot. */
+.eb-status-line { animation: eb-status 6s ease-in-out infinite; }
+
+/* Respect reduced-motion: hold everything still. */
+@media (prefers-reduced-motion: reduce) {
+	.eb-skel,
+	.eb-status-line,
+	.eb-splash [style*="animation"] {
+		animation: none !important;
+	}
+	.eb-status-line:first-child { opacity: 1 !important; }
+}

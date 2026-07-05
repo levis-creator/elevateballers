@@ -1,0 +1,28 @@
+---
+// Skeleton dispatcher — render the placeholder that mirrors a route's real
+// layout so the frame holds its shape while data loads. Drop it into any
+// server-rendered region that awaits data, e.g.
+//   <LoadingSkeleton variant="card-grid" />
+// Variant → page-type map lives in the loading domain (ROUTE_SKELETON).
+import type { SkeletonVariant } from "@/features/loading/domain/entities/loading";
+import SkelCardGrid from "./skeletons/SkelCardGrid.astro";
+import SkelTable from "./skeletons/SkelTable.astro";
+import SkelPodium from "./skeletons/SkelPodium.astro";
+import SkelDateList from "./skeletons/SkelDateList.astro";
+import SkelArticle from "./skeletons/SkelArticle.astro";
+import SkelScoreboard from "./skeletons/SkelScoreboard.astro";
+import SkelDetailHero from "./skeletons/SkelDetailHero.astro";
+
+interface Props {
+	variant: SkeletonVariant;
+}
+const { variant } = Astro.props;
+---
+
+{variant === "card-grid" && <SkelCardGrid />}
+{variant === "table" && <SkelTable />}
+{variant === "podium" && <SkelPodium />}
+{variant === "date-list" && <SkelDateList />}
+{variant === "article" && <SkelArticle />}
+{variant === "scoreboard" && <SkelScoreboard />}
+{variant === "detail-hero" && <SkelDetailHero />}

@@ -1,0 +1,29 @@
+---
+// C · Podium skeleton — Standings / Leaders top-3.
+import Skel from "./Skel.astro";
+const cards = Array.from({ length: 3 });
+---
+
+<section class="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+	<div class="grid grid-cols-3 gap-5 max-[760px]:grid-cols-1">
+		{cards.map(() => (
+			<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="mb-5 flex items-center justify-between">
+					<Skel class="h-10 w-16" />
+					<Skel class="h-5 w-20 rounded-full" />
+				</div>
+				<div class="flex items-center gap-3">
+					<Skel class="h-14 w-14 rounded-full" />
+					<div class="flex-1">
+						<Skel class="mb-2 h-4 w-[70%]" />
+						<Skel class="h-3 w-[45%]" />
+					</div>
+				</div>
+				<div class="mt-5 flex items-end justify-between border-t border-black/[0.06] pt-4">
+					<Skel class="h-10 w-20" />
+					<Skel class="h-3 w-10" />
+				</div>
+			</div>
+		))}
+	</div>
+</section>

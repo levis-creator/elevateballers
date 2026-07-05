@@ -1,0 +1,48 @@
+---
+// D · Date-grouped list skeleton — Fixtures / Results.
+import Skel from "./Skel.astro";
+interface Props {
+	/** Number of date groups. */
+	groups?: number;
+	/** Matches per group. */
+	perGroup?: number;
+}
+const { groups = 2, perGroup = 2 } = Astro.props;
+const groupList = Array.from({ length: groups });
+const matchList = Array.from({ length: perGroup });
+---
+
+<section class="mx-auto max-w-[1000px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+	{groupList.map(() => (
+		<div class="mb-8">
+			<div class="mb-4 flex items-center gap-4">
+				<Skel class="h-12 w-12" />
+				<div>
+					<Skel class="mb-2 h-4 w-24" />
+					<Skel class="h-3 w-16" />
+				</div>
+			</div>
+			<div class="flex flex-col gap-3">
+				{matchList.map(() => (
+					<div class="rounded-xl border border-black/10 bg-white px-5 py-4 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+						<div class="mb-3 flex items-center justify-between">
+							<Skel class="h-4 w-16 rounded" />
+							<Skel class="h-3 w-12" />
+						</div>
+						<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+							<div class="flex items-center justify-end gap-3">
+								<Skel class="h-4 w-24" />
+								<Skel class="h-9 w-9 rounded-full" />
+							</div>
+							<Skel class="h-7 w-12" />
+							<div class="flex items-center gap-3">
+								<Skel class="h-9 w-9 rounded-full" />
+								<Skel class="h-4 w-24" />
+							</div>
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	))}
+</section>

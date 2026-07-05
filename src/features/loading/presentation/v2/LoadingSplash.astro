@@ -1,0 +1,95 @@
+---
+// v2 full-screen boot SPLASH — shown on the first paint of a session (before
+// hydration/fonts settle), then faded out and removed on `load`. Pure CSS
+// animation; a tiny inline script handles the once-per-session guard + removal.
+// Render this at the top of <body> in the v2 Layout. Requires loading.css
+// (imported by the Layout) for the eb-* keyframes.
+import { STATUS_LINES } from "@/features/loading/domain/entities/loading";
+---
+
+<!-- No-JS: the splash can never be removed by script, so hide it outright and
+     let the server-rendered content show. -->
+<noscript><style>#eb-splash{display:none !important;}</style></noscript>
+
+<div id="eb-splash" class="eb-splash fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-paper px-8 py-16 font-body text-ink2" role="status" aria-live="polite" aria-label="Loading">
+	<div class="pointer-events-none absolute inset-0" style="background:radial-gradient(90% 60% at 50% 30%,rgba(228,0,43,0.10),transparent 60%);"></div>
+	<div class="pointer-events-none absolute left-1/2 top-[8%] h-[360px] w-[360px] -translate-x-1/2 rounded-full border border-brand/[0.12]"></div>
+
+	<div class="relative flex flex-col items-center">
+		<!-- brand -->
+		<div class="mb-12 flex items-center gap-3">
+			<span class="relative flex h-[40px] w-[40px] items-center justify-center rounded-full bg-brand">
+				<span class="absolute inset-0 rounded-full border-[1.5px] border-black/50"></span>
+				<span class="absolute bottom-0 left-1/2 top-0 w-[1.5px] -translate-x-1/2 bg-black/50"></span>
+				<span class="absolute left-0 right-0 top-1/2 h-[1.5px] -translate-y-1/2 bg-black/50"></span>
+			</span>
+			<span class="font-display text-[24px] uppercase leading-[0.9] tracking-[0.02em] text-ink2">Elevate<br /><span class="text-brand">Ballers</span></span>
+		</div>
+
+		<!-- bouncing, spinning basketball + squashing shadow -->
+		<div class="relative flex h-[120px] w-[90px] items-end justify-center">
+			<div class="relative h-[64px] w-[64px]" style="animation:eb-bounce 0.75s cubic-bezier(.5,.05,.5,.95) infinite;">
+				<div class="h-full w-full rounded-full bg-brand" style="animation:eb-spin 1.1s linear infinite;">
+					<span class="absolute inset-0 rounded-full border-[2.5px] border-black/45"></span>
+					<span class="absolute bottom-0 left-1/2 top-0 w-[2.5px] -translate-x-1/2 bg-black/45"></span>
+					<span class="absolute left-0 right-0 top-1/2 h-[2.5px] -translate-y-1/2 bg-black/45"></span>
+					<span class="absolute left-1/2 top-1/2 h-[64px] w-[64px] rounded-full border-[2.5px] border-transparent" style="border-top-color:rgba(0,0,0,0.4);transform:translate(-50%,-50%) rotate(38deg);"></span>
+				</div>
+			</div>
+			<div class="absolute bottom-0 h-[10px] w-[52px] rounded-full bg-black/25 blur-[1px]" style="animation:eb-squash 0.75s cubic-bezier(.5,.05,.5,.95) infinite;"></div>
+		</div>
+
+		<!-- label + dots -->
+		<div class="mt-8 flex items-center gap-1.5">
+			<span class="font-display text-[18px] uppercase tracking-[0.06em] text-ink">Loading</span>
+			<span class="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-brand" style="animation:eb-dots 1.2s infinite 0s;"></span>
+			<span class="inline-block h-1.5 w-1.5 rounded-full bg-brand" style="animation:eb-dots 1.2s infinite 0.2s;"></span>
+			<span class="inline-block h-1.5 w-1.5 rounded-full bg-brand" style="animation:eb-dots 1.2s infinite 0.4s;"></span>
+		</div>
+
+		<!-- indeterminate bar -->
+		<div class="relative mt-6 h-[4px] w-[240px] overflow-hidden rounded-full bg-black/[0.08]">
+			<span class="absolute top-0 h-full rounded-full bg-brand" style="animation:eb-indet 1.25s cubic-bezier(.4,0,.2,1) infinite;"></span>
+		</div>
+
+		<!-- cycling status line (pure-CSS cycle through STATUS_LINES) -->
+		<div class="relative mt-5 h-4 w-full text-center">
+			{STATUS_LINES.map((line, i) => (
+				<span
+					class="eb-status-line absolute inset-x-0 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2"
+					style={`animation-delay:${i * 1.2}s;opacity:0;`}
+				>
+					{line}
+				</span>
+			))}
+		</div>
+	</div>
+</div>
+
+<script is:inline>
+	(function () {
+		var el = document.getElementById("eb-splash");
+		if (!el) return;
+		// Show the splash once per session; on later navigations remove it before paint.
+		try {
+			if (sessionStorage.getItem("eb-splashed")) {
+				el.parentNode && el.parentNode.removeChild(el);
+				return;
+			}
+			sessionStorage.setItem("eb-splashed", "1");
+		} catch (e) {}
+		var done = false;
+		var hide = function () {
+			if (done) return;
+			done = true;
+			el.classList.add("eb-splash--hide");
+			setTimeout(function () {
+				el.parentNode && el.parentNode.removeChild(el);
+			}, 450);
+		};
+		if (document.readyState === "complete") setTimeout(hide, 400);
+		else window.addEventListener("load", function () { setTimeout(hide, 300); });
+		// Safety net: never let the splash hang.
+		setTimeout(hide, 4000);
+	})();
+</script>

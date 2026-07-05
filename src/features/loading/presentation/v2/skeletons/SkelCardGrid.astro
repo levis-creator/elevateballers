@@ -1,0 +1,31 @@
+---
+// A · Card-grid skeleton — Players / Teams / News grid.
+import Skel from "./Skel.astro";
+interface Props {
+	/** Number of placeholder cards. */
+	count?: number;
+}
+const { count = 8 } = Astro.props;
+const cards = Array.from({ length: count });
+---
+
+<section class="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+	<Skel class="mb-3 h-8 w-[280px] max-[600px]:w-[70%]" />
+	<Skel class="mb-8 h-4 w-[180px]" />
+	<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
+		{cards.map(() => (
+			<div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<Skel class="aspect-[4/5] rounded-none" />
+				<div class="flex flex-col gap-2.5 p-4">
+					<Skel class="h-4 w-[80%]" />
+					<Skel class="h-3 w-[55%]" />
+					<div class="mt-2 flex justify-between gap-2 border-t border-black/[0.06] pt-3">
+						<Skel class="h-6 w-8" />
+						<Skel class="h-6 w-8" />
+						<Skel class="h-6 w-8" />
+					</div>
+				</div>
+			</div>
+		))}
+	</div>
+</section>
