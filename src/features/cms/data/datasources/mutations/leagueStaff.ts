@@ -5,8 +5,9 @@ export type CreateLeagueStaffInput = {
 	name: string;
 	role: string;
 	department: string;
-	email?: string;
-	photo?: string;
+	email?: string | null;
+	photo?: string | null;
+	bio?: string | null;
 	active?: boolean;
 	sortOrder?: number;
 };

@@ -120,8 +120,9 @@ export default function AdminSidebar() {
     {
       label: 'Personnel',
       items: [
-        { href: '/admin/players', icon: icons.Users,     label: 'Players', permission: 'players:read' },
-        { href: '/admin/staff',   icon: icons.Briefcase, label: 'Staff',   permission: 'staff:read' },
+        { href: '/admin/players',      icon: icons.Users,     label: 'Players',      permission: 'players:read' },
+        { href: '/admin/staff',        icon: icons.Briefcase, label: 'Staff',        permission: 'staff:read' },
+        { href: '/admin/league-staff', icon: icons.Briefcase, label: 'League Staff', permission: 'staff:read' },
       ],
     },
     {

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "astro dev",
+    "dev": "prisma generate && astro dev",
     "dev:ngrok": "node scripts/ngrok-tunnel.js",
     "dev:tunnel": "npm run dev & npm run dev:ngrok",
     "build": "prisma generate && astro build",

@@ -4,6 +4,7 @@ export const ssr = false;
 
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
 import TeamView from '../../../../features/cms/components/TeamView';
+import TeamCoachingStaffManager from '../../../../features/cms/presentation/components/TeamCoachingStaffManager';
 
 const { id } = Astro.params;
 if (!id) {
@@ -13,5 +14,8 @@ if (!id) {
 
 <AdminLayout title="View Team - Admin" permission="teams:read">
   <TeamView teamId={id} client:load />
+  <section class="mt-8 border-t pt-8">
+    <TeamCoachingStaffManager teamId={id} client:load />
+  </section>
 </AdminLayout>
 

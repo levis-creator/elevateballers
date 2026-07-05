@@ -394,6 +394,7 @@ model LeagueStaff {
   department String
   email      String?
   photo      String?
+  bio        String?  @db.Text
   active     Boolean  @default(true)
   sortOrder  Int      @default(0) @map("sort_order")
   createdAt  DateTime @default(now()) @map("created_at")
