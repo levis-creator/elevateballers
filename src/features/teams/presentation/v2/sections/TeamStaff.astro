@@ -1,29 +1,20 @@
 ---
-// Coaching staff grid. Hidden when there are no staff records.
+// Coaching staff grid. Hidden when there are no staff records. Reuses the
+// shared StaffMemberCard (same tile as the Staff page department grids).
 import type { StaffMember } from "@/features/teams/domain/entities/team-detail";
+import StaffMemberCard from "@/features/staff/presentation/v2/StaffMemberCard.astro";
 interface Props {
 	staff: StaffMember[];
 }
 const { staff } = Astro.props;
-const STRIPE = "background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#f0ece5 5px,#f0ece5 10px);";
 ---
 
 {staff.length > 0 && (
 	<section class="mx-auto max-w-[1280px] px-8 py-[56px] max-[960px]:px-6 max-[960px]:py-10">
 		<h2 class="mb-6 font-display text-[26px] uppercase text-ink">Coaching Staff</h2>
-		<div class="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
+		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
 			{staff.map((s) => (
-				<div class="flex items-center gap-4 rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
-					{s.image ? (
-						<img src={s.image} alt={s.name} loading="lazy" class="h-14 w-14 flex-shrink-0 rounded-full border border-black/10 object-cover" />
-					) : (
-						<div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full font-display text-[18px] text-ink" style={STRIPE}>{s.initials}</div>
-					)}
-					<div>
-						<div class="font-body text-[17px] font-extrabold text-ink2">{s.name}</div>
-						<div class="font-mono text-[11px] uppercase tracking-[0.1em] text-brand">{s.role}</div>
-					</div>
-				</div>
+				<StaffMemberCard name={s.name} role={s.role} initials={s.initials} image={s.image} />
 			))}
 		</div>
 	</section>

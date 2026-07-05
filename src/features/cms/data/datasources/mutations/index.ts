@@ -7,6 +7,8 @@ export * from './pageContent';
 export * from './siteSettings';
 export * from './comments';
 export * from './staff';
+export * from './leagueStaff';
+export * from './teamStaffMembers';
 export * from './leagues';
 export * from './seasons';
 export * from './seasonTeams';
