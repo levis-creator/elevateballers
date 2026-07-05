@@ -37,7 +37,7 @@ const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url))
 	<PlayerOfTheWeek potw={home.potw} />
 	<LatestNews news={home.news} categories={home.newsCategories} client:visible />
 	<StatsSection leaderData={home.leaderData} leaderTabs={home.leaderTabs} counts={home.counts} />
-	<FeaturedMedia media={home.media} tabs={home.mediaTabs} client:visible />
+	{home.media.length > 0 && <FeaturedMedia media={home.media} tabs={home.mediaTabs} client:visible />}
 	<About />
 	<RegisterCta registrationOpen={home.registrationOpen} />
 	<Footer footer={footer} />
