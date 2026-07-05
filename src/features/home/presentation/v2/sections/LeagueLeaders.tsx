@@ -31,8 +31,13 @@ export default function LeagueLeaders({ leaderData, tabs }: Props) {
 				{rows.map((p, i) => {
 					const first = i === 0;
 					const pct = Math.round((p.val / max) * 100);
+					const Tag = p.href ? "a" : "div";
 					return (
-						<div key={p.name} className="flex items-center gap-4 border-b border-black/[0.08] px-1 py-3.5">
+						<Tag
+							key={p.name}
+							href={p.href ?? undefined}
+							className="flex items-center gap-4 border-b border-black/[0.08] px-1 py-3.5 text-inherit no-underline hover:bg-paper2"
+						>
 							<span className="w-[26px] font-display text-[20px]" style={{ color: first ? "#e4002b" : "#b3a99c" }}>
 								{i + 1}
 							</span>
@@ -50,7 +55,7 @@ export default function LeagueLeaders({ leaderData, tabs }: Props) {
 								</div>
 							</div>
 							<span className="w-14 text-right font-display text-[22px] text-ink">{p.val.toFixed(1)}</span>
-						</div>
+						</Tag>
 					);
 				})}
 			</div>

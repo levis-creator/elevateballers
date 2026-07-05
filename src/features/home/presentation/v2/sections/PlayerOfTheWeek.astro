@@ -26,7 +26,7 @@ const PHOTO_BG = "background:repeating-linear-gradient(45deg,#1a1714,#1a1714 12p
 		</div>
 		<div>
 			<div class="mb-4 font-mono text-[12px] uppercase tracking-[0.14em] text-brandsoft">Player of the Week</div>
-			<h2 class="mb-2.5 font-display text-[clamp(40px,5vw,68px)] uppercase leading-[0.9] text-[#f6f2ec]">{potw.name}</h2>
+			<h2 class="mb-2.5 font-display text-[clamp(40px,5vw,68px)] uppercase leading-[0.9] text-[#f6f2ec]">{potw.href ? <a href={potw.href} class="text-inherit no-underline hover:text-brand">{potw.name}</a> : potw.name}</h2>
 			<p class="mb-7 max-w-[520px] text-[16px] leading-[1.7] text-creamdim">{potw.description}</p>
 			{potw.stats.length > 0 && (
 				<div class="flex gap-10">

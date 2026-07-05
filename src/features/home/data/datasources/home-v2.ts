@@ -211,7 +211,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 		const [players, matches] = await Promise.all([
 			prisma.player.findMany({
 				where: { approved: true },
-				select: { id: true, firstName: true, lastName: true, team: { select: { name: true } } },
+				select: { id: true, slug: true, firstName: true, lastName: true, team: { select: { name: true } } },
 			}),
 			prisma.match.findMany({
 				where: { status: "COMPLETED" },
@@ -245,6 +245,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 					name: `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || "Unknown",
 					team: p.team?.name ?? "—",
 					val: Math.round(statsByPlayer[p.id][field] * 10) / 10,
+					href: `/players/${p.slug || p.id}`,
 				}))
 				.sort((a, b) => b.val - a.val)
 				.slice(0, 5);
@@ -293,7 +294,8 @@ export async function fetchPotw(
 					{ value: String(Math.round(s.assistsPerGame * 10) / 10), label: "Assists" },
 				]
 			: [];
-		return { name, teamLabel, image, description: potw.description ?? "", stats };
+		const href = p.slug || p.id ? `/players/${p.slug || p.id}` : null;
+		return { name, teamLabel, image, description: potw.description ?? "", stats, href };
 	} catch {
 		return null;
 	}
