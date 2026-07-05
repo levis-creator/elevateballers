@@ -1,0 +1,23 @@
+---
+// G · Detail hero + stat cards skeleton — Team / Player detail.
+import Skel from "./Skel.astro";
+const stats = Array.from({ length: 4 });
+---
+
+<section class="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+	<div class="mb-6 flex items-center gap-6 rounded-2xl border border-black/10 bg-white p-7 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:flex-col max-[600px]:items-start">
+		<Skel class="h-24 w-24 flex-shrink-0 rounded-full" />
+		<div class="flex-1">
+			<Skel class="mb-3 h-8 w-[50%]" />
+			<Skel class="h-4 w-[30%]" />
+		</div>
+	</div>
+	<div class="grid grid-cols-4 gap-4 max-[600px]:grid-cols-2">
+		{stats.map(() => (
+			<div class="rounded-xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<Skel class="mb-3 h-10 w-16" />
+				<Skel class="h-3 w-20" />
+			</div>
+		))}
+	</div>
+</section>

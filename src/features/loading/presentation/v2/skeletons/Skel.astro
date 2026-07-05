@@ -1,0 +1,12 @@
+---
+// Base shimmer placeholder. Every skeleton block is a `<Skel class="…"/>`;
+// size/shape come from the passed Tailwind classes (extra attrs like `style`
+// pass through). Relies on `.eb-skel` (loading.css) for the shimmer animation.
+interface Props {
+	class?: string;
+	[key: string]: unknown;
+}
+const { class: cls = "", ...rest } = Astro.props;
+---
+
+<div class:list={["eb-skel", cls]} {...rest}></div>

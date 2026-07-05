@@ -16,7 +16,10 @@ import "@fontsource/archivo/700.css";
 import "@fontsource/archivo/800.css";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
+// v2 loading-UI animations (boot splash + skeleton shimmer) — global so every page can use them.
+import "@/features/loading/lib/loading.css";
 import SEO from "@/components/SEO.astro";
+import LoadingSplash from "@/features/loading/presentation/v2/LoadingSplash.astro";
 
 interface Props {
 	title?: string;
@@ -101,6 +104,8 @@ const {
 	<!-- Theme-neutral: each v2 page owns its own background/text colour on its
 	     root wrapper (e.g. the home page uses cream #f5f3ef). -->
 	<body class="min-h-screen antialiased">
+		<!-- Boot splash: shown once per session on first paint, then removed on load. -->
+		<LoadingSplash />
 		<slot />
 	</body>
 </html>

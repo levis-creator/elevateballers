@@ -1,0 +1,31 @@
+---
+// E · Article + sidebar skeleton — News detail.
+import Skel from "./Skel.astro";
+import { SKEL_TEXT_WIDTHS } from "@/features/loading/domain/entities/loading";
+const sidebar = Array.from({ length: 3 });
+---
+
+<section class="mx-auto max-w-[1200px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+	<div class="mx-auto mb-8 max-w-[820px]">
+		<Skel class="mb-4 h-3 w-40" />
+		<Skel class="mb-3 h-9 w-[90%]" />
+		<Skel class="mb-6 h-9 w-[60%]" />
+		<Skel class="h-[300px] w-full" />
+	</div>
+	<div class="grid grid-cols-[minmax(0,720px)_1fr] gap-14 max-[960px]:grid-cols-1">
+		<div class="flex flex-col gap-3">
+			{SKEL_TEXT_WIDTHS.map((w) => <Skel class="h-4" style={`width:${w};`} />)}
+			<div class="mt-2"></div>
+			{SKEL_TEXT_WIDTHS.map((w) => <Skel class="h-4" style={`width:${w};`} />)}
+		</div>
+		<div class="flex flex-col gap-5">
+			{sidebar.map(() => (
+				<div class="rounded-2xl border border-black/10 bg-white p-5">
+					<Skel class="mb-3 h-3 w-24" />
+					<Skel class="mb-2 h-4 w-[85%]" />
+					<Skel class="h-4 w-[60%]" />
+				</div>
+			))}
+		</div>
+	</div>
+</section>
