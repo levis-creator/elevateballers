@@ -23,18 +23,18 @@ import { Image } from "astro:assets";
 
 const { slug } = Astro.params;
 if (!slug) {
-  return Astro.redirect("/404", 302);
+  return Astro.rewrite("/404");
 }
 
 let team;
 try {
   team = await getTeamBySlug(slug);
   if (!team) {
-    return Astro.redirect("/404", 302);
+    return Astro.rewrite("/404");
   }
 } catch (error) {
   console.error("Error fetching team:", error);
-  return Astro.redirect("/404", 302);
+  return Astro.rewrite("/404");
 }
 
 // Compute player stats from match events

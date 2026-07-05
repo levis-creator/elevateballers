@@ -6,7 +6,7 @@ Astro.response.headers.set("Cache-Control", "public, s-maxage=120, stale-while-r
 import { usePublicV2 } from "@/lib/ui-version";
 
 const { slug } = Astro.params;
-if (!slug) return Astro.redirect("/404", 302);
+if (!slug) return Astro.rewrite("/404");
 
 // v2-only route (imports only the v2 tree). Rewrite to the legacy page when the
 // flag is off — URL stays /news/<slug>.
@@ -17,18 +17,71 @@ import NewsDetailPage from "@/features/news/presentation/v2/NewsDetailPage.astro
 import { getArticleView } from "@/features/news/domain/usecases/get-article-view";
 
 const view = await getArticleView(slug);
-if (!view) return Astro.redirect("/404", 302);
+if (!view) return Astro.rewrite("/404");
 
 const seoTitle = `${view.title} - Elevate Ballers`;
 const seoDescription = view.excerpt || view.title;
+const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
+const canonicalUrl = `${siteBase}/news/${view.slug}/`;
+const articleImage = view.heroImage
+	? new URL(view.heroImage, `${siteBase}/`).toString()
+	: `${siteBase}/images/Elevate_Icon-200x200.png`;
 ---
 
 <LayoutV2
 	title={seoTitle}
 	description={seoDescription}
 	image={view.heroImage ?? undefined}
-	canonicalURL={`${Astro.url.origin}/news/${view.slug}/`}
+	canonicalURL={canonicalUrl}
 	type="article"
+	publishedTime={view.publishedTime}
+	modifiedTime={view.modifiedTime}
 >
+	<script
+		type="application/ld+json"
+		is:inline
+		set:html={JSON.stringify({
+			"@context": "https://schema.org",
+			"@graph": [
+				{
+					"@type": "NewsArticle",
+					"@id": `${canonicalUrl}#article`,
+					mainEntityOfPage: { "@id": canonicalUrl },
+					url: canonicalUrl,
+					headline: view.title,
+					description: seoDescription,
+					image: articleImage,
+					datePublished: view.publishedTime,
+					dateModified: view.modifiedTime,
+					articleSection: view.category,
+					author: {
+						"@type": "Person",
+						name: view.author.name,
+					},
+					publisher: {
+						"@id": `${siteBase}/#organization`,
+						"@type": "SportsOrganization",
+						name: "Elevate Ballers",
+						url: `${siteBase}/`,
+						logo: {
+							"@type": "ImageObject",
+							url: `${siteBase}/images/Elevate_Icon-200x200.png`,
+							width: 200,
+							height: 200,
+						},
+					},
+				},
+				{
+					"@type": "BreadcrumbList",
+					"@id": `${canonicalUrl}#breadcrumb`,
+					itemListElement: [
+						{ "@type": "ListItem", position: 1, name: "Home", item: `${siteBase}/` },
+						{ "@type": "ListItem", position: 2, name: "News", item: `${siteBase}/news/` },
+						{ "@type": "ListItem", position: 3, name: view.title },
+					],
+				},
+			],
+		})}
+	/>
 	<NewsDetailPage view={view} />
 </LayoutV2>

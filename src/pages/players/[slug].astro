@@ -6,7 +6,7 @@ Astro.response.headers.set("Cache-Control", "public, s-maxage=120, stale-while-r
 import { usePublicV2 } from "@/lib/ui-version";
 
 const { slug } = Astro.params;
-if (!slug) return Astro.redirect("/404", 302);
+if (!slug) return Astro.rewrite("/404");
 
 // v2-only route (imports only the v2 tree). Rewrite to the legacy page when the
 // flag is off — URL stays /players/<slug|id>.
@@ -17,7 +17,7 @@ import PlayerDetailPage from "@/features/player/presentation/v2/PlayerDetailPage
 import { getPlayerView } from "@/features/player/domain/usecases/get-player-view";
 
 const view = await getPlayerView(slug);
-if (!view) return Astro.redirect("/404", 302);
+if (!view) return Astro.rewrite("/404");
 
 // Consolidate SEO on the canonical slug URL when reached via the legacy id.
 if (view.slug && slug !== view.slug) return Astro.redirect(`/players/${view.slug}/`, 301);

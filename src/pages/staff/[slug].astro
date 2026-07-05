@@ -13,18 +13,18 @@ import { getDisplayImageUrl } from '../../lib/asset-url';
 
 const { slug } = Astro.params;
 if (!slug) {
-  return Astro.redirect('/404', 302);
+  return Astro.rewrite('/404');
 }
 
 let staff;
 try {
   staff = await getStaffBySlug(slug);
   if (!staff || !staff.approved) {
-    return Astro.redirect('/404', 302);
+    return Astro.rewrite('/404');
   }
 } catch (error) {
   console.error('Error fetching staff:', error);
-  return Astro.redirect('/404', 302);
+  return Astro.rewrite('/404');
 }
 
 const fullName = `${staff.firstName} ${staff.lastName}`.trim() || 'Staff Member';

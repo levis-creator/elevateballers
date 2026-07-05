@@ -128,6 +128,8 @@ export async function fetchArticleView(slug: string): Promise<ArticleView | null
 			excerpt: article.excerpt || "",
 			author: { name: authorName, initials: initialsOf(authorName) },
 			dateText: fmtDate(article.publishedAt || article.createdAt),
+			publishedTime: new Date(article.publishedAt || article.createdAt).toISOString(),
+			modifiedTime: new Date(article.updatedAt || article.publishedAt || article.createdAt).toISOString(),
 			readTime: readTimeOf(article.content || ""),
 			heroImage: getDisplayImageUrl(article.image),
 			bodyHtml: sanitizeHtml(article.content || ""),

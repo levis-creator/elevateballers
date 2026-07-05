@@ -26,18 +26,18 @@ import { sanitizeHtml } from "../../lib/sanitize";
 
 const { slug } = Astro.params;
 if (!slug) {
-  return Astro.redirect("/404", 302);
+  return Astro.rewrite("/404");
 }
 
 let article;
 try {
   article = await getNewsArticleBySlug(slug);
   if (!article || !article.published) {
-    return Astro.redirect("/404", 302);
+    return Astro.rewrite("/404");
   }
 } catch (error) {
   console.error("Error fetching article:", error);
-  return Astro.redirect("/404", 302);
+  return Astro.rewrite("/404");
 }
 
 const category = reverseCategoryMap[article.category] || article.category;

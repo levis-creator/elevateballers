@@ -28,7 +28,7 @@ interface Props {
 const { id: slugOrId } = Astro.params;
 
 if (!slugOrId) {
-  return Astro.redirect("/matches");
+  return Astro.rewrite("/404");
 }
 
 // Fetch match from database — getMatchWithFullDetails resolves slug-first, id-fallback.
@@ -37,7 +37,7 @@ let hasError = false;
 try {
   match = await getMatchWithFullDetails(slugOrId);
   if (!match) {
-    return Astro.redirect("/matches");
+    return Astro.rewrite("/404");
   }
 } catch (error) {
   console.error("Error fetching match:", error);
@@ -181,7 +181,7 @@ const eventStatusUrl = "https://schema.org/EventScheduled";
               position: 2,
               name: hasFinalScore ? "Results" : "Fixtures",
               item: hasFinalScore
-                ? `${Astro.url.origin}/matches/results/`
+                ? `${Astro.url.origin}/matches/`
                 : `${Astro.url.origin}/upcoming-fixtures/`,
             },
             { "@type": "ListItem", position: 3, name: `${team1Name} vs ${team2Name}` },
@@ -294,7 +294,7 @@ const eventStatusUrl = "https://schema.org/EventScheduled";
                       View All Fixtures
                     </a>
                     <a
-                      href="/matches/results"
+                      href="/matches/"
                       class="match-action-btn match-action-btn--ghost"
                       data-astro-prefetch
                     >

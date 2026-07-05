@@ -5,7 +5,7 @@ import { usePublicV2 } from "@/lib/ui-version";
 
 // `id` is the route param name; the value is either the public slug or the cuid.
 const { id: slugOrId } = Astro.params;
-if (!slugOrId) return Astro.redirect("/matches");
+if (!slugOrId) return Astro.rewrite("/404");
 
 // v2-only route (imports only the v2 tree). Rewrite to the legacy page when the
 // flag is off — URL stays /matches/<slug|id>.
@@ -16,7 +16,7 @@ import MatchDetailPage from "@/features/matches/presentation/v2/MatchDetailPage.
 import { getMatchView } from "@/features/matches/domain/usecases/get-match-view";
 
 const view = await getMatchView(slugOrId);
-if (!view) return Astro.redirect("/matches");
+if (!view) return Astro.rewrite("/404");
 
 // Consolidate SEO on the canonical slug URL when reached via the legacy cuid.
 if (view.slug && slugOrId !== view.slug) return Astro.redirect(`/matches/${view.slug}/`, 301);

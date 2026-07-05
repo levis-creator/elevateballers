@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getNewsArticles, getTeams, getPlayers, getMatches, getPublicStaff } from '../features/cms/lib/queries';
+import { prisma } from '../lib/prisma';
 
 export const prerender = false;
 
@@ -26,7 +27,7 @@ export const GET: APIRoute = async ({ site }) => {
             { path: '/news',             priority: '0.9', freq: 'daily'   },
             { path: '/standings',        priority: '0.8', freq: 'daily'   },
             { path: '/upcoming-fixtures',priority: '0.8', freq: 'daily'   },
-            { path: '/matches/results',  priority: '0.8', freq: 'weekly'  },
+            { path: '/matches',          priority: '0.8', freq: 'weekly'  },
             { path: '/players',          priority: '0.7', freq: 'weekly'  },
             { path: '/teams',            priority: '0.7', freq: 'weekly'  },
             { path: '/stats/leaders',    priority: '0.7', freq: 'weekly'  },
@@ -44,6 +45,25 @@ export const GET: APIRoute = async ({ site }) => {
         // 3. It automatically includes new slugs/IDs without a rebuild
         // 4. It provides accurate <lastmod> dates based on database records
 
+        const matchesFolder = await prisma.folder.findUnique({
+            where: { name: 'matches' },
+            select: { id: true },
+        });
+        const imageRows = matchesFolder
+            ? await prisma.media.findMany({
+                where: { folderId: matchesFolder.id, type: 'IMAGE' },
+                select: { tags: true },
+            })
+            : [];
+        const matchesWithImages = new Set<string>();
+        for (const image of imageRows) {
+            if (!Array.isArray(image.tags)) continue;
+            for (const tag of image.tags) {
+                if (typeof tag === 'string' && tag.startsWith('match:')) {
+                    matchesWithImages.add(tag.slice('match:'.length));
+                }
+            }
+        }
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -103,21 +123,25 @@ export const GET: APIRoute = async ({ site }) => {
                 )
                 .join('')}
   ${matches
-                .map(
-                    (match: any) => `
+                .map((match: any) => {
+                    const matchPath = match.slug || match.id;
+                    const imagesUrl = matchesWithImages.has(match.id)
+                        ? `
   <url>
-    <loc>${baseUrl}/matches/${match.slug || match.id}/</loc>
-    <lastmod>${new Date(match.updatedAt || match.date).toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/matches/${match.slug || match.id}/images/</loc>
+    <loc>${baseUrl}/matches/${matchPath}/images/</loc>
     <lastmod>${new Date(match.updatedAt || match.date).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>`
-                )
+                        : '';
+                    return `
+  <url>
+    <loc>${baseUrl}/matches/${matchPath}/</loc>
+    <lastmod>${new Date(match.updatedAt || match.date).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>${imagesUrl}`;
+                })
                 .join('')}
 </urlset>`;
 
