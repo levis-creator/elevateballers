@@ -49,6 +49,8 @@ export interface ArticleView {
 	excerpt: string;
 	author: { name: string; initials: string };
 	dateText: string;
+	publishedTime: string;
+	modifiedTime: string;
 	readTime: string;
 	heroImage: string | null;
 	/** Sanitized Quill HTML for `.article-body`. */

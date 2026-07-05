@@ -7,6 +7,7 @@ import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import CommentsSectionV2 from "./CommentsSectionV2.tsx";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { socialIcon } from "@/features/layout/lib/social-icons";
 import type { ArticleView } from "@/features/news/domain/entities/article-v2";
 
 interface Props {
@@ -53,9 +54,18 @@ const shares = [
 				</div>
 				<div class="flex items-center gap-2">
 					<span class="mr-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">Share</span>
-					{shares.map((s) => (
-						<a href={s.href} target="_blank" rel="noopener" aria-label={`Share on ${s.label}`} class="flex h-9 w-9 items-center justify-center rounded-lg border border-black/12 font-mono text-[11px] text-muted no-underline hover:border-brand hover:text-brand">{s.label}</a>
-					))}
+					{shares.map((s) => {
+						const icon = socialIcon(s.label);
+						return (
+							<a href={s.href} target="_blank" rel="noopener" aria-label={`Share on ${icon?.name ?? s.label}`} class="flex h-9 w-9 items-center justify-center rounded-lg border border-black/12 font-mono text-[11px] text-muted no-underline hover:border-brand hover:text-brand">
+								{icon ? (
+									<svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path d={icon.path} /></svg>
+								) : (
+									s.label
+								)}
+							</a>
+						);
+					})}
 				</div>
 			</div>
 		</div>
@@ -82,9 +92,18 @@ const shares = [
 					))}
 				</div>
 				<div class="flex items-center gap-2">
-					{shares.map((s) => (
-						<a href={s.href} target="_blank" rel="noopener" aria-label={`Share on ${s.label}`} class="flex h-9 w-9 items-center justify-center rounded-lg border border-black/12 font-mono text-[11px] text-muted no-underline hover:border-brand hover:text-brand">{s.label}</a>
-					))}
+					{shares.map((s) => {
+						const icon = socialIcon(s.label);
+						return (
+							<a href={s.href} target="_blank" rel="noopener" aria-label={`Share on ${icon?.name ?? s.label}`} class="flex h-9 w-9 items-center justify-center rounded-lg border border-black/12 font-mono text-[11px] text-muted no-underline hover:border-brand hover:text-brand">
+								{icon ? (
+									<svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4" aria-hidden="true"><path d={icon.path} /></svg>
+								) : (
+									s.label
+								)}
+							</a>
+						);
+					})}
 				</div>
 			</div>
 		</article>

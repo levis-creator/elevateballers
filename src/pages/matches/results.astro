@@ -12,6 +12,8 @@ import PageLoader from "../../components/PageLoader";
 import ContentLoader from "../../components/ContentLoader";
 import { getDisplayImageUrl } from "../../lib/asset-url";
 
+Astro.response.headers.set("X-Robots-Tag", "noindex, follow");
+
 // Fetch match center data from database
 let fixtures: any[] = [];
 let results: any[] = [];
@@ -64,10 +66,11 @@ try {
   hasError = true;
 }
 
+const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
 const pageTitle = "Match Results - Elevate Ballers";
 const pageDescription =
   "View the latest completed match results from the Elevate Ballers league.";
-const pageUrl = `${Astro.url.origin}/matches/results/`;
+const pageUrl = `${siteBase}/matches/`;
 ---
 
 <Layout
@@ -75,6 +78,7 @@ const pageUrl = `${Astro.url.origin}/matches/results/`;
   description={pageDescription}
   canonicalURL={pageUrl}
   type="website"
+  robots="noindex, follow"
 >
   <script
     type="application/ld+json"
@@ -87,7 +91,7 @@ const pageUrl = `${Astro.url.origin}/matches/results/`;
           "@id": pageUrl,
           url: pageUrl,
           name: pageTitle,
-          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          isPartOf: { "@id": `${siteBase}/#website` },
           description: pageDescription,
           breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
           inLanguage: "en-US",
@@ -100,7 +104,7 @@ const pageUrl = `${Astro.url.origin}/matches/results/`;
               "@type": "ListItem",
               position: 1,
               name: "Home",
-              item: `${Astro.url.origin}/`,
+              item: `${siteBase}/`,
             },
             { "@type": "ListItem", position: 2, name: "Match Results" },
           ],
@@ -111,7 +115,7 @@ const pageUrl = `${Astro.url.origin}/matches/results/`;
   <PageLoader client:load />
   <div id="wrapper" class="match-center-page-shell">
     <TopBar />
-    <Header client:load currentPath={Astro.url.pathname} />
+    <Header client:load currentPath="/matches/" />
     <div id="main">
       <div
         class="stm-title-box-unit transparent-header_on title_box-357"

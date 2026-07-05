@@ -8,6 +8,7 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import ContactFormV2 from "./ContactFormV2.tsx";
 import { getContactData } from "@/features/contact/domain/usecases/get-contact-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { socialIcon } from "@/features/layout/lib/social-icons";
 
 const [data, footer] = await Promise.all([getContactData(), getFooterData()]);
 
@@ -85,11 +86,18 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 				<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
 					<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Follow the League</div>
 					<div class="flex gap-2.5">
-						{data.socials.map((s) => (
-							<a href={s.url} target="_blank" rel="noopener" class="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-white/[0.14] font-mono text-[12px] text-[#c9c1b8] no-underline hover:border-brand hover:text-brand">
-								{s.label}
-							</a>
-						))}
+						{data.socials.map((s) => {
+							const icon = socialIcon(s.label);
+							return (
+								<a href={s.url} target="_blank" rel="noopener" aria-label={icon?.name ?? s.label} class="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-white/[0.14] font-mono text-[12px] text-[#c9c1b8] no-underline hover:border-brand hover:text-brand">
+									{icon ? (
+										<svg viewBox="0 0 24 24" fill="currentColor" class="h-[18px] w-[18px]" aria-hidden="true"><path d={icon.path} /></svg>
+									) : (
+										s.label
+									)}
+								</a>
+							);
+						})}
 					</div>
 				</div>
 			)}

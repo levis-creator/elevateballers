@@ -18,7 +18,7 @@ export interface Props {
 }
 
 const siteName = "Elevate Ballers";
-const siteUrl = Astro.site ? Astro.site.toString() : Astro.url.origin;
+const siteUrl = (Astro.site ? Astro.site.toString() : Astro.url.origin).replace(/\/$/, "");
 
 const {
 	title = "Elevate - Premier Basketball League",
@@ -27,7 +27,7 @@ const {
 	imageWidth,
 	imageHeight,
 	imageType,
-	canonicalURL = Astro.props.canonicalURL || new URL(Astro.url.pathname, siteUrl).toString(),
+	canonicalURL: canonicalInput = Astro.props.canonicalURL || Astro.url.pathname,
 	type = "website",
 	robots = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
 	keywords,
@@ -37,10 +37,21 @@ const {
 	nextURL,
 } = Astro.props;
 
+function normalizeCanonicalUrl(input: string): string {
+	try {
+		const url = new URL(input, `${siteUrl}/`);
+		return new URL(`${url.pathname}${url.search}`, `${siteUrl}/`).toString();
+	} catch {
+		return new URL(Astro.url.pathname, `${siteUrl}/`).toString();
+	}
+}
+
+const canonicalURL = normalizeCanonicalUrl(canonicalInput);
+
 // Use the icon as the default OG image if not specified
 const ogImage = image.startsWith("http")
 	? image
-	: new URL(image, siteUrl).toString();
+	: new URL(image, `${siteUrl}/`).toString();
 ---
 
 <!-- Standard Meta Tags -->
@@ -92,8 +103,8 @@ const ogImage = image.startsWith("http")
 		"@graph": [
 			{
 				"@type": "WebSite",
-				"@id": `${siteUrl}#website`,
-				"url": siteUrl,
+				"@id": `${siteUrl}/#website`,
+				"url": `${siteUrl}/`,
 				"name": siteName,
 				"description": description,
 				"inLanguage": "en-US",

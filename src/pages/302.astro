@@ -1,0 +1,519 @@
+---
+export const prerender = false;
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+
+const requestedDestination = Astro.url.searchParams.get("to") || "/";
+
+function getSafeDestination(value: string): string {
+	try {
+		if (value.startsWith("/") && !value.startsWith("//")) return value;
+
+		const url = new URL(value);
+		if (url.origin === Astro.url.origin) {
+			return `${url.pathname}${url.search}${url.hash}`;
+		}
+	} catch {
+		// Fall through to the home page for malformed values.
+	}
+
+	return "/";
+}
+
+const destinationHref = getSafeDestination(requestedDestination);
+const destinationLabel =
+	destinationHref === "/"
+		? "elevateballers.com"
+		: `elevateballers.com${destinationHref}`;
+
+const quickLinks = [
+	{ href: "/", label: "Home" },
+	{ href: "/teams/", label: "Teams" },
+	{ href: "/standings/", label: "Standings" },
+	{ href: "/upcoming-fixtures/", label: "Fixtures" },
+	{ href: "/news/", label: "News" },
+];
+---
+
+<LayoutV2
+	title="Redirecting - Elevate Ballers"
+	description="This Elevate Ballers page has moved. Continue to the new destination."
+	robots="noindex, follow"
+>
+	<main class="redirect-page" data-destination={destinationHref}>
+		<div class="redirect-glow" aria-hidden="true"></div>
+		<div class="redirect-orbit redirect-orbit-lg" aria-hidden="true"></div>
+		<div class="redirect-orbit redirect-orbit-sm" aria-hidden="true"></div>
+
+		<header class="redirect-header">
+			<a href="/" class="redirect-brand" aria-label="Elevate Ballers home">
+				<span class="brand-ball" aria-hidden="true">
+					<span></span>
+				</span>
+				<span class="brand-wordmark">
+					Elevate<br />
+					<strong>Ballers</strong>
+				</span>
+			</a>
+			<span class="redirect-status">HTTP 302 - Found</span>
+		</header>
+
+		<section class="redirect-content" aria-labelledby="redirect-title">
+			<div class="redirect-loader" aria-hidden="true">
+				<svg viewBox="0 0 120 120" class="redirect-ring">
+					<circle cx="60" cy="60" r="52" class="redirect-ring-track"></circle>
+					<circle cx="60" cy="60" r="52" class="redirect-ring-progress"></circle>
+				</svg>
+				<div class="redirect-ball">
+					<span></span>
+				</div>
+			</div>
+
+			<p class="redirect-kicker">
+				<span></span>
+				Page moved
+				<span></span>
+			</p>
+			<h1 id="redirect-title">Redirecting</h1>
+			<p class="redirect-copy">
+				This page has a new home. We're taking you there now. You'll arrive in
+				<strong id="redirect-countdown">5 seconds</strong>.
+			</p>
+
+			<div class="redirect-destination">
+				<span>Destination</span>
+				<a href={destinationHref}>{destinationLabel}</a>
+			</div>
+
+			<div class="redirect-actions">
+				<a href={destinationHref} class="redirect-button redirect-button-primary">
+					Go There Now ->
+				</a>
+				<a href="/" class="redirect-button redirect-button-secondary">
+					Back to Home
+				</a>
+			</div>
+
+			<p class="redirect-note">Not redirected automatically? Use the button above.</p>
+		</section>
+
+		<nav class="redirect-links" aria-label="Quick links">
+			<div>
+				{quickLinks.map((link) => <a href={link.href}>{link.label}</a>)}
+			</div>
+		</nav>
+	</main>
+
+	<script is:inline>
+		(function () {
+			var page = document.querySelector(".redirect-page");
+			var countdown = document.getElementById("redirect-countdown");
+			if (!page || !countdown) return;
+
+			var destination = page.getAttribute("data-destination") || "/";
+			var remaining = 5;
+			var timer = window.setInterval(function () {
+				remaining -= 1;
+				countdown.textContent = remaining === 1 ? "1 second" : remaining + " seconds";
+
+				if (remaining <= 0) {
+					window.clearInterval(timer);
+					countdown.textContent = "a moment";
+					window.location.replace(destination);
+				}
+			}, 1000);
+		})();
+	</script>
+</LayoutV2>
+
+<style>
+	:global(html),
+	:global(body) {
+		background: #0c0b0a;
+	}
+
+	.redirect-page {
+		position: relative;
+		display: flex;
+		min-height: 100vh;
+		overflow: hidden;
+		flex-direction: column;
+		background: #0c0b0a;
+		color: #f3efe9;
+		font-family: Archivo, system-ui, sans-serif;
+	}
+
+	.redirect-glow {
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(90% 70% at 50% 0%, rgba(228, 0, 43, 0.18), transparent 60%);
+		pointer-events: none;
+	}
+
+	.redirect-orbit {
+		position: absolute;
+		left: 50%;
+		border: 1px solid rgba(228, 0, 43, 0.2);
+		border-radius: 999px;
+		pointer-events: none;
+		transform: translateX(-50%);
+	}
+
+	.redirect-orbit-lg {
+		top: -160px;
+		width: 420px;
+		height: 420px;
+	}
+
+	.redirect-orbit-sm {
+		top: -90px;
+		width: 280px;
+		height: 280px;
+		border-color: rgba(228, 0, 43, 0.15);
+	}
+
+	.redirect-header {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		width: 100%;
+		max-width: 1280px;
+		align-items: center;
+		justify-content: space-between;
+		margin: 0 auto;
+		padding: 24px 32px;
+		gap: 24px;
+	}
+
+	.redirect-brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.brand-wordmark {
+		font-family: Anton, Impact, sans-serif;
+		font-size: 22px;
+		line-height: 0.9;
+		text-transform: uppercase;
+	}
+
+	.brand-wordmark strong {
+		color: #e4002b;
+		font-weight: inherit;
+	}
+
+	.brand-ball,
+	.redirect-ball {
+		position: relative;
+		display: block;
+		border-radius: 999px;
+		background: #e4002b;
+		overflow: hidden;
+	}
+
+	.brand-ball {
+		width: 38px;
+		height: 38px;
+	}
+
+	.brand-ball::before,
+	.brand-ball::after,
+	.brand-ball span,
+	.redirect-ball::before,
+	.redirect-ball::after,
+	.redirect-ball span {
+		position: absolute;
+		content: "";
+		background: rgba(0, 0, 0, 0.45);
+	}
+
+	.brand-ball::before,
+	.redirect-ball::before {
+		inset: 0;
+		border: 2px solid rgba(0, 0, 0, 0.45);
+		border-radius: inherit;
+		background: transparent;
+	}
+
+	.brand-ball::after,
+	.redirect-ball::after {
+		top: 0;
+		bottom: 0;
+		left: 50%;
+		width: 2px;
+		transform: translateX(-50%);
+	}
+
+	.brand-ball span,
+	.redirect-ball span {
+		top: 50%;
+		left: 0;
+		right: 0;
+		height: 2px;
+		transform: translateY(-50%);
+	}
+
+	.redirect-status {
+		font-family: "Space Mono", monospace;
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: #8a817a;
+		white-space: nowrap;
+	}
+
+	.redirect-content {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		width: 100%;
+		max-width: 720px;
+		flex: 1;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		margin: 0 auto;
+		padding: 16px 32px 64px;
+		text-align: center;
+	}
+
+	.redirect-loader {
+		position: relative;
+		width: 120px;
+		height: 120px;
+		margin-bottom: 36px;
+	}
+
+	.redirect-ring {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		transform: rotate(-90deg);
+	}
+
+	.redirect-ring-track,
+	.redirect-ring-progress {
+		fill: none;
+		stroke-width: 4;
+	}
+
+	.redirect-ring-track {
+		stroke: rgba(255, 255, 255, 0.1);
+	}
+
+	.redirect-ring-progress {
+		stroke: #e4002b;
+		stroke-linecap: round;
+		stroke-dasharray: 326.7;
+		stroke-dashoffset: 326.7;
+		animation: redirect-dash 5s linear forwards;
+	}
+
+	.redirect-ball {
+		position: absolute;
+		inset: 18px;
+		animation: redirect-spin 1.4s linear infinite;
+	}
+
+	.redirect-kicker {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 16px;
+		font-family: "Space Mono", monospace;
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: #ff5a72;
+	}
+
+	.redirect-kicker span {
+		width: 24px;
+		height: 1px;
+		background: #e4002b;
+	}
+
+	.redirect-content h1 {
+		margin: 0;
+		font-family: Anton, Impact, sans-serif;
+		font-size: clamp(48px, 9vw, 110px);
+		font-weight: 400;
+		line-height: 0.85;
+		text-transform: uppercase;
+		color: #f3efe9;
+	}
+
+	.redirect-copy {
+		max-width: 460px;
+		margin: 20px 0 0;
+		color: #b8afa6;
+		font-size: 16px;
+		line-height: 1.65;
+	}
+
+	.redirect-copy strong {
+		color: #f3efe9;
+		font-weight: 800;
+	}
+
+	.redirect-destination {
+		display: flex;
+		width: 100%;
+		max-width: 420px;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 24px;
+		padding: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 12px;
+		background: #111010;
+	}
+
+	.redirect-destination span,
+	.redirect-note {
+		font-family: "Space Mono", monospace;
+		font-size: 11px;
+		color: #8a817a;
+	}
+
+	.redirect-destination span {
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	.redirect-destination a {
+		min-width: 0;
+		overflow: hidden;
+		color: #ff5a72;
+		font-family: "Space Mono", monospace;
+		font-size: 12px;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-decoration: none;
+	}
+
+	.redirect-destination a:hover,
+	.redirect-links a:hover {
+		color: #e4002b;
+	}
+
+	.redirect-actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 12px;
+		margin-top: 32px;
+	}
+
+	.redirect-button {
+		display: inline-flex;
+		min-height: 48px;
+		align-items: center;
+		justify-content: center;
+		padding: 14px 28px;
+		border-radius: 6px;
+		font-size: 13px;
+		font-weight: 800;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		text-decoration: none;
+		transition:
+			background-color 160ms ease,
+			border-color 160ms ease,
+			color 160ms ease;
+	}
+
+	.redirect-button-primary {
+		background: #e4002b;
+		color: #fff;
+	}
+
+	.redirect-button-primary:hover {
+		background: #ff2d43;
+	}
+
+	.redirect-button-secondary {
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		color: #f3efe9;
+	}
+
+	.redirect-button-secondary:hover {
+		border-color: #e4002b;
+		color: #e4002b;
+	}
+
+	.redirect-note {
+		margin-top: 28px;
+	}
+
+	.redirect-links {
+		position: relative;
+		z-index: 1;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.redirect-links div {
+		display: flex;
+		max-width: 1280px;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 8px 28px;
+		margin: 0 auto;
+		padding: 24px 32px;
+		font-family: "Space Mono", monospace;
+		font-size: 12px;
+	}
+
+	.redirect-links a {
+		color: #c9c1b8;
+		text-decoration: none;
+	}
+
+	@keyframes redirect-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@keyframes redirect-dash {
+		to {
+			stroke-dashoffset: 0;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.redirect-header {
+			padding: 24px;
+		}
+
+		.redirect-status {
+			font-size: 10px;
+		}
+
+		.redirect-content {
+			padding-right: 24px;
+			padding-left: 24px;
+		}
+
+		.redirect-destination {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.redirect-button {
+			width: 100%;
+		}
+
+		.redirect-links div {
+			padding-right: 24px;
+			padding-left: 24px;
+		}
+	}
+</style>
