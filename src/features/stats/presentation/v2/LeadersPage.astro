@@ -1,0 +1,18 @@
+---
+// v2 Stat-Leaders page. Reuses the shared Header/Footer; the season/league
+// controls, category tabs, podium and leaderboard are a React+Zustand island
+// (SSR'd by Astro, then hydrated).
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import LeadersBoard from "./sections/LeadersBoard.tsx";
+import { getLeadersData } from "@/features/stats/domain/usecases/get-leaders-data";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const [data, footer] = await Promise.all([getLeadersData(), getFooterData()]);
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="stats" />
+	<LeadersBoard data={data} client:load />
+	<Footer footer={footer} />
+</div>
