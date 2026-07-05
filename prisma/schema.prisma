@@ -238,6 +238,7 @@ model Season {
   matches       Match[]
   leagueSeasons LeagueSeason[]
   seasonTeams   SeasonTeam[]
+  teamStaffMembers TeamStaffMember[]
 
   @@unique([slug])
   @@index([name])
@@ -358,6 +359,7 @@ model Team {
   notifications      RegistrationNotification[]
   substitutions      Substitution[]
   staff              TeamStaff[]
+  coachingStaff      TeamStaffMember[]
   timeouts           Timeout[]
   teamHistory        PlayerTeamHistory[]
   seasonTeams        SeasonTeam[]
@@ -383,6 +385,50 @@ model SeasonTeam {
   @@index([leagueId])
   @@index([teamId])
   @@map("season_teams")
+}
+
+model LeagueStaff {
+  id         String   @id @default(cuid())
+  name       String
+  role       String
+  department String
+  email      String?
+  photo      String?
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([department])
+  @@index([active])
+  @@index([sortOrder])
+  @@map("league_staff")
+}
+
+model TeamStaffMember {
+  id                String   @id @default(cuid())
+  teamId            String   @map("team_id")
+  seasonId          String?  @map("season_id")
+  name              String
+  role              String
+  type              String
+  email             String?
+  photo             String?
+  legacyStaffId     String?  @map("legacy_staff_id")
+  legacyTeamStaffId String?  @unique @map("legacy_team_staff_id")
+  active            Boolean  @default(true)
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  season            Season?  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([seasonId])
+  @@index([legacyStaffId])
+  @@index([type])
+  @@index([active])
+  @@map("team_staff_members")
 }
 
 model Player {
