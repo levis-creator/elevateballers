@@ -3,6 +3,7 @@ import "../styles/admin.css"; // Import Tailwind CSS
 import "../styles/design-system.css";
 import "../styles/landing-enhancements.css";
 import SEO from "../components/SEO.astro";
+import CookieConsent from "../components/CookieConsent.astro";
 
 interface Props {
 	title?: string;
@@ -101,15 +102,6 @@ const googleFonts = [
 		{preloadImage && (
 			<link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
 		)}
-
-		<!-- Google Analytics -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=G-VVZ9P3XBLP"></script>
-		<script is:inline>
-			window.dataLayer = window.dataLayer || [];
-			function gtag(){dataLayer.push(arguments);}
-			gtag('js', new Date());
-			gtag('config', 'G-VVZ9P3XBLP');
-		</script>
 
 		<!-- Preconnect (DNS + TLS + TCP handshake early) for critical-path
 		     origins: Google Fonts CSS + woff2 files, plus Supabase Storage
@@ -873,6 +865,7 @@ const googleFonts = [
 		class="home wp-singular page-template-default page page-id-84 wp-theme-elevate basketball_two header_1 theme-elevate woocommerce-js stm-shop-sidebar wpb-js-composer js-comp-ver-6.13.0 vc_responsive elementor-default elementor-kit-4719 elementor-page elementor-page-84"
 	>
 		<slot />
+		<CookieConsent />
 
 		<script is:inline>
 			(function () {

@@ -1,0 +1,76 @@
+---
+export const prerender = false;
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const footer = await getFooterData();
+---
+
+<LayoutV2
+	title="Cookie Policy - Elevate Ballers"
+	description="How Elevate Ballers uses essential and analytics cookies."
+	canonicalURL={`${Astro.url.origin}/cookies/`}
+	type="website"
+>
+	<div class="min-h-screen bg-paper font-body text-ink2">
+		<Header />
+		<main class="mx-auto max-w-[880px] px-8 py-16 max-[720px]:px-6">
+			<p class="font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Privacy</p>
+			<h1 class="mt-3 font-display text-[56px] uppercase leading-[0.9] text-ink max-[640px]:text-[42px]">
+				Cookie Policy
+			</h1>
+			<p class="mt-5 max-w-[680px] text-[17px] leading-[1.7] text-muted">
+				We keep cookies limited. Essential cookies support security, admin sessions, and requested site functions. Analytics cookies are optional and only load after consent.
+			</p>
+
+			<section class="cookie-policy-section">
+				<h2>Essential Cookies</h2>
+				<p>
+					These are required for requested services such as signing into the admin area, keeping sessions secure, submitting protected forms, and remembering your cookie choice. They are not used for advertising.
+				</p>
+			</section>
+
+			<section class="cookie-policy-section">
+				<h2>Analytics Cookies</h2>
+				<p>
+					If accepted, Google Analytics helps us understand aggregate traffic, popular pages, and site performance. Analytics does not load until you choose “Accept analytics” in the cookie banner.
+				</p>
+			</section>
+
+			<section class="cookie-policy-section">
+				<h2>Your Choice</h2>
+				<p>
+					You can reject analytics and continue using the site. Use the “Cookie settings” button shown after you make a choice to change your preference.
+				</p>
+			</section>
+		</main>
+		<Footer footer={footer} />
+	</div>
+</LayoutV2>
+
+<style>
+	.cookie-policy-section {
+		margin-top: 34px;
+		padding-top: 26px;
+		border-top: 1px solid rgba(20, 16, 9, 0.12);
+	}
+
+	.cookie-policy-section h2 {
+		margin: 0 0 10px;
+		font-family: Anton, Impact, sans-serif;
+		font-size: 28px;
+		font-weight: 400;
+		text-transform: uppercase;
+		color: #141009;
+	}
+
+	.cookie-policy-section p {
+		margin: 0;
+		color: #6f665c;
+		font-size: 16px;
+		line-height: 1.7;
+	}
+</style>

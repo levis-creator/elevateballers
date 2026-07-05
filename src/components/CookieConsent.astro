@@ -1,0 +1,245 @@
+---
+const measurementId = "G-VVZ9P3XBLP";
+---
+
+<div class="cookie-consent" data-cookie-consent hidden>
+	<div class="cookie-consent__copy">
+		<strong>Cookies on Elevate Ballers</strong>
+		<span>
+			We use essential cookies for site security and admin sessions. Analytics cookies help us understand traffic and only load if you accept.
+		</span>
+		<a href="/cookies/">Cookie policy</a>
+	</div>
+	<div class="cookie-consent__actions">
+		<button type="button" data-cookie-reject>Reject analytics</button>
+		<button type="button" data-cookie-accept>Accept analytics</button>
+	</div>
+</div>
+
+<button type="button" class="cookie-consent-manage" data-cookie-manage hidden>
+	Cookie settings
+</button>
+
+<script is:inline define:vars={{ measurementId }}>
+	(function () {
+		var STORAGE_KEY = "eb_cookie_consent";
+		var banner = document.querySelector("[data-cookie-consent]");
+		var manage = document.querySelector("[data-cookie-manage]");
+		var accept = document.querySelector("[data-cookie-accept]");
+		var reject = document.querySelector("[data-cookie-reject]");
+
+		function getConsent() {
+			try {
+				return localStorage.getItem(STORAGE_KEY);
+			} catch (error) {
+				return null;
+			}
+		}
+
+		function setConsent(value) {
+			try {
+				localStorage.setItem(STORAGE_KEY, value);
+			} catch (error) {
+				// If storage is unavailable, keep the choice for this page only.
+				window.__ebCookieConsent = value;
+			}
+		}
+
+		function eraseCookie(name) {
+			var domains = [location.hostname, "." + location.hostname];
+			for (var i = 0; i < domains.length; i++) {
+				document.cookie = name + "=; Path=/; Domain=" + domains[i] + "; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+			}
+			document.cookie = name + "=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+		}
+
+		function clearAnalyticsCookies() {
+			eraseCookie("_ga");
+			eraseCookie("_gid");
+			eraseCookie("_gat");
+			eraseCookie("_ga_" + measurementId.replace("G-", ""));
+		}
+
+		function loadAnalytics() {
+			if (window.__ebAnalyticsLoaded) return;
+			window.__ebAnalyticsLoaded = true;
+			window.dataLayer = window.dataLayer || [];
+			window.gtag = function () {
+				window.dataLayer.push(arguments);
+			};
+			window.gtag("js", new Date());
+			window.gtag("config", measurementId);
+
+			var script = document.createElement("script");
+			script.async = true;
+			script.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(measurementId);
+			document.head.appendChild(script);
+		}
+
+		function hideBanner() {
+			if (banner) banner.hidden = true;
+			if (manage) manage.hidden = false;
+		}
+
+		function showBanner() {
+			if (banner) banner.hidden = false;
+			if (manage) manage.hidden = true;
+		}
+
+		function applyChoice(value) {
+			if (value === "accepted") {
+				hideBanner();
+				loadAnalytics();
+				return;
+			}
+
+			if (value === "rejected") {
+				hideBanner();
+				clearAnalyticsCookies();
+				return;
+			}
+
+			showBanner();
+		}
+
+		if (accept) {
+			accept.addEventListener("click", function () {
+				setConsent("accepted");
+				applyChoice("accepted");
+			});
+		}
+
+		if (reject) {
+			reject.addEventListener("click", function () {
+				setConsent("rejected");
+				applyChoice("rejected");
+			});
+		}
+
+		if (manage) {
+			manage.addEventListener("click", function () {
+				showBanner();
+			});
+		}
+
+		applyChoice(getConsent() || window.__ebCookieConsent);
+	})();
+</script>
+
+<style>
+	.cookie-consent {
+		position: fixed;
+		z-index: 9999;
+		right: 18px;
+		bottom: 18px;
+		display: grid;
+		width: min(560px, calc(100vw - 36px));
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 18px;
+		align-items: center;
+		padding: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 8px;
+		background: #111010;
+		box-shadow: 0 18px 60px rgba(0, 0, 0, 0.32);
+		color: #f3efe9;
+		font-family: Archivo, Rubik, system-ui, sans-serif;
+	}
+
+	.cookie-consent[hidden],
+	.cookie-consent-manage[hidden] {
+		display: none;
+	}
+
+	.cookie-consent__copy {
+		display: grid;
+		gap: 5px;
+		min-width: 0;
+		font-size: 13px;
+		line-height: 1.45;
+	}
+
+	.cookie-consent__copy strong {
+		color: #fff;
+		font-size: 14px;
+	}
+
+	.cookie-consent__copy span {
+		color: #c9c1b8;
+	}
+
+	.cookie-consent__copy a {
+		width: fit-content;
+		color: #ff5a72;
+		text-decoration: none;
+	}
+
+	.cookie-consent__copy a:hover {
+		text-decoration: underline;
+	}
+
+	.cookie-consent__actions {
+		display: flex;
+		gap: 8px;
+	}
+
+	.cookie-consent button,
+	.cookie-consent-manage {
+		min-height: 38px;
+		border-radius: 6px;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+
+	.cookie-consent button {
+		padding: 0 13px;
+	}
+
+	.cookie-consent button[data-cookie-reject] {
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		background: transparent;
+		color: #f3efe9;
+	}
+
+	.cookie-consent button[data-cookie-accept] {
+		border: 1px solid #e4002b;
+		background: #e4002b;
+		color: #fff;
+	}
+
+	.cookie-consent-manage {
+		position: fixed;
+		z-index: 9998;
+		right: 18px;
+		bottom: 18px;
+		padding: 0 12px;
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		background: #111010;
+		color: #c9c1b8;
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+	}
+
+	@media (max-width: 680px) {
+		.cookie-consent {
+			left: 12px;
+			right: 12px;
+			bottom: 12px;
+			width: auto;
+			grid-template-columns: 1fr;
+		}
+
+		.cookie-consent__actions {
+			display: grid;
+			grid-template-columns: 1fr;
+		}
+
+		.cookie-consent-manage {
+			right: 12px;
+			bottom: 12px;
+		}
+	}
+</style>

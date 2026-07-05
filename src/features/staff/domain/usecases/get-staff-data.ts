@@ -1,11 +1,15 @@
 /**
- * Use-case for the v2 Staff page. Returns static content for now; when the staff
- * directory is wired to the CMS/DB, replace the body with a fetch (falling back
- * to STAFF_PAGE_DATA) — the return type stays the same so the page won't change.
+ * Use-case for the v2 /staff ("League Staff") page. Prefers live org-wide staff
+ * from the `league_staff` table (grouped by department); falls back to the static
+ * content when the table is empty or unavailable (e.g. before the split
+ * migration + seed have run). No team coaches here — those live on team pages.
  */
-import { STAFF_PAGE_DATA } from "@/features/staff/data/datasources/staff-v2.static";
+import { getLeagueStaffGrouped } from "@/features/staff/data/datasources/league-staff-v2";
+import { STAFF_PAGE_DATA, STAFF_INTRO } from "@/features/staff/data/datasources/staff-v2.static";
 import type { StaffPageData } from "@/features/staff/domain/entities/staff-v2";
 
 export async function getStaffData(): Promise<StaffPageData> {
-	return STAFF_PAGE_DATA;
+	const departments = await getLeagueStaffGrouped();
+	if (!departments || departments.length === 0) return STAFF_PAGE_DATA;
+	return { intro: STAFF_INTRO, departments };
 }

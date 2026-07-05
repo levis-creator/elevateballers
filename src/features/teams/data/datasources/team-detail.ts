@@ -9,6 +9,7 @@ import { getTeamBySlug, getStaffByTeam } from "@/features/cms/lib/queries";
 import { getTeamPlayerStats } from "@/features/player/lib/queries";
 import { getFilteredMatches } from "@/features/matches/lib/queries";
 import { calculateTeamStatistics } from "@/features/team/lib/teamStats";
+import { getTeamCoachingStaff } from "@/features/staff/data/datasources/team-coaching-staff-v2";
 import { getDisplayImageUrl } from "@/lib/asset-url";
 import type {
 	TeamDetail,
@@ -53,8 +54,11 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 	const team = await getTeamBySlug(slug);
 	if (!team) return null;
 
-	const [statsMap, staffRows, completed, upcomingMs, leagueRow] = await Promise.all([
+	const [statsMap, coachingRows, staffRows, completed, upcomingMs, leagueRow] = await Promise.all([
 		getTeamPlayerStats(team.id).catch(() => ({} as Record<string, Record<string, number>>)),
+		// New split-out coaching staff (empty until the migration copies coaches).
+		getTeamCoachingStaff(team.id).catch(() => []),
+		// Legacy team_staff — used as a fallback so coaches keep rendering pre-migration.
 		getStaffByTeam(team.id, true).catch(() => [] as any[]),
 		getFilteredMatches({ teamId: team.id, status: "COMPLETED" }, "date-desc").catch(() => [] as any[]),
 		getFilteredMatches({ teamId: team.id, status: "UPCOMING" }, "date-asc", 5).catch(() => [] as any[]),
@@ -174,11 +178,24 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 		.sort((a, b) => (parseInt(a.jersey) || 999) - (parseInt(b.jersey) || 999));
 
 	// --- staff ---
-	const staff: StaffMember[] = (staffRows as any[]).map((ts) => {
+	// Prefer the split-out coaching staff (already ordered coach → manager →
+	// support); fall back to the legacy team_staff join until the migration copies
+	// coaches, so existing coaches keep rendering with zero downtime.
+	const legacyStaff: StaffMember[] = (staffRows as any[]).map((ts) => {
 		const name = `${ts.staff?.firstName ?? ""} ${ts.staff?.lastName ?? ""}`.trim() || "Staff";
 		return { initials: initialsOf(name), image: getDisplayImageUrl(ts.staff?.image), name, role: formatRole(ts.role) };
 	});
-	const headCoach = staff.find((s) => s.role.toLowerCase() === "coach")?.name || "—";
+	const newStaff: StaffMember[] = coachingRows.map((c) => ({
+		initials: c.initials,
+		image: c.image ?? null,
+		name: c.name,
+		role: c.role,
+	}));
+	const staff: StaffMember[] = newStaff.length > 0 ? newStaff : legacyStaff;
+	const headCoach =
+		staff.find((s) => /head coach|^coach$/i.test(s.role))?.name ||
+		staff.find((s) => s.role.toLowerCase().includes("coach"))?.name ||
+		"—";
 
 	return {
 		name: team.name,
