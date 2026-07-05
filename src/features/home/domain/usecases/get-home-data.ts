@@ -24,7 +24,6 @@ import {
 	FALLBACK_NEWS_CATEGORIES,
 	FALLBACK_LEADER_DATA,
 	FALLBACK_COUNTS,
-	FALLBACK_MEDIA,
 	FALLBACK_MEDIA_TABS,
 	FALLBACK_POTW,
 } from "@/features/home/data/datasources/home-v2.fallback";
@@ -53,7 +52,9 @@ export async function getHomeData(): Promise<HomeData> {
 		leaderData,
 		leaderTabs: Object.keys(leaderData),
 		counts: stats?.counts ?? FALLBACK_COUNTS,
-		media: media ?? FALLBACK_MEDIA,
+		// Real featured media only — no demo fallback, so the section is hidden
+		// on the page when there's nothing to show.
+		media: media ?? [],
 		mediaTabs: FALLBACK_MEDIA_TABS,
 		potw: potw ?? FALLBACK_POTW,
 		registrationOpen: reg ?? true,
