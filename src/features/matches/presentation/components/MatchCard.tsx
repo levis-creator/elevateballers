@@ -6,7 +6,7 @@
 import type { Match } from '@prisma/client';
 import { formatMatchDate, formatMatchTime, getMatchStatusColor, getMatchStatusLabel } from '../../lib/utils';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id, isWinner } from '../../lib/team-helpers';
-import TeamLogo from './TeamLogo';
+import TeamName from '@/features/teams/presentation/components/TeamName';
 import { getLeagueName } from '../../lib/league-helpers';
 
 interface MatchCardProps {
@@ -31,8 +31,10 @@ export default function MatchCard({
   const hasScore = match.team1Score !== null && match.team2Score !== null;
   const team1Name = getTeam1Name(match);
   const team1Logo = getTeam1Logo(match);
+  const team1Nickname = (match as any).team1?.nickname ?? null;
   const team2Name = getTeam2Name(match);
   const team2Logo = getTeam2Logo(match);
+  const team2Nickname = (match as any).team2?.nickname ?? null;
   const team1Id = getTeam1Id(match);
   const team2Id = getTeam2Id(match);
   const team1IsWinner = isWinner(match, team1Id);
@@ -57,25 +59,25 @@ export default function MatchCard({
         </div>
         <div className="match-teams-compact">
           <div className={`match-team-compact ${team1IsWinner ? 'winner' : ''}`}>
-            <TeamLogo 
-              logo={team1Logo} 
-              name={team1Name} 
-              size="sm" 
-              className="team-logo-compact" 
+            <TeamName
+              team={{ name: team1Name, nickname: team1Nickname, logo: team1Logo }}
+              variant="compact"
+              withCrest
+              className="team-name-compact"
+              crestClassName="team-logo-compact"
             />
-            <span className="team-name-compact">{team1Name}</span>
             {hasScore && <span className="team-score-compact">{match.team1Score}</span>}
             {team1IsWinner && <span className="winner-icon-compact">🏆</span>}
           </div>
           <span className="vs-compact">vs</span>
           <div className={`match-team-compact ${team2IsWinner ? 'winner' : ''}`}>
-            <TeamLogo 
-              logo={team2Logo} 
-              name={team2Name} 
-              size="sm" 
-              className="team-logo-compact" 
+            <TeamName
+              team={{ name: team2Name, nickname: team2Nickname, logo: team2Logo }}
+              variant="compact"
+              withCrest
+              className="team-name-compact"
+              crestClassName="team-logo-compact"
             />
-            <span className="team-name-compact">{team2Name}</span>
             {hasScore && <span className="team-score-compact">{match.team2Score}</span>}
             {team2IsWinner && <span className="winner-icon-compact">🏆</span>}
           </div>
@@ -109,25 +111,25 @@ export default function MatchCard({
       </div>
       <div className="match-card-teams">
         <div className={`match-team ${team1IsWinner ? 'winner' : ''}`}>
-          <TeamLogo 
-            logo={team1Logo} 
-            name={team1Name} 
-            size="md" 
-            className="team-logo" 
+          <TeamName
+            team={{ name: team1Name, nickname: team1Nickname, logo: team1Logo }}
+            variant="compact"
+            withCrest
+            className="team-name"
+            crestClassName="team-logo"
           />
-          <span className="team-name">{team1Name}</span>
           {hasScore && <span className="team-score">{match.team1Score}</span>}
           {team1IsWinner && <span className="winner-icon">🏆</span>}
         </div>
         <span className="vs">vs</span>
         <div className={`match-team ${team2IsWinner ? 'winner' : ''}`}>
-          <TeamLogo 
-            logo={team2Logo} 
-            name={team2Name} 
-            size="md" 
-            className="team-logo" 
+          <TeamName
+            team={{ name: team2Name, nickname: team2Nickname, logo: team2Logo }}
+            variant="compact"
+            withCrest
+            className="team-name"
+            crestClassName="team-logo"
           />
-          <span className="team-name">{team2Name}</span>
           {hasScore && <span className="team-score">{match.team2Score}</span>}
           {team2IsWinner && <span className="winner-icon">🏆</span>}
         </div>
@@ -338,4 +340,3 @@ export default function MatchCard({
     </div>
   );
 }
-

@@ -1,14 +1,12 @@
 ---
 // Dark scoreboard hero for a single team.
 import type { TeamDetail } from "@/features/teams/domain/entities/team-detail";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 interface Props {
 	detail: TeamDetail;
 }
 const { detail } = Astro.props;
 const CREST_BG = "background:repeating-linear-gradient(45deg,#1a1714,#1a1714 10px,#151210 10px,#151210 20px);";
-const words = detail.name.split(" ");
-const lastWord = words.length > 1 ? words.pop() : "";
-const firstWords = words.join(" ");
 const formStyle = (r: string) =>
 	r === "win"
 		? "background:rgba(63,191,111,0.16);color:#3fbf6f;"
@@ -35,7 +33,7 @@ const formStyle = (r: string) =>
 					<span class="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">{detail.league}</span>
 				</div>
 				<h1 class="mb-3 font-display text-[clamp(40px,6vw,80px)] uppercase leading-[0.88] text-[#f6f2ec]">
-					{firstWords}{lastWord ? " " : ""}{lastWord && <span class="text-brand">{lastWord}</span>}
+					<TeamName team={{ name: detail.name, nickname: detail.nickname, logo: detail.logo, initials: detail.initials }} variant="full" />
 				</h1>
 				<div class="flex items-center gap-2 font-mono text-[13px] text-creamdim"><span class="text-muted2">Head Coach</span> · {detail.headCoach}</div>
 			</div>

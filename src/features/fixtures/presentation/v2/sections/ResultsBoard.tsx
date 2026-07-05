@@ -1,6 +1,6 @@
 import { useResultsStore } from "@/features/fixtures/presentation/stores/v2/useResultsStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
-import { Crest } from "./FixtureBoard";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { FixtureMatch } from "@/features/fixtures/domain/entities/fixtures-v2";
 
 interface Props {
@@ -12,7 +12,6 @@ interface Props {
 
 const WON = "#141009";
 const LOST = "#a49a8d";
-const FEAT_CREST = "repeating-linear-gradient(45deg,#1a1714,#1a1714 6px,#151210 6px,#151210 12px)";
 
 interface Group {
 	isoDate: string;
@@ -119,11 +118,16 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 									<span className="font-mono text-[11px] uppercase tracking-[0.14em] text-brandsoft">Latest Result</span>
 									<span className="font-mono text-[11px] text-muted2">{feature.weekday}, {feature.mon} {Number(feature.day)}</span>
 								</div>
-								<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-[600px]:gap-2">
-									<div className="flex flex-col items-center gap-3 text-center">
-										<FeatureCrest logo={feature.homeLogo} abbr={feature.homeAbbr} alt={feature.home} color={feature.homeWin ? "#f6f2ec" : "#8a817a"} />
-										<div className="font-display text-[19px] uppercase leading-none max-[600px]:text-[15px]" style={{ color: feature.homeWin ? "#f6f2ec" : "#8a817a" }}>{feature.home}</div>
-									</div>
+								<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 max-[600px]:gap-2">
+									<TeamName
+										team={{ name: feature.home, nickname: feature.homeNickname, logo: feature.homeLogo, initials: feature.homeAbbr }}
+										variant="compact"
+										withCrest
+										align="center"
+										className="flex-col gap-3 font-display text-[19px] uppercase leading-none max-[600px]:text-[15px]"
+										crestClassName="h-[76px] w-[76px] max-[600px]:h-14 max-[600px]:w-14"
+										textStyle={{ color: feature.homeWin ? "#f6f2ec" : "#8a817a" }}
+									/>
 									<div className="flex flex-col items-center gap-1">
 										<div className="font-display text-[54px] leading-none max-[600px]:text-[34px]">
 											<span style={{ color: feature.homeWin ? "#f6f2ec" : "#8a817a" }}>{feature.homeScore}</span>
@@ -132,10 +136,15 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 										</div>
 										<span className="rounded bg-white/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-creamdim">Final · {feature.league}</span>
 									</div>
-									<div className="flex flex-col items-center gap-3 text-center">
-										<FeatureCrest logo={feature.awayLogo} abbr={feature.awayAbbr} alt={feature.away} color={feature.awayWin ? "#f6f2ec" : "#8a817a"} />
-										<div className="font-display text-[19px] uppercase leading-none max-[600px]:text-[15px]" style={{ color: feature.awayWin ? "#f6f2ec" : "#8a817a" }}>{feature.away}</div>
-									</div>
+									<TeamName
+										team={{ name: feature.away, nickname: feature.awayNickname, logo: feature.awayLogo, initials: feature.awayAbbr }}
+										variant="compact"
+										withCrest
+										align="center"
+										className="flex-col gap-3 font-display text-[19px] uppercase leading-none max-[600px]:text-[15px]"
+										crestClassName="h-[76px] w-[76px] max-[600px]:h-14 max-[600px]:w-14"
+										textStyle={{ color: feature.awayWin ? "#f6f2ec" : "#8a817a" }}
+									/>
 								</div>
 								<div className="mt-6 border-t border-white/10 pt-4 text-center font-body text-[14px] text-creamdim">{featureSummary(feature)}</div>
 							</div>
@@ -192,20 +201,28 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 														</span>
 														<span className="font-mono text-[11px] text-muted2">Final · {m.time}</span>
 													</div>
-													<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-														<div className="flex items-center gap-3 justify-self-end text-right">
-															<span className="font-body text-[15px] font-bold" style={{ color: m.homeWin ? WON : LOST }}>{m.home}</span>
-															<Crest logo={m.homeLogo} abbr={m.homeAbbr} alt={m.home} />
-														</div>
+													<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+														<TeamName
+															team={{ name: m.home, nickname: m.homeNickname, logo: m.homeLogo, initials: m.homeAbbr }}
+															variant="compact"
+															withCrest
+															crestPosition="end"
+															align="right"
+															className="justify-self-stretch font-body text-[15px] font-bold"
+															textStyle={{ color: m.homeWin ? WON : LOST }}
+														/>
 														<div className="font-display text-[24px] leading-none">
 															<span style={{ color: m.homeWin ? WON : LOST }}>{m.homeScore}</span>
 															<span className="mx-1.5 text-[#c9beb0]">–</span>
 															<span style={{ color: m.awayWin ? WON : LOST }}>{m.awayScore}</span>
 														</div>
-														<div className="flex items-center gap-3">
-															<Crest logo={m.awayLogo} abbr={m.awayAbbr} alt={m.away} />
-															<span className="font-body text-[15px] font-bold" style={{ color: m.awayWin ? WON : LOST }}>{m.away}</span>
-														</div>
+														<TeamName
+															team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo, initials: m.awayAbbr }}
+															variant="compact"
+															withCrest
+															className="justify-self-stretch font-body text-[15px] font-bold"
+															textStyle={{ color: m.awayWin ? WON : LOST }}
+														/>
 													</div>
 													<div className="mt-3 flex items-center justify-center border-t border-black/[0.06] pt-3 font-mono text-[11px] text-muted2">
 														<span style={{ color: m.homeWin || m.awayWin ? "#1f9d55" : "#8a817a" }}>{winnerText(m)}</span>
@@ -236,16 +253,4 @@ function featureSummary(m: FixtureMatch): string {
 	const winner = m.homeWin ? m.home : m.away;
 	const margin = Math.abs((m.homeScore ?? 0) - (m.awayScore ?? 0));
 	return `${winner} edged it by ${margin} in a ${m.league} clash.`;
-}
-
-/** Large crest for the featured card: logo on white, else coloured initials. */
-function FeatureCrest({ logo, abbr, alt, color }: { logo: string | null; abbr: string; alt: string; color: string }) {
-	if (logo) {
-		return <img src={logo} alt={alt} loading="lazy" className="h-[76px] w-[76px] rounded-full bg-white object-contain max-[600px]:h-14 max-[600px]:w-14" />;
-	}
-	return (
-		<div className="flex h-[76px] w-[76px] items-center justify-center rounded-full font-display text-[26px] max-[600px]:h-14 max-[600px]:w-14" style={{ background: FEAT_CREST, color }}>
-			{abbr}
-		</div>
-	);
 }

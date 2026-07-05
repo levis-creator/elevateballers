@@ -33,6 +33,8 @@ export interface FixtureMatch {
 	status: FixtureStatus;
 	home: string;
 	away: string;
+	homeNickname?: string | null;
+	awayNickname?: string | null;
 	/** Two-letter crest fallback when a team has no logo. */
 	homeAbbr: string;
 	awayAbbr: string;

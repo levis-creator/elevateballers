@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { formatMatchDate, formatMatchTime, getRelativeTimeDescription } from '../../lib/utils';
+import TeamName from '@/features/teams/presentation/components/TeamName';
 
 type FixtureRow = {
   id: string;
@@ -7,8 +8,10 @@ type FixtureRow = {
   slug?: string | null;
   date: Date | string;
   team1Name: string;
+  team1Nickname?: string | null;
   team1Logo?: string | null;
   team2Name: string;
+  team2Nickname?: string | null;
   team2Logo?: string | null;
   league: string;
   venue?: string;
@@ -21,8 +24,10 @@ type ResultRow = {
   slug?: string | null;
   date: Date | string;
   team1Name: string;
+  team1Nickname?: string | null;
   team1Logo?: string | null;
   team2Name: string;
+  team2Nickname?: string | null;
   team2Logo?: string | null;
   team1Score: number | string;
   team2Score: number | string;
@@ -114,7 +119,9 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
                 <td className="px-5 py-4 align-middle">
                   <MatchupCell
                     homeTeam={match.team1Name}
+                    homeNickname={match.team1Nickname}
                     awayTeam={match.team2Name}
+                    awayNickname={match.team2Nickname}
                     homeLogo={match.team1Logo}
                     awayLogo={match.team2Logo}
                   />
@@ -155,7 +162,9 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
             </div>
             <MatchupCard
               homeTeam={match.team1Name}
+              homeNickname={match.team1Nickname}
               awayTeam={match.team2Name}
+              awayNickname={match.team2Nickname}
               homeLogo={match.team1Logo}
               awayLogo={match.team2Logo}
             />
@@ -211,7 +220,9 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
                   <td className="px-5 py-4 align-middle">
                     <MatchupCell
                       homeTeam={match.team1Name}
+                      homeNickname={match.team1Nickname}
                       awayTeam={match.team2Name}
+                      awayNickname={match.team2Nickname}
                       homeLogo={match.team1Logo}
                       awayLogo={match.team2Logo}
                       homeHighlight={team1Won}
@@ -266,7 +277,9 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
               </div>
               <MatchupCard
                 homeTeam={match.team1Name}
+                homeNickname={match.team1Nickname}
                 awayTeam={match.team2Name}
+                awayNickname={match.team2Nickname}
                 homeLogo={match.team1Logo}
                 awayLogo={match.team2Logo}
                 homeHighlight={team1Won}
@@ -287,14 +300,18 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
 
 function MatchupCell({
   homeTeam,
+  homeNickname,
   awayTeam,
+  awayNickname,
   homeLogo,
   awayLogo,
   homeHighlight = false,
   awayHighlight = false,
 }: {
   homeTeam: string;
+  homeNickname?: string | null;
   awayTeam: string;
+  awayNickname?: string | null;
   homeLogo?: string | null;
   awayLogo?: string | null;
   homeHighlight?: boolean;
@@ -302,15 +319,17 @@ function MatchupCell({
 }) {
   return (
     <div className="grid gap-2">
-      <TeamLine name={homeTeam} logo={homeLogo} highlight={homeHighlight} />
-      <TeamLine name={awayTeam} logo={awayLogo} highlight={awayHighlight} />
+      <TeamLine name={homeTeam} nickname={homeNickname} logo={homeLogo} highlight={homeHighlight} />
+      <TeamLine name={awayTeam} nickname={awayNickname} logo={awayLogo} highlight={awayHighlight} />
     </div>
   );
 }
 
 function MatchupCard({
   homeTeam,
+  homeNickname,
   awayTeam,
+  awayNickname,
   homeLogo,
   awayLogo,
   homeHighlight = false,
@@ -318,7 +337,9 @@ function MatchupCard({
   score,
 }: {
   homeTeam: string;
+  homeNickname?: string | null;
   awayTeam: string;
+  awayNickname?: string | null;
   homeLogo?: string | null;
   awayLogo?: string | null;
   homeHighlight?: boolean;
@@ -327,50 +348,37 @@ function MatchupCard({
 }) {
   return (
     <div className="grid gap-3">
-      <TeamLine name={homeTeam} logo={homeLogo} highlight={homeHighlight} mobile />
+      <TeamLine name={homeTeam} nickname={homeNickname} logo={homeLogo} highlight={homeHighlight} mobile />
       <div className="flex items-center justify-center gap-3 text-xs uppercase tracking-[0.24em] text-gray-500">
         <span>vs</span>
         {score}
       </div>
-      <TeamLine name={awayTeam} logo={awayLogo} highlight={awayHighlight} mobile />
+      <TeamLine name={awayTeam} nickname={awayNickname} logo={awayLogo} highlight={awayHighlight} mobile />
     </div>
   );
 }
 
 function TeamLine({
   name,
+  nickname,
   logo,
   highlight = false,
   mobile = false,
 }: {
   name: string;
+  nickname?: string | null;
   logo?: string | null;
   highlight?: boolean;
   mobile?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      {logo ? (
-        <img
-          src={logo}
-          alt={name}
-          loading="lazy"
-          className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/10"
-        />
-      ) : null}
-      {!logo ? (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-[0.72rem] font-black uppercase tracking-wide text-gray-200 ring-1 ring-white/10">
-          {teamAbbr(name)}
-        </span>
-      ) : null}
-      <span
-        className={`min-w-0 truncate font-semibold ${mobile ? 'text-base' : 'text-sm'} ${
-          highlight ? 'text-white' : 'text-gray-200'
-        }`}
-      >
-        {name}
-      </span>
-    </div>
+    <TeamName
+      team={{ name, nickname, logo, initials: teamAbbr(name) }}
+      variant={mobile ? 'compact' : 'table'}
+      withCrest
+      className={`font-semibold ${mobile ? 'text-base' : 'text-sm'} ${highlight ? 'text-white' : 'text-gray-200'}`}
+      crestClassName="h-9 w-9 bg-white/5 text-[0.72rem] font-black tracking-wide text-gray-200 ring-1 ring-white/10"
+    />
   );
 }
 

@@ -54,6 +54,8 @@ function toFixture(m: any): FixtureMatch {
 		status,
 		home,
 		away,
+		homeNickname: m.team1?.nickname ?? null,
+		awayNickname: m.team2?.nickname ?? null,
 		homeAbbr: abbrOf(home),
 		awayAbbr: abbrOf(away),
 		homeLogo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),

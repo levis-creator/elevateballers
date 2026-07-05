@@ -9,6 +9,7 @@ interface GetStandingsOptions {
 interface StandingEntry {
   teamId: string;
   team: string;
+  nickname: string | null;
   logo: string | null;
   played: number;
   won: number;
@@ -97,6 +98,7 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
     return {
       teamId: team.id,
       team: team.name,
+      nickname: team.nickname,
       logo: team.logo,
       played,
       won,

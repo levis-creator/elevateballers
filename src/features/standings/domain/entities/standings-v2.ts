@@ -3,7 +3,9 @@ export interface StandingRow {
 	rank: number; // assigned per active league filter
 	teamId: string;
 	name: string;
+	nickname?: string | null;
 	initials: string;
+	logo?: string | null;
 	href: string;
 	league: string; // league name (used for the filter)
 	p: number; // played

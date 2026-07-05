@@ -45,6 +45,8 @@ const formatRole = (role: string) =>
 
 const homeName = (m: any) => m.team1?.name || m.team1Name || "TBD";
 const awayName = (m: any) => m.team2?.name || m.team2Name || "TBD";
+const homeNickname = (m: any) => m.team1?.nickname ?? null;
+const awayNickname = (m: any) => m.team2?.nickname ?? null;
 const leagueOf = (m: any) => m.league?.name || m.leagueName || "";
 
 export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> {
@@ -80,7 +82,11 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 			date: fmtDate(m.date),
 			season: m.season?.name || "—",
 			home: homeName(m),
+			homeNickname: homeNickname(m),
+			homeLogo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
 			away: awayName(m),
+			awayNickname: awayNickname(m),
+			awayLogo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
 			hs,
 			as,
 			homeColor: hs > as ? "#141009" : "#a49a8d",
@@ -94,7 +100,11 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 		when: fmtWhen(m.date),
 		league: leagueOf(m),
 		home: homeName(m),
+		homeNickname: homeNickname(m),
+		homeLogo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
 		away: awayName(m),
+		awayNickname: awayNickname(m),
+		awayLogo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
 	}));
 
 	// distinct seasons present in results (date-desc → [0] is the current season)
@@ -172,6 +182,7 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 
 	return {
 		name: team.name,
+		nickname: team.nickname,
 		slug: team.slug,
 		initials: initialsOf(team.name),
 		logo: getDisplayImageUrl(team.logo),

@@ -19,7 +19,11 @@ export interface ResultMatch {
 	date: string;
 	season: string;
 	home: string;
+	homeNickname?: string | null;
+	homeLogo?: string | null;
 	away: string;
+	awayNickname?: string | null;
+	awayLogo?: string | null;
 	hs: number;
 	as: number;
 	homeColor: string;
@@ -33,7 +37,11 @@ export interface UpcomingMatch {
 	when: string;
 	league: string;
 	home: string;
+	homeNickname?: string | null;
+	homeLogo?: string | null;
 	away: string;
+	awayNickname?: string | null;
+	awayLogo?: string | null;
 }
 
 export interface SquadPlayer {
@@ -66,6 +74,7 @@ export interface StaffMember {
 
 export interface TeamDetail {
 	name: string;
+	nickname?: string | null;
 	slug: string;
 	initials: string;
 	/** Resolved logo URL, or null → render the initials crest. */

@@ -10,7 +10,7 @@ import { getFeaturedMedia } from "@/features/cms/lib/queries/media";
 import { getActivePlayerOfTheWeek } from "@/features/cms/lib/editorial-queries";
 import { getAllSiteSettings } from "@/features/cms/lib/queries";
 import { calculatePlayerStatistics } from "@/features/player/lib/playerStats";
-import { resolveAssetUrl } from "@/lib/asset-url";
+import { getDisplayImageUrl, resolveAssetUrl } from "@/lib/asset-url";
 import { optimizeImageUrl } from "@/lib/image-cdn";
 import type {
 	Match,
@@ -74,6 +74,12 @@ function homeName(m: any): string {
 function awayName(m: any): string {
 	return m.team2?.name || m.team2Name || "TBD";
 }
+function homeTeam(m: any) {
+	return { name: homeName(m), nickname: m.team1?.nickname ?? null, logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo) };
+}
+function awayTeam(m: any) {
+	return { name: awayName(m), nickname: m.team2?.nickname ?? null, logo: getDisplayImageUrl(m.team2?.logo || m.team2Logo) };
+}
 function venueOf(m: any): string {
 	return m.leagueName || m.league?.name || "";
 }
@@ -83,11 +89,17 @@ function matchHref(m: any): string {
 }
 function toFixture(m: any): Match {
 	const d = new Date(m.date);
+	const home = homeTeam(m);
+	const away = awayTeam(m);
 	return {
 		day: String(d.getDate()).padStart(2, "0"),
 		mon: MON[d.getMonth()],
-		home: homeName(m),
-		away: awayName(m),
+		home: home.name,
+		homeNickname: home.nickname,
+		homeLogo: home.logo,
+		away: away.name,
+		awayNickname: away.nickname,
+		awayLogo: away.logo,
 		venue: venueOf(m),
 		time: fmtTime(d),
 		startDate: d.toISOString(),
@@ -96,11 +108,17 @@ function toFixture(m: any): Match {
 }
 function toNextMatch(m: any): NextMatch {
 	const d = new Date(m.date);
+	const home = homeTeam(m);
+	const away = awayTeam(m);
 	return {
-		homeAbbr: abbr(homeName(m)),
-		home: homeName(m),
-		awayAbbr: abbr(awayName(m)),
-		away: awayName(m),
+		homeAbbr: abbr(home.name),
+		home: home.name,
+		homeNickname: home.nickname,
+		homeLogo: home.logo,
+		awayAbbr: abbr(away.name),
+		away: away.name,
+		awayNickname: away.nickname,
+		awayLogo: away.logo,
 		venue: venueOf(m),
 		when: fmtWhen(d),
 	};
@@ -108,10 +126,16 @@ function toNextMatch(m: any): NextMatch {
 function toResult(m: any): Result {
 	const hs = m.team1Score ?? 0;
 	const as = m.team2Score ?? 0;
+	const home = homeTeam(m);
+	const away = awayTeam(m);
 	return {
-		home: homeName(m),
+		home: home.name,
+		homeNickname: home.nickname,
+		homeLogo: home.logo,
 		hs,
-		away: awayName(m),
+		away: away.name,
+		awayNickname: away.nickname,
+		awayLogo: away.logo,
 		as,
 		homeColor: hs > as ? "#141009" : "#a49a8d",
 		awayColor: as > hs ? "#141009" : "#a49a8d",

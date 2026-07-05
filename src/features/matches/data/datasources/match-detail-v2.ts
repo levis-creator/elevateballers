@@ -155,8 +155,8 @@ function teamTotals(playerIds: string[], statById: Map<string, PlayerMatchStatis
 /** Recent form + head-to-head + players to watch for a pre-game view. */
 async function buildUpcomingExtras(
 	completed: any[],
-	home: { id?: string; name: string; abbr: string },
-	away: { id?: string; name: string; abbr: string },
+	home: { id?: string; name: string; nickname?: string | null; abbr: string },
+	away: { id?: string; name: string; nickname?: string | null; abbr: string },
 ): Promise<{ formGuide: FormGuide[]; h2h: H2HRow[]; watch: WatchCard[] }> {
 	const last5 = (teamId?: string): Array<"W" | "L" | "D"> => {
 		if (!teamId) return [];
@@ -168,8 +168,8 @@ async function buildUpcomingExtras(
 			.filter((r): r is "W" | "L" | "D" => r != null);
 	};
 	const formGuide: FormGuide[] = [
-		{ team: home.name, abbr: home.abbr, logo: null, chips: last5(home.id) },
-		{ team: away.name, abbr: away.abbr, logo: null, chips: last5(away.id) },
+		{ team: home.name, nickname: home.nickname, abbr: home.abbr, logo: null, chips: last5(home.id) },
+		{ team: away.name, nickname: away.nickname, abbr: away.abbr, logo: null, chips: last5(away.id) },
 	].filter((f) => f.chips.length > 0);
 
 	const h2h: H2HRow[] =
@@ -247,6 +247,8 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 
 		const homeName = match.team1Name || match.team1?.name || "TBD";
 		const awayName = match.team2Name || match.team2?.name || "TBD";
+		const homeNickname = match.team1?.nickname ?? null;
+		const awayNickname = match.team2?.nickname ?? null;
 		const team1Id = match.team1Id || match.team1?.id;
 		const team2Id = match.team2Id || match.team2?.id;
 		const hs = match.team1Score;
@@ -259,6 +261,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 
 		const home: MatchSide = {
 			name: homeName,
+			nickname: homeNickname,
 			abbr: abbrOf(homeName),
 			logo: getDisplayImageUrl(match.team1?.logo || match.team1Logo),
 			href: `/teams/${match.team1?.slug || team1Id || ""}`,
@@ -268,6 +271,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 		};
 		const away: MatchSide = {
 			name: awayName,
+			nickname: awayNickname,
 			abbr: abbrOf(awayName),
 			logo: getDisplayImageUrl(match.team2?.logo || match.team2Logo),
 			href: `/teams/${match.team2?.slug || team2Id || ""}`,
@@ -300,8 +304,8 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 		if (!showStats) {
 			const extras = await buildUpcomingExtras(
 				completed,
-				{ id: team1Id, name: homeName, abbr: home.abbr },
-				{ id: team2Id, name: awayName, abbr: away.abbr },
+				{ id: team1Id, name: homeName, nickname: homeNickname, abbr: home.abbr },
+				{ id: team2Id, name: awayName, nickname: awayNickname, abbr: away.abbr },
 			);
 			return {
 				...base,
@@ -336,6 +340,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 				? [
 						{
 							name: homeName,
+							nickname: homeNickname,
 							abbr: home.abbr,
 							color: hs != null && as != null && hs >= as ? WON : LOST,
 							scores: periods.map((pd) => pd.team1Score),
@@ -343,6 +348,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 						},
 						{
 							name: awayName,
+							nickname: awayNickname,
 							abbr: away.abbr,
 							color: as != null && hs != null && as >= hs ? WON : LOST,
 							scores: periods.map((pd) => pd.team2Score),

@@ -1,13 +1,13 @@
 ---
 // Hero + dynamic Next Match card.
 import type { NextMatch } from "@/features/home/domain/entities/home-v2";
+import TeamName from "@/features/teams/presentation/components/TeamName";
 
 interface Props {
 	heroCtaLabel: string;
 	nextMatch: NextMatch;
 }
 const { heroCtaLabel, nextMatch } = Astro.props;
-const TEAM_BG = "background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,#1b1712 6px,#1b1712 12px);";
 ---
 
 <section class="relative overflow-hidden border-b border-black/[0.08]">
@@ -37,21 +37,29 @@ const TEAM_BG = "background:repeating-linear-gradient(45deg,#221d18,#221d18 6px,
 				<span class="font-mono text-[11px] uppercase tracking-[0.12em] text-brand">Next Match</span>
 				<span class="font-mono text-[11px] text-muted2">{nextMatch.when}</span>
 			</div>
-			<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-[18px] py-[26px]">
-				<div class="flex flex-col items-center gap-3 text-center">
-					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-brand" style={TEAM_BG}>{nextMatch.homeAbbr}</div>
-					<div>
-						<div class="font-display text-[16px] uppercase text-cream">{nextMatch.home}</div>
-						<div class="font-mono text-[10px] tracking-[0.1em] text-muted2">HOME</div>
-					</div>
+			<div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-[18px] py-[26px]">
+				<div class="min-w-0">
+					<TeamName
+						team={{ name: nextMatch.home, nickname: nextMatch.homeNickname, logo: nextMatch.homeLogo, initials: nextMatch.homeAbbr }}
+						variant="compact"
+						withCrest
+						align="center"
+						className="flex-col gap-3 font-display text-[16px] uppercase text-cream"
+						crestClassName="h-16 w-16 font-display text-[22px] text-brand"
+					/>
+					<div class="mt-1 text-center font-mono text-[10px] tracking-[0.1em] text-muted2">HOME</div>
 				</div>
 				<div class="font-display text-[20px] text-[#6b635a]">VS</div>
-				<div class="flex flex-col items-center gap-3 text-center">
-					<div class="flex h-16 w-16 items-center justify-center rounded-full font-display text-[22px] text-cream" style={TEAM_BG}>{nextMatch.awayAbbr}</div>
-					<div>
-						<div class="font-display text-[15px] uppercase leading-none text-cream">{nextMatch.away}</div>
-						<div class="font-mono text-[10px] tracking-[0.1em] text-muted2">AWAY</div>
-					</div>
+				<div class="min-w-0">
+					<TeamName
+						team={{ name: nextMatch.away, nickname: nextMatch.awayNickname, logo: nextMatch.awayLogo, initials: nextMatch.awayAbbr }}
+						variant="compact"
+						withCrest
+						align="center"
+						className="flex-col gap-3 font-display text-[15px] uppercase leading-none text-cream"
+						crestClassName="h-16 w-16 font-display text-[22px] text-cream"
+					/>
+					<div class="mt-1 text-center font-mono text-[10px] tracking-[0.1em] text-muted2">AWAY</div>
 				</div>
 			</div>
 			<div class="px-[18px] pb-[18px]">
