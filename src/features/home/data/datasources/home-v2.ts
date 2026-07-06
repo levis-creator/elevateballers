@@ -5,6 +5,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { getUpcomingMatches, getCompletedMatches } from "@/features/matches/lib/queries";
+import { getZonedDateParts, formatMatchTime } from "@/features/matches/domain/usecases/utils";
 import { getNewsArticles } from "@/features/cms/lib/queries/news";
 import { getFeaturedMedia } from "@/features/cms/lib/queries/media";
 import { getActivePlayerOfTheWeek } from "@/features/cms/lib/editorial-queries";
@@ -26,15 +27,11 @@ import type {
 // --- formatting helpers ---
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function fmtTime(d: Date): string {
-	let h = d.getHours();
-	const m = d.getMinutes();
-	const ap = h >= 12 ? "PM" : "AM";
-	h = h % 12 || 12;
-	return `${h}:${String(m).padStart(2, "0")} ${ap}`;
-}
-function fmtWhen(d: Date): string {
-	return `${MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} · ${fmtTime(d)}`;
+// Match date/time must render in the league timezone (Africa/Nairobi, UTC+3),
+// not the server's timezone — otherwise fixtures show ~3h early in UTC.
+function fmtWhen(date: Date | string): string {
+	const p = getZonedDateParts(date);
+	return `${MON[p.month - 1]} ${p.day}, ${p.year} · ${formatMatchTime(date)}`;
 }
 function fmtDate(d: Date | string | null | undefined): string {
 	if (!d) return "";
@@ -88,12 +85,12 @@ function matchHref(m: any): string {
 	return `/matches/${m.slug || m.id}`;
 }
 function toFixture(m: any): Match {
-	const d = new Date(m.date);
+	const p = getZonedDateParts(m.date);
 	const home = homeTeam(m);
 	const away = awayTeam(m);
 	return {
-		day: String(d.getDate()).padStart(2, "0"),
-		mon: MON[d.getMonth()],
+		day: String(p.day).padStart(2, "0"),
+		mon: MON[p.month - 1],
 		home: home.name,
 		homeNickname: home.nickname,
 		homeLogo: home.logo,
@@ -101,13 +98,12 @@ function toFixture(m: any): Match {
 		awayNickname: away.nickname,
 		awayLogo: away.logo,
 		venue: venueOf(m),
-		time: fmtTime(d),
-		startDate: d.toISOString(),
+		time: formatMatchTime(m.date),
+		startDate: new Date(m.date).toISOString(),
 		href: matchHref(m),
 	};
 }
 function toNextMatch(m: any): NextMatch {
-	const d = new Date(m.date);
 	const home = homeTeam(m);
 	const away = awayTeam(m);
 	return {
@@ -120,7 +116,7 @@ function toNextMatch(m: any): NextMatch {
 		awayNickname: away.nickname,
 		awayLogo: away.logo,
 		venue: venueOf(m),
-		when: fmtWhen(d),
+		when: fmtWhen(m.date),
 	};
 }
 function toResult(m: any): Result {
