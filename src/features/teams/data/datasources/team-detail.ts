@@ -171,7 +171,13 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 				ppgColor: ppg != null && ppg === maxPpg && maxPpg > 0 ? "#e4002b" : "#141009",
 			};
 		})
-		.sort((a, b) => (parseInt(a.jersey) || 999) - (parseInt(b.jersey) || 999));
+		// Sort by jersey; unknown ("—") goes last. NaN-guard (not `|| 999`) so
+		// jersey 0 sorts first, not last.
+		.sort((a, b) => {
+			const na = parseInt(a.jersey);
+			const nb = parseInt(b.jersey);
+			return (Number.isNaN(na) ? 999 : na) - (Number.isNaN(nb) ? 999 : nb);
+		});
 
 	// --- staff ---
 	// Prefer the split-out coaching staff (already ordered coach → manager →

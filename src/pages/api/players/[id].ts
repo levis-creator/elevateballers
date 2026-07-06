@@ -78,9 +78,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
     await requirePermission(request, 'players:update');
     const data = await request.json();
 
-    // Convert jerseyNumber to number if provided
+    // Convert jerseyNumber to number if provided. Guard null/empty explicitly —
+    // a truthy check would turn a valid jersey 0 into null.
     if (data.jerseyNumber !== undefined) {
-      data.jerseyNumber = data.jerseyNumber ? parseInt(data.jerseyNumber) : null;
+      data.jerseyNumber = data.jerseyNumber === null || data.jerseyNumber === "" ? null : Number(data.jerseyNumber);
     }
 
     // Handle teamId - convert empty string to undefined

@@ -104,7 +104,11 @@ export const POST: APIRoute = async ({ request }) => {
       bio: data.bio,
       teamId: data.teamId || undefined,
       position: data.position,
-      jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : undefined,
+      // Guard for null/empty explicitly — a truthy check would drop jersey 0.
+      jerseyNumber:
+        data.jerseyNumber === undefined || data.jerseyNumber === null || data.jerseyNumber === ""
+          ? undefined
+          : Number(data.jerseyNumber),
       stats,
       approved: true, // Admin-created players are approved by default
     });

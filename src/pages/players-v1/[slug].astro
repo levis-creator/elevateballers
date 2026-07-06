@@ -310,7 +310,7 @@ const pageImage = pageImageSource.startsWith("http")
                             <strong>Weight:</strong> {player.weight || '-'}
                           </div>
                           <div class="player-detail-item">
-                            <strong>Jersey:</strong> {player.jerseyNumber || '-'}
+                            <strong>Jersey:</strong> {player.jerseyNumber != null ? player.jerseyNumber : '-'}
                           </div>
                         </div>
                       </div>
@@ -374,7 +374,7 @@ const pageImage = pageImageSource.startsWith("http")
                         <strong>Weight:</strong> {player.weight || '-'}
                       </div>
                       <div class="player-detail-item">
-                        <strong>Jersey:</strong> {player.jerseyNumber || '-'}
+                        <strong>Jersey:</strong> {player.jerseyNumber != null ? player.jerseyNumber : '-'}
                       </div>
                     </div>
                   </div>
