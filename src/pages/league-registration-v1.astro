@@ -1,0 +1,252 @@
+---
+// Legacy (v1) league-registration page. `/league-registration` rewrites here when
+// PUBLIC_UI_VERSION !== 'v2'. Guard so it isn't served directly under v2.
+import { usePublicV2 } from "@/lib/ui-version";
+if (usePublicV2) return Astro.rewrite("/404");
+
+export const prerender = false;
+
+import Layout from "../layouts/Layout.astro";
+import TopBar from "../features/layout/components/TopBar.astro";
+import Header from "../features/layout/components/Header";
+import Footer from "../features/layout/components/Footer.astro";
+import Spacing from "../shared/components/ui/Spacing.astro";
+import LeagueRegistrationForm from "../features/registration/components/LeagueRegistrationForm";
+import PageLoader from "../components/PageLoader";
+---
+
+<Layout
+  title="League Registration - Join Elevate Basketball"
+  description="Ready to compete? Register your team or sign up as a player for the upcoming Elevate Basketball season and take your game to the next level."
+  canonicalURL={`${Astro.url.origin}/league-registration/`}
+  type="website"
+>
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${Astro.url.origin}/league-registration/`,
+          url: `${Astro.url.origin}/league-registration/`,
+          name: "League Registration - Join Elevate Basketball",
+          isPartOf: { "@id": `${Astro.url.origin}/#website` },
+          description:
+            "Ready to compete? Register your team or sign up as a player for the upcoming Elevate Basketball season and take your game to the next level.",
+          breadcrumb: {
+            "@id": `${Astro.url.origin}/league-registration/#breadcrumb`,
+          },
+          inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${Astro.url.origin}/league-registration/#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Home",
+              item: `${Astro.url.origin}/`,
+            },
+            { "@type": "ListItem", position: 2, name: "League Registration" },
+          ],
+        },
+      ],
+    })}
+  />
+  <PageLoader client:load />
+  <div id="wrapper">
+    <TopBar />
+    <Header client:load currentPath={Astro.url.pathname} />
+    <div id="main">
+      <div
+        class="stm-title-box-unit transparent-header_on title_box-357"
+        style="padding-top: 0; padding-bottom: 0px;"
+      >
+      </div>
+      <div class="container">
+        <section class="wpb-content-wrapper">
+          <div class="vc_row wpb_row vc_row-fluid">
+            <div class="wpb_column vc_column_container vc_col-sm-12">
+              <div class="vc_column-inner">
+                <div class="wpb_wrapper">
+                  <Spacing
+                    id="stm-spacing-registration-header"
+                    lg="80"
+                    md="70"
+                    sm="60"
+                    xs="50"
+                  />
+
+                  <h1
+                    class="heading-font"
+                    style="text-align: center; margin-bottom: 30px; color: #dd3333;"
+                  >
+                    2026 LEAGUE REGISTRATION
+                  </h1>
+
+                  <div
+                    class="registration-content"
+                    style="max-width: 800px; margin: 0 auto;"
+                  >
+                    <div
+                      class="normal_font"
+                      style="line-height: 1.8; color: #363f48; margin-bottom: 40px; text-align: center;"
+                    >
+                      <p style="margin-bottom: 20px; font-size: 16px;">
+                        Register your team or yourself as a player for the 2026
+                        Elevate Ballers League season.
+                      </p>
+                    </div>
+
+                    <div class="registration-form-wrapper">
+                      <LeagueRegistrationForm client:load />
+                    </div>
+                  </div>
+
+                  <Spacing
+                    id="stm-spacing-registration-footer"
+                    lg="50"
+                    md="50"
+                    sm="40"
+                    xs="40"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <Footer />
+
+  </div>
+  <!--main-->
+  <!--wrapper-->
+
+  <div class="rev-close-btn">
+    <span class="close-left"></span>
+    <span class="close-right"></span>
+  </div>
+
+  <script is:inline>
+    window.RS_MODULES = window.RS_MODULES || {};
+    window.RS_MODULES.modules = window.RS_MODULES.modules || {};
+    window.RS_MODULES.waiting = window.RS_MODULES.waiting || [];
+    window.RS_MODULES.defered = true;
+    window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};
+    window.RS_MODULES.type = "compiled";
+  </script>
+  <script is:inline type="speculationrules">
+    {
+      "prefetch": [
+        {
+          "source": "document",
+          "where": {
+            "and": [
+              { "href_matches": "/*" },
+              {
+                "not": {
+                  "href_matches": [
+                    "/wp-*.php",
+                    "/wp-admin/*",
+                    "/wp-content/uploads/*",
+                    "/wp-content/*",
+                    "/wp-content/plugins/*",
+                    "/wp-content/themes/elevate/*",
+                    "/*\\?(.+)"
+                  ]
+                }
+              },
+              { "not": { "selector_matches": "a[rel~=\"nofollow\"]" } },
+              { "not": { "selector_matches": ".no-prefetch, .no-prefetch a" } }
+            ]
+          },
+          "eagerness": "conservative"
+        }
+      ]
+    }
+  </script>
+
+  <style is:inline type="text/css">
+    .sp-footer-sponsors {
+      background: #f4f4f4;
+      color: #363f48;
+    }
+    .sp-footer-sponsors .sp-sponsors .sp-sponsors-title {
+      color: #363f48;
+    }
+
+    /* Smooth scroll behavior - Matching homepage */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Make footer static so it scrolls with the page */
+    .stm-footer {
+      position: static !important;
+    }
+
+    /* Remove extra padding since footer is no longer fixed */
+    #main {
+      padding-bottom: 0;
+    }
+
+    /* Registration page specific styles */
+    .wpb_wrapper h2.heading-font {
+      font-size: 40px;
+      line-height: 44px;
+      margin-bottom: 30px;
+      color: #dd3333 !important;
+    }
+
+    .registration-form input:focus,
+    .registration-form textarea:focus,
+    .registration-form select:focus {
+      border-color: #dd3333;
+      outline: none;
+    }
+
+    .registration-form button:hover {
+      background-color: #c02929 !important;
+      transition: background-color 0.3s ease;
+    }
+
+    .registration-form label {
+      font-family: Rubik;
+    }
+
+    /* Responsive styles for form grid layouts */
+    @media (max-width: 767px) {
+      .registration-form [style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+
+      #main {
+        padding-bottom: 0;
+      }
+    }
+  </style>
+
+  <div class="sp-header-sponsors" style="margin-top: 10px; margin-right: 10px;">
+    <div class="sportspress"><div class="sp-sponsors"></div></div>
+  </div>
+
+  <script is:inline type="text/javascript">
+    jQuery(document).ready(function ($) {
+      $(".sp-header").prepend($(".sp-header-sponsors"));
+    });
+  </script>
+
+  <style is:inline type="text/css">
+    /* Hide reCAPTCHA V3 badge */
+    .grecaptcha-badge {
+      visibility: hidden !important;
+    }
+  </style>
+
+  <!-- Legacy Scripts removed in favor of React components -->
+</Layout>
+<!-- wrapper -->

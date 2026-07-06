@@ -1,0 +1,36 @@
+---
+// v2 League Registration page. Reuses the shared Header/Footer; the team/player
+// registration form (with Turnstile) is a React island. Icons are lucide-react.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import RegistrationFormV2 from "./RegistrationFormV2.tsx";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+
+const footer = await getFooterData();
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="register" />
+
+	<!-- HERO -->
+	<section class="relative overflow-hidden border-b border-black/[0.08]">
+		<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+		<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
+		<div class="relative mx-auto max-w-[1280px] px-8 pb-[40px] pt-[52px] max-[960px]:px-6">
+			<div class="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
+				<span class="h-px w-[26px] bg-brand"></span>Season 2026 · Registration
+			</div>
+			<h1 class="font-display text-[clamp(52px,7.5vw,110px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Join the League</h1>
+			<p class="mt-5 max-w-[560px] text-[16px] leading-[1.7] text-muted">
+				Register your club or sign up as a player. Tryouts run throughout the year for late entries — pick a tab below and tell us about your team or your game.
+			</p>
+		</div>
+	</section>
+
+	<!-- FORM -->
+	<section class="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+		<RegistrationFormV2 client:load />
+	</section>
+
+	<Footer footer={footer} />
+</div>
