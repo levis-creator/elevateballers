@@ -57,23 +57,34 @@ export async function fetchAboutDynamic(): Promise<AboutDynamic | null> {
 			{ value: foundedYear ? String(foundedYear) : "—", label: "Founded", accent: true },
 		];
 
-		// Per-league team + player counts. Teams belong to a league via SeasonTeam;
-		// dedupe teamIds across seasons, then count approved players on those teams.
+		// Per-league team + player counts. A team belongs to a league via SeasonTeam
+		// AND/OR by having played matches in it — union both so the counts are right
+		// whether a DB was populated via season assignments (dev) or only matches
+		// (production, where season_teams can be empty). Then count approved teams +
+		// players on that set.
 		const leagues: AboutLeague[] = await Promise.all(
 			leagueRows.map(async (lg: any, i: number) => {
-				const seasonTeams = await prisma.seasonTeam.findMany({
-					where: { leagueId: lg.id },
-					select: { teamId: true },
-					distinct: ["teamId"],
-				});
-				const teamIds = seasonTeams.map((s) => s.teamId);
-				const players = teamIds.length
-					? await prisma.player.count({ where: { approved: true, teamId: { in: teamIds } } })
-					: 0;
+				const [seasonTeams, leagueMatches] = await Promise.all([
+					prisma.seasonTeam.findMany({ where: { leagueId: lg.id }, select: { teamId: true }, distinct: ["teamId"] }),
+					prisma.match.findMany({ where: { leagueId: lg.id }, select: { team1Id: true, team2Id: true } }),
+				]);
+				const teamIds = [
+					...new Set(
+						[...seasonTeams.map((s) => s.teamId), ...leagueMatches.flatMap((m) => [m.team1Id, m.team2Id])].filter(
+							Boolean,
+						),
+					),
+				] as string[];
+				const [teamCount, players] = teamIds.length
+					? await Promise.all([
+							prisma.team.count({ where: { id: { in: teamIds }, approved: true } }),
+							prisma.player.count({ where: { approved: true, teamId: { in: teamIds } } }),
+						])
+					: [0, 0];
 				return {
 					abbr: abbrOf(lg.name),
 					title: lg.name,
-					teams: String(teamIds.length),
+					teams: String(teamCount),
 					players: String(players),
 					body:
 						(lg.description && String(lg.description).trim()) ||

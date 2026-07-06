@@ -35,18 +35,21 @@ function createPrismaClient() {
 async function main() {
   const prisma = createPrismaClient();
   try {
-    // Every (seasonId, teamId) pairing implied by existing matches. A match
-    // contributes up to two pairings (team1 and team2); NULLs are ignored.
+    // Every (seasonId, leagueId, teamId) pairing implied by existing matches. A
+    // match contributes up to two pairings (team1 and team2); NULLs are ignored.
+    // leagueId is REQUIRED on season_teams, so only matches carrying both a
+    // seasonId and a leagueId qualify. Dedupe by the (seasonId, teamId) unique key.
     const matches = await prisma.match.findMany({
-      where: { seasonId: { not: null } },
-      select: { seasonId: true, team1Id: true, team2Id: true },
+      where: { seasonId: { not: null }, leagueId: { not: null } },
+      select: { seasonId: true, leagueId: true, team1Id: true, team2Id: true },
     });
 
-    const pairs = new Map(); // key `${seasonId}::${teamId}` -> { seasonId, teamId }
+    const pairs = new Map(); // key `${seasonId}::${teamId}` -> { seasonId, leagueId, teamId }
     for (const m of matches) {
       for (const teamId of [m.team1Id, m.team2Id]) {
-        if (m.seasonId && teamId) {
-          pairs.set(`${m.seasonId}::${teamId}`, { seasonId: m.seasonId, teamId });
+        if (m.seasonId && m.leagueId && teamId) {
+          const key = `${m.seasonId}::${teamId}`;
+          if (!pairs.has(key)) pairs.set(key, { seasonId: m.seasonId, leagueId: m.leagueId, teamId });
         }
       }
     }
