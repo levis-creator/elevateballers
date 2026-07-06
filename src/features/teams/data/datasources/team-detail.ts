@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { getTeamBySlug, getStaffByTeam } from "@/features/cms/lib/queries";
 import { getTeamPlayerStats } from "@/features/player/lib/queries";
 import { getFilteredMatches } from "@/features/matches/lib/queries";
+import { getZonedDateParts, formatMatchTime } from "@/features/matches/domain/usecases/utils";
 import { calculateTeamStatistics } from "@/features/team/lib/teamStats";
 import { getTeamCoachingStaff } from "@/features/staff/data/datasources/team-coaching-staff-v2";
 import { getDisplayImageUrl } from "@/lib/asset-url";
@@ -22,20 +23,15 @@ import type {
 } from "@/features/teams/domain/entities/team-detail";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const fmtTime = (d: Date) => {
-	let h = d.getHours();
-	const m = d.getMinutes();
-	const ap = h >= 12 ? "PM" : "AM";
-	h = h % 12 || 12;
-	return `${h}:${String(m).padStart(2, "0")} ${ap}`;
-};
+// Render match dates/times in the league timezone (Africa/Nairobi, UTC+3), not
+// the server's — otherwise fixtures show ~3h early in UTC.
 const fmtDate = (v: any) => {
-	const d = new Date(v);
-	return `${MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+	const p = getZonedDateParts(v);
+	return `${MON[p.month - 1]} ${p.day}, ${p.year}`;
 };
 const fmtWhen = (v: any) => {
-	const d = new Date(v);
-	return `${MON[d.getMonth()]} ${d.getDate()} · ${fmtTime(d)}`;
+	const p = getZonedDateParts(v);
+	return `${MON[p.month - 1]} ${p.day} · ${formatMatchTime(v)}`;
 };
 const initialsOf = (name: string) =>
 	name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
