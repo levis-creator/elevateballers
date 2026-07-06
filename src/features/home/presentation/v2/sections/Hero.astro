@@ -1,70 +1,178 @@
 ---
-// Hero + dynamic Next Match card.
-import type { NextMatch } from "@/features/home/domain/entities/home-v2";
+// Hero — dark, scoreboard-style, with an animated graphics layer (spinning
+// wireframe basketball, glow, motion streaks, halftone, 3-point arc) and a
+// dynamic Next Match card that falls back to a "no upcoming match" state.
+// The spin uses the global `eb-spin` keyframe from loading.css (imported by the
+// v2 Layout). Stat rail is wired to the real "By The Numbers" counts.
+import type { NextMatch, CountTargets } from "@/features/home/domain/entities/home-v2";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 
 interface Props {
 	heroCtaLabel: string;
-	nextMatch: NextMatch;
+	nextMatch: NextMatch | null;
+	counts: CountTargets;
 }
-const { heroCtaLabel, nextMatch } = Astro.props;
+const { heroCtaLabel, nextMatch, counts } = Astro.props;
 ---
 
-<section class="relative overflow-hidden border-b border-black/[0.08]">
-	<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
-	<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
-	<div class="absolute right-[-40px] top-5 h-[340px] w-[340px] rounded-full border border-brand/10"></div>
-	<div class="relative mx-auto grid max-w-[1280px] grid-cols-[1.15fr_0.85fr] items-center gap-14 px-8 pb-[60px] pt-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:pt-12">
-		<div>
-			<div class="mb-[22px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
-				<span class="h-px w-[26px] bg-brand"></span>Kenya's Premier Basketball League
+<section class="relative overflow-hidden bg-night text-cream">
+	<div class="absolute inset-0" style="background:radial-gradient(100% 90% at 88% -20%,rgba(228,0,43,0.28),transparent 55%);"></div>
+	<div class="absolute -top-40 right-[-180px] h-[640px] w-[640px] rounded-full border border-white/[0.06]"></div>
+	<div class="absolute -top-10 right-[-60px] h-[420px] w-[420px] rounded-full border border-brand/[0.18]"></div>
+	<div class="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/60 to-transparent"></div>
+
+	<!-- oversized ghost word -->
+	<div class="pointer-events-none absolute -bottom-[38px] left-[-14px] select-none font-display text-[190px] uppercase leading-none tracking-[0.02em] max-[960px]:hidden" style="-webkit-text-stroke:1px rgba(255,255,255,0.05);color:transparent;">Nairobi</div>
+
+	<!-- COOL GRAPHICS LAYER -->
+	<!-- soft red glow behind the ball -->
+	<svg class="pointer-events-none absolute -top-[120px] right-[-90px] h-[540px] w-[540px] max-[1180px]:opacity-50 max-[960px]:hidden" viewBox="0 0 540 540" fill="none" aria-hidden="true">
+		<defs>
+			<radialGradient id="ballGlow" cx="50%" cy="42%" r="60%">
+				<stop offset="0%" stop-color="#ff2d43" stop-opacity="0.5"></stop>
+				<stop offset="55%" stop-color="#e4002b" stop-opacity="0.14"></stop>
+				<stop offset="100%" stop-color="#e4002b" stop-opacity="0"></stop>
+			</radialGradient>
+		</defs>
+		<circle cx="270" cy="270" r="250" fill="url(#ballGlow)"></circle>
+	</svg>
+
+	<!-- basketball: red wireframe, spinning -->
+	<svg class="pointer-events-none absolute top-[-46px] right-[16px] h-[408px] w-[408px] max-[1180px]:opacity-70 max-[960px]:hidden" viewBox="0 0 408 408" fill="none" aria-hidden="true" style="animation:eb-spin 24s linear infinite;transform-origin:center;">
+		<defs>
+			<clipPath id="ballClip"><circle cx="204" cy="204" r="180"></circle></clipPath>
+		</defs>
+		<circle cx="204" cy="204" r="180" fill="none" stroke="#e4002b" stroke-width="2" stroke-opacity="0.28"></circle>
+		<g clip-path="url(#ballClip)" stroke="#e4002b" stroke-width="2" stroke-opacity="0.28" fill="none" stroke-linecap="round">
+			<line x1="204" y1="20" x2="204" y2="388"></line>
+			<line x1="20" y1="204" x2="388" y2="204"></line>
+			<path d="M92 40 C 168 150, 168 258, 92 368"></path>
+			<path d="M316 40 C 240 150, 240 258, 316 368"></path>
+		</g>
+	</svg>
+
+	<!-- radiating motion streaks -->
+	<svg class="pointer-events-none absolute top-[40px] right-[220px] h-[240px] w-[240px] max-[1180px]:hidden" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+		<g stroke="#e4002b" stroke-width="3" stroke-linecap="round" opacity="0.5">
+			<line x1="10" y1="40" x2="70" y2="40"></line>
+			<line x1="0" y1="80" x2="52" y2="80"></line>
+			<line x1="16" y1="120" x2="60" y2="120"></line>
+		</g>
+	</svg>
+
+	<!-- halftone dot field -->
+	<svg class="pointer-events-none absolute bottom-[26px] left-[46%] h-[120px] w-[220px] max-[960px]:hidden" viewBox="0 0 220 120" aria-hidden="true">
+		<defs>
+			<pattern id="halftone" width="16" height="16" patternUnits="userSpaceOnUse">
+				<circle cx="4" cy="4" r="2.2" fill="rgba(255,255,255,0.12)"></circle>
+			</pattern>
+		</defs>
+		<rect width="220" height="120" fill="url(#halftone)"></rect>
+	</svg>
+
+	<!-- three-point arc line -->
+	<svg class="pointer-events-none absolute -bottom-[80px] -left-[80px] h-[300px] w-[300px] max-[960px]:hidden" viewBox="0 0 300 300" fill="none" aria-hidden="true">
+		<path d="M300 20 A 190 190 0 0 0 20 300" stroke="rgba(228,0,43,0.4)" stroke-width="2.5" fill="none"></path>
+		<path d="M300 70 A 130 130 0 0 0 70 300" stroke="rgba(255,255,255,0.08)" stroke-width="2" fill="none"></path>
+	</svg>
+
+	<div class="relative mx-auto grid max-w-[1280px] grid-cols-[1.2fr_0.8fr] items-stretch gap-16 px-8 pb-[70px] pt-[84px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:pb-14 max-[960px]:pt-14">
+		<!-- LEFT -->
+		<div class="flex flex-col justify-center">
+			<div class="mb-7 inline-flex w-fit items-center gap-3 rounded-full border border-white/[0.12] bg-white/[0.03] py-[7px] pl-3 pr-[14px] font-mono text-[11px] uppercase tracking-[0.14em] text-creamdim">
+				<span class="relative flex h-[7px] w-[7px]"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75"></span><span class="relative inline-flex h-[7px] w-[7px] rounded-full bg-brand"></span></span>
+				Season 2026 · Live now
 			</div>
-			<h1 class="mb-6 font-display text-[clamp(56px,7vw,104px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">
+			<h1 class="mb-7 font-display text-[clamp(64px,8.2vw,128px)] uppercase leading-[0.82] tracking-[0.005em] text-[#f6f2ec]">
 				Elevate<br />your <span class="text-brand">game</span>
 			</h1>
-			<p class="mb-[34px] max-w-[460px] text-[17px] leading-[1.6] text-muted">
+			<p class="mb-9 max-w-[480px] text-[17px] leading-[1.65] text-creamdim">
 				Live matches, standings, and rising stars from the courts of Nairobi. Follow every game, every team, every player — all season long.
 			</p>
-			<div class="flex flex-wrap items-center gap-4 max-[600px]:flex-col max-[600px]:items-start">
-				<a href="/league-registration" class="rounded bg-brand px-7 py-4 text-[14px] font-extrabold uppercase tracking-[0.04em] text-white no-underline hover:bg-brandlt max-[600px]:w-full max-[600px]:text-center">{heroCtaLabel}</a>
-				<a href="/standings" class="rounded border border-black/20 px-7 py-4 text-[14px] font-bold uppercase tracking-[0.04em] text-ink2 no-underline hover:border-brand hover:text-brand max-[600px]:w-full max-[600px]:text-center">View Standings</a>
+			<div class="mb-11 flex flex-wrap items-center gap-4 max-[600px]:flex-col max-[600px]:items-stretch">
+				<a href="/league-registration" class="rounded bg-brand px-8 py-[17px] text-center text-[14px] font-extrabold uppercase tracking-[0.05em] text-white no-underline hover:bg-brandlt">{heroCtaLabel}</a>
+				<a href="/standings" class="rounded border border-white/20 px-8 py-[17px] text-center text-[14px] font-bold uppercase tracking-[0.05em] text-cream no-underline hover:border-brand hover:text-brand">View Standings</a>
+			</div>
+			<!-- stat rail (real counts) -->
+			<div class="flex flex-wrap items-center gap-x-11 gap-y-5 border-t border-white/[0.08] pt-7">
+				<div>
+					<div class="font-display text-[38px] leading-none text-cream">{counts.teams}</div>
+					<div class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Teams</div>
+				</div>
+				<div class="h-9 w-px bg-white/[0.1] max-[600px]:hidden"></div>
+				<div>
+					<div class="font-display text-[38px] leading-none text-cream">{counts.players}</div>
+					<div class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Players</div>
+				</div>
+				<div class="h-9 w-px bg-white/[0.1] max-[600px]:hidden"></div>
+				<div>
+					<div class="font-display text-[38px] leading-none text-brand">{counts.matches}</div>
+					<div class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Matches Played</div>
+				</div>
 			</div>
 		</div>
 
-		<!-- NEXT MATCH CARD -->
-		<div class="overflow-hidden rounded-xl border border-black/10 bg-night2 shadow-[0_26px_50px_rgba(20,16,9,0.22)]">
-			<div class="flex items-center justify-between border-b border-white/[0.08] bg-black px-[18px] py-[14px]">
-				<span class="font-mono text-[11px] uppercase tracking-[0.12em] text-brand">Next Match</span>
-				<span class="font-mono text-[11px] text-muted2">{nextMatch.when}</span>
-			</div>
-			<div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-[18px] py-[26px]">
-				<div class="min-w-0">
-					<TeamName
-						team={{ name: nextMatch.home, nickname: nextMatch.homeNickname, logo: nextMatch.homeLogo, initials: nextMatch.homeAbbr }}
-						variant="compact"
-						withCrest
-						align="center"
-						className="flex-col gap-3 font-display text-[16px] uppercase text-cream"
-						crestClassName="h-16 w-16 font-display text-[22px] text-brand"
-					/>
-					<div class="mt-1 text-center font-mono text-[10px] tracking-[0.1em] text-muted2">HOME</div>
-				</div>
-				<div class="font-display text-[20px] text-[#6b635a]">VS</div>
-				<div class="min-w-0">
-					<TeamName
-						team={{ name: nextMatch.away, nickname: nextMatch.awayNickname, logo: nextMatch.awayLogo, initials: nextMatch.awayAbbr }}
-						variant="compact"
-						withCrest
-						align="center"
-						className="flex-col gap-3 font-display text-[15px] uppercase leading-none text-cream"
-						crestClassName="h-16 w-16 font-display text-[22px] text-cream"
-					/>
-					<div class="mt-1 text-center font-mono text-[10px] tracking-[0.1em] text-muted2">AWAY</div>
-				</div>
-			</div>
-			<div class="px-[18px] pb-[18px]">
-				<a href="/upcoming-fixtures" class="block rounded-md border border-brand/30 bg-brand/[0.14] py-[13px] text-center text-[12px] font-bold uppercase tracking-[0.08em] text-brandsoft no-underline hover:bg-brand/[0.24]">View Match{nextMatch.venue ? ` · ${nextMatch.venue}` : ""}</a>
-			</div>
+		<!-- RIGHT: NEXT MATCH SCOREBOARD -->
+		<div class="flex flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-white/[0.03] shadow-[0_30px_70px_rgba(0,0,0,0.5)] backdrop-blur-sm max-[960px]:max-w-[440px]">
+			{nextMatch ? (
+				<Fragment>
+					<div class="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
+						<span class="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-brand"><span class="inline-block h-[6px] w-[6px] rounded-full bg-brand"></span>Next Match</span>
+						<span class="font-mono text-[11px] text-muted2">{nextMatch.when}</span>
+					</div>
+					<div class="flex flex-1 items-center justify-center gap-4 px-6 py-9">
+						<div class="flex flex-1 flex-col items-center gap-3.5 text-center">
+							<TeamName
+								team={{ name: nextMatch.home, nickname: nextMatch.homeNickname, logo: nextMatch.homeLogo, initials: nextMatch.homeAbbr }}
+								variant="compact"
+								withCrest
+								align="center"
+								className="flex-col gap-3.5 font-display text-[17px] uppercase leading-none text-cream"
+								crestClassName="h-[76px] w-[76px] border border-white/10 font-display text-[26px] text-brand"
+							/>
+							<div class="font-mono text-[10px] tracking-[0.14em] text-muted2">HOME</div>
+						</div>
+						<div class="flex flex-col items-center gap-1.5">
+							<span class="font-display text-[22px] leading-none text-[#6b635a]">VS</span>
+							<span class="h-[46px] w-px bg-white/[0.1]"></span>
+						</div>
+						<div class="flex flex-1 flex-col items-center gap-3.5 text-center">
+							<TeamName
+								team={{ name: nextMatch.away, nickname: nextMatch.awayNickname, logo: nextMatch.awayLogo, initials: nextMatch.awayAbbr }}
+								variant="compact"
+								withCrest
+								align="center"
+								className="flex-col gap-3.5 font-display text-[17px] uppercase leading-none text-cream"
+								crestClassName="h-[76px] w-[76px] border border-white/10 font-display text-[26px] text-cream"
+							/>
+							<div class="font-mono text-[10px] tracking-[0.14em] text-muted2">AWAY</div>
+						</div>
+					</div>
+					<div class="border-t border-white/[0.08] px-5 pb-5 pt-5">
+						{nextMatch.venue && (
+							<div class="mb-3.5 flex items-center justify-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2"><span class="inline-block h-1 w-1 rounded-full bg-brand"></span>{nextMatch.venue}</div>
+						)}
+						<a href="/upcoming-fixtures" class="block rounded-md bg-brand py-[13px] text-center text-[12px] font-extrabold uppercase tracking-[0.08em] text-white no-underline hover:bg-brandlt">View Match Details →</a>
+					</div>
+				</Fragment>
+			) : (
+				<Fragment>
+					<div class="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
+						<span class="font-mono text-[11px] uppercase tracking-[0.14em] text-muted2">Next Match</span>
+						<span class="font-mono text-[11px] text-[#6b635a]">TBD</span>
+					</div>
+					<div class="flex flex-1 flex-col items-center justify-center gap-4 px-7 py-12 text-center">
+						<div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#1b1712]">
+							<div class="relative h-[24px] w-[24px] rounded-full border-2 border-[#6b635a]"><span class="absolute bottom-0 left-1/2 top-0 w-0.5 -translate-x-1/2 bg-[#6b635a]"></span><span class="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-[#6b635a]"></span></div>
+						</div>
+						<div class="font-display text-[24px] uppercase leading-none text-cream">No Upcoming Match</div>
+						<p class="max-w-[250px] font-body text-[13.5px] leading-[1.55] text-muted2">The next fixture hasn't been scheduled yet. Check the full calendar or catch up on recent results.</p>
+					</div>
+					<div class="border-t border-white/[0.08] px-5 pb-5 pt-5">
+						<a href="/upcoming-fixtures" class="block rounded-md border border-brand/40 bg-brand/[0.14] py-[13px] text-center text-[12px] font-extrabold uppercase tracking-[0.08em] text-brandsoft no-underline hover:bg-brand/[0.24]">See Full Fixtures →</a>
+					</div>
+				</Fragment>
+			)}
 		</div>
 	</div>
 </section>

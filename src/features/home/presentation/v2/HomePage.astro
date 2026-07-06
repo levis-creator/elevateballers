@@ -31,7 +31,7 @@ const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url))
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header registrationOpen={home.registrationOpen} active="home" />
-	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} />
+	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} counts={home.counts} />
 	<NewsTicker items={home.ticker} />
 	<FixturesResults upcoming={home.upcoming} results={home.results} />
 	<PlayerOfTheWeek potw={home.potw} />

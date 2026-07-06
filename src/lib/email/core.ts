@@ -328,6 +328,7 @@ export async function getAdminRecipientEmails(type?: AdminNotificationType): Pro
         email: true,
         notificationSettings: {
           select: {
+            enabled: true,
             emailEnabled: true,
             emailPreferences: true,
           },
@@ -337,6 +338,10 @@ export async function getAdminRecipientEmails(type?: AdminNotificationType): Pro
 
     const emails = admins
       .filter((admin) => {
+        // Master switch: if the user turned notifications off entirely, they
+        // receive nothing — regardless of the email channel / per-type prefs.
+        const enabled = admin.notificationSettings?.enabled ?? true;
+        if (!enabled) return false;
         const emailEnabled = admin.notificationSettings?.emailEnabled ?? true;
         if (!emailEnabled) return false;
         if (!type) return true;

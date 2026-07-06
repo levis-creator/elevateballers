@@ -16,7 +16,6 @@ import {
 	fetchRegistrationOpen,
 } from "@/features/home/data/datasources/home-v2";
 import {
-	FALLBACK_NEXT_MATCH,
 	FALLBACK_UPCOMING,
 	FALLBACK_RESULTS,
 	FALLBACK_TICKER,
@@ -43,7 +42,9 @@ export async function getHomeData(): Promise<HomeData> {
 	const leaderData = stats && stats.leaderData.Points.length ? stats.leaderData : FALLBACK_LEADER_DATA;
 
 	return {
-		nextMatch: fixtures?.nextMatch ?? FALLBACK_NEXT_MATCH,
+		// Real next match, or null → the hero shows a proper "no upcoming match"
+		// state instead of a fake demo fixture.
+		nextMatch: fixtures?.nextMatch ?? null,
 		upcoming: fixtures?.upcoming ?? FALLBACK_UPCOMING,
 		results: results ?? FALLBACK_RESULTS,
 		ticker: newsRes?.ticker.length ? newsRes.ticker : FALLBACK_TICKER,

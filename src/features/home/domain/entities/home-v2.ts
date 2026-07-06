@@ -115,7 +115,7 @@ export interface Potw {
 /** Everything the v2 home page needs, assembled by the use-case. */
 export interface HomeData {
 	// Always present — the use-case fills any gap with fallback content.
-	nextMatch: NextMatch;
+	nextMatch: NextMatch | null;
 	upcoming: Match[];
 	results: Result[];
 	ticker: string[];
