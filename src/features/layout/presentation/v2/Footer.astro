@@ -10,18 +10,7 @@ interface Props {
 	footer?: FooterData;
 }
 const { footer = DEFAULT_FOOTER } = Astro.props;
-const { contact, socials } = footer;
-
-const exploreLinks = [
-	{ label: "Teams", href: "/teams" },
-	{ label: "Standings", href: "/standings" },
-	{ label: "Fixtures & Results", href: "/upcoming-fixtures" },
-	{ label: "Staff", href: "/staff" },
-	{ label: "About the Club", href: "/about-club" },
-	{ label: "Rules", href: "/rules" },
-	{ label: "Cookies", href: "/cookies" },
-];
-
+const { contact, socials, content } = footer;
 ---
 
 <footer id="footer" class="border-t border-black/[0.08] bg-night text-cream">
@@ -37,16 +26,16 @@ const exploreLinks = [
 			</div>
 		</div>
 		<div>
-			<div class="mb-[18px] font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Explore</div>
+			<div class="mb-[18px] font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">{content.exploreTitle}</div>
 			<div class="flex flex-col gap-[11px] text-[14px]">
-				{exploreLinks.map((link) => (
+				{content.exploreLinks.map((link) => (
 					<a href={link.href} class="text-[#c9c1b8] no-underline hover:text-brand">{link.label}</a>
 				))}
 			</div>
 		</div>
 		<div>
-			<div class="mb-[18px] font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Sign up for email alerts</div>
-			<p class="mb-4 text-[14px] leading-[1.6] text-muted2">Select topics and stay current with our latest news.</p>
+			<div class="mb-[18px] font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">{content.newsletterTitle}</div>
+			<p class="mb-4 text-[14px] leading-[1.6] text-muted2">{content.newsletterText}</p>
 			<SubscribeFormV2 client:visible />
 			<div class="mt-[22px] flex gap-2.5">
 				{socials.map((s) => {
@@ -74,7 +63,7 @@ const exploreLinks = [
 	</div>
 	<div class="border-t border-white/[0.06]">
 		<div class="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-3 px-8 py-5 font-mono text-[11px] tracking-[0.04em] text-[#6b635a] max-[960px]:px-6">
-			<span>© 2024–2026 Elevate Ballers · All Rights Reserved</span>
+			<span>{content.copyright}</span>
 			<span><a href="/cookies/" class="text-[#6b635a] no-underline hover:text-brand">Cookie Policy</a></span>
 		</div>
 	</div>
