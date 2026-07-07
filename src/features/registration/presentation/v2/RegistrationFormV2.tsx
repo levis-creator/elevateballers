@@ -15,10 +15,10 @@ import {
 	Hash,
 	Ruler,
 	Weight,
-	CheckCircle2,
 	AlertCircle,
 	Clock,
-	Send,
+	Check,
+	ChevronDown,
 } from "lucide-react";
 
 interface League {
@@ -63,18 +63,21 @@ interface PlayerFormData {
 }
 type TabType = "team" | "player";
 
-// --- shared field styling ---
 const inputCls =
-	"w-full rounded-lg border border-black/15 bg-paper2 px-3.5 py-3 font-body text-[14px] text-ink2 outline-none transition-colors placeholder:text-muted2/70 focus:border-brand focus:bg-white disabled:opacity-60";
+	"w-full rounded-lg border border-black/15 bg-paper2 px-4 py-3 font-body text-[14px] text-ink2 outline-none transition-shadow placeholder:text-muted2/70 focus:border-brand focus:ring-[3px] focus:ring-brand/[0.12] disabled:opacity-60";
 
 function Label({ icon: Icon, children, required }: { icon: ComponentType<any>; children: React.ReactNode; required?: boolean }) {
 	return (
-		<span className="mb-1.5 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">
+		<span className="mb-2 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">
 			<Icon className="h-3.5 w-3.5 text-brand" strokeWidth={2} aria-hidden />
 			{children}
 			{required && <span className="text-brand">*</span>}
 		</span>
 	);
+}
+
+function SelectChevron() {
+	return <ChevronDown className="pointer-events-none absolute right-3.5 top-[38px] h-4 w-4 text-muted" aria-hidden />;
 }
 
 export default function RegistrationFormV2() {
@@ -90,6 +93,7 @@ export default function RegistrationFormV2() {
 	const [playerTurnstileToken, setPlayerTurnstileToken] = useState<string | null>(null);
 	const [seasons, setSeasons] = useState<Season[]>([]);
 	const [seasonsLoading, setSeasonsLoading] = useState(false);
+	const [agreed, setAgreed] = useState(false);
 
 	const [teamFormData, setTeamFormData] = useState<TeamFormData>({
 		name: "",
@@ -214,6 +218,7 @@ export default function RegistrationFormV2() {
 			}
 			setTeamFormData({ name: "", coachName: "", contactEmail: "", contactPhone: "", leagueId: "", seasonId: "", additionalInfo: "" });
 			setTeamTurnstileToken(null);
+			setAgreed(false);
 			setSuccess("Team and coach registration submitted successfully! We will contact you soon.");
 		} catch (err) {
 			console.error("Error submitting team registration:", err);
@@ -256,6 +261,7 @@ export default function RegistrationFormV2() {
 			}
 			setPlayerFormData({ firstName: "", lastName: "", email: "", phone: "", position: "", jerseyNumber: "", height: "", weight: "", teamName: "", additionalInfo: "" });
 			setPlayerTurnstileToken(null);
+			setAgreed(false);
 			setSuccess("Player registration submitted successfully! We will contact you soon.");
 		} catch (err) {
 			console.error("Error submitting player registration:", err);
@@ -265,16 +271,18 @@ export default function RegistrationFormV2() {
 		}
 	};
 
-	const tab = (t: TabType, label: string, Icon: ComponentType<any>) => (
+	const switchTab = (t: TabType) => {
+		setActiveTab(t);
+		setError(null);
+		setSuccess(null);
+	};
+
+	const tabBtn = (t: TabType, label: string, Icon: ComponentType<any>) => (
 		<button
 			type="button"
-			onClick={() => {
-				setActiveTab(t);
-				setError(null);
-				setSuccess(null);
-			}}
-			className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-5 py-3.5 font-display text-[15px] uppercase tracking-[0.04em] transition-colors ${
-				activeTab === t ? "bg-brand text-white" : "bg-paper2 text-muted hover:text-ink2"
+			onClick={() => switchTab(t)}
+			className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-3 font-display text-[15px] uppercase tracking-[0.04em] transition-colors ${
+				activeTab === t ? "bg-brand text-white" : "text-muted hover:text-ink2"
 			}`}
 		>
 			<Icon className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
@@ -282,21 +290,53 @@ export default function RegistrationFormV2() {
 		</button>
 	);
 
+	// --- SUCCESS STATE ---
+	if (success) {
+		const modeLabel = activeTab === "team" ? "team" : "player";
+		return (
+			<div className="mx-auto w-full max-w-[560px]">
+				<div className="rounded-2xl border border-black/10 bg-white p-9 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-6">
+					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1f9d55]/[0.12] text-[#1f9d55]">
+						<Check className="h-7 w-7" strokeWidth={2.5} aria-hidden />
+					</div>
+					<h2 className="mt-5 font-display text-[30px] uppercase text-ink">You're in the queue</h2>
+					<p className="mt-3 max-w-[440px] text-[15px] leading-[1.65] text-muted">
+						Thanks — your {modeLabel} registration has been received. We review entries within 3 working days and will email
+						confirmation and next steps to the address you provided.
+					</p>
+					<div className="mt-6 flex flex-wrap gap-3">
+						<button
+							type="button"
+							onClick={() => setSuccess(null)}
+							className="rounded-lg bg-brand px-6 py-3.5 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-white hover:bg-brandlt"
+						>
+							Register another
+						</button>
+						<a
+							href="/upcoming-fixtures"
+							className="rounded-lg border border-black/15 px-6 py-3.5 font-body text-[13px] font-bold uppercase tracking-[0.05em] text-ink2 no-underline hover:border-brand hover:text-brand"
+						>
+							View fixtures
+						</a>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	const canSubmitTeam = !submitting && !!teamTurnstileToken && !registrationBlocked && agreed;
+	const canSubmitPlayer = !submitting && !!playerTurnstileToken && agreed;
+	const submitCls =
+		"col-span-full mt-2 inline-flex items-center justify-center gap-2 justify-self-start rounded-lg bg-brand px-9 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-white transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#b9b3aa] disabled:opacity-70 max-[600px]:w-full";
+
 	return (
-		<div className="mx-auto max-w-[760px]">
-			{/* Tabs */}
-			<div className="mb-6 flex gap-2 rounded-xl border border-black/10 bg-white p-1.5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
-				{tab("team", "Team", Users)}
-				{tab("player", "Player", User)}
+		<div>
+			{/* SEGMENTED TABS */}
+			<div className="mb-7 inline-flex w-full max-w-[440px] gap-1 rounded-xl border border-black/10 bg-white p-1.5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				{tabBtn("team", "Team", Users)}
+				{tabBtn("player", "Player", User)}
 			</div>
 
-			{/* Banners */}
-			{success && (
-				<div className="mb-5 flex items-start gap-2.5 rounded-xl border border-[#6ee7b7] bg-[#ecfdf5] px-4 py-3 text-[14px] text-[#065f46]">
-					<CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden />
-					<p className="m-0 font-semibold">{success}</p>
-				</div>
-			)}
 			{error && (
 				<div className="mb-5 flex items-start gap-2.5 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[14px] text-[#991b1b]">
 					<AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden />
@@ -304,14 +344,23 @@ export default function RegistrationFormV2() {
 				</div>
 			)}
 
-			<div className="rounded-2xl border border-black/10 bg-white p-8 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-5">
-				{/* ================= TEAM ================= */}
-				{activeTab === "team" && (
-					<form onSubmit={handleTeamSubmit}>
-						<h2 className="mb-6 font-display text-[24px] uppercase text-ink">Team Registration</h2>
+			{/* FORM CARD */}
+			<div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div className="flex items-center justify-between border-b border-black/[0.07] bg-paper2 px-7 py-5 max-[600px]:px-5">
+					<div>
+						<h2 className="font-display text-[24px] uppercase text-ink">{activeTab === "team" ? "Team Registration" : "Player Registration"}</h2>
+						<p className="mt-1 font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">
+							{activeTab === "team" ? "Register your club for the season" : "Sign up to join a team"}
+						</p>
+					</div>
+					<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-brand max-[600px]:hidden">* required</span>
+				</div>
 
-						<div className="grid gap-5">
-							<label className="block">
+				<div className="p-7 max-[600px]:p-5">
+					{/* ================= TEAM ================= */}
+					{activeTab === "team" && (
+						<form onSubmit={handleTeamSubmit} className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
+							<label className="col-span-full block">
 								<Label icon={Shield} required>Team Name</Label>
 								<input type="text" name="name" value={teamFormData.name} onChange={handleTeamChange} placeholder="Enter team name" required className={inputCls} />
 							</label>
@@ -319,150 +368,145 @@ export default function RegistrationFormV2() {
 								<Label icon={User} required>Coach Name</Label>
 								<input type="text" name="coachName" value={teamFormData.coachName} onChange={handleTeamChange} placeholder="Enter coach name" required className={inputCls} />
 							</label>
-							<div className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
-								<label className="block">
-									<Label icon={Mail} required>Contact Email</Label>
-									<input type="email" name="contactEmail" value={teamFormData.contactEmail} onChange={handleTeamChange} placeholder="team@email.com" required className={inputCls} />
-								</label>
-								<label className="block">
-									<Label icon={Phone} required>Contact Phone</Label>
-									<input type="tel" name="contactPhone" value={teamFormData.contactPhone} onChange={handleTeamChange} placeholder="07xx xxx xxx" required className={inputCls} />
-								</label>
-							</div>
-							<label className="block">
+							<label className="relative block">
 								<Label icon={Trophy}>League</Label>
-								<select name="leagueId" value={teamFormData.leagueId} onChange={handleTeamChange} disabled={leaguesLoading} className={inputCls}>
+								<select name="leagueId" value={teamFormData.leagueId} onChange={handleTeamChange} disabled={leaguesLoading} className={`${inputCls} appearance-none pr-10`}>
 									<option value="">Select League</option>
 									{leagues.map((league) => (
 										<option key={league.id} value={league.id}>{league.name}</option>
 									))}
 								</select>
+								<SelectChevron />
+							</label>
+							<label className="block">
+								<Label icon={Mail} required>Contact Email</Label>
+								<input type="email" name="contactEmail" value={teamFormData.contactEmail} onChange={handleTeamChange} placeholder="team@email.com" required className={inputCls} />
+							</label>
+							<label className="block">
+								<Label icon={Phone} required>Contact Phone</Label>
+								<input type="tel" name="contactPhone" value={teamFormData.contactPhone} onChange={handleTeamChange} placeholder="07xx xxx xxx" required className={inputCls} />
 							</label>
 							{teamFormData.leagueId && seasons.length > 0 && (
-								<label className="block">
+								<label className="relative col-span-full block">
 									<Label icon={CalendarRange}>Season</Label>
-									<select name="seasonId" value={teamFormData.seasonId} onChange={handleTeamChange} disabled={seasonsLoading} className={inputCls}>
+									<select name="seasonId" value={teamFormData.seasonId} onChange={handleTeamChange} disabled={seasonsLoading} className={`${inputCls} appearance-none pr-10`}>
 										<option value="">All / Not season-specific</option>
 										{seasons.map((season) => (
 											<option key={season.id} value={season.id}>{season.name}</option>
 										))}
 									</select>
+									<SelectChevron />
 								</label>
 							)}
-
-							{registrationBlocked && (
-								<div className="flex items-start gap-2.5 rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[13.5px] text-[#92400e]">
-									<Clock className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden />
-									<p className="m-0 font-medium">{registrationClosedMessage(registrationStatus)}</p>
-								</div>
-							)}
-							{!registrationBlocked && registrationStatus.closesAt && (
-								<div className="flex items-center gap-2 font-mono text-[12px] text-muted2">
-									<Clock className="h-3.5 w-3.5" aria-hidden />
-									Registration deadline: {new Date(registrationStatus.closesAt).toLocaleString()}
-								</div>
-							)}
-
-							<label className="block">
+							<label className="col-span-full block">
 								<Label icon={MessageSquare}>Additional Information</Label>
 								<textarea name="additionalInfo" value={teamFormData.additionalInfo} onChange={handleTeamChange} placeholder="Any additional information about your team" rows={4} className={`${inputCls} resize-y`} />
 							</label>
 
-							<div className="pt-1"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} onSuccess={setTeamTurnstileToken} onExpire={() => setTeamTurnstileToken(null)} onError={() => setTeamTurnstileToken(null)} /></div>
+							{registrationBlocked && (
+								<div className="col-span-full flex items-start gap-2.5 rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-[13.5px] text-[#92400e]">
+									<Clock className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden />
+									<p className="m-0 font-medium">{registrationClosedMessage(registrationStatus)}</p>
+								</div>
+							)}
+							{!registrationBlocked && (registrationStatus.opensAt || registrationStatus.closesAt) && (
+								<div className="col-span-full flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-black/[0.08] bg-paper2 px-4 py-3 font-mono text-[12px]">
+									<span className="flex items-center gap-1.5 uppercase tracking-[0.08em] text-brand"><Clock className="h-3.5 w-3.5" aria-hidden />Season registration</span>
+									<span className="text-ink2">
+										{registrationStatus.opensAt ? new Date(registrationStatus.opensAt).toLocaleString() : "Open now"}
+										<span className="mx-1.5 text-muted2">→</span>
+										{registrationStatus.closesAt ? new Date(registrationStatus.closesAt).toLocaleString() : "No deadline"}
+									</span>
+								</div>
+							)}
 
-							<button
-								type="submit"
-								disabled={submitting || !teamTurnstileToken || registrationBlocked}
-								className="mt-1 inline-flex items-center justify-center gap-2 self-start rounded-md bg-brand px-8 py-4 font-display text-[15px] uppercase tracking-[0.05em] text-white transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#b9b3aa] disabled:opacity-70 max-[600px]:w-full"
-							>
-								<Send className="h-[18px] w-[18px]" aria-hidden />
+							<div className="col-span-full"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} onSuccess={setTeamTurnstileToken} onExpire={() => setTeamTurnstileToken(null)} onError={() => setTeamTurnstileToken(null)} /></div>
+							<Consent agreed={agreed} setAgreed={setAgreed} />
+							<button type="submit" disabled={!canSubmitTeam} className={submitCls}>
 								{submitting ? "Submitting…" : registrationBlocked ? "Registration Closed" : "Submit Registration"}
 							</button>
-						</div>
-					</form>
-				)}
+						</form>
+					)}
 
-				{/* ================= PLAYER ================= */}
-				{activeTab === "player" && (
-					<form onSubmit={handlePlayerSubmit}>
-						<h2 className="mb-6 font-display text-[24px] uppercase text-ink">Player Registration</h2>
-
-						<div className="grid gap-5">
-							<div className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
-								<label className="block">
-									<Label icon={User} required>First Name</Label>
-									<input type="text" name="firstName" value={playerFormData.firstName} onChange={handlePlayerChange} placeholder="Enter first name" required className={inputCls} />
-								</label>
-								<label className="block">
-									<Label icon={User} required>Last Name</Label>
-									<input type="text" name="lastName" value={playerFormData.lastName} onChange={handlePlayerChange} placeholder="Enter last name" required className={inputCls} />
-								</label>
-							</div>
-							<div className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
-								<label className="block">
-									<Label icon={Mail} required>Email</Label>
-									<input type="email" name="email" value={playerFormData.email} onChange={handlePlayerChange} placeholder="you@email.com" required className={inputCls} />
-								</label>
-								<label className="block">
-									<Label icon={Phone} required>Phone</Label>
-									<input type="tel" name="phone" value={playerFormData.phone} onChange={handlePlayerChange} placeholder="07xx xxx xxx" required className={inputCls} />
-								</label>
-							</div>
-							<div className="grid grid-cols-3 gap-5 max-[600px]:grid-cols-1">
-								<label className="block">
-									<Label icon={Crosshair} required>Position</Label>
-									<select name="position" value={playerFormData.position} onChange={handlePlayerChange} required className={inputCls}>
-										<option value="">Select Position</option>
-										<option value="Point Guard">Point Guard</option>
-										<option value="Shooting Guard">Shooting Guard</option>
-										<option value="Small Forward">Small Forward</option>
-										<option value="Power Forward">Power Forward</option>
-										<option value="Center">Center</option>
-									</select>
-								</label>
-								<label className="block">
-									<Label icon={Hash}>Jersey Number</Label>
-									<input type="number" name="jerseyNumber" value={playerFormData.jerseyNumber} onChange={handlePlayerChange} placeholder="e.g., 23" min="0" max="99" className={inputCls} />
-								</label>
-								<label className="block">
-									<Label icon={Shield} required>Team</Label>
-									<select name="teamName" value={playerFormData.teamName} onChange={handlePlayerChange} disabled={teamsLoading} required className={inputCls}>
-										<option value="">Select Team</option>
-										{teams.map((team) => (
-											<option key={team.id} value={team.name}>{team.name}</option>
-										))}
-									</select>
-								</label>
-							</div>
-							<div className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
-								<label className="block">
-									<Label icon={Ruler}>Height</Label>
-									<input type="text" name="height" value={playerFormData.height} onChange={handlePlayerChange} placeholder={"e.g., 6'2\""} className={inputCls} />
-								</label>
-								<label className="block">
-									<Label icon={Weight}>Weight</Label>
-									<input type="text" name="weight" value={playerFormData.weight} onChange={handlePlayerChange} placeholder="e.g., 82 kg" className={inputCls} />
-								</label>
-							</div>
+					{/* ================= PLAYER ================= */}
+					{activeTab === "player" && (
+						<form onSubmit={handlePlayerSubmit} className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
 							<label className="block">
+								<Label icon={User} required>First Name</Label>
+								<input type="text" name="firstName" value={playerFormData.firstName} onChange={handlePlayerChange} placeholder="Enter first name" required className={inputCls} />
+							</label>
+							<label className="block">
+								<Label icon={User} required>Last Name</Label>
+								<input type="text" name="lastName" value={playerFormData.lastName} onChange={handlePlayerChange} placeholder="Enter last name" required className={inputCls} />
+							</label>
+							<label className="block">
+								<Label icon={Mail} required>Email</Label>
+								<input type="email" name="email" value={playerFormData.email} onChange={handlePlayerChange} placeholder="you@email.com" required className={inputCls} />
+							</label>
+							<label className="block">
+								<Label icon={Phone} required>Phone</Label>
+								<input type="tel" name="phone" value={playerFormData.phone} onChange={handlePlayerChange} placeholder="07xx xxx xxx" required className={inputCls} />
+							</label>
+							<label className="relative block">
+								<Label icon={Crosshair} required>Position</Label>
+								<select name="position" value={playerFormData.position} onChange={handlePlayerChange} required className={`${inputCls} appearance-none pr-10`}>
+									<option value="">Select Position</option>
+									<option value="Point Guard">Point Guard</option>
+									<option value="Shooting Guard">Shooting Guard</option>
+									<option value="Small Forward">Small Forward</option>
+									<option value="Power Forward">Power Forward</option>
+									<option value="Center">Center</option>
+								</select>
+								<SelectChevron />
+							</label>
+							<label className="block">
+								<Label icon={Hash}>Jersey Number</Label>
+								<input type="number" name="jerseyNumber" value={playerFormData.jerseyNumber} onChange={handlePlayerChange} placeholder="e.g., 23" min="0" max="99" className={inputCls} />
+							</label>
+							<label className="relative col-span-full block">
+								<Label icon={Shield} required>Team</Label>
+								<select name="teamName" value={playerFormData.teamName} onChange={handlePlayerChange} disabled={teamsLoading} required className={`${inputCls} appearance-none pr-10`}>
+									<option value="">Select Team</option>
+									{teams.map((team) => (
+										<option key={team.id} value={team.name}>{team.name}</option>
+									))}
+								</select>
+								<SelectChevron />
+							</label>
+							<label className="block">
+								<Label icon={Ruler}>Height</Label>
+								<input type="text" name="height" value={playerFormData.height} onChange={handlePlayerChange} placeholder={"e.g., 6'2\""} className={inputCls} />
+							</label>
+							<label className="block">
+								<Label icon={Weight}>Weight</Label>
+								<input type="text" name="weight" value={playerFormData.weight} onChange={handlePlayerChange} placeholder="e.g., 82 kg" className={inputCls} />
+							</label>
+							<label className="col-span-full block">
 								<Label icon={MessageSquare}>Additional Information</Label>
 								<textarea name="additionalInfo" value={playerFormData.additionalInfo} onChange={handlePlayerChange} placeholder="Any additional information about yourself" rows={4} className={`${inputCls} resize-y`} />
 							</label>
 
-							<div className="pt-1"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} onSuccess={setPlayerTurnstileToken} onExpire={() => setPlayerTurnstileToken(null)} onError={() => setPlayerTurnstileToken(null)} /></div>
-
-							<button
-								type="submit"
-								disabled={submitting || !playerTurnstileToken}
-								className="mt-1 inline-flex items-center justify-center gap-2 self-start rounded-md bg-brand px-8 py-4 font-display text-[15px] uppercase tracking-[0.05em] text-white transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#b9b3aa] disabled:opacity-70 max-[600px]:w-full"
-							>
-								<Send className="h-[18px] w-[18px]" aria-hidden />
+							<div className="col-span-full"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} onSuccess={setPlayerTurnstileToken} onExpire={() => setPlayerTurnstileToken(null)} onError={() => setPlayerTurnstileToken(null)} /></div>
+							<Consent agreed={agreed} setAgreed={setAgreed} />
+							<button type="submit" disabled={!canSubmitPlayer} className={submitCls}>
 								{submitting ? "Submitting…" : "Submit Registration"}
 							</button>
-						</div>
-					</form>
-				)}
+						</form>
+					)}
+				</div>
 			</div>
 		</div>
+	);
+}
+
+function Consent({ agreed, setAgreed }: { agreed: boolean; setAgreed: (v: boolean) => void }) {
+	return (
+		<label className="col-span-full mt-1 flex cursor-pointer items-start gap-3">
+			<input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 accent-brand" />
+			<span className="text-[13px] leading-[1.55] text-muted">
+				I confirm the details are accurate and agree to the{" "}
+				<a href="/rules" className="font-semibold text-ink2 underline underline-offset-2">league rules</a> and code of conduct.
+			</span>
+		</label>
 	);
 }
