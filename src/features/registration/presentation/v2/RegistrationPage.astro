@@ -1,35 +1,144 @@
 ---
-// v2 League Registration page. Reuses the shared Header/Footer; the team/player
-// registration form (with Turnstile) is a React island. Icons are lucide-react.
+// v2 League Registration page — dark hero + deadline chips, two-column layout
+// (form island + sidebar: Key Dates / How it works / Help). The team/player form
+// (with Turnstile) is a React island with lucide icons. Hero chips + Key Dates
+// use the real active season's registration window + startDate.
 import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import RegistrationFormV2 from "./RegistrationFormV2.tsx";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { prisma } from "@/lib/prisma";
+import { getZonedDateParts } from "@/features/matches/domain/usecases/utils";
 
-const footer = await getFooterData();
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmtShort = (v: Date | string | null | undefined): string | null => {
+	if (!v) return null;
+	try {
+		const p = getZonedDateParts(v);
+		return `${MON[p.month - 1]} ${String(p.day).padStart(2, "0")}`;
+	} catch {
+		return null;
+	}
+};
+
+const [footer, teamCount, season] = await Promise.all([
+	getFooterData(),
+	prisma.team.count({ where: { approved: true } }).catch(() => 0),
+	prisma.season
+		.findFirst({ where: { active: true }, orderBy: { startDate: "desc" }, select: { startDate: true, registrationOpensAt: true, registrationClosesAt: true } })
+		.catch(() => null),
+]);
+
+const opens = fmtShort(season?.registrationOpensAt);
+const closes = fmtShort(season?.registrationClosesAt);
+const tipOff = fmtShort(season?.startDate);
+
+// Deadline chips (hero) — real where available, sensible fallbacks otherwise.
+const heroFacts = [
+	{ big: closes ?? "Open", small: closes ? "Registration closes" : "Sign-ups rolling" },
+	{ big: tipOff ?? "2026", small: tipOff ? "Season tip-off" : "Season" },
+	{ big: String(teamCount || "—"), small: "Teams competing" },
+];
+
+const keyDates = [
+	{ date: opens ?? "Open", label: "Registration opens" },
+	{ date: closes ?? "Rolling", label: "Entry deadline" },
+	{ date: tipOff ?? "TBD", label: "Season tip-off" },
+];
+
+const steps = [
+	{ n: "1", title: "Submit", desc: "Complete the team or player form with accurate contact details." },
+	{ n: "2", title: "Review", desc: "We verify eligibility and roster within 3 working days." },
+	{ n: "3", title: "Confirm", desc: "Pay the season fee and receive your fixtures and slot." },
+];
+
+const c = footer.contact;
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="register" />
 
-	<!-- HERO -->
-	<section class="relative overflow-hidden border-b border-black/[0.08]">
-		<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
-		<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
-		<div class="relative mx-auto max-w-[1280px] px-8 pb-[40px] pt-[52px] max-[960px]:px-6">
-			<div class="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
-				<span class="h-px w-[26px] bg-brand"></span>Season 2026 · Registration
+	<!-- HERO (dark) -->
+	<section class="relative overflow-hidden bg-night text-cream">
+		<div class="absolute inset-0" style="background:radial-gradient(100% 90% at 85% -20%,rgba(228,0,43,0.26),transparent 55%);"></div>
+		<div class="absolute -top-32 right-[-160px] h-[560px] w-[560px] rounded-full border border-white/[0.06]"></div>
+		<div class="absolute -top-8 right-[-40px] h-[360px] w-[360px] rounded-full border border-brand/[0.16]"></div>
+		<div class="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/60 to-transparent"></div>
+		<svg class="pointer-events-none absolute -top-10 right-[60px] h-[300px] w-[300px] max-[960px]:hidden" viewBox="0 0 408 408" fill="none" aria-hidden="true" style="animation:eb-spin 28s linear infinite;transform-origin:center;">
+			<defs><clipPath id="rgBall"><circle cx="204" cy="204" r="180"></circle></clipPath></defs>
+			<circle cx="204" cy="204" r="180" fill="none" stroke="#e4002b" stroke-width="2" stroke-opacity="0.28"></circle>
+			<g clip-path="url(#rgBall)" stroke="#e4002b" stroke-width="2" stroke-opacity="0.28" fill="none" stroke-linecap="round">
+				<line x1="204" y1="20" x2="204" y2="388"></line>
+				<line x1="20" y1="204" x2="388" y2="204"></line>
+				<path d="M92 40 C 168 150, 168 258, 92 368"></path>
+				<path d="M316 40 C 240 150, 240 258, 316 368"></path>
+			</g>
+		</svg>
+
+		<div class="relative mx-auto max-w-[1280px] px-8 pb-[52px] pt-[60px] max-[960px]:px-6 max-[960px]:pb-10 max-[960px]:pt-12">
+			<div class="mb-5 inline-flex items-center gap-3 rounded-full border border-white/[0.12] bg-white/[0.03] py-[7px] pl-3 pr-[14px] font-mono text-[11px] uppercase tracking-[0.14em] text-creamdim">
+				<span class="relative flex h-[7px] w-[7px]"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75"></span><span class="relative inline-flex h-[7px] w-[7px] rounded-full bg-brand"></span></span>
+				Season 2026 · Sign-up open
 			</div>
-			<h1 class="font-display text-[clamp(52px,7.5vw,110px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Join the League</h1>
-			<p class="mt-5 max-w-[560px] text-[16px] leading-[1.7] text-muted">
-				Register your club or sign up as a player. Tryouts run throughout the year for late entries — pick a tab below and tell us about your team or your game.
-			</p>
+			<h1 class="max-w-[820px] font-display text-[clamp(48px,6.6vw,104px)] uppercase leading-[0.84] tracking-[0.01em] text-[#f6f2ec]">2026 League<br />Registration</h1>
+			<p class="mt-5 max-w-[520px] text-[16px] leading-[1.7] text-creamdim">Register your team or sign up as a player for the 2026 Elevate Ballers League season. Lock your spot on the Nairobi courts.</p>
+			<div class="mt-8 flex flex-wrap gap-3">
+				{heroFacts.map((f) => (
+					<div class="rounded-xl border border-white/[0.1] bg-white/[0.03] px-5 py-3.5">
+						<div class="font-display text-[24px] leading-none text-cream">{f.big}</div>
+						<div class="mt-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{f.small}</div>
+					</div>
+				))}
+			</div>
 		</div>
 	</section>
 
-	<!-- FORM -->
-	<section class="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
-		<RegistrationFormV2 client:load />
+	<!-- MAIN: FORM + SIDEBAR -->
+	<section id="form" class="mx-auto grid max-w-[1280px] grid-cols-[1.25fr_0.75fr] gap-12 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:py-10">
+		<div>
+			<RegistrationFormV2 client:load />
+		</div>
+
+		<aside class="flex flex-col gap-5">
+			<!-- KEY DATES -->
+			<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Key Dates</div>
+				<div class="flex flex-col">
+					{keyDates.map((d) => (
+						<div class="flex items-center gap-4 border-b border-black/[0.07] py-3 last:border-b-0">
+							<span class="w-[68px] flex-shrink-0 font-display text-[16px] uppercase leading-none text-brand">{d.date}</span>
+							<span class="font-body text-[14px] text-ink2">{d.label}</span>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<!-- STEPS -->
+			<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">How it works</div>
+				<div class="flex flex-col gap-5">
+					{steps.map((s) => (
+						<div class="flex items-start gap-4">
+							<span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-brand/40 bg-brand/[0.14] font-display text-[15px] text-brandsoft">{s.n}</span>
+							<div>
+								<div class="font-display text-[16px] uppercase leading-none text-cream">{s.title}</div>
+								<p class="mt-1.5 text-[13px] leading-[1.55] text-creamdim">{s.desc}</p>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<!-- HELP -->
+			<div class="rounded-2xl border border-black/10 bg-paper2 p-6">
+				<div class="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Need a hand?</div>
+				<p class="text-[14px] leading-[1.6] text-muted">Stuck on registration or transfers? The desk is open {c.hours}.</p>
+				<div class="mt-4 flex flex-col gap-1.5 font-mono text-[13px] text-ink2">
+					{c.phone && <a href={`tel:${c.phone.replace(/\s+/g, "")}`} class="no-underline hover:text-brand">{c.phone}</a>}
+					{c.email && <a href={`mailto:${c.email}`} class="no-underline hover:text-brand">{c.email}</a>}
+				</div>
+			</div>
+		</aside>
 	</section>
 
 	<Footer footer={footer} />
