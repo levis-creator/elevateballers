@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, SearchIcon } from 'lucide-react';
+import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, SearchIcon, ClipboardListIcon } from 'lucide-react';
 import { PermissionProvider } from '@/features/rbac/usePermissions';
 import BannerSettingsEditor from './BannerSettingsEditor';
 import ContactSettingsEditor from './ContactSettingsEditor';
@@ -11,17 +11,19 @@ import SeoSettingsEditor from './SeoSettingsEditor';
 import RulesSettingsEditor from './RulesSettingsEditor';
 import RulesContentEditor from './RulesContentEditor';
 import MatchSettingsEditor from './MatchSettingsEditor';
+import RegistrationSettingsEditor from './RegistrationSettingsEditor';
 
-type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches';
+type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches' | 'registration';
 
 const NAV_ITEMS: { value: Tab; label: string; Icon: React.ElementType }[] = [
-  { value: 'header',   label: 'Header',           Icon: ImageIcon    },
-  { value: 'contact',  label: 'Contact & Social', Icon: PhoneIcon    },
-  { value: 'homepage', label: 'Homepage Intro',   Icon: HomeIcon     },
-  { value: 'seo',      label: 'SEO',              Icon: SearchIcon   },
-  { value: 'about',    label: 'About Page',       Icon: InfoIcon     },
-  { value: 'rules',    label: 'Rules Page',       Icon: BookOpenIcon },
-  { value: 'matches',  label: 'Matches',          Icon: TrophyIcon   },
+  { value: 'header',       label: 'Header',           Icon: ImageIcon         },
+  { value: 'contact',      label: 'Contact & Social', Icon: PhoneIcon         },
+  { value: 'homepage',     label: 'Homepage Intro',   Icon: HomeIcon          },
+  { value: 'seo',          label: 'SEO',              Icon: SearchIcon        },
+  { value: 'about',        label: 'About Page',       Icon: InfoIcon          },
+  { value: 'rules',        label: 'Rules Page',       Icon: BookOpenIcon      },
+  { value: 'matches',      label: 'Matches',          Icon: TrophyIcon        },
+  { value: 'registration', label: 'Registration',     Icon: ClipboardListIcon },
 ];
 
 export default function SettingsTabs() {
@@ -61,6 +63,7 @@ export default function SettingsTabs() {
           {active === 'about'    && <AboutPageEditor />}
           {active === 'rules'    && <><RulesSettingsEditor /><RulesContentEditor /></>}
           {active === 'matches'  && <MatchSettingsEditor />}
+          {active === 'registration' && <RegistrationSettingsEditor />}
         </div>
       </div>
     </PermissionProvider>

@@ -7,6 +7,7 @@ import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import RegistrationFormV2 from "./RegistrationFormV2.tsx";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { getSiteSettingByKey } from "@/features/cms/lib/queries";
 import { prisma } from "@/lib/prisma";
 import { getZonedDateParts } from "@/features/matches/domain/usecases/utils";
 
@@ -21,13 +22,17 @@ const fmtShort = (v: Date | string | null | undefined): string | null => {
 	}
 };
 
-const [footer, teamCount, season] = await Promise.all([
+const [footer, teamCount, season, regVisibleSetting] = await Promise.all([
 	getFooterData(),
 	prisma.team.count({ where: { approved: true } }).catch(() => 0),
 	prisma.season
 		.findFirst({ where: { active: true }, orderBy: { startDate: "desc" }, select: { startDate: true, registrationOpensAt: true, registrationClosesAt: true } })
 		.catch(() => null),
+	getSiteSettingByKey("registration_form_visible").catch(() => null),
 ]);
+
+// Admin master switch (Site Settings → Registration). Missing setting = visible.
+const formVisible = regVisibleSetting ? String((regVisibleSetting as any).value).toLowerCase() !== "false" : true;
 
 const opens = fmtShort(season?.registrationOpensAt);
 const closes = fmtShort(season?.registrationClosesAt);
@@ -96,7 +101,26 @@ const c = footer.contact;
 	<!-- MAIN: FORM + SIDEBAR -->
 	<section id="form" class="mx-auto grid max-w-[1280px] grid-cols-[1.25fr_0.75fr] gap-12 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:py-10">
 		<div>
-			<RegistrationFormV2 client:load />
+			{formVisible ? (
+				<RegistrationFormV2 client:load />
+			) : (
+				<div class="rounded-2xl border border-black/10 bg-white p-9 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-6">
+					<div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand">
+						<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+							<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+						</svg>
+					</div>
+					<h2 class="mt-5 font-display text-[30px] uppercase text-ink">Registration is closed</h2>
+					<p class="mt-3 max-w-[440px] text-[15px] leading-[1.65] text-muted">
+						Team and player sign-ups are currently closed. Tryouts still run year-round for late entries — reach out and we'll let you know the moment a spot opens.
+					</p>
+					<div class="mt-6 flex flex-wrap gap-3">
+						<a href="/contacts" class="rounded-lg bg-brand px-6 py-3.5 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-white no-underline hover:bg-brandlt">Contact us</a>
+						<a href="/upcoming-fixtures" class="rounded-lg border border-black/15 px-6 py-3.5 font-body text-[13px] font-bold uppercase tracking-[0.05em] text-ink2 no-underline hover:border-brand hover:text-brand">View fixtures</a>
+					</div>
+				</div>
+			)}
 		</div>
 
 		<aside class="flex flex-col gap-5">
