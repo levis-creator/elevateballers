@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, SearchIcon, ClipboardListIcon } from 'lucide-react';
+import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, SearchIcon, ClipboardListIcon, PanelBottomIcon } from 'lucide-react';
 import { PermissionProvider } from '@/features/rbac/usePermissions';
 import BannerSettingsEditor from './BannerSettingsEditor';
 import ContactSettingsEditor from './ContactSettingsEditor';
@@ -12,8 +12,9 @@ import RulesSettingsEditor from './RulesSettingsEditor';
 import RulesContentEditor from './RulesContentEditor';
 import MatchSettingsEditor from './MatchSettingsEditor';
 import RegistrationSettingsEditor from './RegistrationSettingsEditor';
+import FooterSettingsEditor from './FooterSettingsEditor';
 
-type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches' | 'registration';
+type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches' | 'registration' | 'footer';
 
 const NAV_ITEMS: { value: Tab; label: string; Icon: React.ElementType }[] = [
   { value: 'header',       label: 'Header',           Icon: ImageIcon         },
@@ -24,6 +25,7 @@ const NAV_ITEMS: { value: Tab; label: string; Icon: React.ElementType }[] = [
   { value: 'rules',        label: 'Rules Page',       Icon: BookOpenIcon      },
   { value: 'matches',      label: 'Matches',          Icon: TrophyIcon        },
   { value: 'registration', label: 'Registration',     Icon: ClipboardListIcon },
+  { value: 'footer',       label: 'Footer',           Icon: PanelBottomIcon   },
 ];
 
 export default function SettingsTabs() {
@@ -64,6 +66,7 @@ export default function SettingsTabs() {
           {active === 'rules'    && <><RulesSettingsEditor /><RulesContentEditor /></>}
           {active === 'matches'  && <MatchSettingsEditor />}
           {active === 'registration' && <RegistrationSettingsEditor />}
+          {active === 'footer'   && <FooterSettingsEditor />}
         </div>
       </div>
     </PermissionProvider>

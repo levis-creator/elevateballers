@@ -6,6 +6,7 @@
 import { getAllSiteSettings } from "@/features/cms/lib/queries";
 import type { FooterData } from "@/features/layout/domain/entities/footer";
 import { DEFAULT_FOOTER } from "@/features/layout/domain/entities/footer";
+import { FOOTER_CONTENT_KEY, parseFooterContent } from "@/features/layout/lib/footer-content";
 
 export async function getFooterData(): Promise<FooterData> {
 	try {
@@ -33,6 +34,7 @@ export async function getFooterData(): Promise<FooterData> {
 				email: val("contact_email", d.contact.email),
 			},
 			socials,
+			content: parseFooterContent(map.get(FOOTER_CONTENT_KEY)),
 		};
 	} catch {
 		return DEFAULT_FOOTER;

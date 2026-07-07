@@ -19,9 +19,14 @@ export interface FooterContact {
 	email: string;
 }
 
+import type { FooterContent } from "@/features/layout/lib/footer-content";
+import { FOOTER_DEFAULTS } from "@/features/layout/lib/footer-content";
+
 export interface FooterData {
 	contact: FooterContact;
 	socials: SocialLink[];
+	/** Editorial content (explore links, newsletter text, copyright) — CMS-editable. */
+	content: FooterContent;
 }
 
 export const DEFAULT_FOOTER: FooterData = {
@@ -38,4 +43,5 @@ export const DEFAULT_FOOTER: FooterData = {
 		{ label: "YT", url: "https://www.youtube.com/@elevateballers9389/featured" },
 		{ label: "X", url: "https://twitter.com/elevateballers/" },
 	],
+	content: FOOTER_DEFAULTS,
 };
