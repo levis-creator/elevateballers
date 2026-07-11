@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Lock, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 
-const MIN_PASSWORD_LENGTH = 10;
+const MIN_PASSWORD_LENGTH = 8;
 
 export default function ResetPasswordForm() {
   const [token, setToken] = useState('');

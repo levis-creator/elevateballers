@@ -40,10 +40,11 @@ describe('validatePasswordStrength', () => {
   it('accepts a strong password with all required character classes', () => {
     expect(validatePasswordStrength('StrongPass1!')).toBeNull();
     expect(validatePasswordStrength('C0rrect-Horse-Battery!')).toBeNull();
+    expect(validatePasswordStrength('Abcdef1!')).toBeNull(); // exactly 8 chars — the new minimum
   });
 
-  it('rejects passwords shorter than 10 characters', () => {
-    expect(validatePasswordStrength('Short1!')).toBeTruthy();
+  it('rejects passwords shorter than 8 characters', () => {
+    expect(validatePasswordStrength('Short1!')).toBeTruthy(); // 7 chars
     expect(validatePasswordStrength('Ab1!')).toBeTruthy();
   });
 
