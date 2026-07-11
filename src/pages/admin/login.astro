@@ -1,8 +1,14 @@
 ---
 export const prerender = false;
 
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 import AdminLoginPage from '../../features/auth/presentation/v2/AdminLoginPage.astro';
 import { checkAuth } from '../../features/cms/lib/auth-astro';
+
+// Admin redesign is flag-gated SEPARATELY from the public site
+// (PUBLIC_ADMIN_UI_VERSION). When off, serve the legacy login at the same URL —
+// separate route keeps each UI's CSS isolated (see ui-version notes).
+if (!usePublicAdminV2) return Astro.rewrite('/admin/login-v1');
 
 try {
   const user = await checkAuth(Astro.request);

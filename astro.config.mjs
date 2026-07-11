@@ -55,6 +55,10 @@ export default defineConfig({
       // NOTE: PUBLIC_* vars are inlined at build time — flipping this requires a
       // rebuild/redeploy (a zero-code, one-click revert), not a live env change.
       PUBLIC_UI_VERSION: envField.string({ context: 'client', access: 'public', default: 'v1', optional: true }),
+      // Admin UI toggle — SEPARATE from PUBLIC_UI_VERSION so the admin console
+      // (login/OTP) rolls out/back independently of the public site.
+      // 'v1' = legacy CMS forms, 'v2' = redesign. Defaults to 'v1'.
+      PUBLIC_ADMIN_UI_VERSION: envField.string({ context: 'client', access: 'public', default: 'v1', optional: true }),
     },
   },
   image: {

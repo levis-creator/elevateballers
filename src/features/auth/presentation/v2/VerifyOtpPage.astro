@@ -1,0 +1,42 @@
+---
+// v2 admin OTP — two-column: reusable BrandingPanel (left, OTP copy/stats) +
+// verification form (right island). Shares the login page's shell so the two
+// admin auth screens read as one flow. Loads v2 tokens/fonts + eb-* keyframes.
+import "@/styles/v2.css";
+import "@fontsource/anton";
+import "@fontsource/archivo/400.css";
+import "@fontsource/archivo/600.css";
+import "@fontsource/archivo/700.css";
+import "@fontsource/space-mono/400.css";
+import "@/features/loading/lib/loading.css";
+import BrandingPanel, { type BrandingStat } from "./BrandingPanel.astro";
+import VerifyOtpForm from "./VerifyOtpForm.tsx";
+
+// Editorial (not DB-backed) — this screen is post-credential, so it speaks to
+// the security posture rather than league counts.
+const stats: BrandingStat[] = [
+	{ big: "6", small: "Digit Code" },
+	{ big: "2FA", small: "Enforced" },
+	{ big: "Encrypted", small: "Session", accent: true },
+];
+---
+
+<div class="grid min-h-screen grid-cols-[1.05fr_0.95fr] bg-night font-body text-cream max-[900px]:grid-cols-1">
+	<BrandingPanel
+		ghostWord="Verify"
+		badge="Second Line of Defense"
+		headlineTop="One more"
+		headlineAccent="check"
+		description="We sent a one-time code to keep the league console locked down. Enter it below to finish signing in — the code expires in a few minutes."
+		stats={stats}
+	/>
+
+	<!-- RIGHT: OTP form -->
+	<div class="relative flex items-center justify-center bg-night2 px-12 py-14 max-[600px]:px-6 max-[600px]:py-10">
+		<svg class="pointer-events-none absolute right-6 top-6 h-[90px] w-[150px]" viewBox="0 0 220 120" aria-hidden="true">
+			<defs><pattern id="otpHt" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="2.2" fill="rgba(255,255,255,0.06)"></circle></pattern></defs>
+			<rect width="220" height="120" fill="url(#otpHt)"></rect>
+		</svg>
+		<VerifyOtpForm client:load />
+	</div>
+</div>
