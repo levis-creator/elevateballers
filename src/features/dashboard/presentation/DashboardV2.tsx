@@ -196,17 +196,17 @@ function DashboardContent() {
 						</div>
 					</Card>
 
-					{/* This Week */}
-					<Card className="overflow-hidden">
+					{/* This Week — stretches to fill the column height (equal with Approvals) */}
+					<Card className="flex flex-1 flex-col overflow-hidden">
 						<div className="flex items-center justify-between border-b border-[var(--bord2)] px-5 py-4">
 							<div className="flex items-center gap-2.5"><span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--brand)]/[0.12] text-[var(--brand)]"><CalendarDays className="h-[15px] w-[15px]" /></span><h2 className="font-['Anton'] text-[19px] uppercase tracking-[0.01em] text-[var(--tx)]">This Week</h2></div>
 							<a href="/admin/matches" className="font-['Space_Mono'] text-[11px] text-[var(--brandsoft)] no-underline">Full schedule →</a>
 						</div>
-						<div className="flex flex-col">
+						<div className="flex flex-1 flex-col">
 							{d.fixtures.map((f: Fixture) => {
 								const st = statusMeta(f.status);
 								return (
-									<div key={f.id} className="flex items-center gap-3.5 border-b border-[var(--bord2)] px-5 py-3 last:border-b-0">
+									<div key={f.id} className="flex flex-1 items-center gap-3.5 border-b border-[var(--bord2)] px-5 py-3 last:border-b-0">
 										<span className="w-[104px] flex-shrink-0 font-['Space_Mono'] text-[11px] uppercase tracking-[0.06em] text-[var(--txm)]">{fixtureDate(f.date)}</span>
 										<span className="flex-1 truncate font-['Archivo'] text-[13px] font-bold text-[var(--tx)]">{f.home}</span>
 										<span className="font-['Anton'] text-[12px] text-[var(--faint)]">v</span>
