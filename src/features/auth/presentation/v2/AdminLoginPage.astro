@@ -1,0 +1,45 @@
+---
+// v2 admin login — two-column: reusable BrandingPanel (left) + sign-in form
+// (right island). Loads the v2 tokens/fonts + eb-* keyframes (spin/shake).
+import "@/styles/v2.css";
+import "@fontsource/anton";
+import "@fontsource/archivo/400.css";
+import "@fontsource/archivo/600.css";
+import "@fontsource/archivo/700.css";
+import "@fontsource/space-mono/400.css";
+import "@/features/loading/lib/loading.css";
+import { prisma } from "@/lib/prisma";
+import BrandingPanel, { type BrandingStat } from "./BrandingPanel.astro";
+import AdminLoginForm from "./AdminLoginForm.tsx";
+
+const [teamCount, playerCount] = await Promise.all([
+	prisma.team.count({ where: { approved: true } }).catch(() => 0),
+	prisma.player.count({ where: { approved: true } }).catch(() => 0),
+]);
+
+const stats: BrandingStat[] = [
+	{ big: String(teamCount), small: "Teams" },
+	{ big: String(playerCount), small: "Players" },
+	{ big: "Season 2026", small: "Live now", accent: true },
+];
+---
+
+<div class="grid min-h-screen grid-cols-[1.05fr_0.95fr] bg-night font-body text-cream max-[900px]:grid-cols-1">
+	<BrandingPanel
+		ghostWord="Admin"
+		badge="League Control Room"
+		headlineTop="Run the"
+		headlineAccent="whole league"
+		description="Post fixtures, update standings, publish match reports and crown the Player of the Week — all from one place. Sign in to your admin console."
+		stats={stats}
+	/>
+
+	<!-- RIGHT: form -->
+	<div class="relative flex items-center justify-center bg-night2 px-12 py-14 max-[600px]:px-6 max-[600px]:py-10">
+		<svg class="pointer-events-none absolute right-6 top-6 h-[90px] w-[150px]" viewBox="0 0 220 120" aria-hidden="true">
+			<defs><pattern id="loginHt" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="2.2" fill="rgba(255,255,255,0.06)"></circle></pattern></defs>
+			<rect width="220" height="120" fill="url(#loginHt)"></rect>
+		</svg>
+		<AdminLoginForm client:load />
+	</div>
+</div>

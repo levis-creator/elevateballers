@@ -1,8 +1,7 @@
 ---
 export const prerender = false;
-export const ssr = false;
 
-import LoginForm from '../../features/cms/presentation/components/LoginForm';
+import AdminLoginPage from '../../features/auth/presentation/v2/AdminLoginPage.astro';
 import { checkAuth } from '../../features/cms/lib/auth-astro';
 
 try {
@@ -22,10 +21,9 @@ try {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Admin Login - Elevate Ballers CMS</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600">
   <link rel="icon" href="/images/Elevate_Icon-32x32.png" sizes="32x32">
 </head>
 <body>
-  <LoginForm client:load />
+  <AdminLoginPage />
 </body>
 </html>

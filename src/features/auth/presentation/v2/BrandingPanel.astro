@@ -1,0 +1,88 @@
+---
+// Reusable dark "court" branding panel for the admin auth screens (login + OTP).
+// Prop-driven so each screen supplies its own badge / headline / copy / stats.
+// Single responsibility: branding + atmosphere only — no form logic.
+export interface BrandingStat {
+	big: string;
+	small: string;
+	/** Render the big value in brand red (e.g. the season chip). */
+	accent?: boolean;
+}
+interface Props {
+	/** Oversized outlined ghost word, bottom-left. Default "Admin". */
+	ghostWord?: string;
+	badge: string;
+	headlineTop: string;
+	headlineAccent: string;
+	description: string;
+	stats?: BrandingStat[];
+}
+const { ghostWord = "Admin", badge, headlineTop, headlineAccent, description, stats = [] } = Astro.props;
+---
+
+<div class="relative flex flex-col justify-between overflow-hidden border-r border-white/[0.06] px-14 py-12 max-[1200px]:px-10 max-[900px]:min-h-[300px] max-[900px]:border-b max-[900px]:border-r-0 max-[600px]:px-7 max-[600px]:py-9">
+	<!-- diagonal weave + gradients -->
+	<div class="pointer-events-none absolute inset-0" aria-hidden="true" style="background:repeating-linear-gradient(45deg,#141210,#141210 22px,#100e0d 22px,#100e0d 44px);"></div>
+	<div class="pointer-events-none absolute inset-0" aria-hidden="true" style="background:linear-gradient(160deg,rgba(12,11,10,0.55),rgba(12,11,10,0.9));"></div>
+	<div class="pointer-events-none absolute inset-0" aria-hidden="true" style="background:radial-gradient(90% 80% at 88% -10%,rgba(228,0,43,0.30),transparent 55%);"></div>
+
+	<!-- ghost word -->
+	<div class="pointer-events-none absolute -bottom-[46px] left-[-16px] select-none font-display text-[190px] uppercase leading-none tracking-[0.02em] max-[1200px]:text-[150px] max-[900px]:hidden" aria-hidden="true" style="-webkit-text-stroke:1px rgba(255,255,255,0.05);color:transparent;">{ghostWord}</div>
+
+	<!-- red glow -->
+	<svg class="pointer-events-none absolute -top-[110px] right-[-90px] h-[520px] w-[520px] max-[900px]:hidden" viewBox="0 0 540 540" fill="none" aria-hidden="true">
+		<defs><radialGradient id="bpGlow" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#ff2d43" stop-opacity="0.45"></stop><stop offset="55%" stop-color="#e4002b" stop-opacity="0.12"></stop><stop offset="100%" stop-color="#e4002b" stop-opacity="0"></stop></radialGradient></defs>
+		<circle cx="270" cy="270" r="250" fill="url(#bpGlow)"></circle>
+	</svg>
+
+	<!-- spinning ball -->
+	<svg class="pointer-events-none absolute top-[-40px] right-[8px] h-[360px] w-[360px] max-[1200px]:h-[280px] max-[1200px]:w-[280px] max-[900px]:hidden" viewBox="0 0 408 408" fill="none" aria-hidden="true" style="animation:eb-spin 26s linear infinite;transform-origin:center;">
+		<defs><clipPath id="bpClip"><circle cx="204" cy="204" r="180"></circle></clipPath></defs>
+		<circle cx="204" cy="204" r="180" fill="none" stroke="#e4002b" stroke-width="2" stroke-opacity="0.28"></circle>
+		<g clip-path="url(#bpClip)" stroke="#e4002b" stroke-width="2" stroke-opacity="0.28" fill="none" stroke-linecap="round">
+			<line x1="204" y1="20" x2="204" y2="388"></line>
+			<line x1="20" y1="204" x2="388" y2="204"></line>
+			<path d="M92 40 C 168 150, 168 258, 92 368"></path>
+			<path d="M316 40 C 240 150, 240 258, 316 368"></path>
+		</g>
+	</svg>
+
+	<!-- three-point arc -->
+	<svg class="pointer-events-none absolute -bottom-[90px] -left-[80px] h-[320px] w-[320px] max-[900px]:hidden" viewBox="0 0 300 300" fill="none" aria-hidden="true">
+		<path d="M300 20 A 190 190 0 0 0 20 300" stroke="rgba(228,0,43,0.4)" stroke-width="2.5" fill="none"></path>
+		<path d="M300 70 A 130 130 0 0 0 70 300" stroke="rgba(255,255,255,0.07)" stroke-width="2" fill="none"></path>
+	</svg>
+
+	<!-- logo lockup -->
+	<div class="relative flex items-center">
+		<img src="/logo/Elevate_Logo.png" alt="Elevate Ballers League" class="h-[46px] w-auto brightness-0 invert" />
+	</div>
+
+	<!-- headline -->
+	<div class="relative max-w-[440px]">
+		<div class="mb-5 inline-flex items-center gap-2.5 rounded-full border border-white/[0.12] bg-white/[0.03] py-[7px] pl-3 pr-[14px] font-mono text-[11px] uppercase tracking-[0.14em] text-creamdim">
+			<span class="inline-block h-[7px] w-[7px] rounded-full bg-brand"></span>{badge}
+		</div>
+		<h1 class="mb-4 font-display text-[clamp(44px,4.6vw,72px)] uppercase leading-[0.86] text-[#f6f2ec]">
+			{headlineTop}<br /><span class="text-brand">{headlineAccent}</span>
+		</h1>
+		<p class="max-w-[380px] text-[15px] leading-[1.65] text-creamdim">{description}</p>
+	</div>
+
+	<!-- stat rail -->
+	{stats.length > 0 ? (
+		<div class="relative flex flex-wrap items-center gap-x-9 gap-y-4 border-t border-white/[0.08] pt-6">
+			{stats.map((s, i) => (
+				<Fragment>
+					{i > 0 && <div class="h-8 w-px bg-white/[0.1]"></div>}
+					<div>
+						<div class={`font-display text-[30px] leading-none ${s.accent ? "text-brand" : "text-cream"}`}>{s.big}</div>
+						<div class="mt-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{s.small}</div>
+					</div>
+				</Fragment>
+			))}
+		</div>
+	) : (
+		<div></div>
+	)}
+</div>
