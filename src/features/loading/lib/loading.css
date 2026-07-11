@@ -13,6 +13,7 @@
 /* Error-shake + success-pop (admin auth forms). */
 @keyframes eb-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 @keyframes eb-pop { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes eb-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
 /* One status line lit at a time (5 lines × 1.2s slots = 6s loop). */
 @keyframes eb-status { 0% { opacity: 0; } 4% { opacity: 1; } 16% { opacity: 1; } 20%, 100% { opacity: 0; } }
