@@ -4,6 +4,8 @@ export const ssr = true; // Enable SSR for proper server-side auth checks
 
 import AdminLayout from '../../features/cms/components/AdminLayout.astro';
 import Dashboard from '../../features/cms/components/Dashboard';
+import DashboardV2 from '../../features/dashboard/presentation/DashboardV2';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 ---
 
 <AdminLayout
@@ -30,5 +32,5 @@ import Dashboard from '../../features/cms/components/Dashboard';
     'audit_logs:manage',
   ]}
 >
-  <Dashboard client:load />
+  {usePublicAdminV2 ? <DashboardV2 client:load /> : <Dashboard client:load />}
 </AdminLayout>

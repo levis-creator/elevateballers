@@ -2,8 +2,16 @@
 import { ClientRouter } from 'astro:transitions';
 import { checkAuth } from '../../cms/lib/auth-astro';
 import AdminShell from './AdminShell';
+import AdminShellV2 from '../presentation/v2/AdminShellV2';
 import { hasPermission, hasAnyPermission, hasAllPermissions } from '../../rbac/permissions';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 import '../../../styles/admin.css';
+import '../presentation/v2/admin-v2.css';
+import '@fontsource/anton';
+import '@fontsource/archivo/400.css';
+import '@fontsource/archivo/600.css';
+import '@fontsource/archivo/700.css';
+import '@fontsource/space-mono/400.css';
 
 interface Props {
   title?: string;
@@ -43,6 +51,12 @@ if (redirectUrl) {
     // Fall back to meta refresh if response stream already started
   }
 }
+
+// v2 admin shell is flag-gated (same PUBLIC_ADMIN_UI_VERSION as the auth pages).
+// The redesigned dashboard lives at /admin; every other admin page keeps its v1
+// content on a light surface inside the v2 chrome until individually redesigned.
+const useV2 = usePublicAdminV2;
+const isDashboard = Astro.url.pathname === '/admin' || Astro.url.pathname === '/admin/';
 ---
 
 <!doctype html>
@@ -119,6 +133,41 @@ if (redirectUrl) {
       <script is:inline define:vars={{ url: redirectUrl }}>
         window.location.href = url;
       </script>
+    ) : useV2 ? (
+      <div id="eb-admin-root" class="eb-root min-h-screen">
+        <script is:inline>
+          (function () {
+            function applyAdminTheme() {
+              try {
+                var t = localStorage.getItem('eb-cms-theme');
+                var light;
+                if (t === 'light') light = true;
+                else if (t === 'dark') light = false;
+                // default = system: follow the OS colour-scheme preference
+                else light = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+                var el = document.getElementById('eb-admin-root');
+                if (el) { el.classList.toggle('light', !!light); el.classList.toggle('dark', !light); }
+              } catch (e) {}
+            }
+            // Apply before paint on this (full) load.
+            applyAdminTheme();
+            // Re-apply after every view-transition swap — the swapped-in page ships
+            // a fresh #eb-admin-root with no theme class, so without this the theme
+            // resets to default when moving between admin modules. Bind once to
+            // `document` (survives swaps).
+            if (!window.__ebAdminThemeBound) {
+              window.__ebAdminThemeBound = true;
+              document.addEventListener('astro:after-swap', applyAdminTheme);
+            }
+          })();
+        </script>
+        <AdminShellV2 client:load transition:persist />
+        <main class="eb-content ml-[var(--admin-sidebar-width,260px)] min-h-screen pt-[57px] transition-[margin] duration-[280ms] ease-out max-md:ml-0">
+          <div class={`mx-auto w-full ${isDashboard ? 'max-w-[1240px] px-6 py-6' : 'max-w-[1400px] p-8 max-md:p-4 max-[480px]:p-3'} max-md:px-4 admin-page scroll-smooth`}>
+            <slot />
+          </div>
+        </main>
+      </div>
     ) : (
       <div class="flex min-h-screen bg-[#f9fafb] relative w-full font-sans">
         <AdminShell client:load transition:persist />
