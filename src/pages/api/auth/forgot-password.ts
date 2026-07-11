@@ -6,25 +6,9 @@ import { sendPasswordResetEmail, sendWelcomeSetPasswordEmail } from '../../../li
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { getResetTtlMinutes, getInviteTtlMinutes } from '../../../features/auth/lib/reset-ttl';
 
 export const prerender = false;
-
-const DEFAULT_RESET_TTL_MINUTES = 60;
-const DEFAULT_INVITE_TTL_MINUTES = 1440;
-
-function getResetTtlMinutes(): number {
-  const raw = process.env.PASSWORD_RESET_TTL_MINUTES;
-  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_RESET_TTL_MINUTES;
-  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_RESET_TTL_MINUTES;
-  return parsed;
-}
-
-function getInviteTtlMinutes(): number {
-  const raw = process.env.INVITE_TTL_MINUTES;
-  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_INVITE_TTL_MINUTES;
-  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_INVITE_TTL_MINUTES;
-  return parsed;
-}
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
