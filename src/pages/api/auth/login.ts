@@ -186,13 +186,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Credentials valid — reset lockout counters
     await resetFailedLogin(user.id);
 
-    // Generate and send OTP
+    // Generate the OTP.
     const code = await createOtpForUser(user.id);
-    try {
-      await sendLoginOtpEmail({ email: user.email, name: user.name, code });
-    } catch (emailError) {
-      console.error('[login] Failed to send OTP email:', emailError);
-      return json({ error: 'Failed to send verification code. Please try again.' }, 500);
+
+    if (import.meta.env.DEV) {
+      // Local-dev affordance: the code IS delivered via the server console, so
+      // the login → OTP flow is testable without a reachable email provider.
+      // `import.meta.env.DEV` is TRUE only under `astro dev` (compiled to false
+      // in production builds), so codes are never logged in prod. The email send
+      // is fire-and-forget: awaiting it would hang the request for the full SMTP
+      // connect timeout when the mail host is unreachable from localhost.
+      console.log(`\n🔐 [dev] Login OTP for ${user.email}: ${code}\n`);
+      void sendLoginOtpEmail({ email: user.email, name: user.name, code }).catch((e) =>
+        console.warn('[dev] OTP email send failed (ignored):', e instanceof Error ? e.message : e)
+      );
+    } else {
+      try {
+        await sendLoginOtpEmail({ email: user.email, name: user.name, code });
+      } catch (emailError) {
+        console.error('[login] Failed to send OTP email:', emailError);
+        return json({ error: 'Failed to send verification code. Please try again.' }, 500);
+      }
     }
 
     const otpSessionToken = createOtpSessionToken({ id: user.id, email: user.email });
