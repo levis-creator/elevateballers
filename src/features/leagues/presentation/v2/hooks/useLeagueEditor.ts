@@ -11,6 +11,9 @@ import {
 } from "@/features/leagues/domain/entities/league-form";
 import type { LeagueSeasonSummary } from "@/features/leagues/domain/entities/league-detail";
 
+/** Long enough to read the "League created" confirmation, short enough not to feel stuck. */
+const CREATED_REDIRECT_MS = 900;
+
 interface LinkableSeason {
 	id: string;
 	name: string;
@@ -34,9 +37,13 @@ export function useLeagueEditor(leagueId?: string) {
 	const [error, setError] = useState("");
 	const [saved, setSaved] = useState(false);
 	const [touched, setTouched] = useState(false);
+	// True between a successful create and the navigation that follows it. Without
+	// this, the button re-enables during the pause and a second click would create
+	// a duplicate league.
+	const [redirecting, setRedirecting] = useState(false);
 
 	const errors = useMemo(() => validateLeagueForm(values), [values]);
-	const canSave = isValid(errors) && !saving;
+	const canSave = isValid(errors) && !saving && !redirecting;
 
 	const set = useCallback(<K extends keyof LeagueFormValues>(key: K, value: LeagueFormValues[K]) => {
 		setValues((prev) => ({ ...prev, [key]: value }));
@@ -101,12 +108,20 @@ export function useLeagueEditor(leagueId?: string) {
 			const data = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(data?.error || "Could not save this league.");
 
-			if (!isEdit && data?.id) {
-				window.location.href = `/admin/leagues/${data.id}`;
-				return;
-			}
 			setSaved(true);
 			setTouched(false);
+
+			// After creating, hand the user to the league's edit page — that is the
+			// only place seasons can be attached. The brief pause lets the "League
+			// created" confirmation land before the navigation.
+			if (!isEdit && data?.id) {
+				setRedirecting(true);
+				setTimeout(() => {
+					window.location.href = `/admin/leagues/${data.id}`;
+				}, CREATED_REDIRECT_MS);
+				return;
+			}
+
 			await load();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Could not save this league.");
@@ -193,7 +208,7 @@ export function useLeagueEditor(leagueId?: string) {
 		slugPreview,
 		seasons,
 		loading,
-		saving,
+		saving: saving || redirecting,
 		saved,
 		error,
 		canSave,
