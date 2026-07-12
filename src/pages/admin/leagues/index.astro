@@ -4,9 +4,11 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import LeagueList from '../../../features/cms/components/LeagueList';
+import LeaguesBoard from '../../../features/leagues/presentation/v2/LeaguesBoard';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 ---
 
 <AdminLayout title="Leagues Management - Admin" permission="leagues:read">
-  <LeagueList client:load />
+  {usePublicAdminV2 ? <LeaguesBoard client:load /> : <LeagueList client:load />}
 </AdminLayout>
 

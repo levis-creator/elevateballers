@@ -11,8 +11,9 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const activeOnly = url.searchParams.get('active') === 'true';
+    const withTeamCounts = url.searchParams.get('counts') === 'teams';
 
-    const leagues = await getLeagues(activeOnly);
+    const leagues = await getLeagues(activeOnly, withTeamCounts);
 
     return new Response(JSON.stringify(leagues), {
       headers: { 'Content-Type': 'application/json' },
