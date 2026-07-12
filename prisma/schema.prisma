@@ -733,6 +733,9 @@ model ContactMessage {
   read      Boolean  @default(false)
   repliedAt DateTime? @map("replied_at")
   repliedBy String?   @map("replied_by")
+  replyBody String?   @map("reply_body") @db.Text
+  draftReply String?  @map("draft_reply") @db.Text
+  trashedAt DateTime? @map("trashed_at")
   ipAddress String?  @map("ip_address")
   userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
@@ -740,6 +743,7 @@ model ContactMessage {
 
   @@index([read])
   @@index([repliedAt])
+  @@index([trashedAt])
   @@index([createdAt])
   @@index([email])
   @@map("contact_messages")

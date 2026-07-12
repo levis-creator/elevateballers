@@ -70,7 +70,8 @@ export const POST: APIRoute = async ({ request, params }) => {
 
     const updated = await prisma.contactMessage.update({
       where: { id },
-      data: { repliedAt: new Date(), repliedBy, read: true },
+      // Store the sent reply so it shows in the thread; clear any saved draft.
+      data: { repliedAt: new Date(), repliedBy, replyBody: reply, read: true, draftReply: null },
     });
 
     return json({ ok: true, message: updated }, 200);
