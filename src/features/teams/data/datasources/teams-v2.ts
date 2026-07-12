@@ -27,8 +27,13 @@ export async function fetchTeamsData(): Promise<TeamsData | null> {
 	try {
 		const [teams, leagues, seasonTeams, coaches] = await Promise.all([
 			getTeams(),
-			getLeagues(),
+			// Active only — an archived league must not surface on the public site.
+			getLeagues(true),
+			// Drives each team's league badge. Scoped to active leagues too, or an
+			// archived league would still be named on the team cards; a team whose
+			// only league is archived falls back to "Unaffiliated".
 			prisma.seasonTeam.findMany({
+				where: { league: { active: true } },
 				select: { teamId: true, league: { select: { name: true } } },
 				orderBy: { createdAt: "desc" },
 			}),

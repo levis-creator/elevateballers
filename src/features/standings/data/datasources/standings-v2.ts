@@ -34,7 +34,8 @@ const toRow = (e: any, league: string): StandingRow => ({
 
 export async function fetchStandingsData(): Promise<StandingsData | null> {
 	try {
-		const leagues = await getLeagues();
+		// Active only — an archived league must not surface on the public site.
+		const leagues = await getLeagues(true);
 
 		const perLeague: { name: string; rows: StandingRow[] }[] = [];
 		let seasonLabel = "";

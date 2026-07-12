@@ -10,6 +10,7 @@ export interface LeagueSeasonSummary {
 	startDate: string;
 	endDate: string;
 	active: boolean;
+	bracketType: string | null;
 	/** Teams entered in this season *of this league* (a season may span leagues). */
 	teams: number;
 	/** Matches of this league in this season. */
