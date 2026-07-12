@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { prisma } from '../prisma';
 import { logAuditSystem } from '../../features/cms/lib/audit';
-import { FROM, SMTP_FROM, SITE_URL, LOGO_URL, C, type AdminNotificationType } from './config';
+import { FROM, SMTP_FROM, SITE_URL, LOGO_URL, C, FONT_DISPLAY, FONT_BODY, FONT_MONO, type AdminNotificationType } from './config';
 import { getResend, getSmtpTransport, hashValue, hashRecipients } from './providers';
 import { cacheGet, cacheSet } from '../cache';
 
@@ -119,138 +119,78 @@ export function emailWrapper(content: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="x-apple-disable-message-reformatting" />
-  <title>ElevateBallers</title>
+  <title>Elevate Ballers</title>
   <!--[if mso]>
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Teko:wght@700&family=Rubik:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&family=Space+Mono&display=swap');
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0 !important;
       padding: 0 !important;
-      background-color: ${C.lightGray};
-      font-family: 'Rubik', Arial, sans-serif;
+      background-color: #ece7df;
+      font-family: ${FONT_BODY};
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
 
-    img {
-      border: 0;
-      height: auto;
-      line-height: 100%;
-      outline: none;
-      text-decoration: none;
-      -ms-interpolation-mode: bicubic;
-    }
+    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
 
-    .email-container {
-      max-width: 600px !important;
-      width: 100% !important;
-      margin: 0 auto !important;
-    }
-
-    .email-body {
-      padding: 40px 32px !important;
-    }
-
-    .email-header {
-      padding: 20px 32px !important;
-    }
-
-    .email-footer {
-      padding: 20px 32px !important;
-    }
-
-    .logo-text {
-      font-size: 28px !important;
-    }
+    .email-container { max-width: 600px !important; width: 100% !important; margin: 0 auto !important; }
+    .email-body { padding: 40px 34px !important; }
+    .email-header { padding: 24px 32px !important; }
+    .email-footer { padding: 24px 32px !important; }
 
     /* ── Mobile ── */
     @media only screen and (max-width: 620px) {
-      .email-container {
-        width: 100% !important;
-      }
-
-      .email-body {
-        padding: 28px 20px !important;
-      }
-
-      .email-header {
-        padding: 16px 20px !important;
-        border-radius: 0 !important;
-      }
-
-      .email-footer {
-        padding: 16px 20px !important;
-        border-radius: 0 !important;
-      }
-
-      .logo-img {
-        width: 44px !important;
-        height: 44px !important;
-        margin-right: 8px !important;
-      }
-
-      .logo-text {
-        font-size: 22px !important;
-      }
-
-      .btn-primary {
-        display: block !important;
-        width: 100% !important;
-        text-align: center !important;
-        padding: 14px 20px !important;
-        box-sizing: border-box !important;
-      }
-
-      .article-image {
-        width: 100% !important;
-        height: auto !important;
-      }
-
-      h2.article-title {
-        font-size: 22px !important;
-      }
+      .email-container { width: 100% !important; }
+      .email-body { padding: 30px 22px !important; }
+      .email-header { padding: 20px 22px !important; }
+      .email-footer { padding: 20px 22px !important; }
+      .logo-text { font-size: 22px !important; }
+      .btn-primary { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+      .article-image { width: 100% !important; height: auto !important; }
+      h2.article-title { font-size: 22px !important; }
     }
   </style>
 </head>
 <body>
-  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">ElevateBallers — Latest updates from the court.</div>
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Elevate Ballers — Kenya's premier basketball league.</div>
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${C.lightGray};padding:24px 16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ece7df;padding:28px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(12,11,10,0.16);">
 
-          <!-- Header -->
+          <!-- Header (dark band, logo on a light chip so it stays legible) -->
           <tr>
-            <td class="email-header" style="background-color:${C.primary};padding:20px 32px;border-radius:8px 8px 0 0;text-align:center;">
-              <img class="logo-img" src="${LOGO_URL}" alt="ElevateBallers" width="56" height="56"
-                style="display:inline-block;vertical-align:middle;margin-right:12px;border-radius:4px;width:56px;height:56px;" />
-              <span class="logo-text" style="font-family:'Teko',Arial,sans-serif;font-size:28px;font-weight:700;color:${C.white};vertical-align:middle;letter-spacing:1px;text-transform:uppercase;">ElevateBallers</span>
+            <td class="email-header" style="background-color:${C.dark};padding:26px 32px;text-align:center;">
+              <span style="display:inline-block;background-color:#ffffff;border-radius:12px;padding:14px 22px;">
+                <img src="${LOGO_URL}" alt="Elevate Ballers League" width="204" style="display:block;width:204px;max-width:100%;height:auto;" />
+              </span>
             </td>
           </tr>
 
+          <!-- Brand accent line -->
+          <tr><td style="height:3px;line-height:3px;font-size:0;background-color:${C.primary};">&nbsp;</td></tr>
+
           <!-- Body -->
           <tr>
-            <td class="email-body" style="background-color:${C.white};padding:40px 32px;">
+            <td class="email-body" style="background-color:${C.white};padding:40px 34px;color:${C.text};font-family:${FONT_BODY};font-size:15px;line-height:1.7;">
               ${content}
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Footer (dark) -->
           <tr>
-            <td class="email-footer" style="background-color:${C.accent};padding:20px 32px;border-radius:0 0 8px 8px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:13px;color:${C.white};">
-                © ${new Date().getFullYear()} ElevateBallers. All rights reserved.
-              </p>
-              <p style="margin:0;">
-                <a href="${SITE_URL}" style="color:${C.secondary};font-size:13px;text-decoration:none;">Visit our website</a>
-              </p>
+            <td class="email-footer" style="background-color:${C.accent};padding:24px 32px;text-align:center;">
+              <p style="margin:0 0 6px;font-family:${FONT_MONO};font-size:10px;color:${C.creamdim};text-transform:uppercase;letter-spacing:1.4px;">Nairobi, Kenya · Elevate Ballers League</p>
+              <p style="margin:0 0 10px;font-family:${FONT_BODY};font-size:12px;color:${C.creamdim};">© ${new Date().getFullYear()} Elevate Ballers. All rights reserved.</p>
+              <a href="${SITE_URL}" style="font-family:${FONT_BODY};font-size:12px;font-weight:700;color:${C.secondary};text-decoration:none;">Visit our website &rarr;</a>
             </td>
           </tr>
 
@@ -263,7 +203,7 @@ export function emailWrapper(content: string): string {
 }
 
 export function btn(text: string, url: string): string {
-  return `<a href="${url}" class="btn-primary" style="display:inline-block;margin-top:20px;padding:12px 28px;background-color:${C.primary};color:${C.white};text-decoration:none;border-radius:6px;font-weight:600;font-size:15px;letter-spacing:0.5px;">${text}</a>`;
+  return `<a href="${url}" class="btn-primary" style="display:inline-block;margin-top:22px;padding:14px 32px;background-color:${C.primary};color:${C.white};text-decoration:none;border-radius:8px;font-family:${FONT_DISPLAY};font-size:15px;letter-spacing:0.06em;text-transform:uppercase;">${text} &rarr;</a>`;
 }
 
 export function unsubscribeFooter(url: string): string {

@@ -16,7 +16,7 @@ export async function sendAdminNotificationEmail(data: {
     : '';
 
   const html = emailWrapper(`
-    <h2 style="margin:0 0 12px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">${data.title}</h2>
+    <h2 style="margin:0 0 12px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">${data.title}</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       ${data.message}
     </p>
@@ -39,7 +39,7 @@ export async function sendContactNotification(data: {
   message: string;
 }): Promise<void> {
   const html = emailWrapper(`
-    <h2 style="margin:0 0 4px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">New Contact Message</h2>
+    <h2 style="margin:0 0 4px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">New Contact Message</h2>
     <p style="margin:0 0 24px;font-size:13px;color:${C.gray};">Someone submitted the contact form on your website.</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:${C.lightGray};border-radius:6px;padding:20px;margin-bottom:24px;">
@@ -81,7 +81,7 @@ export async function sendContactReplyEmail(data: {
     : '';
 
   const html = emailWrapper(`
-    <h2 style="margin:0 0 4px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Re: ${data.subject}</h2>
+    <h2 style="margin:0 0 4px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Re: ${data.subject}</h2>
     <p style="margin:0 0 20px;font-size:13px;color:${C.gray};">A reply from the ElevateBallers team.</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
     <div style="font-size:15px;color:${C.text};line-height:1.7;">${data.replyBody.replace(/\n/g, '<br />')}</div>
@@ -106,7 +106,7 @@ export async function sendContactAutoReply(data: {
   subject: string;
 }): Promise<void> {
   const html = emailWrapper(`
-    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Message Received!</h2>
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Message Received!</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       Thank you for reaching out! We have received your message regarding <strong>${data.subject}</strong> and will get back to you as soon as possible.
