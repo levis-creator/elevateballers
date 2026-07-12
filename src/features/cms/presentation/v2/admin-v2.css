@@ -69,3 +69,55 @@
 .eb-content {
 	font-family: "Rubik", sans-serif;
 }
+
+/*
+ * Reusable v2 form primitives. Every redesigned admin form uses these two
+ * classes for its labels and controls, so field styling lives in exactly one
+ * place instead of being re-declared per editor.
+ */
+.eb-root .eb-lb {
+	display: block;
+	margin-bottom: 7px;
+	font-family: "Space Mono", monospace;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--txm);
+}
+
+.eb-root .eb-in {
+	width: 100%;
+	padding: 10px 14px;
+	border: 1px solid var(--bord);
+	border-radius: 10px;
+	background: var(--surf2);
+	color: var(--tx);
+	font-family: "Archivo", sans-serif;
+	font-size: 13.5px;
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.eb-root .eb-in::placeholder {
+	color: var(--faint);
+}
+
+.eb-root .eb-in:focus {
+	border-color: var(--brand);
+}
+
+.eb-root .eb-in:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+/* Native selects need the arrow re-added once the default appearance is reset. */
+.eb-root select.eb-in {
+	appearance: none;
+	background-image: linear-gradient(45deg, transparent 50%, var(--txm) 50%),
+		linear-gradient(135deg, var(--txm) 50%, transparent 50%);
+	background-position: calc(100% - 17px) calc(50% + 2px), calc(100% - 12px) calc(50% + 2px);
+	background-size: 5px 5px, 5px 5px;
+	background-repeat: no-repeat;
+	padding-right: 34px;
+}

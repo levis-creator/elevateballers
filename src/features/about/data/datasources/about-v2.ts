@@ -43,7 +43,8 @@ export async function fetchAboutDynamic(): Promise<AboutDynamic | null> {
 		const [teamCount, playerCount, leagueRows, firstSeason, footer] = await Promise.all([
 			prisma.team.count({ where: { approved: true } }),
 			prisma.player.count({ where: { approved: true } }),
-			getLeagues(),
+			// Active only — an archived league must not surface on the public site.
+			getLeagues(true),
 			prisma.season.findFirst({ orderBy: { startDate: "asc" }, select: { startDate: true } }),
 			getFooterData(),
 		]);

@@ -95,6 +95,7 @@ export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail | 
 		startDate: season.startDate.toISOString(),
 		endDate: season.endDate.toISOString(),
 		active: season.active,
+		bracketType: season.bracketType,
 		teams: teamsBySeason.get(season.id) ?? 0,
 		matches: matchesBySeason.get(season.id) ?? 0,
 		completed: completedBySeason.get(season.id) ?? 0,
