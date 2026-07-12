@@ -4,8 +4,10 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import ContactMessagesList from '../../../features/cms/components/ContactMessagesList';
+import MessagesInbox from '../../../features/messages/presentation/v2/MessagesInbox';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 ---
 
 <AdminLayout title="Contact Messages - Admin" permission="contact_messages:read">
-  <ContactMessagesList client:load />
+  {usePublicAdminV2 ? <MessagesInbox client:load /> : <ContactMessagesList client:load />}
 </AdminLayout>
