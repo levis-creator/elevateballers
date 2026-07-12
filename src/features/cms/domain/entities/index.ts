@@ -86,6 +86,8 @@ export type LeagueWithMatchCount = League & {
     matches: number;
     leagueSeasons: number;
   };
+  /** Distinct teams that have ever entered this league. Only resolved on request. */
+  teamCount?: number;
 };
 
 export type SeasonWithCounts = Season & {
