@@ -15,7 +15,7 @@ export async function sendTeamRegistrationAutoReply(data: {
     : '';
 
   const html = emailWrapper(`
-    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Registration Received</h2>
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Registration Received</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.coachName},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       Thanks for registering <strong>${data.teamName}</strong>. Our staff will review the submission and follow up soon.
@@ -59,7 +59,7 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
     : '';
 
   const html = emailWrapper(`
-    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Registration Received</h2>
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Registration Received</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.coachName},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       Thanks for registering <strong>${data.teamName}</strong>. Our staff will review the submission and follow up soon.
@@ -122,7 +122,7 @@ export async function sendPlayerRegistrationAutoReply(data: {
     : '';
 
   const html = emailWrapper(`
-    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Player Registration Received</h2>
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Player Registration Received</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       Thanks for registering to play with ElevateBallers. Our staff will review your submission and get back to you soon.
@@ -165,7 +165,7 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
     : '';
 
   const html = emailWrapper(`
-    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Player Registration Received</h2>
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Player Registration Received</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       Thanks for registering to play with ElevateBallers. Our staff will review your submission and get back to you soon.
@@ -224,7 +224,7 @@ export async function sendTeamApprovedEmail(data: {
   teamName: string;
 }): Promise<void> {
   const html = emailWrapper(`
-    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Approved!</h2>
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Approved!</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.coachName},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       Great news! Your team <strong>${data.teamName}</strong> has been approved and is now officially registered with ElevateBallers.
@@ -257,7 +257,7 @@ export async function sendPlayerApprovedEmail(data: {
     : '';
 
   const html = emailWrapper(`
-    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Player Registration Approved!</h2>
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Player Registration Approved!</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
       Congratulations! Your player registration has been approved and you are now officially part of ElevateBallers.

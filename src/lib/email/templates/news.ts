@@ -25,7 +25,7 @@ export async function sendArticleNotification(data: {
 
     const html = emailWrapper(`
       <p style="margin:0 0 8px;font-size:13px;color:${C.gray};text-transform:uppercase;letter-spacing:1px;font-weight:600;">New Article</p>
-      <h2 class="article-title" style="margin:0 0 20px;font-size:26px;color:${C.text};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;line-height:1.2;">${data.article.title}</h2>
+      <h2 class="article-title" style="margin:0 0 20px;font-size:26px;color:${C.text};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;line-height:1.2;">${data.article.title}</h2>
 
       ${data.article.image ? `<img class="article-image" src="${data.article.image}" alt="${data.article.title}" style="width:100%;max-width:536px;height:auto;border-radius:8px;display:block;margin-bottom:20px;" />` : ''}
 
@@ -90,7 +90,7 @@ export async function sendSubscriberWelcome(data: {
       <div style="display:inline-block;background:${C.secondary};border-radius:50%;width:64px;height:64px;line-height:64px;font-size:32px;">🏀</div>
     </div>
 
-    <h2 style="margin:0 0 16px;font-size:26px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;text-align:center;">Welcome to ElevateBallers!</h2>
+    <h2 style="margin:0 0 16px;font-size:26px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;text-align:center;">Welcome to ElevateBallers!</h2>
 
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">${greeting}</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
