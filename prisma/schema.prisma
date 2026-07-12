@@ -731,12 +731,15 @@ model ContactMessage {
   subject   String
   message   String   @db.LongText
   read      Boolean  @default(false)
+  repliedAt DateTime? @map("replied_at")
+  repliedBy String?   @map("replied_by")
   ipAddress String?  @map("ip_address")
   userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([read])
+  @@index([repliedAt])
   @@index([createdAt])
   @@index([email])
   @@map("contact_messages")

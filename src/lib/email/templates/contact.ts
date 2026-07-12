@@ -65,6 +65,41 @@ export async function sendContactNotification(data: {
   console.log(`[email] Contact notification sent to ${ADMIN_TO}`);
 }
 
+export async function sendContactReplyEmail(data: {
+  name: string;
+  email: string;
+  subject: string;
+  replyBody: string;
+  originalMessage?: string;
+}): Promise<void> {
+  const original = data.originalMessage
+    ? `
+    <p style="margin:28px 0 8px;font-size:12px;color:${C.gray};text-transform:uppercase;letter-spacing:0.5px;">Your original message</p>
+    <div style="background:${C.lightGray};border-left:4px solid ${C.border};border-radius:0 6px 6px 0;padding:14px 18px;">
+      <p style="margin:0;font-size:13px;color:${C.gray};line-height:1.7;">${data.originalMessage.replace(/\n/g, '<br />')}</p>
+    </div>`
+    : '';
+
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 4px;font-size:22px;color:${C.primary};font-family:'Teko',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Re: ${data.subject}</h2>
+    <p style="margin:0 0 20px;font-size:13px;color:${C.gray};">A reply from the ElevateBallers team.</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
+    <div style="font-size:15px;color:${C.text};line-height:1.7;">${data.replyBody.replace(/\n/g, '<br />')}</div>
+    <p style="margin:20px 0 0;font-size:15px;color:${C.text};line-height:1.7;">Best regards,<br /><strong>ElevateBallers Team</strong></p>
+    ${original}
+  `);
+
+  await sendTransactionalEmail({
+    to: data.email,
+    // Replies land back in the admin inbox address so the sender can respond.
+    replyTo: ADMIN_TO,
+    subject: `Re: ${data.subject}`,
+    html,
+    audit: { template: 'contact_reply' },
+  });
+  console.log(`[email] Contact reply sent to ${data.email}`);
+}
+
 export async function sendContactAutoReply(data: {
   name: string;
   email: string;
