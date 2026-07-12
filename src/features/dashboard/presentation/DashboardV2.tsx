@@ -276,13 +276,26 @@ function DashboardContent() {
 						{d.activity.length === 0 && <div className="py-6 text-center font-['Archivo'] text-[13px] text-[var(--txm)]">No recent activity.</div>}
 					</div>
 				</Card>
-				{/* League leaders — no stats endpoint yet; clean placeholder. */}
+				{/* League leaders — real points-per-game from completed matches. */}
 				<Card className="flex flex-col p-5">
 					<div className="mb-4 flex items-center justify-between"><h2 className="font-['Anton'] text-[17px] uppercase tracking-[0.02em] text-[var(--tx)]">League Leaders</h2><span className="font-['Space_Mono'] text-[10px] uppercase tracking-[0.1em] text-[var(--txm)]">PPG</span></div>
-					<div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
-						<span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surf2)] text-[var(--brandsoft)]"><Trophy className="h-5 w-5" /></span>
-						<p className="max-w-[240px] font-['Archivo'] text-[12.5px] text-[var(--txm)]">Player scoring leaders will appear here once match stats are recorded.</p>
-					</div>
+					{d.leaders.length > 0 ? (
+						<div className="flex flex-col gap-1">
+							{d.leaders.map((p, i) => (
+								<a key={p.playerId} href={`/admin/players/${p.playerId}`} className="flex items-center gap-3 rounded-lg px-1 py-2 no-underline hover:bg-[var(--hov)]">
+									<span className="w-5 font-['Anton'] text-[18px]" style={{ color: i === 0 ? "#e4002b" : i === 1 ? "#ff8a3d" : i === 2 ? "#f5c518" : "var(--faint)" }}>{i + 1}</span>
+									<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surf2)] font-['Anton'] text-[13px] text-[var(--txd)]">{p.initials}</span>
+									<div className="min-w-0 flex-1"><div className="truncate font-['Archivo'] text-[13px] font-bold text-[var(--tx)]">{p.name}</div><div className="font-['Space_Mono'] text-[10px] text-[var(--txm)]">{p.team}</div></div>
+									<span className="font-['Anton'] text-[20px] text-[var(--tx)]">{p.value.toFixed(1)}</span>
+								</a>
+							))}
+						</div>
+					) : (
+						<div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
+							<span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surf2)] text-[var(--brandsoft)]"><Trophy className="h-5 w-5" /></span>
+							<p className="max-w-[240px] font-['Archivo'] text-[12.5px] text-[var(--txm)]">Player scoring leaders will appear here once completed matches have recorded stats.</p>
+						</div>
+					)}
 				</Card>
 			</div>
 
