@@ -1,17 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, Inbox, MoreVertical, Check } from "lucide-react";
+import EntityAvatar from "@/components/EntityAvatar";
 import { type Message, type MessageFilter, messageStatus, hasDraft, isTrashed } from "@/features/messages/domain/entities/message";
 
-const TINTS = ["#e4002b", "#1f8a5b", "#2a6fdb", "#d98324", "#7c5cff", "#c026a6"];
-export function avatarTint(name: string): string {
-	let h = 0;
-	for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-	return TINTS[h % TINTS.length];
-}
-export function initialOf(name: string): string {
-	return (name.trim()[0] || "?").toUpperCase();
-}
-export function shortTime(iso: string): string {
+function shortTime(iso: string): string {
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return "";
 	const diff = Date.now() - d.getTime();
@@ -114,7 +106,7 @@ export default function MessageList(p: Props) {
 							</button>
 
 							<button type="button" onClick={() => p.onSelect(m.id)} className="flex min-w-0 flex-1 items-start gap-3 py-3 pl-1.5 pr-1 text-left">
-								<span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-['Anton'] text-[14px] text-white" style={{ background: avatarTint(m.name) }}>{initialOf(m.name)}</span>
+								<EntityAvatar seed={m.name} label={m.name} maxInitials={1} variant="solid" className="h-9 w-9 rounded-full text-[14px]" />
 								<span className="min-w-0 flex-1">
 									<span className="flex items-center justify-between gap-2">
 										<span className={`truncate font-['Archivo'] text-[13px] ${unread ? "font-bold text-[var(--tx)]" : "text-[var(--txd)]"}`}>{m.name}</span>
