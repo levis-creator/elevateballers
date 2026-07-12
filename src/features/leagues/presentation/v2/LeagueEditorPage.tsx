@@ -5,6 +5,7 @@ import { useLeagueEditor } from "./hooks/useLeagueEditor";
 import LeagueInfoCard from "./components/LeagueInfoCard";
 import LeagueRegistrationCard from "./components/LeagueRegistrationCard";
 import LeagueSeasonsCard from "./components/LeagueSeasonsCard";
+import SeasonsPlaceholderCard from "./components/SeasonsPlaceholderCard";
 
 function LeagueEditorContent({ leagueId }: { leagueId?: string }) {
 	const v = useLeagueEditor(leagueId);
@@ -27,12 +28,12 @@ function LeagueEditorContent({ leagueId }: { leagueId?: string }) {
 						Competition
 					</div>
 					<h1 className="font-['Anton'] text-[30px] uppercase leading-none text-[var(--tx)]">
-						{v.isEdit ? "Edit League" : "Create League"}
+						{v.isEdit ? "Edit League" : "Add League"}
 					</h1>
 					<p className="mt-1.5 font-['Archivo'] text-[13px] text-[var(--txm)]">
 						{v.isEdit
 							? "Update the details, registration window, and seasons for this league."
-							: "Set up a new league. You can add seasons once it exists."}
+							: "Create a new league. You can add seasons once it's saved."}
 					</p>
 				</div>
 				<a
@@ -85,13 +86,15 @@ function LeagueEditorContent({ leagueId }: { leagueId?: string }) {
 						<span className="flex h-[16px] w-[16px] items-center justify-center rounded-full bg-[#1f9d55] text-white">
 							<Check className="h-[10px] w-[10px]" strokeWidth={4} />
 						</span>
-						Changes saved
+						{v.isEdit ? "Changes saved" : "League created"}
 					</span>
 				)}
 			</div>
 
-			{/* Seasons only exist once the league does. */}
-			{v.isEdit && (
+			{/* A season attaches to a league that already exists, so while creating
+			    one there is nothing to manage yet — say so instead of showing an
+			    empty table. */}
+			{v.isEdit ? (
 				<LeagueSeasonsCard
 					seasons={v.seasons}
 					canManageSeasons={v.canManageSeasons}
@@ -100,6 +103,8 @@ function LeagueEditorContent({ leagueId }: { leagueId?: string }) {
 					onLink={v.linkSeason}
 					onUnlink={v.unlinkSeason}
 				/>
+			) : (
+				<SeasonsPlaceholderCard />
 			)}
 		</div>
 	);
