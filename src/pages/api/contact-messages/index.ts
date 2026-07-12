@@ -166,14 +166,28 @@ export const PATCH: APIRoute = async ({ request }) => {
     const data = await request.json();
     if (!data.id) return json({ error: 'Message ID is required' }, 400);
 
+    // Build a partial update: read state, soft-delete (trash), and/or draft reply.
+    const updateData: {
+      read?: boolean;
+      trashedAt?: Date | null;
+      draftReply?: string | null;
+    } = {};
+    if (data.read !== undefined) updateData.read = Boolean(data.read);
+    if (data.trashed !== undefined) updateData.trashedAt = data.trashed ? new Date() : null;
+    if (data.draftReply !== undefined) {
+      const draft = data.draftReply == null ? '' : String(data.draftReply);
+      updateData.draftReply = draft.trim() ? draft.slice(0, 5000) : null;
+    }
+
     const message = await prisma.contactMessage.update({
       where: { id: data.id },
-      data: { read: data.read !== undefined ? Boolean(data.read) : undefined },
+      data: updateData,
     });
 
     await logAudit(request, 'CONTACT_MESSAGE_UPDATED', {
       contactMessageId: message.id,
       read: message.read,
+      trashed: message.trashedAt != null,
     });
 
     return json(message, 200);

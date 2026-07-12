@@ -10,11 +10,16 @@ export interface Message {
 	read: boolean;
 	repliedAt: string | null;
 	repliedBy?: string | null;
+	replyBody?: string | null;
+	draftReply?: string | null;
+	trashedAt: string | null;
 	createdAt: string;
 }
 
 export type MessageStatus = "unread" | "read" | "replied";
-export type MessageFilter = "All" | "Unread" | "Read" | "Replied";
+export type MessageFilter = "All" | "Unread" | "Read" | "Replied" | "Trash";
+
+export const MESSAGE_FILTERS: MessageFilter[] = ["All", "Unread", "Read", "Replied", "Trash"];
 
 /** A replied message is the strongest state, then read, then unread. */
 export function messageStatus(m: Message): MessageStatus {
@@ -22,7 +27,21 @@ export function messageStatus(m: Message): MessageStatus {
 	return m.read ? "read" : "unread";
 }
 
+export function isTrashed(m: Message): boolean {
+	return !!m.trashedAt;
+}
+
+export function hasDraft(m: Message): boolean {
+	return !!(m.draftReply && m.draftReply.trim());
+}
+
+/**
+ * Filter predicate. Trash is a separate view: every non-Trash filter hides
+ * trashed messages, and the Trash filter shows only trashed ones.
+ */
 export function matchesFilter(m: Message, filter: MessageFilter): boolean {
+	if (filter === "Trash") return isTrashed(m);
+	if (isTrashed(m)) return false;
 	switch (filter) {
 		case "Unread":
 			return !m.read;

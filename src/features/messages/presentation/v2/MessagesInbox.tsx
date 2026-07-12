@@ -45,17 +45,32 @@ function InboxContent() {
 							setSearch={m.setSearch}
 							selectedId={m.selectedId}
 							onSelect={m.select}
+							checked={m.checked}
+							onToggleCheck={m.toggleCheck}
+							onClearChecked={m.clearChecked}
+							onBulkRead={m.bulkRead}
+							onBulkTrash={m.bulkTrash}
+							rowSetRead={m.rowSetRead}
+							rowTrash={m.rowTrash}
+							rowDelete={m.rowDelete}
 						/>
 						<MessageReadingPane
 							selected={m.selected}
 							reply={m.reply}
-							setReply={m.setReply}
+							onReplyChange={m.onReplyChange}
 							onSend={m.sendReply}
 							sending={m.sending}
 							toast={m.toast}
+							draftToast={m.draftToast}
+							draftLoaded={m.draftLoaded}
 							error={m.error}
 							onToggleRead={m.toggleRead}
-							onDelete={m.remove}
+							onMoveToTrash={m.moveToTrash}
+							onRestore={m.restore}
+							onDeleteForever={m.deleteForever}
+							onSaveDraft={m.saveDraft}
+							savingDraft={m.savingDraft}
+							onClose={m.closeReading}
 						/>
 					</>
 				)}
