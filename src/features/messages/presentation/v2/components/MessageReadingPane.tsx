@@ -1,6 +1,6 @@
 import { Inbox, Check, Trash2, RotateCcw, CornerUpLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { type Message, messageStatus, isTrashed } from "@/features/messages/domain/entities/message";
-import { avatarTint, initialOf } from "./MessageList";
+import EntityAvatar from "@/components/EntityAvatar";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
 	unread: { label: "Unread", color: "#2a6fdb" },
@@ -63,7 +63,7 @@ export default function MessageReadingPane(p: Props) {
 				</div>
 
 				<div className="mb-6 flex flex-wrap items-center gap-3.5 rounded-xl border border-[var(--bord)] bg-[var(--surf)] px-4 py-3.5">
-					<span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full font-['Anton'] text-[17px] text-white" style={{ background: avatarTint(s.name) }}>{initialOf(s.name)}</span>
+					<EntityAvatar seed={s.name} label={s.name} maxInitials={1} variant="solid" className="h-11 w-11 rounded-full text-[17px]" />
 					<div className="min-w-0 flex-1">
 						<div className="font-['Archivo'] text-[15px] font-bold text-[var(--tx)]">{s.name}</div>
 						<a href={`mailto:${s.email}`} className="font-['Space_Mono'] text-[12px] text-[var(--brandsoft)] no-underline hover:text-[var(--brand)]">{s.email}</a>

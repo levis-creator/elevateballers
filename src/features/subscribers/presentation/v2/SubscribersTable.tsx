@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import EntityAvatar from "@/components/EntityAvatar";
 import { Search, Download, Plus, Check, MoreVertical, Mail, Loader2, AlertCircle } from "lucide-react";
 import { useSubscribers } from "./hooks/useSubscribers";
 import SubscriberKpis from "./components/SubscriberKpis";
 import AddSubscriberModal from "./components/AddSubscriberModal";
 import type { SubscriberFilter } from "@/features/subscribers/domain/entities/subscriber";
 
-const TINTS = ["#e4002b", "#2a6fdb", "#1f8a5b", "#d98324", "#7c5cff", "#c026a6"];
-const tintFor = (s: string) => {
-	let h = 0;
-	for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-	return TINTS[h % TINTS.length];
-};
 const dateFmt = (iso: string) => {
 	const d = new Date(iso);
 	return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -112,7 +107,6 @@ function SubscribersContent() {
 							<tbody>
 								{v.paged.map((s) => {
 									const isChecked = v.checked.has(s.id);
-									const col = tintFor(s.email);
 									return (
 										<tr key={s.id} className={isChecked ? "bg-[var(--hov)]" : ""}>
 											<td className="border-b border-[var(--bord2)] px-4 py-3 align-middle">
@@ -120,7 +114,7 @@ function SubscribersContent() {
 											</td>
 											<td className="border-b border-[var(--bord2)] px-4 py-3 align-middle">
 												<div className="flex items-center gap-3">
-													<span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-['Anton'] text-[14px]" style={{ background: `${col}22`, color: col }}>{(s.email[0] || "?").toUpperCase()}</span>
+													<EntityAvatar seed={s.email} label={s.name || s.email} maxInitials={1} className="h-9 w-9 rounded-full text-[14px]" />
 													<div className="min-w-0">
 														<div className="truncate font-['Archivo'] text-[13.5px] font-bold text-[var(--tx)]">{s.email}</div>
 														{s.name && <div className="truncate font-['Space_Mono'] text-[11px] text-[var(--txm)]">{s.name}</div>}

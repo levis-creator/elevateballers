@@ -1,14 +1,6 @@
 import { Trophy, Check, MoreVertical } from "lucide-react";
+import EntityAvatar from "@/components/EntityAvatar";
 import { type AdminLeague, leagueStatus } from "@/features/leagues/domain/entities/league";
-
-const TINTS = ["#e4002b", "#2a6fdb", "#1f8a5b", "#d98324", "#7c5cff", "#c026a6"];
-
-/** Stable per-league accent so a card keeps its colour across reloads. */
-function tintFor(seed: string): string {
-	let hash = 0;
-	for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-	return TINTS[hash % TINTS.length];
-}
 
 const STATUS_STYLE: Record<string, { bg: string; fg: string; dot: string }> = {
 	Registering: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55", dot: "#1f9d55" },
@@ -41,11 +33,12 @@ export default function LeagueCard({
 }: Props) {
 	const status = leagueStatus(league);
 	const pill = STATUS_STYLE[status];
-	const tint = tintFor(league.id || league.name);
 	const editHref = `/admin/leagues/${league.id}`;
+	const detailHref = `/admin/leagues/${league.id}/view`;
 
+	// Clicking the card opens the league's detail page; editing is an explicit choice.
 	const open = () => {
-		window.location.href = editHref;
+		window.location.href = detailHref;
 	};
 
 	return (
@@ -78,16 +71,12 @@ export default function LeagueCard({
 					<Check className="h-3 w-3" strokeWidth={3} />
 				</button>
 
-				<span
-					className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl"
-					style={{ background: `${tint}22`, color: tint }}
-				>
-					{league.logo ? (
-						<img src={league.logo} alt="" className="h-full w-full object-cover" loading="lazy" />
-					) : (
-						<Trophy className="h-[24px] w-[24px]" />
-					)}
-				</span>
+				<EntityAvatar
+					seed={league.id || league.name}
+					src={league.logo}
+					fallback={<Trophy className="h-[24px] w-[24px]" />}
+					className="h-12 w-12 rounded-xl"
+				/>
 
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-2">
@@ -127,16 +116,16 @@ export default function LeagueCard({
 								className="absolute right-0 top-8 z-50 w-[190px] overflow-hidden rounded-lg border border-[var(--bord)] bg-[var(--surf)] shadow-[0_14px_40px_rgba(0,0,0,0.4)]"
 							>
 								<a
+									href={detailHref}
+									className="block w-full px-3.5 py-2.5 text-left font-['Archivo'] text-[12.5px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]"
+								>
+									View details
+								</a>
+								<a
 									href={editHref}
 									className="block w-full px-3.5 py-2.5 text-left font-['Archivo'] text-[12.5px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]"
 								>
 									Edit league
-								</a>
-								<a
-									href={`/admin/leagues/${league.id}/view`}
-									className="block w-full px-3.5 py-2.5 text-left font-['Archivo'] text-[12.5px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]"
-								>
-									View details
 								</a>
 								{canUpdate && (
 									<button
