@@ -69,6 +69,11 @@ export default defineConfig({
       alias: {
         '@': resolve(fileURLToPath(new URL('.', import.meta.url)), './src'),
       },
+      // Force a single React instance across every island's module graph.
+      // Without this, Vite's dev dep-optimizer can serve a second React copy
+      // when new client components are added, breaking hooks ("Invalid hook
+      // call / more than one copy of React").
+      dedupe: ['react', 'react-dom'],
     },
     optimizeDeps: {
       include: ['react-masonry-css'],
