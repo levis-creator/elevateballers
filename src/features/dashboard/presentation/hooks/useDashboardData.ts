@@ -59,6 +59,15 @@ export interface ActivityEvent {
 	text: string;
 	at: string;
 }
+export interface Leader {
+	playerId: string;
+	name: string;
+	team: string;
+	initials: string;
+	value: number;
+	gp: number;
+	href: string;
+}
 export interface SeasonPulse {
 	name: string;
 	week: number;
@@ -134,6 +143,7 @@ export function useDashboardData() {
 	const [pipeline, setPipeline] = useState({ published: 0, draft: 0, scheduled: 0, recent: [] as { title: string; status: string }[] });
 	const [storage, setStorage] = useState<Storage>({ usedGb: 0, items: 0, pct: 0 });
 	const [activity, setActivity] = useState<ActivityEvent[]>([]);
+	const [leaders, setLeaders] = useState<Leader[]>([]);
 	const [processing, setProcessing] = useState<Set<string>>(new Set());
 
 	const loadApprovals = useCallback(async () => {
@@ -223,6 +233,17 @@ export function useDashboardData() {
 				})),
 			);
 
+			// League leaders (PPG) — real per-game stats from completed matches.
+			if (can("players:read") || can("matches:read")) {
+				try {
+					const res = await fetch("/api/stats/leaders?stat=Points&limit=5");
+					const d = res.ok ? await res.json() : { leaders: [] };
+					if (!cancelled) setLeaders(Array.isArray(d?.leaders) ? d.leaders : []);
+				} catch {
+					if (!cancelled) setLeaders([]);
+				}
+			}
+
 			await loadApprovals();
 			if (!cancelled) setLoading(false);
 		})();
@@ -254,5 +275,5 @@ export function useDashboardData() {
 		[loadApprovals],
 	);
 
-	return { loading: loading || permsLoading, user, roles, kpis, season, fixtures, approvals, pipeline, storage, activity, processing, resolve, can };
+	return { loading: loading || permsLoading, user, roles, kpis, season, fixtures, approvals, pipeline, storage, activity, leaders, processing, resolve, can };
 }
