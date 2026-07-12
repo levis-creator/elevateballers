@@ -3,8 +3,10 @@ export const prerender = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import SubscribersList from '../../../features/cms/components/SubscribersList';
+import SubscribersTable from '../../../features/subscribers/presentation/v2/SubscribersTable';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 ---
 
 <AdminLayout title="Subscribers - Admin" permission="subscribers:read">
-  <SubscribersList client:load />
+  {usePublicAdminV2 ? <SubscribersTable client:load /> : <SubscribersList client:load />}
 </AdminLayout>
