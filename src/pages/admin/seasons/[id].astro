@@ -4,6 +4,8 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import SeasonEditor from '../../../features/cms/components/SeasonEditor';
+import SeasonFormPage from '../../../features/seasons/presentation/v2/SeasonFormPage';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 
 const { id } = Astro.params;
 
@@ -13,5 +15,5 @@ if (!id) {
 ---
 
 <AdminLayout title="Edit Season - Admin" permission="seasons:update">
-  <SeasonEditor seasonId={id} client:load />
+  {usePublicAdminV2 ? <SeasonFormPage seasonId={id} client:load /> : <SeasonEditor seasonId={id} client:load />}
 </AdminLayout>
