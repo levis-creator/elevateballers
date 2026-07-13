@@ -11,7 +11,9 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     const activeOnly = url.searchParams.get('activeOnly') === 'true';
     const leagueId = url.searchParams.get('leagueId') || undefined;
-    const seasons = await getSeasons(activeOnly, leagueId);
+    // Opt-in: only the admin board needs played-match counts.
+    const withCompletedCounts = url.searchParams.get('counts') === 'matches';
+    const seasons = await getSeasons(activeOnly, leagueId, withCompletedCounts);
     return new Response(JSON.stringify(seasons), {
       headers: { 'Content-Type': 'application/json' },
     });

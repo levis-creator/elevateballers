@@ -1,12 +1,13 @@
 import { CalendarDays } from "lucide-react";
 import {
-	seasonBadge,
+	seasonStatus,
 	seasonProgress,
+	type SeasonStatus,
 	type LeagueSeasonSummary,
 } from "@/features/leagues/domain/entities/league-detail";
 
-const BADGE_STYLE: Record<string, { bg: string; fg: string }> = {
-	Active: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55" },
+const BADGE_STYLE: Record<SeasonStatus, { bg: string; fg: string }> = {
+	Live: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55" },
 	Upcoming: { bg: "rgba(42,111,219,0.16)", fg: "#5b93e8" },
 	Completed: { bg: "var(--chip)", fg: "var(--txm)" },
 };
@@ -37,7 +38,7 @@ export default function LeagueSeasonsTab({ seasons }: { seasons: LeagueSeasonSum
 	return (
 		<div className="flex flex-col gap-3">
 			{seasons.map((season) => {
-				const badge = seasonBadge(season);
+				const badge = seasonStatus(season);
 				const style = BADGE_STYLE[badge];
 				const progress = seasonProgress(season);
 
