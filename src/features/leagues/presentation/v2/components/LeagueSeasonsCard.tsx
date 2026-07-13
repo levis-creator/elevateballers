@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Link2, Plus, MoreVertical } from "lucide-react";
-import { seasonBadge, type LeagueSeasonSummary } from "@/features/leagues/domain/entities/league-detail";
+import {
+	seasonStatus,
+	type SeasonStatus,
+	type LeagueSeasonSummary,
+} from "@/features/leagues/domain/entities/league-detail";
 import CardHeader from "./CardHeader";
 import LinkSeasonModal from "./LinkSeasonModal";
 
-const BADGE_STYLE: Record<string, { bg: string; fg: string; dot: string }> = {
-	Active: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55", dot: "#1f9d55" },
+const BADGE_STYLE: Record<SeasonStatus, { bg: string; fg: string; dot: string }> = {
+	Live: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55", dot: "#1f9d55" },
 	Upcoming: { bg: "rgba(42,111,219,0.16)", fg: "#5b93e8", dot: "#2a6fdb" },
 	Completed: { bg: "var(--chip)", fg: "var(--txm)", dot: "#8a817a" },
 };
@@ -109,7 +113,7 @@ export default function LeagueSeasonsCard({
 						</thead>
 						<tbody>
 							{seasons.map((season) => {
-								const badge = seasonBadge(season);
+								const badge = seasonStatus(season);
 								const style = BADGE_STYLE[badge];
 								return (
 									<tr key={season.id} className="hover:bg-[var(--hov)]">

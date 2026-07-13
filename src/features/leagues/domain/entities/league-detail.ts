@@ -4,6 +4,12 @@
  */
 import type { AdminLeague } from "./league";
 
+// A season's status and progress are the seasons feature's rules, not the
+// leagues feature's. Re-exported here so this page's components keep one import,
+// but there is a single implementation — the badge can't disagree between the
+// league detail page and the seasons board.
+export { seasonProgress, seasonStatus, type SeasonStatus } from "@/features/seasons/domain/entities/season";
+
 export interface LeagueSeasonSummary {
 	id: string;
 	name: string;
@@ -82,22 +88,3 @@ export function computeDetailStats(detail: LeagueDetail): LeagueDetailStats {
 	};
 }
 
-/** Share of a season's matches already played, 0–100. A season with no fixtures is 0%, never NaN. */
-export function seasonProgress(season: Pick<LeagueSeasonSummary, "matches" | "completed">): number {
-	if (season.matches <= 0) return 0;
-	return Math.round((season.completed / season.matches) * 100);
-}
-
-export type SeasonBadge = "Active" | "Upcoming" | "Completed";
-
-/** A season is Upcoming before it starts, Completed after it ends, otherwise Active. */
-export function seasonBadge(
-	season: Pick<LeagueSeasonSummary, "startDate" | "endDate" | "active">,
-	now: Date = new Date(),
-): SeasonBadge {
-	const start = new Date(season.startDate);
-	const end = new Date(season.endDate);
-	if (!Number.isNaN(start.getTime()) && now < start) return "Upcoming";
-	if (!Number.isNaN(end.getTime()) && now > end) return "Completed";
-	return season.active ? "Active" : "Completed";
-}

@@ -45,7 +45,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'seasons:update');
+    await requirePermission(request, 'seasons:delete');
     const success = await deleteSeason(params.id!);
     if (!success) {
       return new Response(JSON.stringify({ error: 'Season not found' }), {

@@ -58,7 +58,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'leagues:update');
+    await requirePermission(request, 'leagues:delete');
     const success = await deleteLeague(params.id!);
 
     if (!success) {

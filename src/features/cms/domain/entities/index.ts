@@ -96,6 +96,8 @@ export type SeasonWithCounts = Season & {
   _count: {
     matches: number;
   };
+  /** Matches already played in this season. Only resolved on request. */
+  completedMatches?: number;
 };
 
 // DTO for API responses that include additional computed fields
