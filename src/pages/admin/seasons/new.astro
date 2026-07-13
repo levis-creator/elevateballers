@@ -4,8 +4,10 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import SeasonEditor from '../../../features/cms/components/SeasonEditor';
+import SeasonFormPage from '../../../features/seasons/presentation/v2/SeasonFormPage';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 ---
 
 <AdminLayout title="Create Season - Admin" permission="seasons:create">
-  <SeasonEditor client:load />
+  {usePublicAdminV2 ? <SeasonFormPage client:load /> : <SeasonEditor client:load />}
 </AdminLayout>

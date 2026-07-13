@@ -1,6 +1,11 @@
 /**
  * League editor form rules. Pure — no framework, no I/O.
  */
+import { SLUG_PATTERN, slugify, toDateTimeLocal } from "@/lib/form-fields";
+
+// Generic field helpers now live in @/lib/form-fields (seasons uses them too).
+// Re-exported so this module stays the one import a league editor needs.
+export { slugify, toDateTimeLocal };
 
 export interface LeagueFormValues {
 	name: string;
@@ -25,13 +30,6 @@ export const EMPTY_LEAGUE_FORM: LeagueFormValues = {
 	registrationClosesAt: "",
 };
 
-export function slugify(name: string): string {
-	return name
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/(^-|-$)/g, "");
-}
-
 export type LeagueFormErrors = Partial<Record<"name" | "slug" | "registrationClosesAt", string>>;
 
 /**
@@ -46,7 +44,7 @@ export function validateLeagueForm(values: LeagueFormValues): LeagueFormErrors {
 		errors.name = "League name is required.";
 	}
 
-	if (values.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(values.slug)) {
+	if (values.slug && !SLUG_PATTERN.test(values.slug)) {
 		errors.slug = "Use lowercase letters, numbers and hyphens only.";
 	}
 
@@ -91,12 +89,3 @@ export function toPayload(values: LeagueFormValues): LeaguePayload {
 	};
 }
 
-/** ISO (or Date) → the "YYYY-MM-DDTHH:mm" a `datetime-local` input expects, in local time. */
-export function toDateTimeLocal(value: string | Date | null | undefined): string {
-	if (!value) return "";
-	const d = value instanceof Date ? value : new Date(value);
-	if (Number.isNaN(d.getTime())) return "";
-
-	const pad = (n: number) => String(n).padStart(2, "0");
-	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
