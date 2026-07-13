@@ -134,8 +134,17 @@ export default function SeasonList() {
   };
 
   const handleBulkDelete = async () => {
+    // Matches CASCADE with their season — they are destroyed, not unlinked.
+    const doomed = seasons.filter((season) => selectedItems.has(season.id));
+    const matchCount = doomed.reduce((total, season) => total + season._count.matches, 0);
+    const warning = matchCount
+      ? `\n\nThis will also PERMANENTLY DELETE ${matchCount} match(es), including any recorded scores.`
+      : '';
+
     const confirmed = window.confirm(
-      `Are you sure you want to delete ${selectedItems.size} season(s)?\n\nThis action cannot be undone. Leagues and matches associated with these seasons will have their season reference removed.`
+      `Are you sure you want to delete ${selectedItems.size} season(s)?\n\n${doomed
+        .map((season) => `• ${season.name}`)
+        .join('\n')}${warning}\n\nThis action cannot be undone.`
     );
     if (!confirmed) return;
 

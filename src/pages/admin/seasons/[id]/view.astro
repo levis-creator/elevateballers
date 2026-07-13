@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
+import SeasonEditor from '../../../../features/cms/components/SeasonEditor';
+import SeasonDetailPage from '../../../../features/seasons/presentation/v2/SeasonDetailPage';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/seasons', 302);
+}
+---
+
+<AdminLayout title="Season Details - Admin" permission="seasons:read">
+  {usePublicAdminV2 ? <SeasonDetailPage seasonId={id} client:load /> : <SeasonEditor seasonId={id} client:load />}
+</AdminLayout>
