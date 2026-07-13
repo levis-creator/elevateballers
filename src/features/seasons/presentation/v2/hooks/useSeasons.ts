@@ -111,10 +111,14 @@ export function useSeasons() {
 	const remove = useCallback(
 		async (id: string) => {
 			const season = seasons.find((s) => s.id === id);
-			const warning = season?.matches
-				? `\n\n${season.matches} match(es) belong to this season and will be deleted with it.`
+			if (!season) return;
+
+			// Name the league too — four seasons can be called "2026 Season".
+			const league = season.leagues.map((l) => l.name).join(", ") || "Unaffiliated";
+			const warning = season.matches
+				? `\n\nThis will also PERMANENTLY DELETE ${season.matches} match${season.matches === 1 ? "" : "es"}, including any recorded scores. This cannot be undone.`
 				: "";
-			if (!window.confirm(`Permanently delete "${season?.name ?? "this season"}"?${warning}`)) return;
+			if (!window.confirm(`Permanently delete "${season.name}" (${league})?${warning}`)) return;
 
 			setSeasons((prev) => prev.filter((s) => s.id !== id));
 			try {
@@ -160,7 +164,28 @@ export function useSeasons() {
 	const bulkDelete = useCallback(async () => {
 		const ids = [...checked];
 		if (!ids.length) return;
-		if (!window.confirm(`Permanently delete ${ids.length} season${ids.length === 1 ? "" : "s"}?`)) return;
+
+		// Deleting a season CASCADES to its matches — they are destroyed, not
+		// unlinked. Name the seasons and count the matches, so nobody can wipe a
+		// season's results from a checkbox without being told.
+		//
+		// Seasons routinely share a name ("2026 Season" runs in every league), so
+		// each line carries its league and match count — a bare name would leave
+		// you unable to tell which one you are about to destroy.
+		const doomed = seasons.filter((s) => checked.has(s.id));
+		const matches = doomed.reduce((total, s) => total + s.matches, 0);
+		const names = doomed
+			.map((s) => {
+				const league = s.leagues.map((l) => l.name).join(", ") || "Unaffiliated";
+				return `• ${s.name} — ${league} (${s.matches} match${s.matches === 1 ? "" : "es"})`;
+			})
+			.join("\n");
+		const warning = matches
+			? `\n\nThis will also PERMANENTLY DELETE ${matches} match${matches === 1 ? "" : "es"}, including any recorded scores. This cannot be undone.`
+			: "";
+
+		if (!window.confirm(`Permanently delete ${ids.length} season${ids.length === 1 ? "" : "s"}?\n\n${names}${warning}`))
+			return;
 
 		setSeasons((prev) => prev.filter((s) => !checked.has(s.id)));
 		clearChecked();
@@ -174,7 +199,7 @@ export function useSeasons() {
 		} catch {
 			load();
 		}
-	}, [checked, clearChecked, load]);
+	}, [seasons, checked, clearChecked, load]);
 
 	return {
 		seasons,

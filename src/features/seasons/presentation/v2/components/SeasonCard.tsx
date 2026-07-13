@@ -40,6 +40,7 @@ export default function SeasonCard({
 	const status = seasonStatus(season);
 	const pill = STATUS_STYLE[status];
 	const progress = seasonProgress(season);
+	const detailHref = `/admin/seasons/${season.id}/view`;
 	const editHref = `/admin/seasons/${season.id}`;
 	const matchesHref = `/admin/seasons/${season.id}/matches`;
 
@@ -48,8 +49,9 @@ export default function SeasonCard({
 	const accent = season.leagues.length ? avatarTint(season.leagues[0]!.id) : "#8a817a";
 	const isCompleted = status === "Completed";
 
+	// Clicking the card opens the season's detail page; editing is an explicit choice.
 	const open = () => {
-		window.location.href = editHref;
+		window.location.href = detailHref;
 	};
 
 	return (
@@ -153,7 +155,7 @@ export default function SeasonCard({
 
 					<div className="relative flex items-center gap-1.5" data-kebab>
 						<a
-							href={editHref}
+							href={detailHref}
 							onClick={(e) => e.stopPropagation()}
 							className="rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 py-1.5 font-['Archivo'] text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--txd)] no-underline hover:border-[var(--brand)] hover:text-[var(--brand)]"
 						>
@@ -179,6 +181,12 @@ export default function SeasonCard({
 								onClick={(e) => e.stopPropagation()}
 								className="absolute right-0 top-[38px] z-50 w-[190px] overflow-hidden rounded-lg border border-[var(--bord)] bg-[var(--surf)] shadow-[0_14px_40px_rgba(0,0,0,0.4)]"
 							>
+								<a
+									href={detailHref}
+									className="block w-full px-3.5 py-2.5 text-left font-['Archivo'] text-[12.5px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]"
+								>
+									View details
+								</a>
 								<a
 									href={matchesHref}
 									className="block w-full px-3.5 py-2.5 text-left font-['Archivo'] text-[12.5px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]"
