@@ -4,11 +4,13 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import MatchEditor from '../../../features/cms/components/MatchEditor';
+import MatchFormV2 from '../../../features/matches/presentation/v2/MatchFormV2';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 
 const seasonId = Astro.url.searchParams.get('seasonId') || undefined;
 ---
 
 <AdminLayout title="Create Match - Admin" permission="matches:create">
-  <MatchEditor seasonId={seasonId} client:load />
+  {usePublicAdminV2 ? <MatchFormV2 seasonId={seasonId} client:load /> : <MatchEditor seasonId={seasonId} client:load />}
 </AdminLayout>
 

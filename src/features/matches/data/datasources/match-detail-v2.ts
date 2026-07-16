@@ -21,6 +21,7 @@ import type {
 	BoxRow,
 	ComparisonRow,
 	PbpEvent,
+	TimelineEvent,
 	FormGuide,
 	H2HRow,
 	WatchCard,
@@ -48,6 +49,25 @@ const mmss = (seconds: number | null | undefined): string => {
 };
 
 const POINTS: Record<string, number> = { TWO_POINT_MADE: 2, THREE_POINT_MADE: 3, FREE_THROW_MADE: 1 };
+
+// Short category chip shown next to each admin play-by-play row.
+const PBP_CAT: Record<string, string> = {
+	TWO_POINT_MADE: "2PT",
+	TWO_POINT_MISSED: "2PT",
+	THREE_POINT_MADE: "3PT",
+	THREE_POINT_MISSED: "3PT",
+	FREE_THROW_MADE: "FT",
+	FREE_THROW_MISSED: "FT",
+	REBOUND_OFFENSIVE: "REB",
+	REBOUND_DEFENSIVE: "REB",
+	ASSIST: "AST",
+	STEAL: "STL",
+	BLOCK: "BLK",
+	TURNOVER: "TO",
+	FOUL_PERSONAL: "FOUL",
+	FOUL_TECHNICAL: "FOUL",
+	FOUL_FLAGRANT: "FOUL",
+};
 
 // Event types shown in the play-by-play feed — meaningful in-game plays only.
 // Substitutions, timeouts, possession changes, jump balls etc. are excluded as
@@ -89,6 +109,107 @@ const EVENT_LABEL: Record<string, string> = {
 	TIMEOUT: "timeout",
 	JUMP_BALL: "jump ball",
 };
+
+// Foul event types tracked in the timeline; personals count toward foul-out.
+const FOUL_TYPES = new Set(["FOUL_PERSONAL", "FOUL_TECHNICAL", "FOUL_FLAGRANT", "FOUL_UNSPORTSMANLIKE"]);
+const FOUL_OUT_LIMIT = 5; // standard disqualification limit
+
+const ordinal = (n: number): string => {
+	const s = ["th", "st", "nd", "rd"];
+	const v = n % 100;
+	return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
+};
+
+// Broadcast short name for lead lines, e.g. "Don Bosco Nets" -> "Nets".
+const shortTeam = (name: string, nickname?: string | null): string =>
+	(nickname && nickname.trim()) || name.trim().split(/\s+/).pop() || name;
+
+const leadLine = (h: number, a: number, homeShort: string, awayShort: string): string => {
+	if (h === a) return `Tied ${h}–${a}`;
+	return h > a ? `${homeShort} lead by ${h - a}` : `${awayShort} lead by ${a - h}`;
+};
+
+interface ScoringTick {
+	side: "home" | "away";
+	pts: number;
+	period: number;
+	secs: number | null;
+	ch: number;
+	ca: number;
+}
+interface RunTmp {
+	period: number;
+	secs: number | null;
+	side: "home" | "away";
+	a: number;
+	b: number;
+	ch: number;
+	ca: number;
+}
+
+/**
+ * Detect scoring runs: maximal stretches where one team dominates the exchange.
+ * Conservative (≥10 points, ≥8 margin, ended once the opponent answers twice or
+ * erases the run) so only genuinely notable runs surface. Runs never cross a
+ * period boundary. Formatted "a–b run".
+ */
+function detectRuns(scoring: ScoringTick[]): RunTmp[] {
+	const runs: RunTmp[] = [];
+	let side: "home" | "away" | null = null;
+	let a = 0;
+	let b = 0;
+	let bAtLast = 0;
+	let oppConsec = 0;
+	let last: ScoringTick | null = null;
+	let curPeriod: number | null = null;
+	const flush = () => {
+		if (side && a >= 10 && a - bAtLast >= 8 && last) {
+			runs.push({ period: last.period, secs: last.secs, side, a, b: bAtLast, ch: last.ch, ca: last.ca });
+		}
+	};
+	const reset = () => {
+		side = null;
+		a = 0;
+		b = 0;
+		bAtLast = 0;
+		oppConsec = 0;
+		last = null;
+	};
+	for (const s of scoring) {
+		// Runs are scoped to a single period.
+		if (curPeriod !== null && s.period !== curPeriod) {
+			flush();
+			reset();
+		}
+		curPeriod = s.period;
+		if (side === null) {
+			side = s.side;
+			a = s.pts;
+			last = s;
+			continue;
+		}
+		if (s.side === side) {
+			a += s.pts;
+			bAtLast = b;
+			oppConsec = 0;
+			last = s;
+		} else {
+			b += s.pts;
+			oppConsec += 1;
+			if (oppConsec >= 2 || b >= a) {
+				flush();
+				side = s.side;
+				a = s.pts;
+				b = 0;
+				bAtLast = 0;
+				oppConsec = 0;
+				last = s;
+			}
+		}
+	}
+	flush();
+	return runs;
+}
 
 const playerName = (p: any): string => `${p?.firstName ?? ""} ${p?.lastName ?? ""}`.trim() || "Unknown";
 
@@ -316,6 +437,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 				box: { home: [], away: [] },
 				pbpPeriods: [],
 				pbpByPeriod: {},
+				timeline: [],
 				...extras,
 			};
 		}
@@ -373,9 +495,149 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 						ast: s.assists,
 						stl: s.steals,
 						tp: s.threePointersMade,
+						blk: s.blocks,
+						pf: s.fouls,
 					};
 				});
 		const box = { home: boxFor(team1Id), away: boxFor(team2Id) };
+
+		// --- Match timeline: subs + fouls + quarter/half/final markers + runs ---
+		const subsRaw = await prisma.substitution.findMany({
+			where: { matchId: match.id },
+			include: { playerIn: true, playerOut: true },
+		});
+
+		const homeShort = shortTeam(homeName, homeNickname);
+		const awayShort = shortTeam(awayName, awayNickname);
+		const SUB_C = "#2a6fdb";
+		const FOUL_C = "#e4002b";
+		const QTR_C = "#d98324";
+		const RUN_C = "#1f9d55";
+		const isCompleted = String(match.status).toUpperCase() === "COMPLETED";
+		const chronAll = events.filter((e) => !e.isUndone).slice().reverse();
+
+		interface TmpTL {
+			period: number;
+			secs: number | null;
+			ev: TimelineEvent;
+		}
+		const tl: TmpTL[] = [];
+		const teamName = (teamId: string | null | undefined) => (teamId === team1Id ? homeName : awayName);
+
+		// Substitutions
+		for (const s of subsRaw) {
+			tl.push({
+				period: s.period,
+				secs: s.secondsRemaining,
+				ev: {
+					chip: "SUB",
+					kind: "subs",
+					color: SUB_C,
+					title: playerName(s.playerIn),
+					team: teamName(s.teamId),
+					detail: `In for ${playerName(s.playerOut)}`,
+					t: `${periodLabel(s.period)} ${mmss(s.secondsRemaining)}`.trim(),
+				},
+			});
+		}
+
+		// Fouls — personals counted per player for the "Nth foul / to the bench" line.
+		const foulCount = new Map<string, number>();
+		for (const e of chronAll) {
+			if (!FOUL_TYPES.has(e.eventType)) continue;
+			const who = e.player ? playerName(e.player) : "Team";
+			let detail: string;
+			if (e.eventType === "FOUL_PERSONAL") {
+				const key = e.playerId ?? who;
+				const n = (foulCount.get(key) ?? 0) + 1;
+				foulCount.set(key, n);
+				detail = `${ordinal(n)} personal foul${n >= FOUL_OUT_LIMIT ? " — to the bench" : ""}`;
+			} else {
+				const label = EVENT_LABEL[e.eventType] || "foul";
+				detail = label.charAt(0).toUpperCase() + label.slice(1);
+			}
+			tl.push({
+				period: e.period ?? 1,
+				secs: e.secondsRemaining,
+				ev: {
+					chip: "FOUL",
+					kind: "fouls",
+					color: FOUL_C,
+					title: who,
+					team: teamName(e.teamId),
+					detail,
+					t: `${periodLabel(e.period ?? 1)} ${mmss(e.secondsRemaining)}`.trim(),
+				},
+			});
+		}
+
+		// Quarter / halftime / final markers (cumulative score after each period).
+		let cumH = 0;
+		let cumA = 0;
+		periods.forEach((pd, idx) => {
+			cumH += pd.team1Score;
+			cumA += pd.team2Score;
+			const n = pd.periodNumber;
+			const isFinalMarker = isCompleted && idx === periods.length - 1;
+			const title = isFinalMarker ? "Final" : n * 2 === periods.length ? "Halftime" : `End of ${periodLabel(n)}`;
+			const detail = isFinalMarker
+				? cumH === cumA
+					? "Match tied"
+					: `${cumH > cumA ? homeName : awayName} win by ${Math.abs(cumH - cumA)}`
+				: leadLine(cumH, cumA, homeShort, awayShort);
+			tl.push({
+				period: n,
+				secs: 0,
+				ev: {
+					chip: isFinalMarker ? "FINAL" : "QTR",
+					kind: "scoring",
+					color: isFinalMarker ? RUN_C : QTR_C,
+					title,
+					team: `${home.abbr} ${cumH} – ${cumA} ${away.abbr}`,
+					detail,
+					t: `${periodLabel(n)} 00:00`,
+				},
+			});
+		});
+
+		// Scoring runs
+		let rch = 0;
+		let rca = 0;
+		const scoringSeq: ScoringTick[] = chronAll
+			.filter((e) => POINTS[e.eventType])
+			.map((e) => {
+				const pts = POINTS[e.eventType];
+				const runSide: "home" | "away" = e.teamId === team1Id ? "home" : "away";
+				if (runSide === "home") rch += pts;
+				else rca += pts;
+				return { side: runSide, pts, period: e.period ?? 1, secs: e.secondsRemaining, ch: rch, ca: rca };
+			});
+		// Keep only the headline run per period so the timeline stays readable.
+		const bestRun = new Map<number, RunTmp>();
+		for (const r of detectRuns(scoringSeq)) {
+			const cur = bestRun.get(r.period);
+			if (!cur || r.a - r.b > cur.a - cur.b) bestRun.set(r.period, r);
+		}
+		for (const r of bestRun.values()) {
+			tl.push({
+				period: r.period,
+				secs: r.secs,
+				ev: {
+					chip: "RUN",
+					kind: "scoring",
+					color: RUN_C,
+					title: `${r.a}–${r.b} run`,
+					team: r.side === "home" ? homeName : awayName,
+					detail: leadLine(r.ch, r.ca, homeShort, awayShort),
+					t: `${periodLabel(r.period)} ${mmss(r.secs)}`.trim(),
+				},
+			});
+		}
+
+		// Chronological: period ascending, then time descending (clock counts down;
+		// period-end markers sit at 00:00 so they land last within their period).
+		tl.sort((x, y) => x.period - y.period || (y.secs ?? 0) - (x.secs ?? 0));
+		const timeline: TimelineEvent[] = tl.map((x) => x.ev);
 
 		// Top performers
 		const performers = players
@@ -439,6 +701,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 				text,
 				score: `${rh}–${ra}`,
 				side: e.teamId === team1Id ? "home" : e.teamId === team2Id ? "away" : "neutral",
+				cat: PBP_CAT[e.eventType] || String(e.eventType).slice(0, 4).toUpperCase(),
 			});
 		}
 		const pbpPeriods = Object.keys(pbpByPeriod);
@@ -452,6 +715,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			box,
 			pbpPeriods,
 			pbpByPeriod,
+			timeline,
 			formGuide: [],
 			h2h: [],
 			watch: [],

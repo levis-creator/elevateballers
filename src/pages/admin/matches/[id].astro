@@ -4,11 +4,12 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import MatchEditor from '../../../features/cms/components/MatchEditor';
+import MatchFormV2 from '../../../features/matches/presentation/v2/MatchFormV2';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 
 const { id } = Astro.params;
 ---
 
 <AdminLayout title="Edit Match - Admin" permission="matches:update">
-  <MatchEditor matchId={id} client:load />
+  {usePublicAdminV2 ? <MatchFormV2 matchId={id} client:load /> : <MatchEditor matchId={id} client:load />}
 </AdminLayout>
-
