@@ -6,6 +6,7 @@ import type { MatchStatus } from '@prisma/client';
 import { getTeamInitials } from '../../domain/usecases/team-helpers';
 import { MATCH_STAGES, stageLabel, scoresUnlocked } from '../../domain/usecases/match-form';
 import { useMatchForm, type TeamOption } from './hooks/useMatchForm';
+import MatchRoster from './MatchRoster';
 
 const HOME = '#e4002b';
 const AWAY = '#2a6fdb';
@@ -412,6 +413,17 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
           </Card>
         </div>
       </div>
+
+      {/* Roster management only makes sense once the match exists (edit mode). */}
+      {f.editing && (
+        <MatchRoster
+          matchId={matchId}
+          team1Id={form.team1Id}
+          team1Name={form.team1Name}
+          team2Id={form.team2Id}
+          team2Name={form.team2Name}
+        />
+      )}
 
       <div className="py-6 text-center font-['Space_Mono'] text-[11px] tracking-[0.04em] text-[var(--faint)]">Elevate Ballers CMS · v2 · Nairobi, Kenya</div>
     </div>
