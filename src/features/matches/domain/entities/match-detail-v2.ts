@@ -63,6 +63,9 @@ export interface BoxRow {
 	ast: number;
 	stl: number;
 	tp: number;
+	/** Blocks / personal fouls — surfaced in the admin box score. */
+	blk: number;
+	pf: number;
 }
 
 /** One play-by-play entry with the running score after it. */
@@ -71,6 +74,26 @@ export interface PbpEvent {
 	text: string;
 	score: string;
 	side: "home" | "away" | "neutral";
+	/** Short category chip label, e.g. "2PT" / "REB" / "FOUL" (admin play-by-play). */
+	cat: string;
+}
+
+/** Filter bucket for the admin match timeline (ALL is every bucket). */
+export type TimelineKind = "scoring" | "subs" | "fouls";
+
+/** One entry in the admin match timeline (subs, fouls, quarter markers, runs, final). */
+export interface TimelineEvent {
+	/** Short chip label: SUB / FOUL / QTR / RUN / FINAL. */
+	chip: string;
+	kind: TimelineKind;
+	/** Dot + chip accent colour (hex). */
+	color: string;
+	title: string;
+	/** Team name / score summary shown after the title, or null. */
+	team: string | null;
+	detail: string;
+	/** e.g. "Q2 06:20". */
+	t: string;
 }
 
 /** Pre-game last-5 form for a team. */
@@ -129,6 +152,8 @@ export interface MatchView {
 	box: { home: BoxRow[]; away: BoxRow[] };
 	pbpPeriods: string[]; // period keys present, e.g. ["Q1","Q2",…]
 	pbpByPeriod: Record<string, PbpEvent[]>;
+	/** Narrative match timeline: subs, fouls, quarter/half/final markers, runs. */
+	timeline: TimelineEvent[];
 
 	// --- upcoming ---
 	formGuide: FormGuide[];

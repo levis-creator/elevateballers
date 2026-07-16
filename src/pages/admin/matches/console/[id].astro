@@ -1,0 +1,20 @@
+---
+export const prerender = false;
+export const ssr = false;
+
+// Live scoring console. Hosts the full game-tracking experience
+// (MatchDetailView) regardless of UI version — under v2 the read-only match
+// detail lives at /admin/matches/view/[id] and links here to score.
+import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
+import MatchDetailView from '../../../../features/cms/components/MatchDetailView';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/matches', 302);
+}
+---
+
+<AdminLayout title="Match Console - Admin" permission="matches:read">
+  <MatchDetailView matchId={id} client:load />
+</AdminLayout>

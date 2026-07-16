@@ -4,6 +4,8 @@ export const ssr = false;
 
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
 import MatchDetailView from '../../../../features/cms/components/MatchDetailView';
+import MatchDetailV2 from '../../../../features/matches/presentation/v2/MatchDetailV2';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 
 const { id } = Astro.params;
 
@@ -13,6 +15,5 @@ if (!id) {
 ---
 
 <AdminLayout title="Match Details - Admin" permission="matches:read">
-  <MatchDetailView matchId={id} client:load />
+  {usePublicAdminV2 ? <MatchDetailV2 matchId={id} client:load /> : <MatchDetailView matchId={id} client:load />}
 </AdminLayout>
-

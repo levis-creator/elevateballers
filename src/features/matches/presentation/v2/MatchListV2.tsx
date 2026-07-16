@@ -312,7 +312,7 @@ function MatchListCard({
           )}
           {meta.consoleLabel && canEdit && (
             <a
-              href={`/admin/matches/view/${match.id}`}
+              href={`/admin/matches/console/${match.id}`}
               data-astro-prefetch
               className="rounded-md px-3 py-1.5 font-['Archivo'] text-[11px] font-extrabold uppercase tracking-[0.05em] text-white no-underline transition-opacity hover:opacity-90"
               style={{ background: meta.consoleColor }}
