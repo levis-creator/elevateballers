@@ -4,9 +4,11 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import MatchList from '../../../features/cms/components/MatchList';
+import MatchListV2 from '../../../features/matches/presentation/v2/MatchListV2';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 ---
 
 <AdminLayout title="Matches Management - Admin" permission="matches:read">
-  <MatchList client:load />
+  {usePublicAdminV2 ? <MatchListV2 client:load /> : <MatchList client:load />}
 </AdminLayout>
 
