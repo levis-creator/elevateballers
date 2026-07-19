@@ -523,17 +523,28 @@ async function seedSeasons(leagues) {
   const year = new Date().getFullYear();
 
   for (const league of leagues) {
-    const slug = `${year}-season`;
-    const existing = await prisma.season.findFirst({ where: { leagueId: league.id, slug } });
-    seasons.push(existing ?? await prisma.season.create({
-      data: {
-        name: `${year} Season`, slug,
-        description: `${year} basketball season for ${league.name}`,
-        startDate: new Date(`${year}-01-01`),
-        endDate: new Date(`${year}-12-31`),
-        active: true, leagueId: league.id,
-      },
-    }));
+    // Season.slug is globally unique, so scope it per-league.
+    const slug = `${year}-${league.slug}`;
+    let season = await prisma.season.findUnique({ where: { slug } });
+    if (!season) {
+      season = await prisma.season.create({
+        data: {
+          name: `${year} Season`, slug,
+          description: `${year} basketball season for ${league.name}`,
+          startDate: new Date(`${year}-01-01`),
+          endDate: new Date(`${year}-12-31`),
+          active: true,
+        },
+      });
+    }
+    // Leagues and seasons are linked through the LeagueSeason join table.
+    await prisma.leagueSeason.upsert({
+      where: { leagueId_seasonId: { leagueId: league.id, seasonId: season.id } },
+      create: { leagueId: league.id, seasonId: season.id },
+      update: {},
+    });
+    // Attach leagueId in-memory so downstream match seeding can map season -> league.
+    seasons.push({ ...season, leagueId: league.id });
   }
 
   console.log(`    ${seasons.length} seasons ready.`);
