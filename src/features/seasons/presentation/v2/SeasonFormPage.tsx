@@ -4,6 +4,7 @@ import { AlertCircle, ArrowLeft, Check, Loader2, Save } from "lucide-react";
 import { useSeasonForm } from "./hooks/useSeasonForm";
 import SeasonDetailsCard from "./components/SeasonDetailsCard";
 import SeasonLeaguesCard from "./components/SeasonLeaguesCard";
+import SeasonConferencesCard from "./components/SeasonConferencesCard";
 import SeasonScheduleCard from "./components/SeasonScheduleCard";
 import SeasonRegistrationCard from "./components/SeasonRegistrationCard";
 import SeasonPreviewRail from "./components/SeasonPreviewRail";
@@ -21,6 +22,9 @@ function SeasonFormContent({ seasonId }: { seasonId?: string }) {
 	}
 
 	const linked = v.leagues.filter((league) => v.values.leagueIds.includes(league.id));
+	// Teams can be picked on a conference only when exactly one league is linked —
+	// that's the league they get rostered under. Otherwise the modal is name-only.
+	const singleLeague = v.values.leagueIds.length === 1 ? linked[0] ?? null : null;
 
 	return (
 		<div className="font-['Archivo'] text-[var(--tx)]">
@@ -71,6 +75,18 @@ function SeasonFormContent({ seasonId }: { seasonId?: string }) {
 						selected={v.values.leagueIds}
 						canCreateLeague={v.canCreateLeague}
 						onToggle={v.toggleLeague}
+					/>
+
+					<SeasonConferencesCard
+						conferences={v.values.conferences}
+						errors={v.errors}
+						touched={v.touched}
+						teams={v.teams}
+						canPickTeams={singleLeague !== null}
+						leagueName={singleLeague?.name ?? null}
+						onAdd={v.addConference}
+						onUpdate={v.updateConference}
+						onRemove={v.removeConference}
 					/>
 
 					<SeasonScheduleCard

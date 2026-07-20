@@ -18,6 +18,7 @@ import type {
   League,
   Season,
   LeagueSeason,
+  Conference,
   Folder,
   FileUsage,
   Role,
@@ -55,6 +56,7 @@ export type {
   League,
   Season,
   LeagueSeason,
+  Conference,
   Folder,
   FileUsage,
   Role,
@@ -93,6 +95,9 @@ export type LeagueWithMatchCount = League & {
 export type SeasonWithCounts = Season & {
   // The leagues this season runs in (many-to-many). Replaces the old single `league`.
   leagueSeasons: (LeagueSeason & { league: League })[];
+  // The season's conferences (sub-groups of teams). Ordered by sortOrder.
+  // seasonTeams carries just the member team ids (for the edit form to prefill).
+  conferences: (Pick<Conference, 'id' | 'name'> & { seasonTeams: { teamId: string }[] })[];
   _count: {
     matches: number;
   };
@@ -245,6 +250,11 @@ export type CreateSeasonInput = {
   startDate: Date;
   endDate: Date;
   leagueIds?: string[]; // Leagues this season runs in (many-to-many). Optional; can be attached later.
+  // Conferences (team sub-groups). Rows with an `id` are existing; without, new.
+  // `undefined` = leave untouched; `[]` = clear all. Reconciled by id on update.
+  // `teamIds` (single-league seasons only) rosters those teams under the league
+  // and sets them as this conference's members; omit it to leave rosters alone.
+  conferences?: { id?: string; name: string; teamIds?: string[] }[];
   active?: boolean;
   registrationOpensAt?: Date | null; // Optional: shared registration window for this season
   registrationClosesAt?: Date | null; // Optional: season registration deadline

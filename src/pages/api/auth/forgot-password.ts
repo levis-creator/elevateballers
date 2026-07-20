@@ -72,6 +72,17 @@ export const POST: APIRoute = async ({ request }) => {
       const origin = new URL(request.url).origin;
       const resetUrl = `${origin}/admin/reset-password?token=${token}`;
 
+      if (import.meta.env.DEV) {
+        // Local-dev affordance: the reset link IS delivered via the server
+        // console, so the forgot → reset flow is testable without a reachable
+        // email provider. `import.meta.env.DEV` is TRUE only under `astro dev`
+        // (compiled to false in production builds), so links are never logged
+        // in prod. Mirrors the login OTP affordance in api/auth/login.ts.
+        console.log(
+          `\n🔑 [dev] Password ${isInvite ? 'set-password (invite)' : 'reset'} link for ${user.email}:\n   ${resetUrl}\n   (expires in ${ttlMinutes} min)\n`,
+        );
+      }
+
       if (isInvite) {
         await sendWelcomeSetPasswordEmail({
           email: user.email,

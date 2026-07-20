@@ -12,6 +12,7 @@ export * from './teamStaffMembers';
 export * from './leagues';
 export * from './seasons';
 export * from './seasonTeams';
+export * from './conferences';
 export * from './matchPlayer';
 export * from './matchEvent';
 export * from './folders';

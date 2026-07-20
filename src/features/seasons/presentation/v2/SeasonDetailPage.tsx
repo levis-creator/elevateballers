@@ -43,7 +43,7 @@ function SeasonDetailContent({ seasonId }: { seasonId: string }) {
 		);
 	}
 
-	const { season, fixtures, standings, teams } = v.detail;
+	const { season, fixtures, standings, teams, conferences } = v.detail;
 
 	return (
 		<div className="font-['Archivo'] text-[var(--tx)]">
@@ -80,7 +80,15 @@ function SeasonDetailContent({ seasonId }: { seasonId: string }) {
 
 			{v.tab === "Schedule" && <SeasonScheduleTab fixtures={fixtures} seasonId={season.id} />}
 			{v.tab === "Standings" && <SeasonStandingsTab standings={standings} seasonName={season.name} />}
-			{v.tab === "Teams" && <SeasonTeamsTab teams={teams} />}
+			{v.tab === "Teams" && (
+				<SeasonTeamsTab
+					teams={teams}
+					conferences={conferences}
+					seasonId={season.id}
+					canAssign={v.canUpdate}
+					onRefresh={v.refresh}
+				/>
+			)}
 		</div>
 	);
 }

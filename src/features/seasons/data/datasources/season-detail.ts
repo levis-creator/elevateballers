@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getStandings } from "@/features/standings/lib/getStandings";
 import type { AdminSeason } from "@/features/seasons/domain/entities/season";
 import type {
+	SeasonConferenceOption,
 	SeasonDetail,
 	SeasonFixture,
 	SeasonStandingRow,
@@ -22,6 +23,7 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 		where: { id: seasonId },
 		include: {
 			leagueSeasons: { include: { league: { select: { id: true, name: true } } } },
+			conferences: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true } },
 			_count: { select: { matches: true } },
 		},
 	});
@@ -52,7 +54,11 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 		// which the standings table (played > 0 only) would drop.
 		prisma.seasonTeam.findMany({
 			where: { seasonId },
-			select: { team: { select: { id: true, name: true, slug: true, logo: true } } },
+			select: {
+				conferenceId: true,
+				conference: { select: { name: true } },
+				team: { select: { id: true, name: true, slug: true, logo: true } },
+			},
 			orderBy: { team: { name: "asc" } },
 		}),
 		getStandings({ seasonId }),
@@ -96,7 +102,7 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 
 	const recordByTeam = new Map(table.map((row) => [row.teamId, row]));
 
-	const teams: SeasonTeamSummary[] = teamRows.map(({ team }) => {
+	const teams: SeasonTeamSummary[] = teamRows.map(({ team, conferenceId, conference }) => {
 		const record = recordByTeam.get(team.id);
 		return {
 			id: team.id,
@@ -106,8 +112,12 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 			played: record?.played ?? 0,
 			won: record?.won ?? 0,
 			lost: record?.lost ?? 0,
+			conferenceId: conferenceId ?? null,
+			conferenceName: conference?.name ?? null,
 		};
 	});
 
-	return { season: adminSeason, fixtures, standings, teams };
+	const conferences: SeasonConferenceOption[] = season.conferences.map((c) => ({ id: c.id, name: c.name }));
+
+	return { season: adminSeason, fixtures, standings, teams, conferences };
 }

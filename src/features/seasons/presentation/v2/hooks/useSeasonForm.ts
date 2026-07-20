@@ -24,6 +24,12 @@ export interface FormLeague {
 	teamCount: number;
 }
 
+export interface FormTeam {
+	id: string;
+	name: string;
+	logo: string | null;
+}
+
 /**
  * Owns the season editor: form state, validation, the league links, and save.
  * `seasonId` absent = create mode.
@@ -34,6 +40,7 @@ export function useSeasonForm(seasonId?: string) {
 
 	const [values, setValues] = useState<SeasonFormValues>(EMPTY_SEASON_FORM);
 	const [leagues, setLeagues] = useState<FormLeague[]>([]);
+	const [teams, setTeams] = useState<FormTeam[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
@@ -64,6 +71,35 @@ export function useSeasonForm(seasonId?: string) {
 		[values.leagueIds, set],
 	);
 
+	const addConference = useCallback(
+		(name: string, teamIds?: string[]) => {
+			set("conferences", [...values.conferences, { name, ...(teamIds !== undefined ? { teamIds } : {}) }]);
+		},
+		[values.conferences, set],
+	);
+
+	const updateConference = useCallback(
+		(index: number, name: string, teamIds?: string[]) => {
+			set(
+				"conferences",
+				values.conferences.map((conference, i) =>
+					i === index ? { ...conference, name, ...(teamIds !== undefined ? { teamIds } : {}) } : conference,
+				),
+			);
+		},
+		[values.conferences, set],
+	);
+
+	const removeConference = useCallback(
+		(index: number) => {
+			set(
+				"conferences",
+				values.conferences.filter((_, i) => i !== index),
+			);
+		},
+		[values.conferences, set],
+	);
+
 	/** The slug preview always shows what the server will actually store. */
 	const slugPreview = values.slug.trim() || slugify(values.name) || "your-season";
 
@@ -72,7 +108,12 @@ export function useSeasonForm(seasonId?: string) {
 		setError("");
 		try {
 			// `?counts=teams` gives each league its distinct team count for the picker.
-			const leaguesRes = await fetch("/api/leagues?counts=teams");
+			// Teams are fetched in parallel — they're the pool for the conference modal
+			// (a team isn't tied to a league until it's rostered under one).
+			const [leaguesRes, teamsRes] = await Promise.all([
+				fetch("/api/leagues?counts=teams"),
+				fetch("/api/teams"),
+			]);
 			if (!leaguesRes.ok) throw new Error("failed");
 			const leagueRows = await leaguesRes.json();
 			setLeagues(
@@ -80,6 +121,15 @@ export function useSeasonForm(seasonId?: string) {
 					id: l.id,
 					name: l.name,
 					teamCount: l.teamCount ?? 0,
+				})),
+			);
+
+			const teamRows = teamsRes.ok ? await teamsRes.json() : [];
+			setTeams(
+				(Array.isArray(teamRows) ? teamRows : []).map((t: any) => ({
+					id: t.id,
+					name: t.name,
+					logo: t.logo ?? null,
 				})),
 			);
 
@@ -102,6 +152,14 @@ export function useSeasonForm(seasonId?: string) {
 				slug: season.slug ?? "",
 				description: season.description ?? "",
 				leagueIds: (season.leagueSeasons ?? []).map((ls: { leagueId: string }) => ls.leagueId),
+				conferences: (season.conferences ?? []).map(
+					(c: { id: string; name: string; seasonTeams?: { teamId: string }[] }) => ({
+						id: c.id,
+						name: c.name,
+						// Prefill membership so an edit doesn't wipe existing team assignments.
+						teamIds: (c.seasonTeams ?? []).map((st) => st.teamId),
+					}),
+				),
 				active: Boolean(season.active),
 				startDate: toDateInput(season.startDate),
 				endDate: toDateInput(season.endDate),
@@ -168,10 +226,14 @@ export function useSeasonForm(seasonId?: string) {
 		values,
 		set,
 		toggleLeague,
+		addConference,
+		updateConference,
+		removeConference,
 		errors,
 		touched,
 		slugPreview,
 		leagues,
+		teams,
 		loading,
 		saving: saving || redirecting,
 		saved,

@@ -1,10 +1,44 @@
 import type { APIRoute } from 'astro';
-import { removeSeasonTeam } from '../../../../../features/cms/lib/mutations';
+import { removeSeasonTeam, setSeasonTeamConference } from '../../../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../../../features/rbac/middleware';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 import { handleApiError } from '../../../../../lib/apiError';
 
 export const prerender = false;
+
+/**
+ * PATCH /api/seasons/[seasonId]/teams/[teamId] — assign the team to one of the
+ * season's conferences, or clear it with `conferenceId: null`.
+ */
+export const PATCH: APIRoute = async ({ params, request }) => {
+  try {
+    await requirePermission(request, 'seasons:update');
+    const body = await request.json().catch(() => ({}));
+    const conferenceId = body?.conferenceId ?? null;
+    if (conferenceId !== null && typeof conferenceId !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'conferenceId must be a string or null' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const updated = await setSeasonTeamConference(params.seasonId!, params.teamId!, conferenceId);
+    if (!updated) {
+      return new Response(
+        JSON.stringify({ error: 'Team is not a participant of this season, or the conference is invalid' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    await logAudit(request, 'SEASON_TEAM_CONFERENCE_SET', {
+      seasonId: params.seasonId,
+      teamId: params.teamId,
+      conferenceId,
+    });
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    return handleApiError(error, 'set season team conference', request);
+  }
+};
 
 /**
  * DELETE /api/seasons/[seasonId]/teams/[teamId] — remove a team from the
