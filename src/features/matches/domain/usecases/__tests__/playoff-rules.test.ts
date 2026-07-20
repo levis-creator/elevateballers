@@ -1,4 +1,3 @@
-f
 import { describe, expect, it } from 'vitest';
 import { isPlayoffStage, validatePlayoffMatch } from '../playoff-rules';
 

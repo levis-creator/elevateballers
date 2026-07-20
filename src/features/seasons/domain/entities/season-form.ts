@@ -6,12 +6,31 @@ import { type SeasonStatus, seasonStatus } from "./season";
 
 export { slugify, toDateInput, toDateTimeLocal };
 
+/**
+ * A conference row on the season form. `id` is present for a conference that
+ * already exists in the DB and absent for one the admin just added — the
+ * mutation layer uses that distinction to reconcile by id (rename-safe) rather
+ * than delete-and-recreate, which would drop team assignments on every rename.
+ */
+export interface SeasonConferenceInput {
+	id?: string;
+	name: string;
+	/**
+	 * Teams to place in this conference. Only meaningful when the season is
+	 * linked to exactly one league (the league they get rostered under on save);
+	 * left undefined otherwise, so a name-only edit never touches team rosters.
+	 */
+	teamIds?: string[];
+}
+
 export interface SeasonFormValues {
 	name: string;
 	slug: string;
 	description: string;
 	/** Leagues this season runs in (many-to-many). May be empty — attach later. */
 	leagueIds: string[];
+	/** Sub-groups of the season's teams (e.g. East / West). May be empty. */
+	conferences: SeasonConferenceInput[];
 	active: boolean;
 	/** `date` strings ("2026-01-01"). Both are required. */
 	startDate: string;
@@ -29,6 +48,7 @@ export const EMPTY_SEASON_FORM: SeasonFormValues = {
 	slug: "",
 	description: "",
 	leagueIds: [],
+	conferences: [],
 	active: true,
 	startDate: "",
 	endDate: "",
@@ -53,7 +73,7 @@ export const BRACKET_TYPES = [
 ] as const;
 
 export type SeasonFormErrors = Partial<
-	Record<"name" | "slug" | "startDate" | "endDate" | "registrationClosesAt", string>
+	Record<"name" | "slug" | "startDate" | "endDate" | "registrationClosesAt" | "conferences", string>
 >;
 
 export function validateSeasonForm(values: SeasonFormValues): SeasonFormErrors {
@@ -84,7 +104,29 @@ export function validateSeasonForm(values: SeasonFormValues): SeasonFormErrors {
 		}
 	}
 
+	// Conferences are optional, but any row that exists must have a non-blank,
+	// case-insensitively unique name (mirrors the DB's @@unique([seasonId, name])).
+	const conferenceError = validateConferences(values.conferences);
+	if (conferenceError) errors.conferences = conferenceError;
+
 	return errors;
+}
+
+/**
+ * Returns the group-level error message for a conference list, or `null` when
+ * the list is valid. Blank rows are the admin mid-edit; duplicate names would
+ * violate the DB unique index, so both are caught before save.
+ */
+function validateConferences(conferences: SeasonConferenceInput[]): string | null {
+	const seen = new Set<string>();
+	for (const conference of conferences) {
+		const name = conference.name.trim();
+		if (!name) return "Every conference needs a name.";
+		const key = name.toLowerCase();
+		if (seen.has(key)) return "Conference names must be unique.";
+		seen.add(key);
+	}
+	return null;
 }
 
 export function isValid(errors: SeasonFormErrors): boolean {
@@ -96,6 +138,7 @@ export interface SeasonPayload {
 	slug?: string;
 	description?: string;
 	leagueIds: string[];
+	conferences: { id?: string; name: string; teamIds?: string[] }[];
 	active: boolean;
 	startDate: string;
 	endDate: string;
@@ -115,6 +158,16 @@ export function toPayload(values: SeasonFormValues): SeasonPayload {
 		slug: values.slug.trim() || undefined,
 		description: values.description.trim() || undefined,
 		leagueIds: values.leagueIds,
+		// Trim names and drop blank rows; keep `id` so the server can reconcile
+		// renames against existing conferences instead of recreating them.
+		// `teamIds` rides along only when set, so a name-only edit stays name-only.
+		conferences: values.conferences
+			.map((conference) => ({
+				id: conference.id,
+				name: conference.name.trim(),
+				...(conference.teamIds !== undefined ? { teamIds: conference.teamIds } : {}),
+			}))
+			.filter((conference) => conference.name.length > 0),
 		active: values.active,
 		startDate: values.startDate,
 		endDate: values.endDate,

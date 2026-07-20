@@ -38,11 +38,24 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    if (data.conferences !== undefined) {
+      const invalid =
+        !Array.isArray(data.conferences) ||
+        data.conferences.some((c: unknown) => typeof (c as { name?: unknown })?.name !== 'string' || !(c as { name: string }).name.trim());
+      if (invalid) {
+        return new Response(
+          JSON.stringify({ error: 'Each conference must have a non-empty name' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const season = await createSeason(data);
     await logAudit(request, 'SEASON_CREATED', {
       seasonId: season.id,
       name: season.name,
       leagueIds: data.leagueIds ?? [],
+      conferences: data.conferences?.length ?? 0,
     });
     return new Response(JSON.stringify(season), {
       status: 201,

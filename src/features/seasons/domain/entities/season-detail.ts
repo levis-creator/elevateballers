@@ -32,6 +32,14 @@ export interface SeasonTeamSummary {
 	played: number;
 	won: number;
 	lost: number;
+	/** The conference this team is assigned to in the season, or null when unassigned. */
+	conferenceId: string | null;
+	conferenceName: string | null;
+}
+
+export interface SeasonConferenceOption {
+	id: string;
+	name: string;
 }
 
 export interface SeasonDetail {
@@ -39,6 +47,8 @@ export interface SeasonDetail {
 	fixtures: SeasonFixture[];
 	standings: SeasonStandingRow[];
 	teams: SeasonTeamSummary[];
+	/** The season's conferences, ordered — the options for the team selector. */
+	conferences: SeasonConferenceOption[];
 }
 
 export type SeasonTab = "Schedule" | "Standings" | "Teams";

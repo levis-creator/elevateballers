@@ -49,7 +49,10 @@ function detail(season: Partial<AdminSeason>, teamCount: number): SeasonDetail {
 			played: 0,
 			won: 0,
 			lost: 0,
+			conferenceId: null,
+			conferenceName: null,
 		})),
+		conferences: [],
 	};
 }
 

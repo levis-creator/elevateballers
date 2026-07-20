@@ -26,6 +26,32 @@ export async function removeSeasonTeam(seasonId: string, teamId: string): Promis
 }
 
 /**
+ * Assign (or clear) a rostered team's conference. Passing `null` unassigns.
+ * When a conference id is given it must belong to this same season — a
+ * cross-season id is rejected rather than silently stored. Returns true if a
+ * roster row was updated (false when the team isn't rostered in the season).
+ */
+export async function setSeasonTeamConference(
+  seasonId: string,
+  teamId: string,
+  conferenceId: string | null,
+): Promise<boolean> {
+  if (conferenceId) {
+    const conference = await prisma.conference.findFirst({
+      where: { id: conferenceId, seasonId },
+      select: { id: true },
+    });
+    if (!conference) return false;
+  }
+
+  const result = await prisma.seasonTeam.updateMany({
+    where: { seasonId, teamId },
+    data: { conferenceId },
+  });
+  return result.count > 0;
+}
+
+/**
  * Seed a season's roster from the teams already appearing in its matches.
  * Same logic as scripts/backfill-season-teams.js but scoped to one season, so
  * it can be triggered from the admin UI. Returns how many new rows were created.

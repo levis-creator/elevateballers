@@ -57,6 +57,27 @@ describe('validateSeasonForm', () => {
 		expect(validateSeasonForm(form({ ...bad, hasRegistrationWindow: false })).registrationClosesAt).toBeUndefined();
 		expect(validateSeasonForm(form({ ...bad, hasRegistrationWindow: true })).registrationClosesAt).toBeDefined();
 	});
+
+	it('allows an empty conference list — conferences are optional', () => {
+		expect(validateSeasonForm(form({ conferences: [] })).conferences).toBeUndefined();
+		expect(isValid(validateSeasonForm(form()))).toBe(true);
+	});
+
+	it('accepts named conferences', () => {
+		expect(
+			validateSeasonForm(form({ conferences: [{ name: 'East' }, { id: 'c1', name: 'West' }] })).conferences,
+		).toBeUndefined();
+	});
+
+	it('rejects a blank conference name', () => {
+		expect(validateSeasonForm(form({ conferences: [{ name: '  ' }] })).conferences).toBeDefined();
+	});
+
+	it('rejects duplicate conference names case-insensitively', () => {
+		expect(
+			validateSeasonForm(form({ conferences: [{ name: 'East' }, { name: 'east' }] })).conferences,
+		).toBeDefined();
+	});
 });
 
 describe('toPayload', () => {
@@ -96,6 +117,27 @@ describe('toPayload', () => {
 	it('passes the league links through — an empty array clears them (set semantics)', () => {
 		expect(toPayload(form({ leagueIds: ['l1', 'l2'] })).leagueIds).toEqual(['l1', 'l2']);
 		expect(toPayload(form({ leagueIds: [] })).leagueIds).toEqual([]);
+	});
+
+	it('trims conference names and drops blank rows, preserving ids', () => {
+		const p = toPayload(
+			form({ conferences: [{ id: 'c1', name: '  East  ' }, { name: '   ' }, { name: 'West' }] }),
+		);
+		expect(p.conferences).toEqual([{ id: 'c1', name: 'East' }, { id: undefined, name: 'West' }]);
+	});
+
+	it('emits an empty conference array when there are none (clear semantics)', () => {
+		expect(toPayload(form({ conferences: [] })).conferences).toEqual([]);
+	});
+
+	it('carries conference teamIds only when set (name-only edits stay name-only)', () => {
+		const p = toPayload(
+			form({ conferences: [{ name: 'East', teamIds: ['t1', 't2'] }, { name: 'West' }] }),
+		);
+		expect(p.conferences[0]).toEqual({ id: undefined, name: 'East', teamIds: ['t1', 't2'] });
+		// No teamIds key when the row never had one — the server leaves that roster alone.
+		expect(p.conferences[1]).toEqual({ id: undefined, name: 'West' });
+		expect('teamIds' in p.conferences[1]).toBe(false);
 	});
 });
 
