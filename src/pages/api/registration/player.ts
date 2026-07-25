@@ -40,7 +40,11 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Enforce the league/season registration window when the form scopes to one
-    const gate = await checkRegistrationOpen(data.leagueId, data.seasonId);
+    const gate = await checkRegistrationOpen(
+      data.leagueId,
+      data.seasonId,
+      data.leagueSeasonId,
+    );
     if (!gate.open) {
       return new Response(
         JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }),

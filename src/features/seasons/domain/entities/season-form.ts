@@ -23,6 +23,31 @@ export interface SeasonConferenceInput {
 	teamIds?: string[];
 }
 
+export type LeagueSeasonFormStatus =
+	| "DRAFT"
+	| "REGISTRATION"
+	| "SCHEDULED"
+	| "ACTIVE"
+	| "PLAYOFFS"
+	| "COMPLETED";
+
+export interface LeagueSeasonFormValues {
+	id?: string;
+	leagueId: string;
+	leagueName: string;
+	enabled: boolean;
+	startDate: string;
+	endDate: string;
+	status: LeagueSeasonFormStatus;
+	competitionStructure: "SINGLE_TABLE" | "CONFERENCES";
+	bracketType: string;
+	hasRegistrationWindow: boolean;
+	registrationOpensAt: string;
+	registrationClosesAt: string;
+	teamIds: string[];
+	conferences: SeasonConferenceInput[];
+}
+
 export interface SeasonFormValues {
 	name: string;
 	slug: string;
@@ -41,6 +66,8 @@ export interface SeasonFormValues {
 	/** `datetime-local` strings, or "" when unset. */
 	registrationOpensAt: string;
 	registrationClosesAt: string;
+	/** Operational competition editions. Phase 5 authoritative form state. */
+	leagueSeasons: LeagueSeasonFormValues[];
 }
 
 export const EMPTY_SEASON_FORM: SeasonFormValues = {
@@ -56,6 +83,7 @@ export const EMPTY_SEASON_FORM: SeasonFormValues = {
 	hasRegistrationWindow: false,
 	registrationOpensAt: "",
 	registrationClosesAt: "",
+	leagueSeasons: [],
 };
 
 /**
@@ -73,11 +101,21 @@ export const BRACKET_TYPES = [
 ] as const;
 
 export type SeasonFormErrors = Partial<
-	Record<"name" | "slug" | "startDate" | "endDate" | "registrationClosesAt" | "conferences", string>
+	Record<
+		| "name"
+		| "slug"
+		| "startDate"
+		| "endDate"
+		| "registrationClosesAt"
+		| "conferences"
+		| "leagueSeasons",
+		string
+	>
 >;
 
 export function validateSeasonForm(values: SeasonFormValues): SeasonFormErrors {
 	const errors: SeasonFormErrors = {};
+	const enabledCompetitions = values.leagueSeasons.filter((row) => row.enabled);
 
 	if (!values.name.trim()) errors.name = "Season name is required.";
 
@@ -85,8 +123,8 @@ export function validateSeasonForm(values: SeasonFormValues): SeasonFormErrors {
 		errors.slug = "Use lowercase letters, numbers and hyphens only.";
 	}
 
-	if (!values.startDate) errors.startDate = "A start date is required.";
-	if (!values.endDate) errors.endDate = "An end date is required.";
+	if (!enabledCompetitions.length && !values.startDate) errors.startDate = "A start date is required.";
+	if (!enabledCompetitions.length && !values.endDate) errors.endDate = "An end date is required.";
 
 	// A season that ends before it starts would render as Completed the moment it
 	// is saved, and its progress bar would be meaningless.
@@ -108,6 +146,51 @@ export function validateSeasonForm(values: SeasonFormValues): SeasonFormErrors {
 	// case-insensitively unique name (mirrors the DB's @@unique([seasonId, name])).
 	const conferenceError = validateConferences(values.conferences);
 	if (conferenceError) errors.conferences = conferenceError;
+
+	for (const competition of values.leagueSeasons.filter((row) => row.enabled)) {
+		if (!competition.startDate || !competition.endDate) {
+			errors.leagueSeasons = `${competition.leagueName} needs start and end dates.`;
+			break;
+		}
+		if (new Date(competition.endDate) < new Date(competition.startDate)) {
+			errors.leagueSeasons = `${competition.leagueName} must end on or after it starts.`;
+			break;
+		}
+		if (
+			competition.hasRegistrationWindow &&
+			competition.registrationOpensAt &&
+			competition.registrationClosesAt &&
+			new Date(competition.registrationClosesAt) <=
+				new Date(competition.registrationOpensAt)
+		) {
+			errors.leagueSeasons = `${competition.leagueName}'s registration deadline must follow its opening.`;
+			break;
+		}
+		if (
+			competition.competitionStructure === "CONFERENCES" &&
+			competition.conferences.length === 0
+		) {
+			errors.leagueSeasons = `${competition.leagueName} needs at least one conference.`;
+			break;
+		}
+		const nestedConferenceError = validateConferences(competition.conferences);
+		if (nestedConferenceError) {
+			errors.leagueSeasons = `${competition.leagueName}: ${nestedConferenceError}`;
+			break;
+		}
+		const assigned = competition.conferences.flatMap((conference) => conference.teamIds ?? []);
+		if (new Set(assigned).size !== assigned.length) {
+			errors.leagueSeasons = `${competition.leagueName} has a team assigned to more than one conference.`;
+			break;
+		}
+		if (
+			competition.competitionStructure === "CONFERENCES" &&
+			competition.teamIds.some((teamId) => !assigned.includes(teamId))
+		) {
+			errors.leagueSeasons = `${competition.leagueName} has participating teams without a conference.`;
+			break;
+		}
+	}
 
 	return errors;
 }
@@ -145,6 +228,19 @@ export interface SeasonPayload {
 	bracketType?: string;
 	registrationOpensAt: string | null;
 	registrationClosesAt: string | null;
+	leagueSeasons?: {
+		id?: string;
+		leagueId: string;
+		startDate: string;
+		endDate: string;
+		status: LeagueSeasonFormStatus;
+		competitionStructure: "SINGLE_TABLE" | "CONFERENCES";
+		bracketType?: string;
+		registrationOpensAt: string | null;
+		registrationClosesAt: string | null;
+		teamIds: string[];
+		conferences: { id?: string; name: string; teamIds?: string[] }[];
+	}[];
 }
 
 /**
@@ -153,7 +249,8 @@ export interface SeasonPayload {
  * registration window off clears both timestamps rather than leaving stale ones.
  */
 export function toPayload(values: SeasonFormValues): SeasonPayload {
-	return {
+	const enabledCompetitions = values.leagueSeasons.filter((row) => row.enabled);
+	const payload: SeasonPayload = {
 		name: values.name.trim(),
 		slug: values.slug.trim() || undefined,
 		description: values.description.trim() || undefined,
@@ -175,6 +272,39 @@ export function toPayload(values: SeasonFormValues): SeasonPayload {
 		registrationOpensAt: values.hasRegistrationWindow ? values.registrationOpensAt || null : null,
 		registrationClosesAt: values.hasRegistrationWindow ? values.registrationClosesAt || null : null,
 	};
+	if (enabledCompetitions.length) {
+		const starts = enabledCompetitions.map((row) => row.startDate).filter(Boolean).sort();
+		const ends = enabledCompetitions.map((row) => row.endDate).filter(Boolean).sort();
+		payload.leagueIds = enabledCompetitions.map((row) => row.leagueId);
+		if (starts.length) payload.startDate = starts[0];
+		if (ends.length) payload.endDate = ends[ends.length - 1];
+		payload.active = enabledCompetitions.some((row) => row.status !== "COMPLETED");
+		payload.leagueSeasons = enabledCompetitions.map((row) => ({
+			id: row.id,
+			leagueId: row.leagueId,
+			startDate: row.startDate,
+			endDate: row.endDate,
+			status: row.status,
+			competitionStructure: row.competitionStructure,
+			bracketType: row.bracketType || undefined,
+			registrationOpensAt: row.hasRegistrationWindow
+				? row.registrationOpensAt || null
+				: null,
+			registrationClosesAt: row.hasRegistrationWindow
+				? row.registrationClosesAt || null
+				: null,
+			teamIds: row.teamIds,
+			conferences:
+				row.competitionStructure === "CONFERENCES"
+					? row.conferences.map((conference) => ({
+							id: conference.id,
+							name: conference.name.trim(),
+							teamIds: conference.teamIds ?? [],
+						}))
+					: [],
+		}));
+	}
+	return payload;
 }
 
 /**
@@ -183,13 +313,18 @@ export function toPayload(values: SeasonFormValues): SeasonPayload {
  * so the form previews the same rule the seasons board renders.
  */
 export function previewStatus(values: SeasonFormValues, now: Date = new Date()): SeasonStatus {
+	const enabled = values.leagueSeasons.filter((competition) => competition.enabled);
+	const starts = enabled.map((competition) => competition.startDate).filter(Boolean).sort();
+	const ends = enabled.map((competition) => competition.endDate).filter(Boolean).sort();
 	return seasonStatus(
 		{
 			// An unset date must not read as "1970"; fall back to a wide-open window
 			// so a half-filled form previews as Live rather than Completed.
-			startDate: values.startDate || "0000-01-01",
-			endDate: values.endDate || "9999-12-31",
-			active: values.active,
+			startDate: starts[0] || values.startDate || "0000-01-01",
+			endDate: ends[ends.length - 1] || values.endDate || "9999-12-31",
+			active: enabled.length
+				? enabled.some((competition) => competition.status !== "COMPLETED")
+				: values.active,
 		},
 		now,
 	);
@@ -207,10 +342,21 @@ export interface ChecklistItem {
 
 /** The "Before you save" rail. Linking a league is encouraged, not required. */
 export function checklist(values: SeasonFormValues): ChecklistItem[] {
+	const enabledCompetitions = values.leagueSeasons.filter((competition) => competition.enabled);
 	return [
 		{ label: "Season name", done: Boolean(values.name.trim()) },
-		{ label: "Start and end dates", done: Boolean(values.startDate && values.endDate) },
-		{ label: "At least one league linked", done: values.leagueIds.length > 0 },
+		{
+			label: "Competition dates",
+			done: enabledCompetitions.length
+				? enabledCompetitions.every((competition) => competition.startDate && competition.endDate)
+				: Boolean(values.startDate && values.endDate),
+		},
+		{
+			label: "At least one league linked",
+			done:
+				values.leagueSeasons.some((competition) => competition.enabled) ||
+				values.leagueIds.length > 0,
+		},
 	];
 }
 
@@ -224,8 +370,11 @@ function pretty(value: string): string | null {
 
 /** The preview card's date line, tolerant of a half-filled form. */
 export function previewRange(values: SeasonFormValues): string {
-	const start = pretty(values.startDate);
-	const end = pretty(values.endDate);
+	const enabled = values.leagueSeasons.filter((competition) => competition.enabled);
+	const starts = enabled.map((competition) => competition.startDate).filter(Boolean).sort();
+	const ends = enabled.map((competition) => competition.endDate).filter(Boolean).sort();
+	const start = pretty(starts[0] || values.startDate);
+	const end = pretty(ends[ends.length - 1] || values.endDate);
 	if (start && end) return `${start} – ${end}`;
 	if (start) return `From ${start}`;
 	if (end) return `Until ${end}`;

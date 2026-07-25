@@ -2,6 +2,21 @@ import { prisma } from '../../../../../lib/prisma';
 import { getEnvBoolean } from '../../../../../lib/env';
 import { ensureMatchSlug } from '../../../../matches/lib/slug';
 import type { CreateMatchInput, UpdateMatchInput, Match } from '../../../types';
+import { resolveLeagueSeasonScope } from '../../../../seasons/data/league-season-scope';
+
+async function assertTeamsParticipate(
+  leagueSeasonId: string,
+  teamIds: Array<string | undefined>,
+): Promise<void> {
+  const ids = [...new Set(teamIds.filter(Boolean))] as string[];
+  if (!ids.length) return;
+  const count = await prisma.seasonTeam.count({
+    where: { leagueSeasonId, teamId: { in: ids } },
+  });
+  if (count !== ids.length) {
+    throw new Error('Every selected team must participate in the selected league season');
+  }
+}
 
 export async function createMatch(data: CreateMatchInput): Promise<Match> {
   if (data.team1Id && data.team2Id && data.team1Id === data.team2Id) {
@@ -27,13 +42,16 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
 
   if (data.stage && data.stage.trim() !== '') matchData.stage = data.stage;
 
-  if (data.leagueId) {
+  if (data.leagueSeasonId || (data.seasonId && data.leagueId)) {
+    const scope = await resolveLeagueSeasonScope(data);
+    await assertTeamsParticipate(scope.leagueSeasonId, [data.team1Id, data.team2Id]);
+    Object.assign(matchData, scope);
+    matchData.leagueName = null;
+  } else if (data.leagueId) {
     matchData.league = { connect: { id: data.leagueId } };
   } else {
     matchData.leagueName = data.league || '';
   }
-
-  if (data.seasonId) matchData.season = { connect: { id: data.seasonId } };
 
   if (data.team1Id) {
     matchData.team1 = { connect: { id: data.team1Id } };
@@ -147,8 +165,33 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
   try {
     const currentMatch = await prisma.match.findUnique({
       where: { id },
-      select: { status: true },
+      select: {
+        status: true,
+        leagueSeasonId: true,
+        seasonId: true,
+        leagueId: true,
+        team1Id: true,
+        team2Id: true,
+      },
     });
+    if (!currentMatch) return null;
+
+    const scopeWasProvided =
+      data.leagueSeasonId !== undefined ||
+      data.seasonId !== undefined ||
+      data.leagueId !== undefined;
+    if (scopeWasProvided) {
+      const scope = await resolveLeagueSeasonScope({
+        leagueSeasonId: data.leagueSeasonId ?? currentMatch.leagueSeasonId,
+        seasonId: data.seasonId ?? currentMatch.seasonId,
+        leagueId: data.leagueId ?? currentMatch.leagueId,
+      });
+      await assertTeamsParticipate(scope.leagueSeasonId, [
+        data.team1Id ?? currentMatch.team1Id ?? undefined,
+        data.team2Id ?? currentMatch.team2Id ?? undefined,
+      ]);
+      Object.assign(updateData, scope, { leagueName: null });
+    }
 
     const updatedMatch = await prisma.match.update({
       where: { id },

@@ -5,13 +5,13 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm run backfill:league-seasons
-8 verbose argv "run" "backfill:league-seasons"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T09_17_51_003Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T09_17_51_003Z-debug-0.log
+7 verbose title npm exec tsc --noEmit --pretty false --incremental false
+8 verbose argv "exec" "--" "tsc" "--noEmit" "--pretty" "false" "--incremental" "false"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T10_25_04_149Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T10_25_04_149Z-debug-0.log
 11 silly logfile done cleaning log files
-12 notice run elevateballers@0.0.1 backfill:league-seasons
-13 notice run tsx scripts/backfill-league-seasons.ts
+12 notice run elevateballers@0.0.1 npx
+13 notice run tsc --noEmit --pretty false --incremental false
 14 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 15 verbose os Windows_NT 10.0.26200
 16 verbose node v24.18.0

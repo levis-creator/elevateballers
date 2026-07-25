@@ -26,6 +26,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     const data = await request.json();
     const teamIds: unknown = data?.teamIds;
     const leagueId: unknown = data?.leagueId;
+    const leagueSeasonId: unknown = data?.leagueSeasonId;
 
     if (typeof leagueId !== 'string' || !leagueId) {
       return new Response(
@@ -41,10 +42,22 @@ export const POST: APIRoute = async ({ params, request }) => {
       );
     }
 
-    const added = await addSeasonTeams(params.seasonId!, leagueId, teamIds as string[]);
+    if (leagueSeasonId !== undefined && typeof leagueSeasonId !== 'string') {
+      return new Response(JSON.stringify({ error: 'leagueSeasonId must be a string' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const added = await addSeasonTeams(
+      params.seasonId!,
+      leagueId,
+      teamIds as string[],
+      leagueSeasonId as string | undefined,
+    );
     await logAudit(request, 'SEASON_TEAMS_ADDED', {
       seasonId: params.seasonId,
       leagueId,
+      leagueSeasonId,
       requested: teamIds.length,
       added,
     });

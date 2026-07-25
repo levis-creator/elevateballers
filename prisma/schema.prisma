@@ -295,7 +295,7 @@ model Conference {
   leagueSeason   LeagueSeason? @relation("LeagueSeasonConferences", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
   seasonTeams    SeasonTeam[]
 
-  @@unique([seasonId, name])
+  @@unique([leagueSeasonId, name])
   @@index([seasonId])
   @@index([leagueSeasonId])
   @@map("conferences")

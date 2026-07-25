@@ -206,6 +206,8 @@ export type CreateMatchInput = {
   team2Id?: string;
   // League relationship (preferred)
   leagueId?: string;
+  // Competition-edition relationship (authoritative when provided)
+  leagueSeasonId?: string;
   // Season relationship (preferred)
   seasonId?: string;
   // Fallback fields for teams/leagues not in database
@@ -250,6 +252,19 @@ export type CreateSeasonInput = {
   startDate: Date;
   endDate: Date;
   leagueIds?: string[]; // Leagues this season runs in (many-to-many). Optional; can be attached later.
+  leagueSeasons?: {
+    id?: string;
+    leagueId: string;
+    startDate: Date | string;
+    endDate: Date | string;
+    registrationOpensAt?: Date | string | null;
+    registrationClosesAt?: Date | string | null;
+    status: import('@prisma/client').LeagueSeasonStatus;
+    competitionStructure: import('@prisma/client').CompetitionStructure;
+    bracketType?: string | null;
+    teamIds?: string[];
+    conferences?: { id?: string; name: string; teamIds?: string[] }[];
+  }[];
   // Conferences (team sub-groups). Rows with an `id` are existing; without, new.
   // `undefined` = leave untouched; `[]` = clear all. Reconciled by id on update.
   // `teamIds` (single-league seasons only) rosters those teams under the league

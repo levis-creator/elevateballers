@@ -3,7 +3,18 @@ import type { SeasonWithCounts } from '../../../types';
 
 const SEASON_INCLUDE = {
   include: {
-    leagueSeasons: { include: { league: true } },
+    leagueSeasons: {
+      include: {
+        league: true,
+        conferences: {
+          orderBy: { sortOrder: 'asc' },
+          select: { id: true, name: true, seasonTeams: { select: { teamId: true } } },
+        },
+        seasonTeams: {
+          select: { teamId: true, conferenceId: true },
+        },
+      },
+    },
     conferences: {
       orderBy: { sortOrder: 'asc' },
       select: { id: true, name: true, seasonTeams: { select: { teamId: true } } },

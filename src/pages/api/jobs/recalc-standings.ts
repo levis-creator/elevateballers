@@ -22,10 +22,10 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
-    const { leagueId, seasonId } = body;
+    const { leagueSeasonId, leagueId, seasonId } = body;
 
     // Recompute standings — the cache is populated as a side-effect
-    await getStandings({ leagueId, seasonId });
+    await getStandings({ leagueSeasonId, leagueId, seasonId });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

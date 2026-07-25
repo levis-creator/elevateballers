@@ -17,7 +17,7 @@ export const prerender = false;
 export const POST: APIRoute = async ({ params, request }) => {
   try {
     await requireAuth(request);
-  } catch (error: any) {
+  } catch {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -52,10 +52,11 @@ export const POST: APIRoute = async ({ params, request }) => {
     // Queue background standings recalculation via QStash
     const match = await prisma.match.findUnique({
       where: { id: matchId },
-      select: { leagueId: true, seasonId: true },
+      select: { leagueSeasonId: true, leagueId: true, seasonId: true },
     });
     if (match) {
       await publishToJob('/api/jobs/recalc-standings', {
+        leagueSeasonId: match.leagueSeasonId,
         leagueId: match.leagueId,
         seasonId: match.seasonId,
       });

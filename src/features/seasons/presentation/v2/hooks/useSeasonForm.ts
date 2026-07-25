@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePermissions } from "@/features/rbac/usePermissions";
 import {
 	type SeasonFormValues,
+	type LeagueSeasonFormValues,
 	EMPTY_SEASON_FORM,
 	checklist,
 	isValid,
@@ -100,6 +101,82 @@ export function useSeasonForm(seasonId?: string) {
 		[values.conferences, set],
 	);
 
+	const updateLeagueSeason = useCallback(
+		(leagueId: string, patch: Partial<LeagueSeasonFormValues>) => {
+			setValues((prev) => {
+				const leagueSeasons = prev.leagueSeasons.map((row) =>
+					row.leagueId === leagueId ? { ...row, ...patch } : row,
+				);
+				return {
+					...prev,
+					leagueSeasons,
+					leagueIds: leagueSeasons.filter((row) => row.enabled).map((row) => row.leagueId),
+				};
+			});
+			setTouched(true);
+			setSaved(false);
+		},
+		[],
+	);
+
+	const addLeagueConference = useCallback(
+		(leagueId: string, name: string, teamIds: string[] = []) => {
+			setValues((prev) => ({
+				...prev,
+				leagueSeasons: prev.leagueSeasons.map((row) =>
+					row.leagueId === leagueId
+						? {
+								...row,
+								teamIds: [...new Set([...row.teamIds, ...teamIds])],
+								conferences: [...row.conferences, { name, teamIds }],
+							}
+						: row,
+				),
+			}));
+			setTouched(true);
+			setSaved(false);
+		},
+		[],
+	);
+
+	const updateLeagueConference = useCallback(
+		(leagueId: string, index: number, name: string, teamIds: string[] = []) => {
+			setValues((prev) => ({
+				...prev,
+				leagueSeasons: prev.leagueSeasons.map((row) =>
+					row.leagueId === leagueId
+						? {
+								...row,
+								teamIds: [...new Set([...row.teamIds, ...teamIds])],
+								conferences: row.conferences.map((conference, i) =>
+									i === index ? { ...conference, name, teamIds } : conference,
+								),
+							}
+						: row,
+				),
+			}));
+			setTouched(true);
+			setSaved(false);
+		},
+		[],
+	);
+
+	const removeLeagueConference = useCallback(
+		(leagueId: string, index: number) => {
+			setValues((prev) => ({
+				...prev,
+				leagueSeasons: prev.leagueSeasons.map((row) =>
+					row.leagueId === leagueId
+						? { ...row, conferences: row.conferences.filter((_, i) => i !== index) }
+						: row,
+				),
+			}));
+			setTouched(true);
+			setSaved(false);
+		},
+		[],
+	);
+
 	/** The slug preview always shows what the server will actually store. */
 	const slugPreview = values.slug.trim() || slugify(values.name) || "your-season";
 
@@ -116,13 +193,12 @@ export function useSeasonForm(seasonId?: string) {
 			]);
 			if (!leaguesRes.ok) throw new Error("failed");
 			const leagueRows = await leaguesRes.json();
-			setLeagues(
-				(Array.isArray(leagueRows) ? leagueRows : []).map((l: any) => ({
+			const availableLeagues: FormLeague[] = (Array.isArray(leagueRows) ? leagueRows : []).map((l: any) => ({
 					id: l.id,
 					name: l.name,
 					teamCount: l.teamCount ?? 0,
-				})),
-			);
+				}));
+			setLeagues(availableLeagues);
 
 			const teamRows = teamsRes.ok ? await teamsRes.json() : [];
 			setTeams(
@@ -134,7 +210,24 @@ export function useSeasonForm(seasonId?: string) {
 			);
 
 			if (!seasonId) {
-				setValues(EMPTY_SEASON_FORM);
+				setValues({
+					...EMPTY_SEASON_FORM,
+					leagueSeasons: availableLeagues.map((league) => ({
+						leagueId: league.id,
+						leagueName: league.name,
+						enabled: false,
+						startDate: "",
+						endDate: "",
+						status: "DRAFT",
+						competitionStructure: "SINGLE_TABLE",
+						bracketType: "",
+						hasRegistrationWindow: false,
+						registrationOpensAt: "",
+						registrationClosesAt: "",
+						teamIds: [],
+						conferences: [],
+					})),
+				});
 				setTouched(false);
 				return;
 			}
@@ -146,6 +239,35 @@ export function useSeasonForm(seasonId?: string) {
 			const season = await res.json();
 			const opensAt = toDateTimeLocal(season.registrationOpensAt);
 			const closesAt = toDateTimeLocal(season.registrationClosesAt);
+
+			const storedLeagueSeasons = season.leagueSeasons ?? [];
+			const leagueSeasons: LeagueSeasonFormValues[] = availableLeagues.map((league) => {
+				const row = storedLeagueSeasons.find((candidate: any) => candidate.leagueId === league.id);
+				const rowOpensAt = toDateTimeLocal(row?.registrationOpensAt);
+				const rowClosesAt = toDateTimeLocal(row?.registrationClosesAt);
+				return {
+					id: row?.id ?? undefined,
+					leagueId: league.id,
+					leagueName: league.name,
+					enabled: Boolean(row),
+					startDate: toDateInput(row?.startDate ?? season.startDate),
+					endDate: toDateInput(row?.endDate ?? season.endDate),
+					status: row?.status ?? "DRAFT",
+					competitionStructure:
+						row?.competitionStructure ??
+						(row?.conferences?.length ? "CONFERENCES" : "SINGLE_TABLE"),
+					bracketType: row?.bracketType ?? "",
+					hasRegistrationWindow: Boolean(rowOpensAt || rowClosesAt),
+					registrationOpensAt: rowOpensAt,
+					registrationClosesAt: rowClosesAt,
+					teamIds: (row?.seasonTeams ?? []).map((team: any) => team.teamId),
+					conferences: (row?.conferences ?? []).map((conference: any) => ({
+						id: conference.id,
+						name: conference.name,
+						teamIds: (conference.seasonTeams ?? []).map((team: any) => team.teamId),
+					})),
+				};
+			});
 
 			setValues({
 				name: season.name ?? "",
@@ -168,6 +290,7 @@ export function useSeasonForm(seasonId?: string) {
 				hasRegistrationWindow: Boolean(opensAt || closesAt),
 				registrationOpensAt: opensAt,
 				registrationClosesAt: closesAt,
+				leagueSeasons,
 			});
 			setTouched(false);
 		} catch (err) {
@@ -229,6 +352,10 @@ export function useSeasonForm(seasonId?: string) {
 		addConference,
 		updateConference,
 		removeConference,
+		updateLeagueSeason,
+		addLeagueConference,
+		updateLeagueConference,
+		removeLeagueConference,
 		errors,
 		touched,
 		slugPreview,

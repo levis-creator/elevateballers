@@ -22,7 +22,14 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       );
     }
 
-    const updated = await setSeasonTeamConference(params.seasonId!, params.teamId!, conferenceId);
+    const leagueSeasonId =
+      typeof body?.leagueSeasonId === 'string' ? body.leagueSeasonId : undefined;
+    const updated = await setSeasonTeamConference(
+      params.seasonId!,
+      params.teamId!,
+      conferenceId,
+      leagueSeasonId,
+    );
     if (!updated) {
       return new Response(
         JSON.stringify({ error: 'Team is not a participant of this season, or the conference is invalid' }),
