@@ -5,7 +5,7 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
-export const GET: APIRoute = async ({ params, url, request }) => {
+export const GET: APIRoute = async ({ params, url }) => {
   const matchId = params.matchId;
   if (!matchId) {
     return new Response(JSON.stringify({ error: 'Match ID is required' }), {
@@ -42,7 +42,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
 export const POST: APIRoute = async ({ params, request }) => {
   try {
     await requireAuth(request);
-  } catch (error: any) {
+  } catch {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -59,27 +59,30 @@ export const POST: APIRoute = async ({ params, request }) => {
 
   try {
     const body = await request.json();
-    const matchPlayer = await createMatchPlayer({
+    const result = await createMatchPlayer({
       ...body,
       matchId,
     });
 
-    if (!matchPlayer) {
+    if (!result) {
       return new Response(JSON.stringify({ error: 'Failed to create match player' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    await logAudit(request, 'MATCH_PLAYER_ADDED', {
-      matchId,
-      matchPlayerId: matchPlayer.id,
-      playerId: matchPlayer.playerId,
-      teamId: matchPlayer.teamId,
-    });
+    const { matchPlayer, created } = result;
+    if (created) {
+      await logAudit(request, 'MATCH_PLAYER_ADDED', {
+        matchId,
+        matchPlayerId: matchPlayer.id,
+        playerId: matchPlayer.playerId,
+        teamId: matchPlayer.teamId,
+      });
+    }
 
-    return new Response(JSON.stringify(matchPlayer), {
-      status: 201,
+    return new Response(JSON.stringify({ ...matchPlayer, created }), {
+      status: created ? 201 : 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {

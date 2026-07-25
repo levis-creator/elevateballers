@@ -1,9 +1,16 @@
 import { prisma } from '../../../../lib/prisma';
 import type { CreateMatchPlayerInput, UpdateMatchPlayerInput, MatchPlayer } from '../../types';
 
-export async function createMatchPlayer(data: CreateMatchPlayerInput): Promise<MatchPlayer | null> {
+export type CreateMatchPlayerResult = {
+  matchPlayer: MatchPlayer;
+  created: boolean;
+};
+
+export async function createMatchPlayer(
+  data: CreateMatchPlayerInput
+): Promise<CreateMatchPlayerResult | null> {
   try {
-    return await prisma.matchPlayer.create({
+    const matchPlayer = await prisma.matchPlayer.create({
       data: {
         matchId: data.matchId,
         playerId: data.playerId,
@@ -16,10 +23,27 @@ export async function createMatchPlayer(data: CreateMatchPlayerInput): Promise<M
         subOut: data.subOut ?? false,
       },
     });
+    return { matchPlayer, created: true };
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      const matchPlayer = await prisma.matchPlayer.findUnique({
+        where: {
+          matchId_playerId_teamId: {
+            matchId: data.matchId,
+            playerId: data.playerId,
+            teamId: data.teamId,
+          },
+        },
+      });
+      if (matchPlayer) return { matchPlayer, created: false };
+    }
     console.error('Error creating match player:', error);
     return null;
   }
+}
+
+function isUniqueConstraintError(error: unknown): error is { code: 'P2002' } {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
 }
 
 export async function updateMatchPlayer(
