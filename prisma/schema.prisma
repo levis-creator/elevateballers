@@ -253,14 +253,30 @@ model Season {
 // Join table: a season can run in many leagues and a league runs many seasons.
 // Cascades on both sides delete only the link — the season survives league deletion.
 model LeagueSeason {
-  leagueId  String   @map("league_id")
-  seasonId  String   @map("season_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  // Transitional nullable identifier. Phase 3 backfills existing rows; a later
+  // contract migration promotes it to the primary key.
+  id                   String?              @unique @default(cuid())
+  leagueId             String               @map("league_id")
+  seasonId             String               @map("season_id")
+  startDate            DateTime?            @map("start_date")
+  endDate              DateTime?            @map("end_date")
+  registrationOpensAt  DateTime?            @map("registration_opens_at")
+  registrationClosesAt DateTime?            @map("registration_closes_at")
+  status               LeagueSeasonStatus   @default(DRAFT)
+  competitionStructure CompetitionStructure @default(SINGLE_TABLE) @map("competition_structure")
+  bracketType          String?              @map("bracket_type")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  league               League               @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season               Season               @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  conferences          Conference[]         @relation("LeagueSeasonConferences")
+  seasonTeams          SeasonTeam[]         @relation("LeagueSeasonTeams")
+  matches              Match[]              @relation("LeagueSeasonMatches")
 
   @@id([leagueId, seasonId])
   @@index([seasonId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
   @@map("league_seasons")
 }
 
@@ -268,17 +284,20 @@ model LeagueSeason {
 // within a season. Deleting a conference unassigns its teams (SetNull on
 // SeasonTeam.conferenceId) — it never removes roster rows or teams.
 model Conference {
-  id        String   @id @default(cuid())
-  seasonId  String   @map("season_id")
-  name      String
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  season      Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  seasonTeams SeasonTeam[]
+  id             String        @id @default(cuid())
+  seasonId       String        @map("season_id")
+  leagueSeasonId String?       @map("league_season_id")
+  name           String
+  sortOrder      Int           @default(0) @map("sort_order")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  season         Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  leagueSeason   LeagueSeason? @relation("LeagueSeasonConferences", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
+  seasonTeams    SeasonTeam[]
 
   @@unique([seasonId, name])
   @@index([seasonId])
+  @@index([leagueSeasonId])
   @@map("conferences")
 }
 
@@ -298,6 +317,7 @@ model Match {
   leagueId              String?          @map("league_id")
   leagueName            String?          @map("league_name")
   seasonId              String?          @map("season_id")
+  leagueSeasonId        String?          @map("league_season_id")
   team1Id               String?          @map("team1_id")
   team2Id               String?          @map("team2_id")
   stage                 MatchStage?
@@ -327,6 +347,7 @@ model Match {
   matchPlayers          MatchPlayer[]
   gameRules             GameRules?       @relation(fields: [gameRulesId], references: [id])
   league                League?          @relation(fields: [leagueId], references: [id])
+  leagueSeason          LeagueSeason?    @relation("LeagueSeasonMatches", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
   nextLoserMatch        Match?           @relation("NextLoserMatches", fields: [nextLoserMatchId], references: [id])
   previousLoserMatches  Match[]          @relation("NextLoserMatches")
   nextWinnerMatch       Match?           @relation("NextWinnerMatches", fields: [nextWinnerMatchId], references: [id])
@@ -346,6 +367,7 @@ model Match {
   @@index([team2Id])
   @@index([leagueId])
   @@index([seasonId])
+  @@index([leagueSeasonId])
   @@index([gameRulesId])
   @@index([possessionTeamId])
   @@index([winnerId])
@@ -390,20 +412,23 @@ model Team {
 }
 
 model SeasonTeam {
-  id           String   @id @default(cuid())
-  seasonId     String   @map("season_id")
-  leagueId     String   @map("league_id")
-  teamId       String   @map("team_id")
-  conferenceId String?  @map("conference_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  season     Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  league     League      @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  conference Conference? @relation(fields: [conferenceId], references: [id], onDelete: SetNull)
+  id             String        @id @default(cuid())
+  seasonId       String        @map("season_id")
+  leagueId       String        @map("league_id")
+  leagueSeasonId String?       @map("league_season_id")
+  teamId         String        @map("team_id")
+  conferenceId   String?       @map("conference_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  season         Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  league         League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  leagueSeason   LeagueSeason? @relation("LeagueSeasonTeams", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
+  team           Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  conference     Conference?   @relation(fields: [conferenceId], references: [id], onDelete: SetNull)
 
   @@unique([seasonId, teamId])
   @@index([seasonId])
   @@index([leagueId])
+  @@index([leagueSeasonId])
   @@index([teamId])
   @@index([conferenceId])
   @@map("season_teams")
@@ -1048,6 +1073,20 @@ enum NewsCategory {
   CHAMPIONSHIPS
   MATCH_REPORT
   ANALYSIS
+}
+
+enum CompetitionStructure {
+  SINGLE_TABLE
+  CONFERENCES
+}
+
+enum LeagueSeasonStatus {
+  DRAFT
+  REGISTRATION
+  SCHEDULED
+  ACTIVE
+  PLAYOFFS
+  COMPLETED
 }
 
 enum MatchStatus {
