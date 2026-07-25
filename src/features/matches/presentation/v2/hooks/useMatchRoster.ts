@@ -76,13 +76,13 @@ export function useMatchRoster({
 
   // Load roster + both team pools when enabled / teams change.
   useEffect(() => {
-    if (!enabled || !matchId) return;
+    if (!enabled) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError('');
       try {
-        await loadRoster();
+        if (matchId) await loadRoster();
         const teamIds = [team1Id, team2Id].filter(Boolean);
         const entries = await Promise.all(
           teamIds.map(async (id) => [id, await getJson<PoolPlayer>(`/api/players?teamId=${id}`)] as const),
@@ -100,6 +100,7 @@ export function useMatchRoster({
   }, [enabled, matchId, team1Id, team2Id, loadRoster]);
 
   const rosterFor = useCallback((teamId: string) => roster.filter((r) => r.teamId === teamId), [roster]);
+  const poolFor = useCallback((teamId: string) => pools[teamId] ?? [], [pools]);
 
   // Team pool minus players already on the match roster.
   const availableFor = useCallback(
@@ -186,5 +187,5 @@ export function useMatchRoster({
     [roster],
   );
 
-  return { loading, error, busy, rosterFor, availableFor, addPlayer, removePlayer, toggleStarter, totals };
+  return { loading, error, busy, rosterFor, poolFor, availableFor, addPlayer, removePlayer, toggleStarter, totals };
 }
