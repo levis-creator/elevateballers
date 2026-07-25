@@ -37,6 +37,7 @@
     "backfill:match-stages": "tsx scripts/backfill-match-stages.ts",
     "backfill:league-seasons": "tsx scripts/backfill-league-seasons.ts",
     "audit:competition": "tsx scripts/audit-competition-structure.ts",
+    "audit:league-season-contract": "tsx scripts/audit-league-season-contract.ts",
     "audit:legacy-match-scope": "tsx scripts/audit-legacy-match-scope.ts",
     "repair:legacy-match-scope": "tsx scripts/repair-legacy-match-scope.ts",
     "migrate:staff-split": "tsx scripts/migrate-staff-split.ts",
