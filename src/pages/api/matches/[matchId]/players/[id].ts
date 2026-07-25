@@ -36,7 +36,7 @@ export const GET: APIRoute = async ({ params }) => {
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requireAuth(request);
-  } catch (error: any) {
+  } catch {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -82,7 +82,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requireAuth(request);
-  } catch (error: any) {
+  } catch {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -98,13 +98,15 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   }
 
   try {
-    await deleteMatchPlayer(id);
+    const deleted = await deleteMatchPlayer(id);
 
-    await logAudit(request, 'MATCH_PLAYER_REMOVED', {
-      matchPlayerId: id,
-    });
+    if (deleted) {
+      await logAudit(request, 'MATCH_PLAYER_REMOVED', {
+        matchPlayerId: id,
+      });
+    }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, deleted }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
