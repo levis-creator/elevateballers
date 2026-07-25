@@ -105,10 +105,12 @@ function printPlan(plan: ReturnType<typeof planLeagueSeasonBackfill>) {
 async function verify(prisma: PrismaClient) {
 	const [missingIds, missingDates, missingConferenceLinks, missingTeamLinks, missingMatchLinks] =
 		await Promise.all([
-			prisma.leagueSeason.count({ where: { id: null } }),
-			prisma.leagueSeason.count({ where: { OR: [{ startDate: null }, { endDate: null }] } }),
-			prisma.conference.count({ where: { leagueSeasonId: null } }),
-			prisma.seasonTeam.count({ where: { leagueSeasonId: null } }),
+			prisma.leagueSeason.count({ where: { id: null as never } }),
+			prisma.leagueSeason.count({
+				where: { OR: [{ startDate: null as never }, { endDate: null as never }] },
+			}),
+			prisma.conference.count({ where: { leagueSeasonId: null as never } }),
+			prisma.seasonTeam.count({ where: { leagueSeasonId: null as never } }),
 			prisma.match.count({
 				where: {
 					seasonId: { not: null },
@@ -186,7 +188,7 @@ async function main() {
 						where: {
 							seasonId: row.seasonId,
 							leagueId: row.leagueId,
-							OR: [{ leagueSeasonId: null }, { leagueSeasonId: row.id }],
+							OR: [{ leagueSeasonId: null as never }, { leagueSeasonId: row.id }],
 						},
 						data: { leagueSeasonId: row.id },
 					});
@@ -202,7 +204,7 @@ async function main() {
 						? await tx.conference.updateMany({
 								where: {
 									id: { in: conferenceIds },
-									OR: [{ leagueSeasonId: null }, { leagueSeasonId: row.id }],
+									OR: [{ leagueSeasonId: null as never }, { leagueSeasonId: row.id }],
 								},
 								data: { leagueSeasonId: row.id },
 							})

@@ -87,14 +87,14 @@ async function reconcileConferences(
   tx: Prisma.TransactionClient,
   seasonId: string,
   conferences: ConferenceInput[],
-  leagueSeason: { id: string; leagueId: string } | null,
+  leagueSeason: { id: string; leagueId: string },
 ): Promise<void> {
   const keptIds = conferences.filter((c) => c.id).map((c) => c.id as string);
   // Delete removed rows first, freeing their names for reuse this save.
   await tx.conference.deleteMany({
     where: {
       seasonId,
-      ...(leagueSeason ? { leagueSeasonId: leagueSeason.id } : { leagueSeasonId: null }),
+      leagueSeasonId: leagueSeason.id,
       ...(keptIds.length ? { id: { notIn: keptIds } } : {}),
     },
   });
@@ -106,7 +106,7 @@ async function reconcileConferences(
       where: {
         id,
         seasonId,
-        ...(leagueSeason ? { leagueSeasonId: leagueSeason.id } : { leagueSeasonId: null }),
+        leagueSeasonId: leagueSeason.id,
       },
       data: { name: `__reconciling_${id}` },
     });
@@ -124,7 +124,7 @@ async function reconcileConferences(
       const created = await tx.conference.create({
         data: {
           seasonId,
-          leagueSeasonId: leagueSeason?.id ?? null,
+          leagueSeasonId: leagueSeason.id,
           name: c.name,
           sortOrder: index,
         },
@@ -136,7 +136,7 @@ async function reconcileConferences(
     // Team membership only when the form supplied it AND we know which league to
     // roster under (single-league seasons). Set semantics: the given teams become
     // the members; any team dropped from the list is unassigned (but stays rostered).
-    if (c.teamIds !== undefined && leagueSeason) {
+    if (c.teamIds !== undefined) {
       const ids = [...new Set(c.teamIds.filter(Boolean))];
       if (ids.length) {
         await tx.seasonTeam.createMany({
@@ -255,14 +255,11 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
   // Conferences (and any selected teams) after the season exists, so team rows
   // can be rostered against it. Reuses the same reconcile path as updateSeason.
   if (!leagueSeasons && conferences && conferences.length) {
-    await prisma.$transaction(async (tx) =>
-      reconcileConferences(
-        tx,
-        season.id,
-        conferences,
-        await singleLeagueSeason(tx, season.id, leagueIds),
-      ),
-    );
+    await prisma.$transaction(async (tx) => {
+      const scope = await singleLeagueSeason(tx, season.id, leagueIds);
+      if (!scope) throw new Error('Conferences require exactly one league competition.');
+      await reconcileConferences(tx, season.id, conferences, scope);
+    });
   }
 
   return season;
@@ -332,12 +329,9 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
             where: { seasonId: id },
             select: { leagueId: true },
           })).map((row) => row.leagueId);
-        await reconcileConferences(
-          tx,
-          id,
-          conferences,
-          await singleLeagueSeason(tx, id, effectiveLeagueIds),
-        );
+        const scope = await singleLeagueSeason(tx, id, effectiveLeagueIds);
+        if (!scope) throw new Error('Conferences require exactly one league competition.');
+        await reconcileConferences(tx, id, conferences, scope);
       }
       return await tx.season.update({ where: { id }, data: updateData });
     });
