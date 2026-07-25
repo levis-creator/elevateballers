@@ -39,6 +39,6 @@ export async function updateMatchPlayer(
 }
 
 export async function deleteMatchPlayer(id: string): Promise<boolean> {
-  await prisma.matchPlayer.delete({ where: { id } });
-  return true;
+  const result = await prisma.matchPlayer.deleteMany({ where: { id } });
+  return result.count > 0;
 }
