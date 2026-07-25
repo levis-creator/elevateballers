@@ -39,11 +39,6 @@ export async function updateMatchPlayer(
 }
 
 export async function deleteMatchPlayer(id: string): Promise<boolean> {
-  try {
-    await prisma.matchPlayer.delete({ where: { id } });
-    return true;
-  } catch (error) {
-    console.error('Error deleting match player:', error);
-    return false;
-  }
+  await prisma.matchPlayer.delete({ where: { id } });
+  return true;
 }
