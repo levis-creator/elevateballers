@@ -28,9 +28,9 @@ export const GET: APIRoute = async ({ params, url }) => {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        // Match players only change on substitutions — cache briefly at edge
-        // to absorb polling bursts from multiple concurrent admins/viewers.
-        'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30',
+        // Rosters are edited interactively; edge caching can return pre-mutation
+        // data in production and overwrite optimistic client state.
+        'Cache-Control': 'private, no-store, max-age=0',
       },
     });
   } catch (error: any) {
