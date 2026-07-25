@@ -8,6 +8,7 @@ import { handleApiError } from '../../../../lib/apiError';
 import { cacheDel, cacheInvalidatePattern } from '../../../../lib/cache';
 import { publishToJob } from '../../../../lib/qstash';
 import { prisma } from '../../../../lib/prisma';
+import { standingsCachePattern } from '../../../../features/standings/lib/standings-cache';
 export const prerender = false;
 
 /**
@@ -42,23 +43,24 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Invalidate caches that depend on match results
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      select: { leagueSeasonId: true },
+    });
+
+    // Invalidate only this competition's overall and conference tables.
     await Promise.all([
       cacheDel(`gamestate:${matchId}`),
-      cacheInvalidatePattern('standings:*'),
+      ...(match?.leagueSeasonId
+        ? [cacheInvalidatePattern(standingsCachePattern(match.leagueSeasonId))]
+        : []),
       cacheInvalidatePattern('leaders:*'),
     ]);
 
     // Queue background standings recalculation via QStash
-    const match = await prisma.match.findUnique({
-      where: { id: matchId },
-      select: { leagueSeasonId: true, leagueId: true, seasonId: true },
-    });
-    if (match) {
+    if (match?.leagueSeasonId) {
       await publishToJob('/api/jobs/recalc-standings', {
         leagueSeasonId: match.leagueSeasonId,
-        leagueId: match.leagueId,
-        seasonId: match.seasonId,
       });
     }
 

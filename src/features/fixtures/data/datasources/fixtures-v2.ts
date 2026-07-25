@@ -8,6 +8,8 @@ import { getUpcomingMatches, getCompletedMatches } from "@/features/matches/lib/
 import { getZonedDateParts, formatMatchTime } from "@/features/matches/domain/usecases/utils";
 import { getDisplayImageUrl } from "@/lib/asset-url";
 import type { FixtureMatch, FixtureStatus, FixturesData } from "@/features/fixtures/domain/entities/fixtures-v2";
+import { prisma } from "@/lib/prisma";
+import { getPublicCompetitions } from "@/features/seasons/data/public-competitions";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -44,6 +46,9 @@ function toFixture(m: any): FixtureMatch {
 		href: hrefOf(m),
 		league: m.league?.name || m.leagueName || "Elevate Ballers",
 		season: (m.season?.name && String(m.season.name).trim()) || String(p.year),
+		seasonId: m.seasonId ?? m.season?.id ?? null,
+		leagueSeasonId: m.leagueSeasonId ?? null,
+		conferenceIds: [],
 		ts: new Date(m.date).getTime(),
 		isoDate,
 		day: String(p.day).padStart(2, "0"),
@@ -70,9 +75,27 @@ function toFixture(m: any): FixtureMatch {
 
 export async function fetchFixturesData(): Promise<FixturesData | null> {
 	try {
-		const [upcoming, completed] = await Promise.all([getUpcomingMatches(), getCompletedMatches()]);
+		const [upcoming, completed, competitions, memberships] = await Promise.all([
+			getUpcomingMatches(),
+			getCompletedMatches(),
+			getPublicCompetitions(),
+			prisma.seasonTeam.findMany({
+				where: { conferenceId: { not: null } },
+				select: { leagueSeasonId: true, teamId: true, conferenceId: true },
+			}),
+		]);
 		const raw = [...upcoming, ...completed];
 		const matches = raw.map(toFixture);
+		const conferenceByTeam = new Map(
+			memberships.map((row) => [`${row.leagueSeasonId}:${row.teamId}`, row.conferenceId]),
+		);
+		raw.forEach((match: any, index) => {
+			if (!match.leagueSeasonId) return;
+			const ids = [match.team1Id, match.team2Id]
+				.map((teamId) => teamId ? conferenceByTeam.get(`${match.leagueSeasonId}:${teamId}`) : null)
+				.filter((id): id is string => Boolean(id));
+			matches[index].conferenceIds = [...new Set(ids)];
+		});
 		if (!matches.length) return null;
 
 		// Per season key: newest match time + whether it came from a real Season
@@ -98,7 +121,16 @@ export async function fetchFixturesData(): Promise<FixturesData | null> {
 		const seasons = (realByRecency.length ? realByRecency : byRecency).map(([s]) => s);
 		const defaultSeason = seasons[0] ?? "";
 
-		return { matches, seasons, defaultSeason };
+		return {
+			matches,
+			competitions,
+			seasons,
+			defaultSeason,
+			defaultLeagueSeasonId:
+				matches.find((match) => match.leagueSeasonId)?.leagueSeasonId
+				?? competitions[0]?.id
+				?? "",
+		};
 	} catch {
 		return null;
 	}

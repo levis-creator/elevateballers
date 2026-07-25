@@ -2,16 +2,23 @@ import { create } from "zustand";
 
 /** Client state for the v2 Results page: season + league filters. */
 interface ResultsState {
-	season: string; // "" = default to the newest season
-	league: string; // "all" = every league
+	season: string;
+	league: string;
+	leagueSeasonId: string;
+	conferenceId: string;
 	setSeason: (season: string) => void;
 	setLeague: (league: string) => void;
+	setLeagueSeason: (leagueSeasonId: string) => void;
+	setConference: (conferenceId: string) => void;
 }
 
 export const useResultsStore = create<ResultsState>((set) => ({
 	season: "",
 	league: "all",
-	// Changing season resets the league filter — its league list may differ.
+	leagueSeasonId: "",
+	conferenceId: "",
+	setLeagueSeason: (leagueSeasonId) => set({ leagueSeasonId, conferenceId: "" }),
+	setConference: (conferenceId) => set({ conferenceId }),
 	setSeason: (season) => set({ season, league: "all" }),
 	setLeague: (league) => set({ league }),
 }));

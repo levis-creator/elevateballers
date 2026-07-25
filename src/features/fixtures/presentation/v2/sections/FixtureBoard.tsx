@@ -2,11 +2,14 @@ import { useFixturesStore } from "@/features/fixtures/presentation/stores/v2/use
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { FixtureMatch } from "@/features/fixtures/domain/entities/fixtures-v2";
+import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 
 interface Props {
 	matches: FixtureMatch[];
 	seasons: string[];
 	defaultSeason: string;
+	competitions: PublicCompetitionOption[];
+	defaultLeagueSeasonId: string;
 }
 
 const CREST_BG = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 4px,#f0ece5 4px,#f0ece5 8px)";
@@ -42,20 +45,21 @@ export function Crest({ logo, abbr, alt }: { logo: string | null; abbr: string; 
 /** Fixtures — season selector + Upcoming/Results toggle + league filter +
  *  date-grouped match list. React island; all three filters live in a Zustand
  *  store. Matches arrive with dates/times already formatted server-side. */
-export default function FixtureBoard({ matches, seasons, defaultSeason }: Props) {
-	const { season, view, league, setSeason, setView, setLeague } = useFixturesStore();
-
-	// Guard each selection against stale values.
-	const activeSeason = season && seasons.includes(season) ? season : defaultSeason;
-	const seasonMatches = matches.filter((m) => m.season === activeSeason);
-
-	const leagues = [...new Set(seasonMatches.map((m) => m.league))];
-	const activeLeague = league === "all" || leagues.includes(league) ? league : "all";
+export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId }: Props) {
+	const { leagueSeasonId, conferenceId, view, setLeagueSeason, setConference, setView } = useFixturesStore();
+	const selected = competitions.find((item) => item.id === leagueSeasonId)
+		?? competitions.find((item) => item.id === defaultLeagueSeasonId)
+		?? competitions[0];
+	const seasonIds = [...new Set(competitions.map((item) => item.seasonId))];
+	const seasonCompetitions = competitions.filter((item) => item.seasonId === selected?.seasonId);
+	const showConferences = selected?.structure === "CONFERENCES" && selected.conferences.length > 0;
+	const activeConferenceId = showConferences && selected.conferences.some((item) => item.id === conferenceId) ? conferenceId : "";
 
 	const isResults = view === "results";
-	const filtered = seasonMatches
+	const filtered = matches
+		.filter((m) => m.leagueSeasonId === selected?.id)
+		.filter((m) => !activeConferenceId || m.conferenceIds.includes(activeConferenceId))
 		.filter((m) => (isResults ? m.status === "done" : m.status !== "done"))
-		.filter((m) => activeLeague === "all" || m.league === activeLeague)
 		.sort((a, b) => (isResults ? b.ts - a.ts : a.ts - b.ts));
 
 	// Group by match-day, preserving the sorted order.
@@ -73,12 +77,8 @@ export default function FixtureBoard({ matches, seasons, defaultSeason }: Props)
 
 	const emptyTitle = isResults ? "No results yet" : "No upcoming fixtures";
 	const emptyBody = isResults
-		? activeLeague === "all"
-			? "Completed matches will appear here once games have been played this season."
-			: `No ${activeLeague} results recorded yet for this season.`
-		: activeLeague === "all"
-			? "The schedule for this season hasn’t been published yet. Check back soon."
-			: `No ${activeLeague} fixtures are scheduled right now.`;
+		? "Completed matches will appear here once games have been played in this competition."
+		: "The schedule for this competition hasn’t been published yet. Check back soon.";
 
 	return (
 		<>
@@ -89,20 +89,23 @@ export default function FixtureBoard({ matches, seasons, defaultSeason }: Props)
 				<div className="relative mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-6 px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
 					<div>
 						<div className="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
-							<span className="h-px w-[26px] bg-brand" />Match Calendar{activeSeason ? ` · ${activeSeason}` : ""}
+							<span className="h-px w-[26px] bg-brand" />Match Calendar{selected ? ` · ${selected.seasonLabel}` : ""}
 						</div>
 						<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Fixtures</h1>
 					</div>
-					{seasons.length > 1 && (
+					{seasonIds.length > 1 && selected && (
 						<div className="relative">
 							<select
-								value={activeSeason}
-								onChange={(e) => setSeason(e.target.value)}
+								value={selected.seasonId}
+								onChange={(e) => {
+									const next = competitions.find((item) => item.seasonId === e.target.value);
+									if (next) setLeagueSeason(next.id);
+								}}
 								className="cursor-pointer appearance-none rounded-md border border-black/15 bg-white py-[11px] pl-4 pr-9 font-body text-[13px] font-bold tracking-[0.04em] text-ink2 outline-none"
 							>
-								{seasons.map((s) => (
-									<option key={s} value={s}>
-										{s}
+								{seasonIds.map((id) => (
+									<option key={id} value={id}>
+										{competitions.find((item) => item.seasonId === id)?.seasonLabel}
 									</option>
 								))}
 							</select>
@@ -123,17 +126,19 @@ export default function FixtureBoard({ matches, seasons, defaultSeason }: Props)
 							Results
 						</button>
 					</div>
-					{leagues.length > 1 && (
+					{selected && (
 						<div className="flex flex-wrap items-center gap-2">
-							<span className="mr-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">League</span>
-							<button type="button" onClick={() => setLeague("all")} className={pillClass(activeLeague === "all")}>
-								All
-							</button>
-							{leagues.map((lg) => (
-								<button key={lg} type="button" onClick={() => setLeague(lg)} className={pillClass(activeLeague === lg)}>
-									{lg}
+							<span className="mr-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Competition</span>
+							{seasonCompetitions.map((item) => (
+								<button key={item.id} type="button" onClick={() => setLeagueSeason(item.id)} className={pillClass(selected.id === item.id)}>
+									{item.leagueLabel}
 								</button>
 							))}
+							{showConferences && <>
+								<span className="ml-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Conference</span>
+								<button type="button" onClick={() => setConference("")} className={pillClass(!activeConferenceId)}>All</button>
+								{selected.conferences.map((item) => <button key={item.id} type="button" onClick={() => setConference(item.id)} className={pillClass(activeConferenceId === item.id)}>{item.name}</button>)}
+							</>}
 						</div>
 					)}
 				</div>

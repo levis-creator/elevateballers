@@ -2,12 +2,15 @@ import { useResultsStore } from "@/features/fixtures/presentation/stores/v2/useR
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { FixtureMatch } from "@/features/fixtures/domain/entities/fixtures-v2";
+import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 
 interface Props {
 	/** All matches for the site; the board keeps only completed ("done") games. */
 	matches: FixtureMatch[];
 	seasons: string[];
 	defaultSeason: string;
+	competitions: PublicCompetitionOption[];
+	defaultLeagueSeasonId: string;
 }
 
 const WON = "#141009";

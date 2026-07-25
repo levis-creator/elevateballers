@@ -1,14 +1,21 @@
-import { prisma } from '../../../lib/prisma';
-import { cacheGet, cacheSet } from '../../../lib/cache';
-import { resolveLeagueSeasonScope } from '../../seasons/data/league-season-scope';
+import { prisma } from "../../../lib/prisma";
+import { cacheGet, cacheSet } from "../../../lib/cache";
+import {
+  LeagueSeasonScopeError,
+  resolveLeagueSeasonScope,
+} from "../../seasons/data/league-season-scope";
+import { standingsCacheKey } from "./standings-cache";
 
-interface GetStandingsOptions {
+export interface GetStandingsOptions {
   leagueSeasonId?: string;
+  conferenceId?: string;
+  /** Phase 9 compatibility bridge; new callers must send leagueSeasonId. */
   leagueId?: string;
+  /** Phase 9 compatibility bridge; new callers must send leagueSeasonId. */
   seasonId?: string;
 }
 
-interface StandingEntry {
+export interface StandingEntry {
   teamId: string;
   team: string;
   nickname: string | null;
@@ -25,122 +32,147 @@ interface StandingEntry {
   rank: number;
 }
 
-export async function getStandings(options: GetStandingsOptions = {}): Promise<StandingEntry[]> {
-  let { leagueSeasonId, leagueId, seasonId } = options;
-  if (leagueSeasonId || (leagueId && seasonId)) {
-    const scope = await resolveLeagueSeasonScope({ leagueSeasonId, leagueId, seasonId });
-    ({ leagueSeasonId, leagueId, seasonId } = scope);
-  }
-  const cacheKey = leagueSeasonId
-    ? `standings:${leagueSeasonId}:overall`
-    : `standings:${leagueId ?? 'all'}:${seasonId ?? 'all'}`;
-  const cached = await cacheGet<StandingEntry[]>(cacheKey);
-  if (cached) return cached;
+interface Participant {
+  team: {
+    id: string;
+    name: string;
+    nickname: string | null;
+    logo: string | null;
+    slug: string;
+  };
+}
 
-  const teams = await prisma.team.findMany({
-    where: {
-      approved: true,
-      ...(leagueSeasonId && {
-        seasonTeams: { some: { leagueSeasonId } },
-      }),
-    },
-    include: {
-      team1Matches: {
-        where: {
-          status: 'COMPLETED',
-          ...(leagueSeasonId && { leagueSeasonId }),
-          ...(leagueId && { leagueId }),
-          ...(seasonId && { seasonId }),
-        },
-        select: { team1Score: true, team2Score: true },
-      },
-      team2Matches: {
-        where: {
-          status: 'COMPLETED',
-          ...(leagueSeasonId && { leagueSeasonId }),
-          ...(leagueId && { leagueId }),
-          ...(seasonId && { seasonId }),
-        },
-        select: { team1Score: true, team2Score: true },
-      },
-    },
-  });
+interface CompletedMatch {
+  team1Id: string | null;
+  team2Id: string | null;
+  team1Score: number | null;
+  team2Score: number | null;
+}
 
-  const standings = teams.map((team) => {
-    let played = 0;
-    let won = 0;
-    let drawn = 0;
-    let lost = 0;
-    let goalsFor = 0;
-    let goalsAgainst = 0;
-
-    team.team1Matches.forEach((match) => {
-      if (match.team1Score !== null && match.team2Score !== null) {
-        played++;
-        goalsFor += match.team1Score;
-        goalsAgainst += match.team2Score;
-
-        if (match.team1Score > match.team2Score) {
-          won++;
-        } else if (match.team1Score === match.team2Score) {
-          drawn++;
-        } else {
-          lost++;
-        }
-      }
-    });
-
-    team.team2Matches.forEach((match) => {
-      if (match.team1Score !== null && match.team2Score !== null) {
-        played++;
-        goalsFor += match.team2Score;
-        goalsAgainst += match.team1Score;
-
-        if (match.team2Score > match.team1Score) {
-          won++;
-        } else if (match.team1Score === match.team2Score) {
-          drawn++;
-        } else {
-          lost++;
-        }
-      }
-    });
-
-    const goalDifference = goalsFor - goalsAgainst;
-    const points = won * 3 + drawn;
-
-    return {
+export function calculateStandings(
+  participants: Participant[],
+  matches: CompletedMatch[],
+): StandingEntry[] {
+  const entries = new Map<string, StandingEntry>();
+  for (const { team } of participants) {
+    entries.set(team.id, {
       teamId: team.id,
       team: team.name,
       nickname: team.nickname,
       logo: team.logo,
-      played,
-      won,
-      drawn,
-      lost,
-      goalsFor,
-      goalsAgainst,
-      goalDifference,
-      points,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDifference: 0,
+      points: 0,
       url: `/teams/${team.slug}`,
-    };
+      rank: 0,
+    });
+  }
+
+  const apply = (entry: StandingEntry, own: number, opponent: number) => {
+    entry.played++;
+    entry.goalsFor += own;
+    entry.goalsAgainst += opponent;
+    if (own > opponent) entry.won++;
+    else if (own === opponent) entry.drawn++;
+    else entry.lost++;
+  };
+
+  for (const match of matches) {
+    if (match.team1Score === null || match.team2Score === null) continue;
+    const home = match.team1Id ? entries.get(match.team1Id) : undefined;
+    const away = match.team2Id ? entries.get(match.team2Id) : undefined;
+    if (home) apply(home, match.team1Score, match.team2Score);
+    if (away) apply(away, match.team2Score, match.team1Score);
+  }
+
+  const rows = [...entries.values()];
+  for (const row of rows) {
+    row.goalDifference = row.goalsFor - row.goalsAgainst;
+    row.points = row.won * 3 + row.drawn;
+  }
+  rows.sort((a, b) =>
+    b.points - a.points ||
+    b.goalDifference - a.goalDifference ||
+    b.goalsFor - a.goalsFor ||
+    a.team.localeCompare(b.team),
+  );
+  return rows.map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+export async function getStandings(options: GetStandingsOptions): Promise<StandingEntry[]> {
+  if (!options.leagueSeasonId && !(options.leagueId && options.seasonId)) {
+    throw new LeagueSeasonScopeError("leagueSeasonId is required for standings.");
+  }
+  const scope = await resolveLeagueSeasonScope(options);
+  const competition = await prisma.leagueSeason.findUnique({
+    where: { id: scope.leagueSeasonId },
+    select: { competitionStructure: true },
   });
+  if (!competition) throw new LeagueSeasonScopeError("League competition not found.");
 
-  standings.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
-    return b.goalsFor - a.goalsFor;
-  });
+  if (options.conferenceId) {
+    if (competition.competitionStructure !== "CONFERENCES") {
+      throw new LeagueSeasonScopeError(
+        "Conference standings are unavailable for a single-table competition.",
+      );
+    }
+    const conference = await prisma.conference.findFirst({
+      where: {
+        id: options.conferenceId,
+        leagueSeasonId: scope.leagueSeasonId,
+      },
+      select: { id: true },
+    });
+    if (!conference) {
+      throw new LeagueSeasonScopeError(
+        "conferenceId does not belong to the selected league competition.",
+      );
+    }
+  }
 
-  const filteredStandings = (leagueSeasonId || leagueId || seasonId)
-    ? standings.filter((standing) => standing.played > 0)
-    : standings;
+  const cacheKey = standingsCacheKey(scope.leagueSeasonId, options.conferenceId);
+  const cached = await cacheGet<StandingEntry[]>(cacheKey);
+  if (cached) return cached;
 
-  const result = filteredStandings.map((standing, index) => ({
-    ...standing,
-    rank: index + 1,
-  }));
+  const [participants, matches] = await Promise.all([
+    prisma.seasonTeam.findMany({
+      where: {
+        leagueSeasonId: scope.leagueSeasonId,
+        ...(options.conferenceId ? { conferenceId: options.conferenceId } : {}),
+      },
+      select: {
+        team: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            logo: true,
+            slug: true,
+          },
+        },
+      },
+      orderBy: { team: { name: "asc" } },
+    }),
+    prisma.match.findMany({
+      where: {
+        leagueSeasonId: scope.leagueSeasonId,
+        status: "COMPLETED",
+      },
+      select: {
+        team1Id: true,
+        team2Id: true,
+        team1Score: true,
+        team2Score: true,
+      },
+    }),
+  ]);
 
-  await cacheSet(cacheKey, result, 1800); // 30 min TTL — invalidated on game end via QStash
+  const result = calculateStandings(participants, matches);
+  await cacheSet(cacheKey, result, 1800);
   return result;
 }

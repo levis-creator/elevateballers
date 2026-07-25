@@ -18,14 +18,18 @@ export interface StandingRow {
 	pts: number; // table points
 }
 
-export interface StandingsData {
-	/** All teams across every league for the current season (unranked here — the
-	 *  island ranks within the active league filter). */
+import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
+
+export interface StandingTable {
+	leagueSeasonId: string;
+	conferenceId: string | null;
 	rows: StandingRow[];
-	/** League names, for the filter tabs. */
-	leagues: string[];
-	/** Season name shown in the hero (e.g. "2026 Season"). */
-	seasonLabel: string;
+}
+
+export interface StandingsData {
+	competitions: PublicCompetitionOption[];
+	tables: StandingTable[];
+	defaultLeagueSeasonId: string;
 	/** Top N teams that qualify for the playoffs (cut-line). */
 	playoffSpots: number;
 }
