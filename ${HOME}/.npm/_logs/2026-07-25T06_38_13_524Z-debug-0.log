@@ -5,14 +5,14 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec eslint src/features/matches/presentation/v2/MatchFormV2.tsx
-8 verbose argv "exec" "--" "eslint" "src/features/matches/presentation/v2/MatchFormV2.tsx"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T03_46_29_806Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T03_46_29_806Z-debug-0.log
+7 verbose title npm exec prisma generate deploy
+8 verbose argv "exec" "--" "prisma" "generate" "deploy"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T06_38_13_524Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T06_38_13_524Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 notice run elevateballers@0.0.1 npx
-14 notice run eslint src/features/matches/presentation/v2/MatchFormV2.tsx
+14 notice run prisma generate deploy
 15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 16 verbose os Windows_NT 10.0.26200
 17 verbose node v24.18.0
