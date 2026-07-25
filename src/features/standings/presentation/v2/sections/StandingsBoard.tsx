@@ -15,6 +15,11 @@ const GRID = "grid-cols-[60px_minmax(0,1fr)_44px_44px_44px_44px_60px_60px_64px_5
 const diffLabel = (d: number) => `${d > 0 ? "+" : ""}${d}`;
 const diffColor = (d: number) => (d > 0 ? "#2f9e44" : d < 0 ? "#e4002b" : "#a49a8d");
 const PLACE = ["1st Place", "2nd Place", "3rd Place"];
+const conferenceAccent = (name: string, index: number) => {
+	if (name.toLowerCase().includes("grind")) return "#e4002b";
+	if (name.toLowerCase().includes("clutch")) return "#141009";
+	return index % 2 === 0 ? "#e4002b" : "#141009";
+};
 
 /** Standings — hero + league filter tabs + top-3 + full table + search.
  *  React island; league filter and search live in a Zustand store. Rankings are
@@ -42,6 +47,28 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 	const podium = ranked.slice(0, 3);
 	const q = query.trim().toLowerCase();
 	const table = q ? ranked.filter((r) => r.name.toLowerCase().includes(q)) : ranked;
+	const conferenceLeaders = showConferences
+		? selected.conferences.map((conference, index) => {
+			const conferenceRows = [...(tables.find((table) =>
+				table.leagueSeasonId === selected.id
+				&& table.conferenceId === conference.id
+			)?.rows ?? [])]
+				.sort((a, b) => b.pts - a.pts || b.diff - a.diff || b.pf - a.pf)
+				.map((row, rowIndex) => ({ ...row, rank: rowIndex + 1 }));
+
+			return {
+				...conference,
+				accent: conferenceAccent(conference.name, index),
+				rows: conferenceRows.slice(0, 3),
+				teamCount: conferenceRows.length,
+			};
+		}).filter((conference) => conference.rows.length > 0)
+		: [];
+	const showConferenceRace = activeConferenceId === "" && conferenceLeaders.length > 1;
+	const tableTitle = activeConferenceId
+		? `${selected?.conferences.find((item) => item.id === activeConferenceId)?.name ?? "Conference"} Conference Table`
+		: "Full Table";
+	const tableMeta = `${table.length} teams · ${selected?.leagueLabel ?? "League"}${activeConferenceId ? " Conference" : " Overall"}`;
 	const selectSeason = (nextSeasonId: string) => {
 		const next = competitions.find((item) => item.seasonId === nextSeasonId);
 		if (next) setLeagueSeason(next.id);
@@ -50,14 +77,20 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 	return (
 		<>
 			{/* HERO */}
-			<section className="relative overflow-hidden border-b border-black/[0.08]">
+			<section className="relative overflow-hidden border-b border-black/[0.08] bg-paper">
 				<div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%)" }} />
 				<div className="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]" />
-				<div className="relative mx-auto max-w-[1280px] px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
+				<div className="absolute right-[12%] top-12 hidden h-20 w-20 rounded-full border-[12px] border-brand/10 max-[960px]:hidden" />
+				<div className="relative mx-auto max-w-[1280px] px-8 pb-[48px] pt-[62px] max-[960px]:px-6">
 					<div className="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
 							<span className="h-px w-[26px] bg-brand" />League Table · {selected?.seasonLabel ?? ""}
 					</div>
-					<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Standings</h1>
+					<div className="flex flex-wrap items-end justify-between gap-6">
+						<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Standings</h1>
+						<p className="max-w-[420px] pb-2 text-[15px] leading-[1.65] text-muted">
+							Track playoff positioning, conference races and table points across Elevate Ballers competitions.
+						</p>
+					</div>
 				</div>
 			</section>
 
@@ -156,10 +189,57 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 						</div>
 					</section>
 
+					{showConferenceRace && (
+						<section className="mx-auto max-w-[1280px] px-8 pt-[34px] max-[960px]:px-6">
+							<div className="mb-4 flex items-end justify-between gap-4">
+								<div>
+									<div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-brand">Conference Race</div>
+									<h2 className="font-display text-[28px] uppercase leading-none text-ink">Top Conference Seeds</h2>
+								</div>
+								<div className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">{selected?.leagueLabel}</div>
+							</div>
+							<div className="grid grid-cols-2 gap-5 max-[760px]:grid-cols-1">
+								{conferenceLeaders.map((conference) => (
+									<div key={conference.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+										<div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4">
+											<div>
+												<div className="font-display text-[24px] uppercase leading-none text-ink">{conference.name}</div>
+												<div className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{conference.teamCount} teams</div>
+											</div>
+											<button type="button" onClick={() => setConference(conference.id)} className="rounded-md border border-black/10 bg-paper2 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-ink2 hover:border-brand hover:text-brand">
+												View Table
+											</button>
+										</div>
+										<div className="h-1" style={{ background: conference.accent }} />
+										<div className="divide-y divide-black/[0.06]">
+											{conference.rows.map((row) => (
+												<a key={row.teamId} href={row.href} className="grid grid-cols-[42px_minmax(0,1fr)_58px_54px] items-center gap-3 px-5 py-3 no-underline hover:bg-paper2">
+													<span className="font-display text-[18px]" style={{ color: row.rank === 1 ? conference.accent : "#b3a99c" }}>{row.rank}</span>
+													<TeamName
+														team={{ name: row.name, nickname: row.nickname, logo: row.logo, initials: row.initials }}
+														variant="compact"
+														withCrest
+														className="font-body text-[13px] font-bold text-ink2"
+														crestClassName="h-9 w-9 text-[12px]"
+													/>
+													<span className="text-center font-mono text-[12px] text-muted">{row.w}-{row.l}</span>
+													<span className="text-right font-display text-[20px] text-ink">{row.pts}</span>
+												</a>
+											))}
+										</div>
+									</div>
+								))}
+							</div>
+						</section>
+					)}
+
 					{/* FULL TABLE */}
 					<section className="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
 						<div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-							<h2 className="font-display text-[26px] uppercase text-ink">Full Table</h2>
+							<div>
+								<h2 className="font-display text-[26px] uppercase text-ink">{tableTitle}</h2>
+								<div className="mt-1 font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">{tableMeta}</div>
+							</div>
 							<div className="flex items-center gap-2.5 rounded-lg border border-black/15 bg-white px-4 py-2.5">
 								<span className="font-mono text-[13px] text-muted2">⌕</span>
 								<input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search teams…" className="w-[180px] border-none bg-transparent font-body text-[14px] text-ink2 outline-none max-[600px]:w-[120px]" />
