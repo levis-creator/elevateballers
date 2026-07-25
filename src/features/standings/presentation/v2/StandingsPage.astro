@@ -12,6 +12,6 @@ const [data, footer] = await Promise.all([getStandingsData(), getFooterData()]);
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="standings" />
-	<StandingsBoard rows={data.rows} leagues={data.leagues} seasonLabel={data.seasonLabel} playoffSpots={data.playoffSpots} client:load />
+	<StandingsBoard competitions={data.competitions} tables={data.tables} defaultLeagueSeasonId={data.defaultLeagueSeasonId} playoffSpots={data.playoffSpots} client:load />
 	<Footer footer={footer} />
 </div>

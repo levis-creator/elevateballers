@@ -16,11 +16,21 @@ import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import { StandingsPage } from "../features/standings/components/StandingsPage";
 import { getStandings } from "../features/standings/lib/getStandings";
+import { prisma } from "../lib/prisma";
 import PageLoader from "../components/PageLoader";
 
 let standings = [];
 try {
-  standings = await getStandings();
+  const requestedCompetition = Astro.url.searchParams.get("leagueSeasonId");
+  const fallbackCompetition = requestedCompetition
+    ? null
+    : await prisma.leagueSeason.findFirst({
+        where: { status: { in: ["ACTIVE", "SCHEDULED", "PLAYOFFS"] } },
+        orderBy: { startDate: "desc" },
+        select: { id: true },
+      });
+  const leagueSeasonId = requestedCompetition ?? fallbackCompetition?.id;
+  standings = leagueSeasonId ? await getStandings({ leagueSeasonId }) : [];
 } catch (error) {
   console.error("Failed to fetch standings from database:", error);
 }

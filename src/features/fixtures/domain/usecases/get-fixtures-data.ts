@@ -12,6 +12,9 @@ const demoMatch = (
 	href: "#",
 	league: "Elevate Ballers League",
 	season: "2026 Season",
+	seasonId: "demo-season",
+	leagueSeasonId: "demo-competition",
+	conferenceIds: [],
 	ts: 0,
 	isoDate: "2026-07-05",
 	day: "05",
@@ -54,6 +57,17 @@ const FALLBACK: FixturesData = {
 	],
 	seasons: ["2026 Season"],
 	defaultSeason: "2026 Season",
+	defaultLeagueSeasonId: "demo-competition",
+	competitions: [{
+		id: "demo-competition",
+		seasonId: "demo-season",
+		seasonLabel: "2026 Season",
+		leagueId: "demo-league",
+		leagueLabel: "Elevate Ballers League",
+		structure: "SINGLE_TABLE",
+		startDate: "2026-01-01T00:00:00.000Z",
+		conferences: [],
+	}],
 };
 
 export async function getFixturesData(): Promise<FixturesData> {

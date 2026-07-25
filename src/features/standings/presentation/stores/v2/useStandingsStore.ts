@@ -2,16 +2,19 @@ import { create } from "zustand";
 
 /** Client state for the v2 Standings page: league filter + table search. */
 interface StandingsState {
-	league: string; // "" = default to the first league
+	leagueSeasonId: string;
+	conferenceId: string;
 	query: string;
-	setLeague: (league: string) => void;
+	setLeagueSeason: (leagueSeasonId: string) => void;
+	setConference: (conferenceId: string) => void;
 	setQuery: (query: string) => void;
 }
 
 export const useStandingsStore = create<StandingsState>((set) => ({
-	league: "",
+	leagueSeasonId: "",
+	conferenceId: "",
 	query: "",
-	// Switching league clears any active search so the full new table shows.
-	setLeague: (league) => set({ league, query: "" }),
+	setLeagueSeason: (leagueSeasonId) => set({ leagueSeasonId, conferenceId: "", query: "" }),
+	setConference: (conferenceId) => set({ conferenceId, query: "" }),
 	setQuery: (query) => set({ query }),
 }));

@@ -1,12 +1,13 @@
 import { useStandingsStore } from "@/features/standings/presentation/stores/v2/useStandingsStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
-import type { StandingRow } from "@/features/standings/domain/entities/standings-v2";
+import type { StandingTable } from "@/features/standings/domain/entities/standings-v2";
+import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 
 interface Props {
-	rows: StandingRow[];
-	leagues: string[];
-	seasonLabel: string;
+	competitions: PublicCompetitionOption[];
+	tables: StandingTable[];
+	defaultLeagueSeasonId: string;
 	playoffSpots: number;
 }
 
@@ -18,20 +19,33 @@ const PLACE = ["1st Place", "2nd Place", "3rd Place"];
 /** Standings — hero + league filter tabs + top-3 + full table + search.
  *  React island; league filter and search live in a Zustand store. Rankings are
  *  computed within the active league filter. */
-export default function StandingsBoard({ rows, leagues, seasonLabel, playoffSpots }: Props) {
-	const { league, query, setLeague, setQuery } = useStandingsStore();
-
-	// Default to the first league; guard against a stale selection.
-	const activeLeague = league && leagues.includes(league) ? league : (leagues[0] ?? "");
-	const inLeague = rows.filter((r) => r.league === activeLeague);
-	const ranked = [...inLeague]
+export default function StandingsBoard({ competitions, tables, defaultLeagueSeasonId, playoffSpots }: Props) {
+	const { leagueSeasonId, conferenceId, query, setLeagueSeason, setConference, setQuery } = useStandingsStore();
+	const selected = competitions.find((item) => item.id === leagueSeasonId)
+		?? competitions.find((item) => item.id === defaultLeagueSeasonId)
+		?? competitions[0];
+	const seasonIds = [...new Set(competitions.map((item) => item.seasonId))];
+	const seasonId = selected?.seasonId ?? seasonIds[0] ?? "";
+	const seasonCompetitions = competitions.filter((item) => item.seasonId === seasonId);
+	const showConferences = selected?.structure === "CONFERENCES" && selected.conferences.length > 0;
+	const activeConferenceId = showConferences && selected.conferences.some((item) => item.id === conferenceId)
+		? conferenceId
+		: "";
+	const rows = tables.find((table) =>
+		table.leagueSeasonId === selected?.id
+		&& (table.conferenceId ?? "") === activeConferenceId
+	)?.rows ?? [];
+	const ranked = [...rows]
 		.sort((a, b) => b.pts - a.pts || b.diff - a.diff || b.pf - a.pf)
 		.map((r, i) => ({ ...r, rank: i + 1 }));
 
 	const podium = ranked.slice(0, 3);
 	const q = query.trim().toLowerCase();
 	const table = q ? ranked.filter((r) => r.name.toLowerCase().includes(q)) : ranked;
-	const tabs = leagues;
+	const selectSeason = (nextSeasonId: string) => {
+		const next = competitions.find((item) => item.seasonId === nextSeasonId);
+		if (next) setLeagueSeason(next.id);
+	};
 
 	return (
 		<>
@@ -41,7 +55,7 @@ export default function StandingsBoard({ rows, leagues, seasonLabel, playoffSpot
 				<div className="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]" />
 				<div className="relative mx-auto max-w-[1280px] px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
 					<div className="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
-						<span className="h-px w-[26px] bg-brand" />League Table · {seasonLabel}
+							<span className="h-px w-[26px] bg-brand" />League Table · {selected?.seasonLabel ?? ""}
 					</div>
 					<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Standings</h1>
 				</div>
@@ -56,16 +70,40 @@ export default function StandingsBoard({ rows, leagues, seasonLabel, playoffSpot
 				</section>
 			) : (
 				<>
-					{/* LEAGUE FILTER */}
-					{leagues.length > 1 && (
+					{/* SEASON → COMPETITION → OPTIONAL CONFERENCE */}
+					{selected && (
 						<section className="border-b border-black/[0.08] bg-panel">
-							<div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-2 px-8 py-5 max-[960px]:px-6">
-								<span className="mr-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">League</span>
-								{tabs.map((t) => (
-									<button key={t} type="button" onClick={() => setLeague(t)} className={pillClass(activeLeague === t)}>
-										{t}
-									</button>
-								))}
+							<div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-4 px-8 py-5 max-[960px]:px-6">
+								{seasonIds.length > 1 && (
+									<label className="flex items-center gap-2">
+										<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Season</span>
+										<select value={seasonId} onChange={(event) => selectSeason(event.target.value)} className="rounded-md border border-black/15 bg-white px-3 py-2 text-[13px] font-bold text-ink2">
+											{seasonIds.map((id) => {
+												const item = competitions.find((competition) => competition.seasonId === id);
+												return <option key={id} value={id}>{item?.seasonLabel}</option>;
+											})}
+										</select>
+									</label>
+								)}
+								<div className="flex flex-wrap items-center gap-2">
+									<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Competition</span>
+									{seasonCompetitions.map((item) => (
+										<button key={item.id} type="button" onClick={() => setLeagueSeason(item.id)} className={pillClass(selected.id === item.id)}>
+											{item.leagueLabel}
+										</button>
+									))}
+								</div>
+								{showConferences && (
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Conference</span>
+										<button type="button" onClick={() => setConference("")} className={pillClass(activeConferenceId === "")}>Overall</button>
+										{selected.conferences.map((conference) => (
+											<button key={conference.id} type="button" onClick={() => setConference(conference.id)} className={pillClass(activeConferenceId === conference.id)}>
+												{conference.name}
+											</button>
+										))}
+									</div>
+								)}
 							</div>
 						</section>
 					)}

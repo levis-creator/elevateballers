@@ -22,10 +22,16 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
-    const { leagueSeasonId, leagueId, seasonId } = body;
+    const { leagueSeasonId, conferenceId } = body;
+    if (typeof leagueSeasonId !== 'string' || !leagueSeasonId) {
+      return new Response(JSON.stringify({ error: 'leagueSeasonId is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Recompute standings — the cache is populated as a side-effect
-    await getStandings({ leagueSeasonId, leagueId, seasonId });
+    await getStandings({ leagueSeasonId, conferenceId });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

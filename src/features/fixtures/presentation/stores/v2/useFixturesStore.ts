@@ -4,20 +4,19 @@ export type FixtureView = "upcoming" | "results";
 
 /** Client state for the v2 Fixtures page: season + view + league filters. */
 interface FixturesState {
-	season: string; // "" = default to the newest season
+	leagueSeasonId: string;
+	conferenceId: string;
 	view: FixtureView;
-	league: string; // "all" = every league
-	setSeason: (season: string) => void;
+	setLeagueSeason: (leagueSeasonId: string) => void;
+	setConference: (conferenceId: string) => void;
 	setView: (view: FixtureView) => void;
-	setLeague: (league: string) => void;
 }
 
 export const useFixturesStore = create<FixturesState>((set) => ({
-	season: "",
+	leagueSeasonId: "",
+	conferenceId: "",
 	view: "upcoming",
-	league: "all",
-	// Changing season resets the league filter — its league list may differ.
-	setSeason: (season) => set({ season, league: "all" }),
+	setLeagueSeason: (leagueSeasonId) => set({ leagueSeasonId, conferenceId: "" }),
+	setConference: (conferenceId) => set({ conferenceId }),
 	setView: (view) => set({ view }),
-	setLeague: (league) => set({ league }),
 }));

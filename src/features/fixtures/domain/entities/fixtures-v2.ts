@@ -14,6 +14,9 @@ export interface FixtureMatch {
 	league: string;
 	/** Season key (e.g. "2026 Season" or "2026") — the season selector filters on this. */
 	season: string;
+	seasonId: string | null;
+	leagueSeasonId: string | null;
+	conferenceIds: string[];
 
 	/** Epoch ms — precise sort key (upcoming ascending, results descending). */
 	ts: number;
@@ -53,8 +56,10 @@ export interface FixtureMatch {
 
 export interface FixturesData {
 	matches: FixtureMatch[];
+	competitions: import("@/features/seasons/domain/entities/public-competition").PublicCompetitionOption[];
 	/** Distinct season keys, newest first. */
 	seasons: string[];
 	/** Season the board opens on — the newest with matches, or "". */
 	defaultSeason: string;
+	defaultLeagueSeasonId: string;
 }

@@ -12,9 +12,9 @@ import type {
 /**
  * Assembles everything the admin season-detail page needs in one round trip.
  *
- * Scoping note: a Season can run in more than one League, so everything here is
- * scoped by `seasonId` — never by league. Standings therefore cover the whole
- * season, across every league it runs in, which is what the page claims to show.
+ * Standings are never combined across competition editions. Until Phase 9 adds
+ * a competition selector to this page, a table is shown only for a season with
+ * exactly one enabled league.
  *
  * Returns null when the season does not exist.
  */
@@ -28,6 +28,8 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 		},
 	});
 	if (!season) return null;
+	const standingsCompetition =
+		season.leagueSeasons.length === 1 ? season.leagueSeasons[0] : null;
 
 	const [matchGroups, fixtureRows, teamRows, table] = await Promise.all([
 		prisma.match.groupBy({
@@ -61,7 +63,9 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 			},
 			orderBy: { team: { name: "asc" } },
 		}),
-		getStandings({ seasonId }),
+		standingsCompetition?.id
+			? getStandings({ leagueSeasonId: standingsCompetition.id })
+			: Promise.resolve([]),
 	]);
 
 	const completed = matchGroups.find((group) => group.status === "COMPLETED")?._count._all ?? 0;

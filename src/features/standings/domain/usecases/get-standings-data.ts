@@ -34,9 +34,18 @@ const FALLBACK_ROWS: StandingRow[] = DEMO.map(([name, w, l, pf, pa, p, pts], i) 
 }));
 
 const FALLBACK: StandingsData = {
-	rows: FALLBACK_ROWS,
-	leagues: ["Elevate Ballers League"],
-	seasonLabel: "2026 Season",
+	competitions: [{
+		id: "demo-competition",
+		seasonId: "demo-season",
+		seasonLabel: "2026 Season",
+		leagueId: "demo-league",
+		leagueLabel: "Elevate Ballers League",
+		structure: "SINGLE_TABLE",
+		startDate: "2026-01-01T00:00:00.000Z",
+		conferences: [],
+	}],
+	tables: [{ leagueSeasonId: "demo-competition", conferenceId: null, rows: FALLBACK_ROWS }],
+	defaultLeagueSeasonId: "demo-competition",
 	playoffSpots: 8,
 };
 

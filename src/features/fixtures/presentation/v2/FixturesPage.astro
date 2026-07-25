@@ -13,6 +13,6 @@ const [data, footer] = await Promise.all([getFixturesData(), getFooterData()]);
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="fixtures" />
-	<FixtureBoard matches={data.matches} seasons={data.seasons} defaultSeason={data.defaultSeason} client:load />
+	<FixtureBoard matches={data.matches} seasons={data.seasons} defaultSeason={data.defaultSeason} competitions={data.competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} client:load />
 	<Footer footer={footer} />
 </div>

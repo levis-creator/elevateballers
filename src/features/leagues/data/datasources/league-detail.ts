@@ -102,16 +102,22 @@ export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail | 
 	}));
 
 	// The season the league is "on" now: the active one, else the most recent.
-	const current = links.find((l) => l.season.active)?.season ?? links[0]?.season ?? null;
-	const currentSeason = current ? { id: current.id, name: current.name } : null;
+	const currentLink =
+		links.find((link) => link.status === "ACTIVE") ??
+		links.find((link) => link.season.active) ??
+		links[0] ??
+		null;
+	const currentSeason = currentLink
+		? { id: currentLink.season.id, name: currentLink.season.name }
+		: null;
 
 	// ── Standings ─────────────────────────────────────────────────────────
-	// Season table for the Overview; league-wide table only to source each
-	// team's W–L for the Teams tab. Both are cached inside getStandings.
-	const [seasonTable, leagueTable] = await Promise.all([
-		getStandings({ leagueId, seasonId: currentSeason?.id }),
-		getStandings({ leagueId }),
-	]);
+	// Phase 8 never mixes editions. The Teams tab uses the current competition's
+	// record rather than a lifetime league aggregate.
+	const seasonTable = currentLink?.id
+		? await getStandings({ leagueSeasonId: currentLink.id })
+		: [];
+	const leagueTable = seasonTable;
 
 	const standings: LeagueStandingRow[] = seasonTable.map((row) => ({
 		rank: row.rank,
