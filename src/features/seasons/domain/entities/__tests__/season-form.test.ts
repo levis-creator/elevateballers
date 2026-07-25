@@ -22,6 +22,23 @@ const form = (o: Partial<SeasonFormValues> = {}): SeasonFormValues => ({
 	...o,
 });
 
+const competition = (o = {}) => ({
+	leagueId: 'mens',
+	leagueName: "Men's League",
+	enabled: true,
+	startDate: '2026-02-01',
+	endDate: '2026-10-01',
+	status: 'SCHEDULED' as const,
+	competitionStructure: 'SINGLE_TABLE' as const,
+	bracketType: '',
+	hasRegistrationWindow: false,
+	registrationOpensAt: '',
+	registrationClosesAt: '',
+	teamIds: ['t1'],
+	conferences: [],
+	...o,
+});
+
 describe('validateSeasonForm', () => {
 	it('accepts a valid form', () => {
 		expect(isValid(validateSeasonForm(form()))).toBe(true);
@@ -77,6 +94,29 @@ describe('validateSeasonForm', () => {
 		expect(
 			validateSeasonForm(form({ conferences: [{ name: 'East' }, { name: 'east' }] })).conferences,
 		).toBeDefined();
+	});
+
+	it('validates each enabled league competition independently', () => {
+		const values = form({
+			startDate: '',
+			endDate: '',
+			leagueSeasons: [competition(), competition({ leagueId: 'women', leagueName: "Women's League", endDate: '' })],
+		});
+		expect(validateSeasonForm(values).startDate).toBeUndefined();
+		expect(validateSeasonForm(values).leagueSeasons).toContain("Women's League");
+	});
+
+	it('requires every participating team to have one conference when conferences are enabled', () => {
+		const values = form({
+			leagueSeasons: [
+				competition({
+					competitionStructure: 'CONFERENCES',
+					teamIds: ['t1', 't2'],
+					conferences: [{ name: 'East', teamIds: ['t1'] }],
+				}),
+			],
+		});
+		expect(validateSeasonForm(values).leagueSeasons).toContain('without a conference');
 	});
 });
 
@@ -138,6 +178,27 @@ describe('toPayload', () => {
 		// No teamIds key when the row never had one — the server leaves that roster alone.
 		expect(p.conferences[1]).toEqual({ id: undefined, name: 'West' });
 		expect('teamIds' in p.conferences[1]).toBe(false);
+	});
+
+	it('uses enabled competition dates as the umbrella range and emits independent settings', () => {
+		const p = toPayload(
+			form({
+				leagueSeasons: [
+					competition(),
+					competition({
+						leagueId: 'women',
+						leagueName: "Women's League",
+						startDate: '2026-04-01',
+						endDate: '2026-12-15',
+						status: 'DRAFT',
+					}),
+				],
+			}),
+		);
+		expect(p.leagueIds).toEqual(['mens', 'women']);
+		expect(p.startDate).toBe('2026-02-01');
+		expect(p.endDate).toBe('2026-12-15');
+		expect(p.leagueSeasons?.[1].status).toBe('DRAFT');
 	});
 });
 

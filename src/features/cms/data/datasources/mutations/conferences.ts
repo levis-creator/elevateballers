@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../../../lib/prisma';
+import { resolveLeagueSeasonScope } from '../../../../seasons/data/league-season-scope';
 
 export interface ConferenceSummary {
   id: string;
@@ -15,7 +16,7 @@ export interface ConferenceSummary {
  */
 async function syncConferenceTeams(
   tx: Prisma.TransactionClient,
-  seasonId: string,
+  leagueSeasonId: string,
   conferenceId: string,
   teamIds: string[],
 ): Promise<void> {
@@ -23,14 +24,14 @@ async function syncConferenceTeams(
 
   if (unique.length) {
     await tx.seasonTeam.updateMany({
-      where: { seasonId, teamId: { in: unique } },
+      where: { leagueSeasonId, teamId: { in: unique } },
       data: { conferenceId },
     });
   }
 
   await tx.seasonTeam.updateMany({
     where: {
-      seasonId,
+      leagueSeasonId,
       conferenceId,
       ...(unique.length ? { teamId: { notIn: unique } } : {}),
     },
@@ -47,14 +48,16 @@ export async function createConference(
   seasonId: string,
   name: string,
   teamIds: string[] = [],
+  leagueSeasonId?: string,
 ): Promise<ConferenceSummary> {
+  const scope = await resolveLeagueSeasonScope({ seasonId, leagueSeasonId });
   return await prisma.$transaction(async (tx) => {
-    const sortOrder = await tx.conference.count({ where: { seasonId } });
+    const sortOrder = await tx.conference.count({ where: { leagueSeasonId: scope.leagueSeasonId } });
     const conference = await tx.conference.create({
-      data: { seasonId, name, sortOrder },
+      data: { seasonId: scope.seasonId, leagueSeasonId: scope.leagueSeasonId, name, sortOrder },
       select: { id: true, name: true },
     });
-    if (teamIds.length) await syncConferenceTeams(tx, seasonId, conference.id, teamIds);
+    if (teamIds.length) await syncConferenceTeams(tx, scope.leagueSeasonId, conference.id, teamIds);
     return conference;
   });
 }
@@ -71,7 +74,7 @@ export async function updateConference(
 ): Promise<boolean> {
   const existing = await prisma.conference.findFirst({
     where: { id: conferenceId, seasonId },
-    select: { id: true },
+    select: { id: true, leagueSeasonId: true },
   });
   if (!existing) return false;
 
@@ -80,7 +83,8 @@ export async function updateConference(
       await tx.conference.update({ where: { id: conferenceId }, data: { name: changes.name } });
     }
     if (changes.teamIds !== undefined) {
-      await syncConferenceTeams(tx, seasonId, conferenceId, changes.teamIds);
+      if (!existing.leagueSeasonId) return;
+      await syncConferenceTeams(tx, existing.leagueSeasonId, conferenceId, changes.teamIds);
     }
   });
   return true;

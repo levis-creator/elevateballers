@@ -1,7 +1,9 @@
 import { prisma } from '../../../lib/prisma';
 import { cacheGet, cacheSet } from '../../../lib/cache';
+import { resolveLeagueSeasonScope } from '../../seasons/data/league-season-scope';
 
 interface GetStandingsOptions {
+  leagueSeasonId?: string;
   leagueId?: string;
   seasonId?: string;
 }
@@ -23,19 +25,30 @@ interface StandingEntry {
   rank: number;
 }
 
-export async function getStandings({ leagueId, seasonId }: GetStandingsOptions = {}): Promise<StandingEntry[]> {
-  const cacheKey = `standings:${leagueId ?? 'all'}:${seasonId ?? 'all'}`;
+export async function getStandings(options: GetStandingsOptions = {}): Promise<StandingEntry[]> {
+  let { leagueSeasonId, leagueId, seasonId } = options;
+  if (leagueSeasonId || (leagueId && seasonId)) {
+    const scope = await resolveLeagueSeasonScope({ leagueSeasonId, leagueId, seasonId });
+    ({ leagueSeasonId, leagueId, seasonId } = scope);
+  }
+  const cacheKey = leagueSeasonId
+    ? `standings:${leagueSeasonId}:overall`
+    : `standings:${leagueId ?? 'all'}:${seasonId ?? 'all'}`;
   const cached = await cacheGet<StandingEntry[]>(cacheKey);
   if (cached) return cached;
 
   const teams = await prisma.team.findMany({
     where: {
       approved: true,
+      ...(leagueSeasonId && {
+        seasonTeams: { some: { leagueSeasonId } },
+      }),
     },
     include: {
       team1Matches: {
         where: {
           status: 'COMPLETED',
+          ...(leagueSeasonId && { leagueSeasonId }),
           ...(leagueId && { leagueId }),
           ...(seasonId && { seasonId }),
         },
@@ -44,6 +57,7 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
       team2Matches: {
         where: {
           status: 'COMPLETED',
+          ...(leagueSeasonId && { leagueSeasonId }),
           ...(leagueId && { leagueId }),
           ...(seasonId && { seasonId }),
         },
@@ -118,7 +132,7 @@ export async function getStandings({ leagueId, seasonId }: GetStandingsOptions =
     return b.goalsFor - a.goalsFor;
   });
 
-  const filteredStandings = (leagueId || seasonId)
+  const filteredStandings = (leagueSeasonId || leagueId || seasonId)
     ? standings.filter((standing) => standing.played > 0)
     : standings;
 

@@ -5,16 +5,16 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm run repair:legacy-match-scope
-8 verbose argv "run" "repair:legacy-match-scope"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T09_38_04_779Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T09_38_04_779Z-debug-0.log
+7 verbose title npm exec tsc --noEmit
+8 verbose argv "exec" "--" "tsc" "--noEmit"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T10_18_54_513Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T10_18_54_513Z-debug-0.log
 11 silly logfile done cleaning log files
-12 notice run elevateballers@0.0.1 repair:legacy-match-scope
-13 notice run tsx scripts/repair-legacy-match-scope.ts
+12 notice run elevateballers@0.0.1 npx
+13 notice run tsc --noEmit
 14 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 15 verbose os Windows_NT 10.0.26200
 16 verbose node v24.18.0
 17 verbose npm  v12.0.1
-18 verbose exit 0
-19 info ok
+18 verbose exit 2
+19 verbose code 2

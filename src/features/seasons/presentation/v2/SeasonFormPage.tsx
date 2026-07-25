@@ -3,10 +3,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AlertCircle, ArrowLeft, Check, Loader2, Save } from "lucide-react";
 import { useSeasonForm } from "./hooks/useSeasonForm";
 import SeasonDetailsCard from "./components/SeasonDetailsCard";
-import SeasonLeaguesCard from "./components/SeasonLeaguesCard";
-import SeasonConferencesCard from "./components/SeasonConferencesCard";
-import SeasonScheduleCard from "./components/SeasonScheduleCard";
-import SeasonRegistrationCard from "./components/SeasonRegistrationCard";
+import LeagueSeasonPanels from "./components/LeagueSeasonPanels";
 import SeasonPreviewRail from "./components/SeasonPreviewRail";
 
 function SeasonFormContent({ seasonId }: { seasonId?: string }) {
@@ -21,10 +18,10 @@ function SeasonFormContent({ seasonId }: { seasonId?: string }) {
 		);
 	}
 
-	const linked = v.leagues.filter((league) => v.values.leagueIds.includes(league.id));
-	// Teams can be picked on a conference only when exactly one league is linked —
-	// that's the league they get rostered under. Otherwise the modal is name-only.
-	const singleLeague = v.values.leagueIds.length === 1 ? linked[0] ?? null : null;
+	const enabledLeagueIds = v.values.leagueSeasons
+		.filter((competition) => competition.enabled)
+		.map((competition) => competition.leagueId);
+	const linked = v.leagues.filter((league) => enabledLeagueIds.includes(league.id));
 
 	return (
 		<div className="font-['Archivo'] text-[var(--tx)]">
@@ -39,8 +36,8 @@ function SeasonFormContent({ seasonId }: { seasonId?: string }) {
 					</h1>
 					<p className="mt-1.5 font-['Archivo'] text-[13px] text-[var(--txm)]">
 						{v.isEdit
-							? "Update this season's details, leagues and window."
-							: "Set up a new season, link it to leagues, and define its window."}
+							? "Manage each league competition independently."
+							: "Create the season, then configure each league competition."}
 					</p>
 				</div>
 				<a
@@ -70,35 +67,17 @@ function SeasonFormContent({ seasonId }: { seasonId?: string }) {
 						set={v.set}
 					/>
 
-					<SeasonLeaguesCard
+					<LeagueSeasonPanels
 						leagues={v.leagues}
-						selected={v.values.leagueIds}
-						canCreateLeague={v.canCreateLeague}
-						onToggle={v.toggleLeague}
-					/>
-
-					<SeasonConferencesCard
-						conferences={v.values.conferences}
-						errors={v.errors}
-						touched={v.touched}
+						competitions={v.values.leagueSeasons}
 						teams={v.teams}
-						canPickTeams={singleLeague !== null}
-						leagueName={singleLeague?.name ?? null}
-						onAdd={v.addConference}
-						onUpdate={v.updateConference}
-						onRemove={v.removeConference}
-					/>
-
-					<SeasonScheduleCard
-						values={v.values}
 						errors={v.errors}
 						touched={v.touched}
-						status={v.status}
-						statusLocked={v.statusLocked}
-						set={v.set}
+						onChange={v.updateLeagueSeason}
+						onAddConference={v.addLeagueConference}
+						onUpdateConference={v.updateLeagueConference}
+						onRemoveConference={v.removeLeagueConference}
 					/>
-
-					<SeasonRegistrationCard values={v.values} errors={v.errors} touched={v.touched} set={v.set} />
 
 					{/* actions */}
 					<div className="flex flex-wrap items-center gap-2.5">

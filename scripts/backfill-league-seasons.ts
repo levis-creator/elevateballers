@@ -168,27 +168,60 @@ async function main() {
 							competitionStructure: row.competitionStructure,
 						},
 					});
-				}
-				for (const row of plan.conferences) {
-					await tx.conference.update({
-						where: { id: row.id },
-						data: { leagueSeasonId: row.leagueSeasonId },
+
+					// Child ownership is defined by the same legacy
+					// (seasonId, leagueId) pair. Bulk updates keep production
+					// transactions short over remote database connections.
+					const expectedTeams = plan.seasonTeams.filter(
+						(item) => item.leagueSeasonId === row.id,
+					).length;
+					const expectedMatches = plan.matches.filter(
+						(item) => item.leagueSeasonId === row.id,
+					).length;
+					const conferenceIds = plan.conferences
+						.filter((item) => item.leagueSeasonId === row.id)
+						.map((item) => item.id);
+
+					const teams = await tx.seasonTeam.updateMany({
+						where: {
+							seasonId: row.seasonId,
+							leagueId: row.leagueId,
+							OR: [{ leagueSeasonId: null }, { leagueSeasonId: row.id }],
+						},
+						data: { leagueSeasonId: row.id },
 					});
-				}
-				for (const row of plan.seasonTeams) {
-					await tx.seasonTeam.update({
-						where: { id: row.id },
-						data: { leagueSeasonId: row.leagueSeasonId },
+					const matches = await tx.match.updateMany({
+						where: {
+							seasonId: row.seasonId,
+							leagueId: row.leagueId,
+							OR: [{ leagueSeasonId: null }, { leagueSeasonId: row.id }],
+						},
+						data: { leagueSeasonId: row.id },
 					});
-				}
-				for (const row of plan.matches) {
-					await tx.match.update({
-						where: { id: row.id },
-						data: { leagueSeasonId: row.leagueSeasonId },
-					});
+					const conferences = conferenceIds.length
+						? await tx.conference.updateMany({
+								where: {
+									id: { in: conferenceIds },
+									OR: [{ leagueSeasonId: null }, { leagueSeasonId: row.id }],
+								},
+								data: { leagueSeasonId: row.id },
+							})
+						: { count: 0 };
+
+					if (
+						teams.count !== expectedTeams ||
+						matches.count !== expectedMatches ||
+						conferences.count !== conferenceIds.length
+					) {
+						throw new Error(
+							`Concurrent change detected for ${row.seasonId}:${row.leagueId}; ` +
+								`expected teams/matches/conferences ${expectedTeams}/${expectedMatches}/${conferenceIds.length}, ` +
+								`updated ${teams.count}/${matches.count}/${conferences.count}. Transaction rolled back.`,
+						);
+					}
 				}
 			},
-			{ timeout: 60_000 },
+			{ timeout: 120_000 },
 		);
 
 		await verify(prisma);

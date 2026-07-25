@@ -3,6 +3,78 @@ import { prisma } from '../../../../../lib/prisma';
 import type { CreateSeasonInput, UpdateSeasonInput, Season } from '../../../types';
 
 type ConferenceInput = { id?: string; name: string; teamIds?: string[] };
+type LeagueSeasonInput = NonNullable<CreateSeasonInput['leagueSeasons']>[number];
+
+async function reconcileLeagueSeasons(
+  tx: Prisma.TransactionClient,
+  seasonId: string,
+  inputs: LeagueSeasonInput[],
+): Promise<void> {
+  const leagueIds = [...new Set(inputs.map((row) => row.leagueId))];
+  await tx.leagueSeason.deleteMany({
+    where: { seasonId, ...(leagueIds.length ? { leagueId: { notIn: leagueIds } } : {}) },
+  });
+
+  for (const input of inputs) {
+    const leagueSeason = await tx.leagueSeason.upsert({
+      where: { leagueId_seasonId: { leagueId: input.leagueId, seasonId } },
+      create: {
+        leagueId: input.leagueId,
+        seasonId,
+        startDate: new Date(input.startDate),
+        endDate: new Date(input.endDate),
+        registrationOpensAt: toDbDate(input.registrationOpensAt) ?? null,
+        registrationClosesAt: toDbDate(input.registrationClosesAt) ?? null,
+        status: input.status,
+        competitionStructure: input.competitionStructure,
+        bracketType: input.bracketType || null,
+      },
+      update: {
+        startDate: new Date(input.startDate),
+        endDate: new Date(input.endDate),
+        registrationOpensAt: toDbDate(input.registrationOpensAt) ?? null,
+        registrationClosesAt: toDbDate(input.registrationClosesAt) ?? null,
+        status: input.status,
+        competitionStructure: input.competitionStructure,
+        bracketType: input.bracketType || null,
+      },
+      select: { id: true, leagueId: true },
+    });
+    if (!leagueSeason.id) throw new Error('League season is missing its identifier.');
+
+    const teamIds = [...new Set(input.teamIds ?? [])];
+    if (teamIds.length) {
+      await tx.seasonTeam.createMany({
+        data: teamIds.map((teamId) => ({
+          seasonId,
+          leagueId: input.leagueId,
+          leagueSeasonId: leagueSeason.id!,
+          teamId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await tx.seasonTeam.deleteMany({
+      where: {
+        leagueSeasonId: leagueSeason.id,
+        ...(teamIds.length ? { teamId: { notIn: teamIds } } : {}),
+      },
+    });
+
+    if (input.competitionStructure === 'CONFERENCES') {
+      await reconcileConferences(tx, seasonId, input.conferences ?? [], {
+        id: leagueSeason.id,
+        leagueId: leagueSeason.leagueId,
+      });
+    } else {
+      await tx.seasonTeam.updateMany({
+        where: { leagueSeasonId: leagueSeason.id },
+        data: { conferenceId: null },
+      });
+      await tx.conference.deleteMany({ where: { leagueSeasonId: leagueSeason.id } });
+    }
+  }
+}
 
 /**
  * Reconcile a season's conferences by id (rename-safe — never delete-and-recreate,
@@ -15,21 +87,47 @@ async function reconcileConferences(
   tx: Prisma.TransactionClient,
   seasonId: string,
   conferences: ConferenceInput[],
-  leagueId: string | null,
+  leagueSeason: { id: string; leagueId: string } | null,
 ): Promise<void> {
   const keptIds = conferences.filter((c) => c.id).map((c) => c.id as string);
   // Delete removed rows first, freeing their names for reuse this save.
   await tx.conference.deleteMany({
-    where: { seasonId, ...(keptIds.length ? { id: { notIn: keptIds } } : {}) },
+    where: {
+      seasonId,
+      ...(leagueSeason ? { leagueSeasonId: leagueSeason.id } : { leagueSeasonId: null }),
+      ...(keptIds.length ? { id: { notIn: keptIds } } : {}),
+    },
   });
+
+  // Free all retained names before assigning their final values. This makes
+  // swaps such as East ↔ West safe under the per-league unique index.
+  for (const id of keptIds) {
+    const moved = await tx.conference.updateMany({
+      where: {
+        id,
+        seasonId,
+        ...(leagueSeason ? { leagueSeasonId: leagueSeason.id } : { leagueSeasonId: null }),
+      },
+      data: { name: `__reconciling_${id}` },
+    });
+    if (moved.count !== 1) throw new Error('A conference does not belong to this league competition.');
+  }
 
   for (const [index, c] of conferences.entries()) {
     let conferenceId = c.id;
     if (conferenceId) {
-      await tx.conference.update({ where: { id: conferenceId }, data: { name: c.name, sortOrder: index } });
+      await tx.conference.update({
+        where: { id: conferenceId },
+        data: { name: c.name, sortOrder: index },
+      });
     } else {
       const created = await tx.conference.create({
-        data: { seasonId, name: c.name, sortOrder: index },
+        data: {
+          seasonId,
+          leagueSeasonId: leagueSeason?.id ?? null,
+          name: c.name,
+          sortOrder: index,
+        },
         select: { id: true },
       });
       conferenceId = created.id;
@@ -38,17 +136,29 @@ async function reconcileConferences(
     // Team membership only when the form supplied it AND we know which league to
     // roster under (single-league seasons). Set semantics: the given teams become
     // the members; any team dropped from the list is unassigned (but stays rostered).
-    if (c.teamIds !== undefined && leagueId) {
+    if (c.teamIds !== undefined && leagueSeason) {
       const ids = [...new Set(c.teamIds.filter(Boolean))];
       if (ids.length) {
         await tx.seasonTeam.createMany({
-          data: ids.map((teamId) => ({ seasonId, leagueId, teamId })),
+          data: ids.map((teamId) => ({
+            seasonId,
+            leagueId: leagueSeason.leagueId,
+            leagueSeasonId: leagueSeason.id,
+            teamId,
+          })),
           skipDuplicates: true,
         });
-        await tx.seasonTeam.updateMany({ where: { seasonId, teamId: { in: ids } }, data: { conferenceId } });
+        await tx.seasonTeam.updateMany({
+          where: { leagueSeasonId: leagueSeason.id, teamId: { in: ids } },
+          data: { conferenceId },
+        });
       }
       await tx.seasonTeam.updateMany({
-        where: { seasonId, conferenceId, ...(ids.length ? { teamId: { notIn: ids } } : {}) },
+        where: {
+          leagueSeasonId: leagueSeason.id,
+          conferenceId,
+          ...(ids.length ? { teamId: { notIn: ids } } : {}),
+        },
         data: { conferenceId: null },
       });
     }
@@ -56,8 +166,17 @@ async function reconcileConferences(
 }
 
 /** The league to roster conference teams under: only unambiguous with one league. */
-function singleLeague(leagueIds?: string[]): string | null {
-  return leagueIds && leagueIds.length === 1 ? leagueIds[0] : null;
+async function singleLeagueSeason(
+  tx: Prisma.TransactionClient,
+  seasonId: string,
+  leagueIds?: string[],
+): Promise<{ id: string; leagueId: string } | null> {
+  if (!leagueIds || leagueIds.length !== 1) return null;
+  const row = await tx.leagueSeason.findUnique({
+    where: { leagueId_seasonId: { leagueId: leagueIds[0], seasonId } },
+    select: { id: true, leagueId: true },
+  });
+  return row?.id ? { id: row.id, leagueId: row.leagueId } : null;
 }
 
 function slugify(name: string): string {
@@ -78,7 +197,16 @@ function toDbDate(value: Date | string | null | undefined): Date | null | undefi
 }
 
 export async function createSeason(data: CreateSeasonInput): Promise<Season> {
-  const { leagueIds, conferences, slug: providedSlug, name, startDate, endDate, ...rest } = data;
+  const {
+    leagueIds,
+    leagueSeasons,
+    conferences,
+    slug: providedSlug,
+    name,
+    startDate,
+    endDate,
+    ...rest
+  } = data;
 
   // Slug is now globally unique across all seasons.
   let uniqueSlug = providedSlug || slugify(name);
@@ -100,16 +228,41 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
       registrationClosesAt: toDbDate(data.registrationClosesAt) ?? null,
       bracketType: data.bracketType || null,
       // Attach the season to its leagues via the join table (optional).
-      ...(leagueIds && leagueIds.length
-        ? { leagueSeasons: { create: leagueIds.map((leagueId) => ({ leagueId })) } }
+      ...(!leagueSeasons && leagueIds && leagueIds.length
+        ? {
+            leagueSeasons: {
+              create: leagueIds.map((leagueId) => ({
+                leagueId,
+                startDate: new Date(startDate),
+                endDate: new Date(endDate),
+                registrationOpensAt: toDbDate(data.registrationOpensAt) ?? null,
+                registrationClosesAt: toDbDate(data.registrationClosesAt) ?? null,
+                bracketType: data.bracketType || null,
+                status: data.active === false ? 'COMPLETED' : 'ACTIVE',
+                competitionStructure:
+                  leagueIds.length === 1 && conferences?.length ? 'CONFERENCES' : 'SINGLE_TABLE',
+              })),
+            },
+          }
         : {}),
     },
   });
 
+  if (leagueSeasons) {
+    await prisma.$transaction((tx) => reconcileLeagueSeasons(tx, season.id, leagueSeasons));
+  }
+
   // Conferences (and any selected teams) after the season exists, so team rows
   // can be rostered against it. Reuses the same reconcile path as updateSeason.
-  if (conferences && conferences.length) {
-    await prisma.$transaction((tx) => reconcileConferences(tx, season.id, conferences, singleLeague(leagueIds)));
+  if (!leagueSeasons && conferences && conferences.length) {
+    await prisma.$transaction(async (tx) =>
+      reconcileConferences(
+        tx,
+        season.id,
+        conferences,
+        await singleLeagueSeason(tx, season.id, leagueIds),
+      ),
+    );
   }
 
   return season;
@@ -120,7 +273,7 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
     const existing = await prisma.season.findUnique({ where: { id } });
     if (!existing) return null;
 
-    const { leagueIds, conferences, ...fields } = data;
+    const { leagueIds, leagueSeasons, conferences, ...fields } = data;
 
     // Regenerate a globally-unique slug when name/slug changes.
     const desiredSlug = fields.slug || (fields.name && !fields.slug ? slugify(fields.name) : undefined);
@@ -140,19 +293,51 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
     if ('registrationOpensAt' in fields) updateData.registrationOpensAt = toDbDate(fields.registrationOpensAt);
     if ('registrationClosesAt' in fields) updateData.registrationClosesAt = toDbDate(fields.registrationClosesAt);
 
-    // When leagueIds is provided, replace the season's league attachments (set semantics).
-    if (leagueIds) {
-      updateData.leagueSeasons = {
-        deleteMany: {},
-        create: leagueIds.map((leagueId) => ({ leagueId })),
-      };
-    }
-
     // Conferences reconcile by id (rename-safe) and, on single-league seasons,
     // roster+assign any selected teams. `undefined` = leave untouched; `[]` = clear.
     return await prisma.$transaction(async (tx) => {
-      if (conferences) {
-        await reconcileConferences(tx, id, conferences, singleLeague(leagueIds));
+      if (leagueSeasons) {
+        await reconcileLeagueSeasons(tx, id, leagueSeasons);
+      } else if (leagueIds) {
+        await tx.leagueSeason.deleteMany({
+          where: { seasonId: id, leagueId: { notIn: leagueIds } },
+        });
+        for (const leagueId of leagueIds) {
+          await tx.leagueSeason.upsert({
+            where: { leagueId_seasonId: { leagueId, seasonId: id } },
+            create: {
+              leagueId,
+              seasonId: id,
+              startDate: updateData.startDate ?? existing.startDate,
+              endDate: updateData.endDate ?? existing.endDate,
+              registrationOpensAt:
+                'registrationOpensAt' in fields
+                  ? updateData.registrationOpensAt
+                  : existing.registrationOpensAt,
+              registrationClosesAt:
+                'registrationClosesAt' in fields
+                  ? updateData.registrationClosesAt
+                  : existing.registrationClosesAt,
+              bracketType: fields.bracketType ?? existing.bracketType,
+              status: fields.active === false ? 'COMPLETED' : 'ACTIVE',
+            },
+            update: {},
+          });
+        }
+      }
+      if (!leagueSeasons && conferences) {
+        const effectiveLeagueIds =
+          leagueIds ??
+          (await tx.leagueSeason.findMany({
+            where: { seasonId: id },
+            select: { leagueId: true },
+          })).map((row) => row.leagueId);
+        await reconcileConferences(
+          tx,
+          id,
+          conferences,
+          await singleLeagueSeason(tx, id, effectiveLeagueIds),
+        );
       }
       return await tx.season.update({ where: { id }, data: updateData });
     });

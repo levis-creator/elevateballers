@@ -9,6 +9,7 @@ import {
   registrationClosedMessage,
   type RegistrationStatus,
 } from './registration';
+import { resolveLeagueSeasonScope } from '../features/seasons/data/league-season-scope';
 
 export interface RegistrationGateResult {
   open: boolean;
@@ -23,7 +24,8 @@ export interface RegistrationGateResult {
  */
 export async function checkRegistrationOpen(
   leagueId?: string | null,
-  seasonId?: string | null
+  seasonId?: string | null,
+  leagueSeasonId?: string | null,
 ): Promise<RegistrationGateResult> {
   if (!leagueId) return { open: true };
 
@@ -41,9 +43,12 @@ export async function checkRegistrationOpen(
 
   // A season is shared across leagues (many-to-many). Only apply its window if
   // the season actually runs in this league; otherwise the pairing is invalid.
-  const season = seasonId
-    ? await prisma.season.findFirst({
-        where: { id: seasonId, leagueSeasons: { some: { leagueId } } },
+  const scope = seasonId
+    ? await resolveLeagueSeasonScope({ leagueSeasonId, leagueId, seasonId })
+    : null;
+  const season = scope
+    ? await prisma.leagueSeason.findUnique({
+        where: { id: scope.leagueSeasonId },
         select: { registrationOpensAt: true, registrationClosesAt: true },
       })
     : null;

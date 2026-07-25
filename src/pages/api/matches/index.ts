@@ -159,7 +159,12 @@ export const POST: APIRoute = async ({ request }) => {
     const data = await request.json();
 
     // Validate required fields
-    if ((!data.team1Id && !data.team1Name) || (!data.team2Id && !data.team2Name) || !data.date || (!data.leagueId && !data.league) || !data.seasonId) {
+    if (
+      (!data.team1Id && !data.team1Name) ||
+      (!data.team2Id && !data.team2Name) ||
+      !data.date ||
+      (!data.leagueSeasonId && ((!data.leagueId && !data.league) || !data.seasonId))
+    ) {
       return new Response(
         JSON.stringify({ error: 'Teams, date, league, and season are required' }),
         {
@@ -205,7 +210,9 @@ export const POST: APIRoute = async ({ request }) => {
       team2Name: data.team2Name,
       team2Logo: data.team2Logo || '',
       leagueId: data.leagueId,
+      leagueSeasonId: data.leagueSeasonId,
       league: data.league,
+      seasonId: data.seasonId,
       date: new Date(data.date),
       team1Score: data.team1Score,
       team2Score: data.team2Score,
@@ -220,6 +227,8 @@ export const POST: APIRoute = async ({ request }) => {
       team1Id: match.team1Id,
       team2Id: match.team2Id,
       leagueId: match.leagueId,
+      leagueSeasonId: match.leagueSeasonId,
+      seasonId: match.seasonId,
       date: match.date,
     });
 

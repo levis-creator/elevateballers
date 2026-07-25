@@ -5,13 +5,13 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm run audit:legacy-match-scope
-8 verbose argv "run" "audit:legacy-match-scope"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T09_37_17_178Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T09_37_17_178Z-debug-0.log
+7 verbose title npm test --run src/features/seasons/domain/entities/__tests__/season-form.test.ts
+8 verbose argv "test" "--" "--run" "src/features/seasons/domain/entities/__tests__/season-form.test.ts"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T10_18_20_736Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T10_18_20_736Z-debug-0.log
 11 silly logfile done cleaning log files
-12 notice run elevateballers@0.0.1 audit:legacy-match-scope
-13 notice run tsx scripts/audit-legacy-match-scope.ts
+12 notice run elevateballers@0.0.1 test
+13 notice run vitest run --run src/features/seasons/domain/entities/__tests__/season-form.test.ts
 14 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 15 verbose os Windows_NT 10.0.26200
 16 verbose node v24.18.0

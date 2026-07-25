@@ -1,16 +1,26 @@
 import { prisma } from '../../../../../lib/prisma';
+import {
+  resolveLeagueSeasonScope,
+  type LeagueSeasonScopeInput,
+} from '../../../../seasons/data/league-season-scope';
 
 /**
  * Register teams into a specific (season, league). Idempotent — the
  * (seasonId, teamId) unique constraint means already-present teams are
  * skipped. Returns how many new rows were created.
  */
-export async function addSeasonTeams(seasonId: string, leagueId: string, teamIds: string[]): Promise<number> {
+export async function addSeasonTeams(
+  seasonId: string,
+  leagueId: string,
+  teamIds: string[],
+  leagueSeasonId?: string,
+): Promise<number> {
   const unique = [...new Set(teamIds.filter(Boolean))];
   if (unique.length === 0) return 0;
+  const scope = await resolveLeagueSeasonScope({ leagueSeasonId, seasonId, leagueId });
 
   const result = await prisma.seasonTeam.createMany({
-    data: unique.map((teamId) => ({ seasonId, leagueId, teamId })),
+    data: unique.map((teamId) => ({ ...scope, teamId })),
     skipDuplicates: true,
   });
   return result.count;
@@ -35,17 +45,21 @@ export async function setSeasonTeamConference(
   seasonId: string,
   teamId: string,
   conferenceId: string | null,
+  leagueSeasonId?: string,
 ): Promise<boolean> {
+  let scope: LeagueSeasonScopeInput = { seasonId, leagueSeasonId };
   if (conferenceId) {
     const conference = await prisma.conference.findFirst({
       where: { id: conferenceId, seasonId },
-      select: { id: true },
+      select: { id: true, leagueSeasonId: true },
     });
     if (!conference) return false;
+    scope = { seasonId, leagueSeasonId: conference.leagueSeasonId ?? leagueSeasonId };
   }
+  const resolved = await resolveLeagueSeasonScope(scope);
 
   const result = await prisma.seasonTeam.updateMany({
-    where: { seasonId, teamId },
+    where: { leagueSeasonId: resolved.leagueSeasonId, teamId },
     data: { conferenceId },
   });
   return result.count > 0;
@@ -74,7 +88,12 @@ export async function backfillSeasonTeamsFromMatches(seasonId: string): Promise<
   if (pairs.size === 0) return 0;
 
   const result = await prisma.seasonTeam.createMany({
-    data: [...pairs.values()].map(({ leagueId, teamId }) => ({ seasonId, leagueId, teamId })),
+    data: await Promise.all(
+      [...pairs.values()].map(async ({ leagueId, teamId }) => ({
+        ...(await resolveLeagueSeasonScope({ seasonId, leagueId })),
+        teamId,
+      })),
+    ),
     skipDuplicates: true,
   });
   return result.count;
