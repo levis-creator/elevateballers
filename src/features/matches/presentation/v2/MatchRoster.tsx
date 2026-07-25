@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, Search, Sparkles, Users } from 'lucide-react';
 import { getTeamInitials } from '../../domain/usecases/team-helpers';
 import { useMatchRoster, type PoolPlayer, type RosterPlayer } from './hooks/useMatchRoster';
@@ -34,6 +34,7 @@ function TeamRoster({
   const [selectedOnly, setSelectedOnly] = useState(false);
   const selected = useMemo(() => new Map(roster.map((p) => [p.playerId, p])), [roster]);
   const starters = roster.filter((p) => p.started).length;
+  const isMutating = busy.size > 0;
   const normalizedQuery = query.trim().toLowerCase();
   const visible = pool.filter((player) => {
     if (selectedOnly && !selected.has(player.id)) return false;
@@ -142,10 +143,10 @@ function TeamRoster({
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 border-t border-[var(--bord2)] p-3">
-        <button type="button" onClick={setAll} className="rounded-lg border border-[var(--bord)] bg-[var(--surf)] px-3 py-2 font-['Archivo'] text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
+        <button type="button" onClick={setAll} disabled={isMutating} className="rounded-lg border border-[var(--bord)] bg-[var(--surf)] px-3 py-2 font-['Archivo'] text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-wait disabled:opacity-40">
           {roster.length === pool.length && pool.length > 0 ? 'Clear all' : 'Select all'}
         </button>
-        <button type="button" onClick={setAutoStarters} disabled={roster.length === 0} className="inline-flex items-center justify-center gap-1 rounded-lg border border-[var(--bord)] bg-[var(--surf)] px-3 py-2 font-['Archivo'] text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--txd)] hover:border-[#f5b301] disabled:opacity-40">
+        <button type="button" onClick={setAutoStarters} disabled={roster.length === 0 || isMutating} className="inline-flex items-center justify-center gap-1 rounded-lg border border-[var(--bord)] bg-[var(--surf)] px-3 py-2 font-['Archivo'] text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--txd)] hover:border-[#f5b301] disabled:opacity-40">
           <Sparkles className="h-3 w-3" /> Auto starters
         </button>
       </div>
@@ -171,6 +172,28 @@ export default function MatchRoster({
   const enabled = Boolean(team1Id && team2Id && team1Id !== team2Id);
   const roster = useMatchRoster({ matchId, team1Id, team2Id, enabled });
   const [draft, setDraft] = useState<RosterPlayer[]>([]);
+  const publishDraft = useCallback((next: RosterPlayer[]) => {
+    onDraftChange?.(next.map(({ playerId, teamId: id, started, jerseyNumber }) => ({
+      playerId,
+      teamId: id,
+      started,
+      jerseyNumber,
+    })));
+  }, [onDraftChange]);
+
+  useEffect(() => {
+    if (matchId) return;
+    setDraft((current) => current.filter((player) => player.teamId === team1Id || player.teamId === team2Id));
+  }, [matchId, team1Id, team2Id]);
+
+  useEffect(() => {
+    if (!matchId) publishDraft(draft);
+  }, [draft, matchId, publishDraft]);
+
+  const updateDraft = useCallback((update: (current: RosterPlayer[]) => RosterPlayer[]) => {
+    setDraft(update);
+  }, []);
+
   const displayedRoster = matchId ? {
     forTeam: roster.rosterFor,
     add: roster.addPlayer,
@@ -179,21 +202,18 @@ export default function MatchRoster({
   } : {
     forTeam: (teamId: string) => draft.filter((player) => player.teamId === teamId),
     add: async (player: PoolPlayer, teamId: string) => {
-      const next = [...draft, { id: `draft-${player.id}`, playerId: player.id, teamId, started: false, jerseyNumber: player.jerseyNumber, name: playerName(player) }];
-      setDraft(next);
-      onDraftChange?.(next.map(({ playerId, teamId: id, started, jerseyNumber }) => ({ playerId, teamId: id, started, jerseyNumber })));
+      updateDraft((current) => current.some((item) => item.playerId === player.id && item.teamId === teamId)
+        ? current
+        : [...current, { id: `draft-${player.id}`, playerId: player.id, teamId, started: false, jerseyNumber: player.jerseyNumber, name: playerName(player) }]);
     },
     remove: async (player: RosterPlayer) => {
-      const next = draft.filter((item) => item.id !== player.id);
-      setDraft(next);
-      onDraftChange?.(next.map(({ playerId, teamId: id, started, jerseyNumber }) => ({ playerId, teamId: id, started, jerseyNumber })));
+      updateDraft((current) => current.filter((item) => item.id !== player.id));
     },
     toggle: async (player: RosterPlayer) => {
-      const next = draft.map((item) => item.id === player.id ? { ...item, started: !item.started } : item);
-      setDraft(next);
-      onDraftChange?.(next.map(({ playerId, teamId: id, started, jerseyNumber }) => ({ playerId, teamId: id, started, jerseyNumber })));
+      updateDraft((current) => current.map((item) => item.id === player.id ? { ...item, started: !item.started } : item));
     },
   };
+  const selectedCount = matchId ? roster.totals.count : draft.length;
 
   return (
     <div className="rounded-2xl border border-[var(--bord)] bg-[var(--surf)] p-6 max-[600px]:p-5">
@@ -203,7 +223,7 @@ export default function MatchRoster({
         </span>
         <div>
           <h2 className="font-['Anton'] text-[18px] uppercase leading-none text-[var(--tx)]">Match Roster</h2>
-          <p className="mt-1 font-['Space_Mono'] text-[11px] text-[var(--txm)]">Select players and assign the starting five · {roster.totals.count} selected</p>
+          <p className="mt-1 font-['Space_Mono'] text-[11px] text-[var(--txm)]">Select players and assign the starting five · {selectedCount} selected</p>
         </div>
       </div>
 
