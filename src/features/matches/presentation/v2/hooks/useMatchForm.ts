@@ -9,10 +9,8 @@ import { parseLocalDateTimeToUTC, formatUTCToLocalInput } from '../../../domain/
 import {
   getTeam1Id,
   getTeam1Name,
-  getTeam1Logo,
   getTeam2Id,
   getTeam2Name,
-  getTeam2Logo,
 } from '../../../domain/usecases/team-helpers';
 import { getLeagueId } from '../../../domain/usecases/league-helpers';
 import { getSeasonId } from '../../../domain/usecases/season-helpers';
@@ -21,6 +19,13 @@ export interface TeamOption {
   id: string;
   name: string;
   logo?: string | null;
+}
+export interface DraftRosterPlayer {
+  playerId: string;
+  teamId: string;
+  started: boolean;
+  jerseyNumber?: number | null;
+  position?: string | null;
 }
 interface NamedOption {
   id: string;
@@ -57,7 +62,7 @@ async function getJson<T = any>(url: string): Promise<T[]> {
  * (POST create / PUT edit, plus "save & add another"). The component is pure
  * presentation over this.
  */
-export function useMatchForm({ matchId, seasonId }: { matchId?: string; seasonId?: string }) {
+export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?: string; seasonId?: string; draftRoster?: DraftRosterPlayer[] }) {
   const editing = Boolean(matchId);
 
   const [form, setForm] = useState<MatchFormData>({ ...EMPTY, seasonId: seasonId || '' });
@@ -195,6 +200,19 @@ export function useMatchForm({ matchId, seasonId }: { matchId?: string; seasonId
           const body = await res.json().catch(() => ({}));
           throw new Error(body?.error || 'Failed to save match');
         }
+        const savedMatch = await res.json();
+        if (!matchId && draftRoster.length > 0) {
+          await Promise.all(
+            draftRoster.map(async (player) => {
+              const rosterResponse = await fetch(`/api/matches/${savedMatch.id}/players`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(player),
+              });
+              if (!rosterResponse.ok) throw new Error('Match saved, but its roster could not be saved');
+            }),
+          );
+        }
         if (!matchId && mode === 'again') {
           // Keep league/season/stage/status/date as context; reset the rest.
           setForm((prev) => ({
@@ -217,7 +235,7 @@ export function useMatchForm({ matchId, seasonId }: { matchId?: string; seasonId
         setSaving(false);
       }
     },
-    [form, matchId],
+    [form, matchId, draftRoster],
   );
 
   return {

@@ -5,7 +5,7 @@ import { ChevronLeft, Search, X, Users, CalendarClock, Trophy, Check, Save, Plus
 import type { MatchStatus } from '@prisma/client';
 import { getTeamInitials } from '../../domain/usecases/team-helpers';
 import { MATCH_STAGES, stageLabel, scoresUnlocked } from '../../domain/usecases/match-form';
-import { useMatchForm, type TeamOption } from './hooks/useMatchForm';
+import { useMatchForm, type DraftRosterPlayer, type TeamOption } from './hooks/useMatchForm';
 import MatchRoster from './MatchRoster';
 
 const HOME = '#e4002b';
@@ -74,11 +74,11 @@ function TeamPicker({
 
   return (
     <div className="relative" ref={ref}>
-      <label className={labelCls} style={{ color: accent }}>
+      <label className="mb-1.5 block font-['Archivo'] text-[12px] font-bold uppercase tracking-[0.06em]" style={{ color: accent }}>
         {label} <span className="text-[var(--brand)]">*</span>
       </label>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-[var(--faint)]" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-[var(--txm)]" />
         <input
           value={query}
           onChange={(e) => {
@@ -88,7 +88,8 @@ function TeamPicker({
           }}
           onFocus={() => setOpen(true)}
           placeholder={`Search ${label.toLowerCase()}...`}
-          className="eb-in !pl-9 !pr-8"
+          className="eb-in !rounded-lg !py-2.5 !pl-9 !pr-8 !text-[13.5px]"
+          style={{ borderColor: value.name ? `${accent}66` : undefined }}
           aria-label={label}
         />
         {value.name && (
@@ -164,7 +165,8 @@ function whenText(date: string): string {
 /* -------------------------------------------------------------------------- */
 
 function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: string }) {
-  const f = useMatchForm({ matchId, seasonId });
+  const [draftRoster, setDraftRoster] = useState<DraftRosterPlayer[]>([]);
+  const f = useMatchForm({ matchId, seasonId, draftRoster });
   const { form } = f;
   const leagueName = f.leagues.find((l) => l.id === form.leagueId)?.name ?? '—';
   const status = statusMeta(form.status);
@@ -195,11 +197,11 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
   return (
     <div className="font-['Archivo'] text-[var(--tx)]">
       {/* header */}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="mb-1 font-['Space_Mono'] text-[11px] uppercase tracking-[0.16em] text-[var(--brandsoft)]">Competition</div>
-          <h1 className="font-['Anton'] text-[34px] uppercase leading-none text-[var(--tx)]">{f.editing ? 'Edit Match' : 'Create Match'}</h1>
-          <p className="mt-1.5 font-['Archivo'] text-[14px] text-[var(--txd)]">Schedule a fixture and, optionally, record its result.</p>
+          <h1 className="font-['Anton'] text-[30px] uppercase leading-none text-[var(--tx)]">{f.editing ? 'Edit Match' : 'Create Match'}</h1>
+          <p className="mt-1.5 font-['Archivo'] text-[13px] text-[var(--txm)]">Schedule a new fixture and, optionally, record its result.</p>
         </div>
         <a
           href="/admin/matches"
@@ -220,12 +222,12 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
         </div>
       )}
 
-      <div className="grid grid-cols-[1.6fr_1fr] gap-5 max-[960px]:grid-cols-1">
+      <div className="grid grid-cols-[1.55fr_1fr] gap-5 max-[900px]:grid-cols-1">
         {/* left: form */}
         <div className="space-y-4">
           <Card className="p-6 max-[600px]:p-4">
             <SectionHead icon={<Users className="h-[18px] w-[18px]" />} title="Matchup" sub={`Pick both teams · ${f.teams.length} available`} />
-            <div className="flex items-end gap-3 max-[520px]:flex-col max-[520px]:items-stretch">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3 max-[520px]:grid-cols-1">
               <div className="flex-1">
                 <TeamPicker
                   label="Home Team"
@@ -237,7 +239,7 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
                   onClear={() => f.clearTeam(1)}
                 />
               </div>
-              <span className="pb-2.5 font-['Anton'] text-[15px] text-[var(--faint)] max-[520px]:self-center max-[520px]:pb-0">VS</span>
+              <span className="flex h-10 items-center font-['Anton'] text-[12px] uppercase text-[var(--faint)] max-[520px]:h-auto max-[520px]:justify-center max-[520px]:py-1">VS</span>
               <div className="flex-1">
                 <TeamPicker
                   label="Away Team"
@@ -330,8 +332,17 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
             </p>
           </Card>
 
+          <MatchRoster
+            matchId={matchId}
+            team1Id={form.team1Id}
+            team1Name={form.team1Name}
+            team2Id={form.team2Id}
+            team2Name={form.team2Name}
+            onDraftChange={setDraftRoster}
+          />
+
           {/* actions */}
-          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               onClick={() => f.submit('save')}
@@ -357,8 +368,9 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
         </div>
 
         {/* right: preview + checklist */}
-        <div className="space-y-4">
-          <Card className="overflow-hidden">
+        <div className="flex flex-col gap-5">
+          <div className="sticky top-0 flex flex-col gap-5">
+            <Card className="overflow-hidden">
             <div className="border-b border-[var(--bord2)] px-5 py-3 font-['Space_Mono'] text-[10px] uppercase tracking-[0.14em] text-[var(--txm)]">Live Preview</div>
             <div className="relative overflow-hidden p-5">
               <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(90% 120% at 50% -10%, rgba(228,0,43,0.12), transparent 60%)' }} />
@@ -373,7 +385,18 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
                     <PreviewCrest name={form.team1Name} color={HOME} />
                     <span className="font-['Anton'] text-[12px] uppercase text-[var(--tx)]">{form.team1Name || 'Home Team'}</span>
                   </div>
-                  <span className="font-['Anton'] text-[16px] text-[var(--faint)]">VS</span>
+                  <div className="flex min-w-[72px] flex-col items-center">
+                    {unlocked && (form.team1Score !== '' || form.team2Score !== '') ? (
+                      <div className="font-['Anton'] text-[28px] leading-none text-[var(--tx)]">
+                        {form.team1Score || '0'}<span className="px-1.5 text-[var(--faint)]">:</span>{form.team2Score || '0'}
+                      </div>
+                    ) : (
+                      <span className="font-['Anton'] text-[16px] text-[var(--faint)]">VS</span>
+                    )}
+                    <span className="mt-1 font-['Space_Mono'] text-[8px] uppercase tracking-[0.14em] text-[var(--faint)]">
+                      {unlocked ? 'Score' : 'Fixture'}
+                    </span>
+                  </div>
                   <div className="flex flex-1 flex-col items-center gap-2 text-center">
                     <PreviewCrest name={form.team2Name} color={AWAY} />
                     <span className="font-['Anton'] text-[12px] uppercase text-[var(--tx)]">{form.team2Name || 'Away Team'}</span>
@@ -393,9 +416,9 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
                 </div>
               ))}
             </div>
-          </Card>
+            </Card>
 
-          <Card className="p-5">
+            <Card className="p-5">
             <div className="mb-3 font-['Space_Mono'] text-[10px] uppercase tracking-[0.14em] text-[var(--txm)]">Before You Save</div>
             <div className="flex flex-col gap-2.5">
               {checks.map((c) => (
@@ -410,20 +433,10 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
                 </div>
               ))}
             </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
-
-      {/* Roster management only makes sense once the match exists (edit mode). */}
-      {f.editing && (
-        <MatchRoster
-          matchId={matchId}
-          team1Id={form.team1Id}
-          team1Name={form.team1Name}
-          team2Id={form.team2Id}
-          team2Name={form.team2Name}
-        />
-      )}
 
       <div className="py-6 text-center font-['Space_Mono'] text-[11px] tracking-[0.04em] text-[var(--faint)]">Elevate Ballers CMS · v2 · Nairobi, Kenya</div>
     </div>
