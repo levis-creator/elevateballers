@@ -23,12 +23,18 @@ export const PATCH: APIRoute = async ({ params, request }) => {
     }
 
     const leagueSeasonId =
-      typeof body?.leagueSeasonId === 'string' ? body.leagueSeasonId : undefined;
+      typeof body?.leagueSeasonId === 'string' ? body.leagueSeasonId : '';
+    if (!leagueSeasonId) {
+      return new Response(JSON.stringify({ error: 'leagueSeasonId is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     const updated = await setSeasonTeamConference(
-      params.seasonId!,
+      leagueSeasonId,
       params.teamId!,
       conferenceId,
-      leagueSeasonId,
+      params.seasonId!,
     );
     if (!updated) {
       return new Response(
@@ -54,7 +60,15 @@ export const PATCH: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'seasons:update');
-    const removed = await removeSeasonTeam(params.seasonId!, params.teamId!);
+    const url = new URL(request.url);
+    const leagueSeasonId = url.searchParams.get('leagueSeasonId');
+    if (!leagueSeasonId) {
+      return new Response(JSON.stringify({ error: 'leagueSeasonId query parameter is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const removed = await removeSeasonTeam(leagueSeasonId, params.teamId!, params.seasonId!);
     if (!removed) {
       return new Response(
         JSON.stringify({ error: 'Team is not a participant of this season' }),

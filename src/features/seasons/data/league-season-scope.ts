@@ -20,9 +20,9 @@ export class LeagueSeasonScopeError extends Error {
 }
 
 /**
- * Resolve the first-class competition edition and reject inconsistent legacy
- * identifiers. During the expand/contract transition callers may still send
- * seasonId + leagueId, but all writes receive the canonical three identifiers.
+ * Resolve the first-class competition edition and reject inconsistent
+ * identifiers. New API boundaries must provide leagueSeasonId; the pair/season
+ * fallbacks remain only for internal compatibility callers during Phase 7.
  */
 export async function resolveLeagueSeasonScope(
 	input: LeagueSeasonScopeInput,
@@ -52,11 +52,6 @@ export async function resolveLeagueSeasonScope(
 			"A valid leagueSeasonId or linked seasonId + leagueId is required.",
 		);
 	}
-	if (!leagueSeason.id) {
-		throw new LeagueSeasonScopeError(
-			"The selected league season has not completed the Phase 3 backfill.",
-		);
-	}
 	if (input.seasonId && input.seasonId !== leagueSeason.seasonId) {
 		throw new LeagueSeasonScopeError("seasonId does not belong to the selected league season.");
 	}
@@ -68,6 +63,18 @@ export async function resolveLeagueSeasonScope(
 		seasonId: leagueSeason.seasonId,
 		leagueId: leagueSeason.leagueId,
 	};
+}
+
+/** Canonical Phase 7 API resolver: no inference from umbrella identifiers. */
+export async function resolveLeagueSeasonById(
+	leagueSeasonId: string | null | undefined,
+	expected: Pick<LeagueSeasonScopeInput, "seasonId" | "leagueId"> = {},
+	client: Pick<typeof prisma, "leagueSeason"> = prisma,
+): Promise<ResolvedLeagueSeasonScope> {
+	if (!leagueSeasonId) {
+		throw new LeagueSeasonScopeError("leagueSeasonId is required.");
+	}
+	return resolveLeagueSeasonScope({ leagueSeasonId, ...expected }, client);
 }
 
 async function resolveOnlySeason(

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	LeagueSeasonScopeError,
+	resolveLeagueSeasonById,
 	resolveLeagueSeasonScope,
 } from "../league-season-scope";
 
@@ -51,5 +52,15 @@ describe("resolveLeagueSeasonScope", () => {
 		await expect(resolveLeagueSeasonScope({ seasonId: "s1" }, client)).rejects.toThrow(
 			"multiple leagues",
 		);
+	});
+
+	it("requires leagueSeasonId at canonical API boundaries", async () => {
+		const client = {
+			leagueSeason: { findUnique: vi.fn(), findMany: vi.fn() },
+		} as any;
+		await expect(resolveLeagueSeasonById(undefined, {}, client)).rejects.toThrow(
+			"leagueSeasonId is required",
+		);
+		expect(client.leagueSeason.findUnique).not.toHaveBeenCalled();
 	});
 });

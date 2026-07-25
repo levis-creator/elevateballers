@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../../../lib/prisma';
-import { resolveLeagueSeasonScope } from '../../../../seasons/data/league-season-scope';
+import { resolveLeagueSeasonById } from '../../../../seasons/data/league-season-scope';
 
 export interface ConferenceSummary {
   id: string;
@@ -45,12 +45,12 @@ async function syncConferenceTeams(
  * Throws Prisma P2002 if the name collides within the season.
  */
 export async function createConference(
-  seasonId: string,
+  leagueSeasonId: string,
   name: string,
   teamIds: string[] = [],
-  leagueSeasonId?: string,
+  expectedSeasonId?: string,
 ): Promise<ConferenceSummary> {
-  const scope = await resolveLeagueSeasonScope({ seasonId, leagueSeasonId });
+  const scope = await resolveLeagueSeasonById(leagueSeasonId, { seasonId: expectedSeasonId });
   return await prisma.$transaction(async (tx) => {
     const sortOrder = await tx.conference.count({ where: { leagueSeasonId: scope.leagueSeasonId } });
     const conference = await tx.conference.create({
@@ -83,7 +83,6 @@ export async function updateConference(
       await tx.conference.update({ where: { id: conferenceId }, data: { name: changes.name } });
     }
     if (changes.teamIds !== undefined) {
-      if (!existing.leagueSeasonId) return;
       await syncConferenceTeams(tx, existing.leagueSeasonId, conferenceId, changes.teamIds);
     }
   });

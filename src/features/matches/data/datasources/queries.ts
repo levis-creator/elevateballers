@@ -4,7 +4,7 @@
  */
 
 import { prisma } from '../../../../lib/prisma';
-import type { Match, MatchStatus, MatchStage } from '@prisma/client';
+import type { MatchStatus, MatchStage } from '@prisma/client';
 import type { MatchFilter, MatchSortOption } from '../../types';
 import type { MatchWithTeamsAndLeagueAndSeason } from '../../../cms/types';
 
@@ -174,7 +174,9 @@ export async function getFilteredMatches(
   }
 
   // Season filter
-  if (filter.seasonId) {
+  if (filter.leagueSeasonId) {
+    where.leagueSeasonId = filter.leagueSeasonId;
+  } else if (filter.seasonId) {
     where.seasonId = filter.seasonId;
   }
 

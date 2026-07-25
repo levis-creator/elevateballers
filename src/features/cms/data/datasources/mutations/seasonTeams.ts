@@ -1,7 +1,7 @@
 import { prisma } from '../../../../../lib/prisma';
 import {
+  resolveLeagueSeasonById,
   resolveLeagueSeasonScope,
-  type LeagueSeasonScopeInput,
 } from '../../../../seasons/data/league-season-scope';
 
 /**
@@ -10,14 +10,13 @@ import {
  * skipped. Returns how many new rows were created.
  */
 export async function addSeasonTeams(
-  seasonId: string,
-  leagueId: string,
+  leagueSeasonId: string,
   teamIds: string[],
-  leagueSeasonId?: string,
+  expectedSeasonId?: string,
 ): Promise<number> {
   const unique = [...new Set(teamIds.filter(Boolean))];
   if (unique.length === 0) return 0;
-  const scope = await resolveLeagueSeasonScope({ leagueSeasonId, seasonId, leagueId });
+  const scope = await resolveLeagueSeasonById(leagueSeasonId, { seasonId: expectedSeasonId });
 
   const result = await prisma.seasonTeam.createMany({
     data: unique.map((teamId) => ({ ...scope, teamId })),
@@ -30,8 +29,15 @@ export async function addSeasonTeams(
  * Remove a single team from a season's roster. Does not touch matches.
  * Returns true if a participant row was removed.
  */
-export async function removeSeasonTeam(seasonId: string, teamId: string): Promise<boolean> {
-  const result = await prisma.seasonTeam.deleteMany({ where: { seasonId, teamId } });
+export async function removeSeasonTeam(
+  leagueSeasonId: string,
+  teamId: string,
+  expectedSeasonId?: string,
+): Promise<boolean> {
+  const scope = await resolveLeagueSeasonById(leagueSeasonId, { seasonId: expectedSeasonId });
+  const result = await prisma.seasonTeam.deleteMany({
+    where: { leagueSeasonId: scope.leagueSeasonId, teamId },
+  });
   return result.count > 0;
 }
 
@@ -42,24 +48,22 @@ export async function removeSeasonTeam(seasonId: string, teamId: string): Promis
  * roster row was updated (false when the team isn't rostered in the season).
  */
 export async function setSeasonTeamConference(
-  seasonId: string,
+  leagueSeasonId: string,
   teamId: string,
   conferenceId: string | null,
-  leagueSeasonId?: string,
+  expectedSeasonId?: string,
 ): Promise<boolean> {
-  let scope: LeagueSeasonScopeInput = { seasonId, leagueSeasonId };
+  const scope = await resolveLeagueSeasonById(leagueSeasonId, { seasonId: expectedSeasonId });
   if (conferenceId) {
     const conference = await prisma.conference.findFirst({
-      where: { id: conferenceId, seasonId },
-      select: { id: true, leagueSeasonId: true },
+      where: { id: conferenceId, leagueSeasonId: scope.leagueSeasonId },
+      select: { id: true },
     });
     if (!conference) return false;
-    scope = { seasonId, leagueSeasonId: conference.leagueSeasonId ?? leagueSeasonId };
   }
-  const resolved = await resolveLeagueSeasonScope(scope);
 
   const result = await prisma.seasonTeam.updateMany({
-    where: { leagueSeasonId: resolved.leagueSeasonId, teamId },
+    where: { leagueSeasonId: scope.leagueSeasonId, teamId },
     data: { conferenceId },
   });
   return result.count > 0;

@@ -35,6 +35,7 @@ export interface MatchFormData {
   team2Name: string;
   leagueId: string;
   seasonId: string;
+  leagueSeasonId: string;
   date: string; // datetime-local value
   status: MatchStatus;
   stage: MatchStage | '';
@@ -84,6 +85,16 @@ export function validateMatchForm(form: MatchFormData, now: Date = new Date()): 
   if (form.team1Id && form.team1Id === form.team2Id) errors.push('Home and away team must differ');
   if (!form.leagueId) errors.push('League is required');
   if (!form.seasonId) errors.push('Season is required');
+  if (form.stage !== 'EXHIBITION' && !form.leagueSeasonId) {
+    errors.push('League competition is required');
+  }
+  if (
+    form.leagueSeasonId &&
+    ((!form.team1Id && !["TBD", "BYE"].includes(form.team1Name)) ||
+      (!form.team2Id && !["TBD", "BYE"].includes(form.team2Name)))
+  ) {
+    errors.push('Competition fixtures must use participating teams');
+  }
   if (!form.stage) errors.push('Match stage is required');
   if (!form.date) {
     errors.push('Date & time is required');

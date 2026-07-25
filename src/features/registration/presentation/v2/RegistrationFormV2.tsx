@@ -35,6 +35,12 @@ interface Season {
 	name: string;
 	registrationOpensAt: string | null;
 	registrationClosesAt: string | null;
+	leagueSeasons?: {
+		id: string;
+		leagueId: string;
+		registrationOpensAt: string | null;
+		registrationClosesAt: string | null;
+	}[];
 }
 interface Team {
 	id: string;
@@ -172,7 +178,16 @@ export default function RegistrationFormV2() {
 
 	const selectedLeague = leagues.find((l) => l.id === teamFormData.leagueId) ?? null;
 	const selectedSeason = seasons.find((s) => s.id === teamFormData.seasonId) ?? null;
-	const registrationStatus = selectedLeague ? isRegistrationOpen(selectedLeague, selectedSeason) : { open: true };
+	const selectedCompetition =
+		selectedSeason?.leagueSeasons?.find((row) => row.leagueId === teamFormData.leagueId) ?? null;
+	const registrationSeason = selectedSeason && selectedCompetition
+		? {
+				...selectedSeason,
+				registrationOpensAt: selectedCompetition.registrationOpensAt,
+				registrationClosesAt: selectedCompetition.registrationClosesAt,
+			}
+		: selectedSeason;
+	const registrationStatus = selectedLeague ? isRegistrationOpen(selectedLeague, registrationSeason) : { open: true };
 	const registrationBlocked = !registrationStatus.open;
 
 	const handleTeamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -208,6 +223,7 @@ export default function RegistrationFormV2() {
 					contactPhone: teamFormData.contactPhone.trim(),
 					leagueId: teamFormData.leagueId || undefined,
 					seasonId: teamFormData.seasonId || undefined,
+					leagueSeasonId: selectedCompetition?.id,
 					additionalInfo: teamFormData.additionalInfo.trim() || undefined,
 					"cf-turnstile-token": teamTurnstileToken,
 				}),

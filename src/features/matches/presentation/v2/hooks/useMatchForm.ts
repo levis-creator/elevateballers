@@ -31,6 +31,9 @@ interface NamedOption {
   id: string;
   name: string;
 }
+interface SeasonOption extends NamedOption {
+  leagueSeasonId: string;
+}
 
 const EMPTY: MatchFormData = {
   team1Id: '',
@@ -39,6 +42,7 @@ const EMPTY: MatchFormData = {
   team2Name: '',
   leagueId: '',
   seasonId: '',
+  leagueSeasonId: '',
   date: '',
   status: 'UPCOMING' as MatchStatus,
   stage: 'REGULAR_SEASON' as MatchStage,
@@ -68,7 +72,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
   const [form, setForm] = useState<MatchFormData>({ ...EMPTY, seasonId: seasonId || '' });
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [leagues, setLeagues] = useState<NamedOption[]>([]);
-  const [seasons, setSeasons] = useState<NamedOption[]>([]);
+  const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -76,16 +80,45 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
   const addAnother = useRef(false);
 
   const setField = useCallback(<K extends keyof MatchFormData>(key: K, value: MatchFormData[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }, []);
+    setForm((prev) => {
+      if (key === 'leagueId') {
+        return { ...prev, leagueId: String(value), seasonId: '', leagueSeasonId: '' };
+      }
+      if (key === 'seasonId') {
+        const selected = seasons.find((season) => season.id === value);
+        return {
+          ...prev,
+          seasonId: String(value),
+          leagueSeasonId: selected?.leagueSeasonId ?? '',
+        };
+      }
+      return { ...prev, [key]: value };
+    });
+  }, [seasons]);
 
   // Option lists ------------------------------------------------------------
   useEffect(() => {
-    getJson<TeamOption>('/api/teams').then((list) =>
-      setTeams(list.map((t) => ({ id: t.id, name: t.name, logo: (t as any).logo ?? null }))),
-    );
     getJson<NamedOption>('/api/leagues').then(setLeagues);
   }, []);
+
+  // Fixture eligibility comes from the selected competition roster.
+  useEffect(() => {
+    if (!form.leagueSeasonId || !form.seasonId) {
+      setTeams([]);
+      return;
+    }
+    let cancelled = false;
+    getJson<TeamOption>(
+      `/api/seasons/${form.seasonId}/teams?leagueSeasonId=${encodeURIComponent(form.leagueSeasonId)}`,
+    ).then((list) => {
+      if (!cancelled) {
+        setTeams(list.map((team) => ({ id: team.id, name: team.name, logo: team.logo ?? null })));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.leagueSeasonId, form.seasonId]);
 
   // Seasons cascade off the chosen league. Clear the season when the league
   // changes to a different one (but keep a pre-seeded season on first load).
@@ -96,8 +129,19 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
       return;
     }
     let cancelled = false;
-    getJson<NamedOption>(`/api/seasons?leagueId=${leagueId}`).then((list) => {
-      if (!cancelled) setSeasons(list);
+    getJson<NamedOption & { leagueSeasons?: { id: string; leagueId: string }[] }>(
+      `/api/seasons?leagueId=${leagueId}`,
+    ).then((list) => {
+      if (!cancelled) {
+        setSeasons(
+          list.flatMap((season) => {
+            const competition = season.leagueSeasons?.find((row) => row.leagueId === leagueId);
+            return competition?.id
+              ? [{ id: season.id, name: season.name, leagueSeasonId: competition.id }]
+              : [];
+          }),
+        );
+      }
     });
     return () => {
       cancelled = true;
@@ -121,6 +165,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
           team2Name: getTeam2Name(m) || '',
           leagueId: getLeagueId(m) || '',
           seasonId: getSeasonId(m) || '',
+          leagueSeasonId: m.leagueSeasonId || '',
           date: m.date ? formatUTCToLocalInput(m.date) : '',
           status: m.status,
           stage: (m.stage as MatchStage) || 'REGULAR_SEASON',
@@ -173,6 +218,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
     };
     if (form.leagueId) payload.leagueId = form.leagueId;
     if (form.seasonId) payload.seasonId = form.seasonId;
+    if (form.leagueSeasonId) payload.leagueSeasonId = form.leagueSeasonId;
     if (form.team1Id) payload.team1Id = form.team1Id;
     else payload.team1Name = form.team1Name;
     if (form.team2Id) payload.team2Id = form.team2Id;

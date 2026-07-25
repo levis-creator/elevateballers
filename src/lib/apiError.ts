@@ -6,6 +6,7 @@
  *   - Auth/permission errors thrown by requirePermission()
  *   - Prisma P2002 (unique constraint) → 409 Conflict
  *   - Prisma P2025 (record not found) → 404 Not Found
+ *   - LeagueSeasonScopeError → 400 Bad Request
  *   - Generic errors → 500 (detail only in development)
  */
 
@@ -36,6 +37,12 @@ export function handleApiError(error: unknown, context: string, request?: Reques
   if (msg.startsWith('Forbidden')) {
     console.warn(`[api:${context}] Forbidden`, buildLogMeta(msg, clientIp));
     return json({ error: 'Insufficient permissions' }, 403);
+  }
+  if (
+    error instanceof Error &&
+    (error.name === 'LeagueSeasonScopeError' || error.name === 'FixtureScopeError')
+  ) {
+    return json({ error: msg }, 400);
   }
 
   // Prisma known-error codes
