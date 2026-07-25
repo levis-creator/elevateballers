@@ -24,6 +24,7 @@ export type MatchFilter = {
   league?: string;
   leagueId?: string;
   seasonId?: string;
+  leagueSeasonId?: string;
   teamId?: string;
   dateFrom?: Date;
   dateTo?: Date;

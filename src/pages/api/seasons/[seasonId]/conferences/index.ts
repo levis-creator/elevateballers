@@ -21,12 +21,13 @@ export const POST: APIRoute = async ({ params, request }) => {
     const teamIds = Array.isArray(body?.teamIds) ? body.teamIds.filter((id: unknown) => typeof id === 'string') : [];
 
     const leagueSeasonId =
-      typeof body?.leagueSeasonId === 'string' ? body.leagueSeasonId : undefined;
+      typeof body?.leagueSeasonId === 'string' ? body.leagueSeasonId : '';
+    if (!leagueSeasonId) return json({ error: 'leagueSeasonId is required' }, 400);
     const conference = await createConference(
-      params.seasonId!,
+      leagueSeasonId,
       name,
       teamIds,
-      leagueSeasonId,
+      params.seasonId!,
     );
     await logAudit(request, 'SEASON_CONFERENCE_CREATED', {
       seasonId: params.seasonId,

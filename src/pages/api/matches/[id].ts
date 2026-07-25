@@ -5,6 +5,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { json, handleApiError } from '../../../lib/apiError';
 import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rules';
+import { resolveLeagueSeasonById } from '../../../features/seasons/data/league-season-scope';
 
 export const prerender = false;
 
@@ -72,15 +73,31 @@ export const PUT: APIRoute = async ({ params, request }) => {
     // Enforce playoff rules against the match's effective state — a partial edit
     // (e.g. just a score) still has to satisfy them, so fall back to the stored
     // values for any field the request doesn't touch.
+    const effectiveLeagueSeasonId =
+      data.leagueSeasonId !== undefined ? data.leagueSeasonId : existingMatch?.leagueSeasonId;
+    const effectiveScope = effectiveLeagueSeasonId
+      ? await resolveLeagueSeasonById(effectiveLeagueSeasonId, {
+          seasonId: data.seasonId,
+          leagueId: data.leagueId,
+        })
+      : null;
     const effective = {
       stage: data.stage !== undefined ? data.stage : existingMatch?.stage,
-      seasonId: data.seasonId !== undefined ? data.seasonId : existingMatch?.seasonId,
+      seasonId: effectiveScope?.seasonId,
       team1Id: data.team1Id !== undefined ? data.team1Id : existingMatch?.team1Id,
       team2Id: data.team2Id !== undefined ? data.team2Id : existingMatch?.team2Id,
     };
 
     // Every match must be categorised with a stage.
     if (!effective.stage) return json({ error: 'Match stage is required' }, 400);
+    if (!effectiveScope && effective.stage !== 'EXHIBITION') {
+      return json({ error: 'leagueSeasonId is required for competition matches' }, 400);
+    }
+    if (effectiveScope) {
+      data.leagueSeasonId = effectiveScope.leagueSeasonId;
+      data.leagueId = effectiveScope.leagueId;
+      data.seasonId = effectiveScope.seasonId;
+    }
 
     const playoffError = validatePlayoffMatch(effective);
     if (playoffError) return json({ error: playoffError }, 400);

@@ -15,6 +15,22 @@ export async function getSeasonTeams(seasonId: string, leagueId?: string): Promi
   return rows.map((r: { team: Team }) => r.team);
 }
 
+/** Teams eligible for fixtures in one competition edition. */
+export async function getLeagueSeasonTeams(
+  leagueSeasonId: string,
+  expectedSeasonId?: string,
+): Promise<Team[]> {
+  const rows = await prisma.seasonTeam.findMany({
+    where: {
+      leagueSeasonId,
+      ...(expectedSeasonId ? { seasonId: expectedSeasonId } : {}),
+    },
+    include: { team: true },
+    orderBy: { team: { name: 'asc' } },
+  });
+  return rows.map((row: { team: Team }) => row.team);
+}
+
 /**
  * Teams in a league, derived as the union of participants across all of the
  * league's season rosters. Deduplicated by team id and ordered by name.

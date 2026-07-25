@@ -5,14 +5,14 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec prisma migrate resolve --applied 20260725130000_contract_league_seasons
-8 verbose argv "exec" "--" "prisma" "migrate" "resolve" "--applied" "20260725130000_contract_league_seasons"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T11_10_35_459Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T11_10_35_459Z-debug-0.log
+7 verbose title npm run backfill:season-teams
+8 verbose argv "run" "backfill:season-teams"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T12_22_16_389Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T12_22_16_389Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
-12 silly logfile done cleaning log files
-13 notice run elevateballers@0.0.1 npx
-14 notice run prisma migrate resolve --applied 20260725130000_contract_league_seasons
+12 notice run elevateballers@0.0.1 backfill:season-teams
+13 notice run node scripts/backfill-season-teams.js
+14 silly logfile done cleaning log files
 15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 16 verbose os Windows_NT 10.0.26200
 17 verbose node v24.18.0

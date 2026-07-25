@@ -5,7 +5,7 @@ import { validateMatchForm, matchChecklist, scoresUnlocked, stageLabel, type Mat
 function form(o: Partial<MatchFormData> = {}): MatchFormData {
   return {
     team1Id: '', team1Name: '', team2Id: '', team2Name: '',
-    leagueId: '', seasonId: '', date: '',
+    leagueId: '', seasonId: '', leagueSeasonId: '', date: '',
     status: 'UPCOMING' as MatchStatus, stage: '' as MatchStage | '',
     team1Score: '', team2Score: '', duration: '',
     ...o,
@@ -15,7 +15,8 @@ function form(o: Partial<MatchFormData> = {}): MatchFormData {
 // A complete, valid upcoming fixture in the future.
 const valid = form({
   team1Id: 't1', team1Name: 'Home', team2Id: 't2', team2Name: 'Away',
-  leagueId: 'l1', seasonId: 's1', stage: 'REGULAR_SEASON', date: '2999-01-01T18:00',
+  leagueId: 'l1', seasonId: 's1', leagueSeasonId: 'ls1',
+  stage: 'REGULAR_SEASON', date: '2999-01-01T18:00',
 });
 
 describe('validateMatchForm', () => {
@@ -47,9 +48,25 @@ describe('validateMatchForm', () => {
     expect(errs).toContain('Home score must be between 0 and 999');
   });
 
-  it('accepts a typed custom team name (no id)', () => {
-    const errs = validateMatchForm({ ...valid, team1Id: '', team1Name: 'Walk-on Squad' });
+  it('accepts a typed custom team name only for an unscoped exhibition', () => {
+    const errs = validateMatchForm({
+      ...valid,
+      stage: 'EXHIBITION',
+      leagueSeasonId: '',
+      team1Id: '',
+      team1Name: 'Walk-on Squad',
+    });
     expect(errs).toEqual([]);
+    expect(
+      validateMatchForm({ ...valid, team1Id: '', team1Name: 'Walk-on Squad' }),
+    ).toContain('Competition fixtures must use participating teams');
+  });
+
+  it('requires canonical scope for competition games but not exhibitions', () => {
+    expect(validateMatchForm({ ...valid, leagueSeasonId: '' })).toContain('League competition is required');
+    expect(
+      validateMatchForm({ ...valid, stage: 'EXHIBITION', leagueSeasonId: '' }),
+    ).not.toContain('League competition is required');
   });
 });
 

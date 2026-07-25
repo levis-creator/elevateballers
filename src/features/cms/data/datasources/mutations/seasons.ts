@@ -40,15 +40,13 @@ async function reconcileLeagueSeasons(
       },
       select: { id: true, leagueId: true },
     });
-    if (!leagueSeason.id) throw new Error('League season is missing its identifier.');
-
     const teamIds = [...new Set(input.teamIds ?? [])];
     if (teamIds.length) {
       await tx.seasonTeam.createMany({
         data: teamIds.map((teamId) => ({
           seasonId,
           leagueId: input.leagueId,
-          leagueSeasonId: leagueSeason.id!,
+          leagueSeasonId: leagueSeason.id,
           teamId,
         })),
         skipDuplicates: true,

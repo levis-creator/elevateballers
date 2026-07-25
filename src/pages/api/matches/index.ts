@@ -6,6 +6,7 @@ import type { MatchFilter, MatchSortOption, MatchDTO, MatchStage } from '../../.
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rules';
+import { resolveLeagueSeasonById } from '../../../features/seasons/data/league-season-scope';
 
 export const prerender = false;
 
@@ -98,6 +99,10 @@ export const GET: APIRoute = async ({ request }) => {
     if (seasonIdParam) {
       filter.seasonId = seasonIdParam;
     }
+    const leagueSeasonIdParam = url.searchParams.get('leagueSeasonId');
+    if (leagueSeasonIdParam) {
+      filter.leagueSeasonId = leagueSeasonIdParam;
+    }
     
     // Date range filters
     const dateFromParam = url.searchParams.get('dateFrom');
@@ -162,8 +167,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (
       (!data.team1Id && !data.team1Name) ||
       (!data.team2Id && !data.team2Name) ||
-      !data.date ||
-      (!data.leagueSeasonId && ((!data.leagueId && !data.league) || !data.seasonId))
+      !data.date
     ) {
       return new Response(
         JSON.stringify({ error: 'Teams, date, league, and season are required' }),
@@ -187,11 +191,24 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    const scope = data.leagueSeasonId
+      ? await resolveLeagueSeasonById(data.leagueSeasonId, {
+          seasonId: data.seasonId,
+          leagueId: data.leagueId,
+        })
+      : null;
+    if (!scope && stageValue !== 'EXHIBITION') {
+      return new Response(
+        JSON.stringify({ error: 'leagueSeasonId is required for competition matches' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
     // Playoff matches must reference a season and two real teams — the bracket
     // and standings can't advance free-typed names.
     const playoffError = validatePlayoffMatch({
       stage: stageValue,
-      seasonId: data.seasonId,
+      seasonId: scope?.seasonId,
       team1Id: data.team1Id,
       team2Id: data.team2Id,
     });
@@ -209,10 +226,10 @@ export const POST: APIRoute = async ({ request }) => {
       team2Id: data.team2Id,
       team2Name: data.team2Name,
       team2Logo: data.team2Logo || '',
-      leagueId: data.leagueId,
-      leagueSeasonId: data.leagueSeasonId,
+      leagueId: scope?.leagueId,
+      leagueSeasonId: scope?.leagueSeasonId,
       league: data.league,
-      seasonId: data.seasonId,
+      seasonId: scope?.seasonId,
       date: new Date(data.date),
       team1Score: data.team1Score,
       team2Score: data.team2Score,

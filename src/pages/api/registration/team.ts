@@ -41,6 +41,12 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const ip = getClientIp(request);
     const data = await request.json();
+    if (data.seasonId && !data.leagueSeasonId) {
+      return new Response(
+        JSON.stringify({ error: 'leagueSeasonId is required when registering for a season' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
 
     // Cloudflare Turnstile verification
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();

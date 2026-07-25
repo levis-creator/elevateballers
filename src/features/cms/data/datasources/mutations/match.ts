@@ -3,6 +3,10 @@ import { getEnvBoolean } from '../../../../../lib/env';
 import { ensureMatchSlug } from '../../../../matches/lib/slug';
 import type { CreateMatchInput, UpdateMatchInput, Match } from '../../../types';
 import { resolveLeagueSeasonScope } from '../../../../seasons/data/league-season-scope';
+import {
+  FixtureScopeError,
+  fixtureSchedulingError,
+} from '../../../../matches/domain/usecases/fixture-scheduling';
 
 async function assertTeamsParticipate(
   leagueSeasonId: string,
@@ -14,8 +18,36 @@ async function assertTeamsParticipate(
     where: { leagueSeasonId, teamId: { in: ids } },
   });
   if (count !== ids.length) {
-    throw new Error('Every selected team must participate in the selected league season');
+    throw new FixtureScopeError('Every selected team must participate in the selected league season');
   }
+}
+
+function assertCompetitionTeamSlots(
+  team1Id: string | null | undefined,
+  team2Id: string | null | undefined,
+  team1Name?: string | null,
+  team2Name?: string | null,
+): void {
+  const placeholder = (id: string | null | undefined, name?: string | null) =>
+    Boolean(id) || name === 'TBD' || name === 'BYE';
+  if (!placeholder(team1Id, team1Name) || !placeholder(team2Id, team2Name)) {
+    throw new FixtureScopeError(
+      'Competition fixtures must use participating teams; only TBD or BYE bracket placeholders are allowed.',
+    );
+  }
+}
+
+async function assertFixtureSchedule(
+  leagueSeasonId: string,
+  fixtureDate: Date | string,
+): Promise<void> {
+  const competition = await prisma.leagueSeason.findUnique({
+    where: { id: leagueSeasonId },
+    select: { startDate: true, endDate: true, status: true },
+  });
+  if (!competition) throw new FixtureScopeError('The selected league competition does not exist');
+  const error = fixtureSchedulingError(competition, fixtureDate);
+  if (error) throw new FixtureScopeError(error);
 }
 
 export async function createMatch(data: CreateMatchInput): Promise<Match> {
@@ -44,6 +76,8 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
 
   if (data.leagueSeasonId || (data.seasonId && data.leagueId)) {
     const scope = await resolveLeagueSeasonScope(data);
+    await assertFixtureSchedule(scope.leagueSeasonId, data.date);
+    assertCompetitionTeamSlots(data.team1Id, data.team2Id, data.team1Name, data.team2Name);
     await assertTeamsParticipate(scope.leagueSeasonId, [data.team1Id, data.team2Id]);
     Object.assign(matchData, scope);
     matchData.leagueName = null;
@@ -170,26 +204,45 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
         leagueSeasonId: true,
         seasonId: true,
         leagueId: true,
+        date: true,
         team1Id: true,
         team2Id: true,
+        team1Name: true,
+        team2Name: true,
       },
     });
     if (!currentMatch) return null;
 
-    const scopeWasProvided =
+    const competitionValidationNeeded =
       data.leagueSeasonId !== undefined ||
       data.seasonId !== undefined ||
-      data.leagueId !== undefined;
-    if (scopeWasProvided) {
+      data.leagueId !== undefined ||
+      data.team1Id !== undefined ||
+      data.team2Id !== undefined ||
+      data.date !== undefined;
+    if (competitionValidationNeeded && currentMatch.leagueSeasonId) {
       const scope = await resolveLeagueSeasonScope({
         leagueSeasonId: data.leagueSeasonId ?? currentMatch.leagueSeasonId,
         seasonId: data.seasonId ?? currentMatch.seasonId,
         leagueId: data.leagueId ?? currentMatch.leagueId,
       });
-      await assertTeamsParticipate(scope.leagueSeasonId, [
-        data.team1Id ?? currentMatch.team1Id ?? undefined,
-        data.team2Id ?? currentMatch.team2Id ?? undefined,
-      ]);
+      const team1Id = data.team1Id ?? currentMatch.team1Id;
+      const team2Id = data.team2Id ?? currentMatch.team2Id;
+      assertCompetitionTeamSlots(
+        team1Id,
+        team2Id,
+        data.team1Name ?? currentMatch.team1Name,
+        data.team2Name ?? currentMatch.team2Name,
+      );
+      await assertTeamsParticipate(scope.leagueSeasonId, [team1Id ?? undefined, team2Id ?? undefined]);
+      if (
+        data.date !== undefined ||
+        data.leagueSeasonId !== undefined ||
+        data.seasonId !== undefined ||
+        data.leagueId !== undefined
+      ) {
+        await assertFixtureSchedule(scope.leagueSeasonId, data.date ?? currentMatch.date);
+      }
       Object.assign(updateData, scope, { leagueName: null });
     }
 
@@ -233,6 +286,7 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
 
     return updatedMatch;
   } catch (error) {
+    if (error instanceof FixtureScopeError) throw error;
     console.error('Error updating match:', error);
     return null;
   }
