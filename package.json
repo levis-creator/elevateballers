@@ -41,6 +41,7 @@
     "audit:league-season-contract": "tsx scripts/audit-league-season-contract.ts",
     "audit:legacy-match-scope": "tsx scripts/audit-legacy-match-scope.ts",
     "repair:legacy-match-scope": "tsx scripts/repair-legacy-match-scope.ts",
+    "merge:duplicate-season": "tsx scripts/merge-duplicate-season.ts",
     "migrate:staff-split": "tsx scripts/migrate-staff-split.ts",
     "cleanup:private": "tsx scripts/cleanup-private-info.ts",
     "test": "vitest run",
