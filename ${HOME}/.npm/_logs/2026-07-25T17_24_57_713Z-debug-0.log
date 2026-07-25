@@ -5,17 +5,17 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm run backfill:season-teams
-8 verbose argv "run" "backfill:season-teams"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T12_21_23_249Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T12_21_23_249Z-debug-0.log
+7 verbose title npm run audit:competition --json
+8 verbose argv "run" "audit:competition" "--" "--json"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T17_24_57_713Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-25T17_24_57_713Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
-13 notice run elevateballers@0.0.1 backfill:season-teams
-14 notice run node scripts/backfill-season-teams.js
+13 notice run elevateballers@0.0.1 audit:competition
+14 notice run tsx scripts/audit-competition-structure.ts --json
 15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 16 verbose os Windows_NT 10.0.26200
 17 verbose node v24.18.0
 18 verbose npm  v12.0.1
-19 verbose exit 0
-20 info ok
+19 verbose exit 2
+20 verbose code 2
