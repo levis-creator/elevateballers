@@ -1,6 +1,7 @@
 import { useTeamViewStore } from "@/features/teams/presentation/stores/v2/useTeamViewStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import type { SquadPlayer } from "@/features/teams/domain/entities/team-detail";
+import { optimizeImageUrl } from "@/lib/image-cdn";
 
 interface Props {
 	players: SquadPlayer[];
@@ -50,7 +51,15 @@ export default function TeamSquad({ players, playerCount }: Props) {
 								<span className="font-display text-[18px] text-brand">{p.jersey}</span>
 								<span className="flex items-center gap-3">
 									{p.image ? (
-										<img src={p.image} alt={p.name} loading="lazy" className="h-9 w-9 flex-shrink-0 rounded-full border border-black/10 object-cover" />
+										<img
+											src={optimizeImageUrl(p.image, { width: 72, quality: 70 })}
+											alt={p.name}
+											width={36}
+											height={36}
+											loading="lazy"
+											decoding="async"
+											className="h-9 w-9 flex-shrink-0 rounded-full border border-black/10 object-cover"
+										/>
 									) : (
 										<span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-mono text-[11px] text-muted2" style={{ background: STRIPE }}>
 											{p.initials}
@@ -82,7 +91,15 @@ export default function TeamSquad({ players, playerCount }: Props) {
 									<span className="font-display text-[16px] text-brand">{p.jersey}</span>
 									<span className="flex items-center gap-3">
 										{p.image ? (
-											<img src={p.image} alt={p.name} loading="lazy" className="h-8 w-8 flex-shrink-0 rounded-full border border-black/10 object-cover" />
+											<img
+												src={optimizeImageUrl(p.image, { width: 64, quality: 70 })}
+												alt={p.name}
+												width={32}
+												height={32}
+												loading="lazy"
+												decoding="async"
+												className="h-8 w-8 flex-shrink-0 rounded-full border border-black/10 object-cover"
+											/>
 										) : (
 											<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-mono text-[10px] text-muted2" style={{ background: STRIPE }}>
 												{p.initials}

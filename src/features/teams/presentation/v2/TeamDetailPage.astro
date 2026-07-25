@@ -21,7 +21,7 @@ const footer = await getFooterData();
 	<Header active="teams" />
 	<TeamHero detail={detail} />
 	<TeamMatches recent={detail.recent} upcoming={detail.upcoming} seasons={detail.seasons} client:visible />
-	<TeamSquad players={detail.players} playerCount={detail.playerCount} client:visible />
+	<TeamSquad players={detail.players} playerCount={detail.playerCount} client:idle />
 	<TeamStaff staff={detail.staff} />
 	<Footer footer={footer} />
 </div>
