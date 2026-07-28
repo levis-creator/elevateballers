@@ -25,16 +25,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Plus, Users, X, Loader2, RefreshCw, Search } from 'lucide-react';
+import { AlertCircle, Plus, Users, X, Loader2, RefreshCw, Search, Star } from 'lucide-react';
+
+type SeasonParticipant = Team & {
+  featured?: boolean;
+  leagueSeasonId?: string;
+};
 
 interface SeasonTeamsPanelProps {
   seasonId: string;
   // The leagues this season runs in — a team joins one specific league.
-  leagues?: { id: string; name: string }[];
+  leagues?: { id: string; leagueSeasonId?: string; name: string }[];
 }
 
 export default function SeasonTeamsPanel({ seasonId, leagues = [] }: SeasonTeamsPanelProps) {
-  const [participants, setParticipants] = useState<Team[]>([]);
+  const [participants, setParticipants] = useState<SeasonParticipant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -54,7 +59,7 @@ export default function SeasonTeamsPanel({ seasonId, leagues = [] }: SeasonTeams
   }, [leagues, selectedLeagueId]);
 
   // Remove-confirmation state
-  const [teamToRemove, setTeamToRemove] = useState<Team | null>(null);
+  const [teamToRemove, setTeamToRemove] = useState<SeasonParticipant | null>(null);
   const [removing, setRemoving] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
 
@@ -64,7 +69,7 @@ export default function SeasonTeamsPanel({ seasonId, leagues = [] }: SeasonTeams
       setError('');
       const res = await fetch(`/api/seasons/${seasonId}/teams`);
       if (!res.ok) throw new Error('Failed to load teams');
-      setParticipants((await res.json()) as Team[]);
+      setParticipants((await res.json()) as SeasonParticipant[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load teams');
     } finally {
@@ -127,7 +132,7 @@ export default function SeasonTeamsPanel({ seasonId, leagues = [] }: SeasonTeams
       const res = await fetch(`/api/seasons/${seasonId}/teams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leagueId: selectedLeagueId, teamIds: [...selectedIds] }),
+        body: JSON.stringify({ leagueSeasonId: leagues.find((league) => league.id === selectedLeagueId)?.leagueSeasonId, teamIds: [...selectedIds] }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -144,12 +149,28 @@ export default function SeasonTeamsPanel({ seasonId, leagues = [] }: SeasonTeams
     }
   };
 
+  const toggleFeatured = async (team: SeasonParticipant) => {
+    if (!team.leagueSeasonId) return;
+    try {
+      const res = await fetch(`/api/seasons/${seasonId}/teams/${team.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leagueSeasonId: team.leagueSeasonId, featured: !team.featured }),
+      });
+      if (!res.ok) throw new Error('Failed to update featured status');
+      setParticipants((current) => current.map((item) => item.id === team.id && item.leagueSeasonId === team.leagueSeasonId ? { ...item, featured: !team.featured } : item));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update featured status');
+    }
+  };
+
   const handleRemove = async () => {
     if (!teamToRemove) return;
     try {
       setRemoving(true);
       setError('');
-      const res = await fetch(`/api/seasons/${seasonId}/teams/${teamToRemove.id}`, {
+      const query = teamToRemove.leagueSeasonId ? `?leagueSeasonId=${encodeURIComponent(teamToRemove.leagueSeasonId)}` : '';
+      const res = await fetch(`/api/seasons/${seasonId}/teams/${teamToRemove.id}${query}`, {
         method: 'DELETE',
       });
       if (!res.ok && res.status !== 404) throw new Error('Failed to remove team');
@@ -252,6 +273,9 @@ export default function SeasonTeamsPanel({ seasonId, leagues = [] }: SeasonTeams
               >
                 <TeamLogo logo={team.logo} name={team.name} size="xs" className="w-6 h-6 object-contain" />
                 <span className="text-sm font-medium">{team.name}</span>
+                <Button variant="ghost" size="icon" className={`h-6 w-6 rounded-full ${team.featured ? 'text-yellow-500' : 'text-muted-foreground'}`} onClick={() => toggleFeatured(team)} aria-label={`${team.featured ? 'Remove from' : 'Feature on'} season homepage`} title={team.featured ? 'Featured in this season' : 'Feature in this season'}>
+                  <Star className="h-3.5 w-3.5" fill={team.featured ? 'currentColor' : 'none'} />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

@@ -12,7 +12,12 @@ export async function getSeasonTeams(seasonId: string, leagueId?: string): Promi
     include: { team: true },
     orderBy: { team: { name: 'asc' } },
   });
-  return rows.map((r: { team: Team }) => r.team);
+  return rows.map((r: { team: Team; featured: boolean; conferenceId: string | null; leagueSeasonId: string }) => ({
+    ...r.team,
+    featured: r.featured,
+    conferenceId: r.conferenceId,
+    leagueSeasonId: r.leagueSeasonId,
+  }));
 }
 
 /** Teams eligible for fixtures in one competition edition. */
@@ -28,7 +33,12 @@ export async function getLeagueSeasonTeams(
     include: { team: true },
     orderBy: { team: { name: 'asc' } },
   });
-  return rows.map((row: { team: Team }) => row.team);
+  return rows.map((row: { team: Team; featured: boolean; conferenceId: string | null; leagueSeasonId: string }) => ({
+    ...row.team,
+    featured: row.featured,
+    conferenceId: row.conferenceId,
+    leagueSeasonId: row.leagueSeasonId,
+  }));
 }
 
 /**

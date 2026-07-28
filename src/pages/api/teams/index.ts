@@ -84,8 +84,17 @@ export const POST: APIRoute = async ({ request }) => {
     const team = await createTeam({
       name: data.name,
       nickname: data.nickname,
+      shortName: data.shortName,
+      abbreviation: data.abbreviation,
+      slug: data.slug,
       logo: data.logo,
       description: data.description,
+      venue: data.venue,
+      city: data.city,
+      founded: data.founded === undefined || data.founded === '' ? undefined : Number(data.founded),
+      contactEmail: data.contactEmail,
+      primaryColor: data.primaryColor,
+      secondaryColor: data.secondaryColor,
       approved: true, // Admin-created teams are approved by default
     });
 

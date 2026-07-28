@@ -451,7 +451,7 @@ export default function SeasonMatchesList({ seasonId }: SeasonMatchesListProps) 
         <TabsContent value="teams">
           <SeasonTeamsPanel
             seasonId={seasonId}
-            leagues={(season?.leagueSeasons ?? []).map((ls: any) => ({ id: ls.leagueId, name: ls.league.name }))}
+            leagues={(season?.leagueSeasons ?? []).map((ls: any) => ({ id: ls.leagueId, leagueSeasonId: ls.id, name: ls.league.name }))}
           />
         </TabsContent>
       </Tabs>

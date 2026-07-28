@@ -69,6 +69,21 @@ export async function setSeasonTeamConference(
   return result.count > 0;
 }
 
+/** Set homepage promotion for one team's participation in one season edition. */
+export async function setSeasonTeamFeatured(
+  leagueSeasonId: string,
+  teamId: string,
+  featured: boolean,
+  expectedSeasonId?: string,
+): Promise<boolean> {
+  const scope = await resolveLeagueSeasonById(leagueSeasonId, { seasonId: expectedSeasonId });
+  const result = await prisma.seasonTeam.updateMany({
+    where: { leagueSeasonId: scope.leagueSeasonId, teamId },
+    data: { featured },
+  });
+  return result.count > 0;
+}
+
 /**
  * Seed a season's roster from the teams already appearing in its matches.
  * Same logic as scripts/backfill-season-teams.js but scoped to one season, so

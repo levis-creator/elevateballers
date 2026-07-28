@@ -1,0 +1,12 @@
+ALTER TABLE `teams`
+  ADD COLUMN `short_name` VARCHAR(191) NULL,
+  ADD COLUMN `abbreviation` VARCHAR(191) NULL,
+  ADD COLUMN `venue` VARCHAR(191) NULL,
+  ADD COLUMN `city` VARCHAR(191) NULL,
+  ADD COLUMN `founded` INTEGER NULL,
+  ADD COLUMN `contact_email` VARCHAR(191) NULL,
+  ADD COLUMN `primary_color` VARCHAR(191) NULL,
+  ADD COLUMN `secondary_color` VARCHAR(191) NULL;
+
+ALTER TABLE `season_teams`
+  ADD COLUMN `featured` BOOLEAN NOT NULL DEFAULT false;

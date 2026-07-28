@@ -385,6 +385,14 @@ model Team {
   updatedAt          DateTime                   @updatedAt @map("updated_at")
   slug               String                     @unique
   nickname           String?
+  shortName          String?                    @map("short_name")
+  abbreviation       String?
+  venue              String?
+  city               String?
+  founded            Int?
+  contactEmail       String?                    @map("contact_email")
+  primaryColor       String?                    @map("primary_color")
+  secondaryColor     String?                    @map("secondary_color")
   jumpBallPossession JumpBall[]                 @relation("JumpBallPossession")
   matchEvents        MatchEvent[]
   matchPlayers       MatchPlayer[]
@@ -414,6 +422,7 @@ model SeasonTeam {
   leagueSeasonId String        @map("league_season_id")
   teamId         String        @map("team_id")
   conferenceId   String?       @map("conference_id")
+  featured       Boolean       @default(false)
   createdAt      DateTime      @default(now()) @map("created_at")
   season         Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   league         League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
