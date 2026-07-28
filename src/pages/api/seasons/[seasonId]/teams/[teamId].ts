@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { removeSeasonTeam, setSeasonTeamConference } from '../../../../../features/cms/lib/mutations';
+import { removeSeasonTeam, setSeasonTeamConference, setSeasonTeamFeatured } from '../../../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../../../features/rbac/middleware';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 import { handleApiError } from '../../../../../lib/apiError';
@@ -14,8 +14,9 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'seasons:update');
     const body = await request.json().catch(() => ({}));
+    const hasConferenceChange = Object.prototype.hasOwnProperty.call(body, 'conferenceId');
     const conferenceId = body?.conferenceId ?? null;
-    if (conferenceId !== null && typeof conferenceId !== 'string') {
+    if (hasConferenceChange && conferenceId !== null && typeof conferenceId !== 'string') {
       return new Response(
         JSON.stringify({ error: 'conferenceId must be a string or null' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -30,12 +31,20 @@ export const PATCH: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const updated = await setSeasonTeamConference(
-      leagueSeasonId,
-      params.teamId!,
-      conferenceId,
-      params.seasonId!,
-    );
+    if (body?.featured !== undefined && typeof body.featured !== 'boolean') {
+      return new Response(JSON.stringify({ error: 'featured must be a boolean' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const updated = hasConferenceChange
+      ? await setSeasonTeamConference(leagueSeasonId, params.teamId!, conferenceId, params.seasonId!)
+      : body?.featured !== undefined
+        ? await setSeasonTeamFeatured(leagueSeasonId, params.teamId!, body.featured, params.seasonId!)
+        : false;
+    if (body?.featured !== undefined && hasConferenceChange) {
+      await setSeasonTeamFeatured(leagueSeasonId, params.teamId!, body.featured, params.seasonId!);
+    }
     if (!updated) {
       return new Response(
         JSON.stringify({ error: 'Team is not a participant of this season, or the conference is invalid' }),

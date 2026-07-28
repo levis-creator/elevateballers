@@ -2,7 +2,8 @@ import { prisma } from '../../../../lib/prisma';
 import type { TeamWithPlayerCount, TeamWithPlayers } from '../../types';
 
 const TEAMS_PAGINATION_SELECT = {
-  id: true, name: true, slug: true, logo: true, description: true,
+  id: true, name: true, shortName: true, abbreviation: true, slug: true, logo: true, description: true,
+  venue: true, city: true, founded: true, primaryColor: true, secondaryColor: true,
   approved: true, createdAt: true, updatedAt: true,
   _count: { select: { players: true } },
 } as const;
@@ -19,7 +20,8 @@ export async function getTeams(includeUnapproved = false): Promise<TeamWithPlaye
   return await prisma.team.findMany({
     where: includeUnapproved ? {} : { approved: true },
     select: {
-      id: true, name: true, slug: true, logo: true, description: true,
+      id: true, name: true, shortName: true, abbreviation: true, slug: true, logo: true, description: true,
+      venue: true, city: true, founded: true, primaryColor: true, secondaryColor: true,
       approved: true, createdAt: true, updatedAt: true,
       _count: { select: { players: true } },
     },
@@ -59,7 +61,9 @@ export async function getTeamById(id: string, includeUnapproved = false): Promis
   return await prisma.team.findUnique({
     where: { id },
     select: {
-      id: true, name: true, slug: true, logo: true, description: true,
+      id: true, name: true, shortName: true, abbreviation: true, slug: true, logo: true, description: true,
+      venue: true, city: true, founded: true, primaryColor: true, secondaryColor: true,
+      ...(includeUnapproved ? { contactEmail: true } : {}),
       approved: true, createdAt: true, updatedAt: true,
       players: {
         where: includeUnapproved ? {} : { approved: true },
@@ -73,7 +77,8 @@ export async function getTeamBySlug(slug: string): Promise<TeamWithPlayers | nul
   return await prisma.team.findUnique({
     where: { slug, approved: true },
     select: {
-      id: true, name: true, slug: true, logo: true, description: true,
+      id: true, name: true, shortName: true, abbreviation: true, slug: true, logo: true, description: true,
+      venue: true, city: true, founded: true, primaryColor: true, secondaryColor: true,
       approved: true, createdAt: true, updatedAt: true,
       players: {
         where: { approved: true },
