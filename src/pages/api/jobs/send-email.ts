@@ -14,6 +14,7 @@ import { verifyQStashSignature } from '../../../lib/qstash-verify';
 import { sendTransactionalEmail } from '../../../lib/email/core';
 import { sendContactNotification, sendContactAutoReply } from '../../../lib/email/templates/contact';
 import { sendAdminNotificationEmail } from '../../../lib/email';
+import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 
 export const prerender = false;
 
@@ -28,6 +29,14 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
+
+    if (body.registrationJobId) {
+      await processRegistrationEmailJob(String(body.registrationJobId));
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Templated job types
     if (body.jobType) {

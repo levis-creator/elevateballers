@@ -2,7 +2,7 @@ import { prisma } from '../../../../../lib/prisma';
 import { generateSlug } from '../../../domain/usecases/utils';
 import type { CreatePlayerInput, UpdatePlayerInput, Player } from '../../../types';
 
-async function generateUniquePlayerSlug(baseSlug: string, excludeId?: string): Promise<string> {
+async function generateUniquePlayerSlug(baseSlug: string, excludeId?: string, db: any = prisma): Promise<string> {
   let slug = generateSlug(baseSlug);
   let counter = 1;
   const original = slug;
@@ -10,24 +10,24 @@ async function generateUniquePlayerSlug(baseSlug: string, excludeId?: string): P
   while (true) {
     const where: any = { slug };
     if (excludeId) where.id = { not: excludeId };
-    const existing = await prisma.player.findFirst({ where });
+    const existing = await db.player.findFirst({ where });
     if (!existing) return slug;
     slug = `${original}-${counter}`;
     counter++;
   }
 }
 
-export async function createPlayer(data: CreatePlayerInput): Promise<Player> {
+export async function createPlayer(data: CreatePlayerInput, db: any = prisma): Promise<Player> {
   const baseName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'player';
-  const slug = data.slug || await generateUniquePlayerSlug(baseName);
+  const slug = data.slug || await generateUniquePlayerSlug(baseName, undefined, db);
 
-  const player = await prisma.player.create({
+  const player = await db.player.create({
     data: { ...data, slug, approved: data.approved ?? true },
   });
 
   if (player.teamId) {
     try {
-      await prisma.playerTeamHistory.create({
+      await db.playerTeamHistory.create({
         data: { playerId: player.id, teamId: player.teamId },
       });
     } catch (historyError) {

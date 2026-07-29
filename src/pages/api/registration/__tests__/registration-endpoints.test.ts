@@ -18,6 +18,10 @@ const mocks = vi.hoisted(() => ({
   playerFindMany: vi.fn(),
   playerFindFirst: vi.fn(),
   notificationCreate: vi.fn(),
+  findSubmission: vi.fn(),
+  submitTeamRegistration: vi.fn(),
+  submitPlayerRegistration: vi.fn(),
+  publishToJob: vi.fn(),
 }));
 
 vi.mock('../../../../lib/rateLimit', () => ({ checkRateLimit: mocks.checkRateLimit }));
@@ -27,13 +31,16 @@ vi.mock('../../../../features/cms/lib/mutations', () => ({ createTeam: mocks.cre
 vi.mock('../../../../features/cms/lib/audit', () => ({ logAudit: mocks.logAudit }));
 vi.mock('../../../../lib/email', () => ({ sendTeamRegistrationAutoReply: mocks.sendTeamRegistrationAutoReply, sendPlayerRegistrationAutoReply: mocks.sendPlayerRegistrationAutoReply, sendAdminNotificationEmail: mocks.sendAdminNotificationEmail }));
 vi.mock('../../../../lib/apiError', () => ({ handleApiError: vi.fn((_error, _context, _request) => new Response(JSON.stringify({ error: 'unexpected' }), { status: 500 })) }));
+vi.mock('../../../../lib/qstash', () => ({ publishToJob: mocks.publishToJob }));
+vi.mock('../../../../features/registration/application/process-registration-email-job', () => ({ processRegistrationEmailJob: vi.fn() }));
+vi.mock('../../../../features/registration/data/datasources/public-submission', () => ({ findSubmission: mocks.findSubmission, submitTeamRegistration: mocks.submitTeamRegistration, submitPlayerRegistration: mocks.submitPlayerRegistration }));
 vi.mock('../../../../lib/prisma', () => ({ prisma: { team: { findUnique: mocks.teamFindUnique }, league: { findUnique: mocks.leagueFindUnique }, staff: { findFirst: mocks.staffFindFirst }, player: { findMany: mocks.playerFindMany, findFirst: mocks.playerFindFirst }, registrationNotification: { create: mocks.notificationCreate } } }));
 
 import { POST as postTeam } from '../team';
 import { POST as postPlayer } from '../player';
 
-function request(body: Record<string, unknown>, ip = '203.0.113.10'): Request {
-  return new Request('https://example.test/api/registration', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body) });
+function request(body: Record<string, unknown>, ip = '203.0.113.10', key = 'test-idempotency-key'): Request {
+  return new Request('https://example.test/api/registration', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip, 'idempotency-key': key }, body: JSON.stringify(body) });
 }
 
 const teamPayload = { name: '  Mavs   Basketball ', coachName: '  Jane   Doe ', contactEmail: ' JANE@EXAMPLE.COM ', contactPhone: ' (+254) 700-000-000 ', 'cf-turnstile-token': 'token' };
@@ -58,6 +65,10 @@ describe('public registration endpoints', () => {
     mocks.playerFindMany.mockResolvedValue([]);
     mocks.playerFindFirst.mockResolvedValue(null);
     mocks.notificationCreate.mockResolvedValue(undefined);
+    mocks.findSubmission.mockResolvedValue(null);
+    mocks.submitTeamRegistration.mockResolvedValue({ response: { success: true, message: 'Team registration submitted successfully', entityId: 'team-1' }, jobIds: ['job-team'], teamId: 'team-1' });
+    mocks.submitPlayerRegistration.mockResolvedValue({ response: { success: true, message: 'Player registration submitted successfully', entityId: 'player-1' }, jobIds: ['job-player'], playerId: 'player-1' });
+    mocks.publishToJob.mockResolvedValue(true);
   });
 
   it('rejects honeypot submissions before security verification', async () => {
@@ -85,8 +96,7 @@ describe('public registration endpoints', () => {
   it('normalizes the team payload before persistence', async () => {
     const response = await postTeam({ request: request(teamPayload) } as any);
     expect(response.status).toBe(201);
-    expect(mocks.createTeam).toHaveBeenCalledWith(expect.objectContaining({ name: 'Mavs Basketball' }));
-    expect(mocks.createStaff).toHaveBeenCalledWith(expect.objectContaining({ email: 'jane@example.com', phone: '+254700000000' }));
+    expect(mocks.submitTeamRegistration).toHaveBeenCalledWith(expect.objectContaining({ name: 'Mavs Basketball', contactEmail: 'jane@example.com', contactPhone: '+254700000000', idempotencyKey: 'test-idempotency-key' }));
   });
 
   it('returns a generic response for duplicate players', async () => {

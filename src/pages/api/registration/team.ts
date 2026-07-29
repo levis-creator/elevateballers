@@ -1,42 +1,21 @@
 import type { APIRoute } from 'astro';
-import { createTeam, createStaff, assignStaffToTeam } from '../../../features/cms/lib/mutations';
 import { prisma } from '../../../lib/prisma';
-import { sendTeamRegistrationAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { checkRegistrationOpen } from '../../../lib/registrationGate';
-import { allowPublicRegistration, genericRegistrationResponse, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, validateTeamRegistration } from '../../../lib/publicRegistrationSecurity';
+import { publishToJob } from '../../../lib/qstash';
+import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
+import { findSubmission, submitTeamRegistration } from '../../../features/registration/data/datasources/public-submission';
+import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, validateTeamRegistration } from '../../../lib/publicRegistrationSecurity';
 
 export const prerender = false;
 
-/**
- * Parse a full name into firstName and lastName
- * Handles single names, two-part names, and multi-part names
- */
-function parseName(fullName: string): { firstName: string; lastName: string } {
-  const trimmed = fullName.trim();
-  const parts = trimmed.split(/\s+/);
+const getClientIp = (request: Request): string => request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? 'unknown';
 
-  if (parts.length === 1) {
-    // Single name - use as first name, empty last name
-    return { firstName: parts[0], lastName: '' };
-  } else if (parts.length === 2) {
-    // Two parts - first and last
-    return { firstName: parts[0], lastName: parts[1] };
-  } else {
-    // Multiple parts - first part is first name, rest is last name
-    return {
-      firstName: parts[0],
-      lastName: parts.slice(1).join(' '),
-    };
-  }
+function responseFromStored(value: unknown, status = 200): Response {
+  return new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 }
-
-const getClientIp = (request: Request): string =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-  request.headers.get('x-real-ip') ??
-  'unknown';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -44,237 +23,36 @@ export const POST: APIRoute = async ({ request }) => {
     const rawData = await request.json();
     if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return genericRegistrationResponse();
     if (isHoneypotTriggered(rawData.website)) return genericRegistrationResponse();
-    const data = {
-      ...rawData,
-      name: normalizeText(rawData.name),
-      coachName: normalizeText(rawData.coachName),
-      contactEmail: normalizeEmail(rawData.contactEmail),
-      contactPhone: normalizePhone(rawData.contactPhone),
-      leagueId: normalizeId(rawData.leagueId),
-      seasonId: normalizeId(rawData.seasonId),
-      leagueSeasonId: normalizeId(rawData.leagueSeasonId),
-      additionalInfo: normalizeOptionalText(rawData.additionalInfo),
-    };
+    const idempotencyKey = getIdempotencyKey(request, rawData);
+    if (!idempotencyKey) return new Response(JSON.stringify({ error: 'A valid idempotency key is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    const existingSubmission = await findSubmission(idempotencyKey);
+    if (existingSubmission?.response) return responseFromStored(existingSubmission.response);
+
+    const data = { ...rawData, name: normalizeText(rawData.name), coachName: normalizeText(rawData.coachName), contactEmail: normalizeEmail(rawData.contactEmail), contactPhone: normalizePhone(rawData.contactPhone), leagueId: normalizeId(rawData.leagueId), seasonId: normalizeId(rawData.seasonId), leagueSeasonId: normalizeId(rawData.leagueSeasonId), additionalInfo: normalizeOptionalText(rawData.additionalInfo) };
     const validationError = validateTeamRegistration(data);
     if (validationError) return new Response(JSON.stringify({ error: validationError }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     if (!await allowPublicRegistration('team', ip, data.contactEmail)) return genericRegistrationResponse(429);
-
-    // Cloudflare Turnstile verification
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
-    if (!await verifyTurnstile(turnstileToken, ip)) {
-      return new Response(
-        JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!await verifyTurnstile(turnstileToken, ip)) return new Response(JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId);
+    if (!gate.open) return new Response(JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    const existingTeam = await prisma.team.findUnique({ where: { name: data.name }, select: { id: true } });
+    if (existingTeam) return genericRegistrationResponse();
+    let leagueName: string | undefined;
+    if (data.leagueId) leagueName = (await prisma.league.findUnique({ where: { id: data.leagueId }, select: { name: true } }))?.name;
+
+    const result = await submitTeamRegistration({ idempotencyKey, name: data.name, coachName: data.coachName, contactEmail: data.contactEmail, contactPhone: data.contactPhone, leagueId: data.leagueId, additionalInfo: data.additionalInfo, leagueName });
+    await logAudit(request, 'TEAM_REGISTRATION_SUBMITTED', { teamId: result.teamId, teamName: data.name, coachName: data.coachName });
+    for (const jobId of result.jobIds) {
+      if (!await publishToJob('/api/jobs/send-email', { registrationJobId: jobId })) void processRegistrationEmailJob(jobId).catch((error) => console.error('[registration] team email job failed:', error));
     }
-
-    // Enforce the league/season registration window (authoritative check)
-    const gate = await checkRegistrationOpen(
-      data.leagueId,
-      data.seasonId,
-      data.leagueSeasonId,
-    );
-    if (!gate.open) {
-      return new Response(
-        JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if team name already exists
-    const existing = await prisma.team.findUnique({
-      where: { name: data.name },
-      select: { id: true, name: true },
-    });
-
-    if (existing) {
+    return responseFromStored(result.response, 201);
+  } catch (error: any) {
+    if (error?.code === 'P2002' && error?.meta?.target?.includes?.('idempotency_key')) {
+      const key = request.headers.get('idempotency-key');
+      if (key) { const existing = await findSubmission(key); if (existing?.response) return responseFromStored(existing.response); }
       return genericRegistrationResponse();
     }
-
-    // Get league name if leagueId is provided
-    let leagueName: string | undefined;
-    if (data.leagueId) {
-      const league = await prisma.league.findUnique({
-        where: { id: data.leagueId },
-        select: { name: true },
-      });
-      leagueName = league?.name;
-    }
-
-    // Create team with description excluding private contact info
-    // Coach details are already saved in the Staff record linked to this team
-    const description = [
-      leagueName && `League: ${leagueName}`,
-      data.coachName && `Coach: ${data.coachName}`,
-      data.additionalInfo && `Additional Info: ${data.additionalInfo}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    const team = await createTeam({
-      name: data.name,
-      description: description || undefined,
-      approved: false, // Public registrations are unapproved by default
-    });
-
-    // Parse coach name and create staff member
-    const { firstName, lastName } = parseName(data.coachName);
-
-    // Check if staff with same email already exists
-    let coachStaff = await prisma.staff.findFirst({
-      where: {
-        email: data.contactEmail,
-      },
-    });
-
-    // Create staff if doesn't exist
-    if (!coachStaff) {
-      coachStaff = await createStaff({
-        firstName,
-        lastName: lastName || firstName, // Use firstName as lastName if lastName is empty
-        email: data.contactEmail,
-        phone: data.contactPhone,
-        role: 'COACH',
-        bio: data.additionalInfo || undefined,
-        approved: false,
-      });
-    }
-
-    // Assign coach to team
-    try {
-      await assignStaffToTeam({
-        teamId: team.id,
-        staffId: coachStaff.id,
-        role: 'COACH',
-      });
-    } catch (error: any) {
-      // If staff is already assigned, that's okay - continue
-      if (!error.message.includes('already assigned')) {
-        console.error('Error assigning coach to team:', error);
-        // Don't fail the registration if assignment fails, but log it
-      }
-    }
-
-    // Auto-link players who registered with this team name
-    let linkedPlayersCount = 0;
-    try {
-      // Find players who registered with this team name but aren't linked yet
-      const playersToLink = await prisma.player.findMany({
-        where: {
-          teamId: null,
-          OR: [
-            {
-              bio: {
-                contains: `Team: ${team.name}`,
-              },
-            },
-            {
-              bio: {
-                contains: team.name,
-              },
-            },
-          ],
-        },
-      });
-
-      if (playersToLink.length > 0) {
-        await prisma.player.updateMany({
-          where: {
-            id: {
-              in: playersToLink.map(p => p.id),
-            },
-          },
-          data: {
-            teamId: team.id,
-          },
-        });
-
-        linkedPlayersCount = playersToLink.length;
-
-        // Create notifications for auto-linked players
-        for (const player of playersToLink) {
-          await prisma.registrationNotification.create({
-            data: {
-              type: 'PLAYER_AUTO_LINKED',
-              playerId: player.id,
-              teamId: team.id,
-              message: `Player ${player.firstName} ${player.lastName} was automatically linked to team ${team.name}`,
-              metadata: {
-                playerName: `${player.firstName} ${player.lastName}`,
-                teamName: team.name,
-              },
-            },
-          });
-        }
-      }
-    } catch (error: any) {
-      console.error('Error auto-linking players:', error);
-      // Don't fail the registration if auto-linking fails
-    }
-
-    // Create notification for team registration
-    try {
-      await prisma.registrationNotification.create({
-        data: {
-          type: 'TEAM_REGISTERED',
-          teamId: team.id,
-          staffId: coachStaff.id,
-          message: `New team registration: ${team.name} (Coach: ${data.coachName})`,
-          metadata: {
-            teamName: team.name,
-            coachName: data.coachName,
-            contactEmail: data.contactEmail,
-            contactPhone: data.contactPhone,
-            leagueName: leagueName,
-            linkedPlayersCount: linkedPlayersCount,
-          },
-        },
-      });
-      const adminUrl = `${process.env.SITE_URL || 'https://elevateballers.com'}/admin/teams/${team.id}`;
-      sendAdminNotificationEmail({
-        type: 'team_registered',
-        title: 'New Team Registration',
-        message: `${team.name} was submitted by ${data.coachName}.`,
-        actionUrl: adminUrl,
-        actionText: 'Review Team',
-      }).catch((err) => {
-        console.error('Failed to send admin notification email:', err);
-      });
-    } catch (error: any) {
-      console.error('Error creating team registration notification:', error);
-      // Don't fail the registration if notification creation fails
-    }
-
-    // Send auto-reply email (fire-and-forget)
-    sendTeamRegistrationAutoReply({
-      coachName: data.coachName,
-      email: data.contactEmail,
-      teamName: team.name,
-      leagueName: leagueName || null,
-    }).catch((err) => {
-      console.error('Failed to send team registration auto-reply:', err);
-    });
-
-    await logAudit(request, 'TEAM_REGISTRATION_SUBMITTED', {
-      teamId: team.id,
-      teamName: team.name,
-      coachName: data.coachName,
-      contactEmail: data.contactEmail,
-      leagueName: leagueName || null,
-      linkedPlayersCount,
-    });
-
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Team registration submitted successfully',
-      team,
-      coach: coachStaff,
-      linkedPlayers: linkedPlayersCount,
-    }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
     return handleApiError(error, 'submit team registration', request);
   }
 };

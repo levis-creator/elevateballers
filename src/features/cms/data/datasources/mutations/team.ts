@@ -2,7 +2,7 @@ import { prisma } from '../../../../../lib/prisma';
 import { generateSlug } from '../../../domain/usecases/utils';
 import type { CreateTeamInput, UpdateTeamInput, Team } from '../../../types';
 
-async function generateUniqueSlug(baseSlug: string, excludeId?: string): Promise<string> {
+async function generateUniqueSlug(baseSlug: string, excludeId?: string, db: any = prisma): Promise<string> {
   let slug = generateSlug(baseSlug);
   let counter = 1;
   const original = slug;
@@ -10,17 +10,17 @@ async function generateUniqueSlug(baseSlug: string, excludeId?: string): Promise
   while (true) {
     const where: any = { slug };
     if (excludeId) where.id = { not: excludeId };
-    const existing = await prisma.team.findFirst({ where });
+    const existing = await db.team.findFirst({ where });
     if (!existing) return slug;
     slug = `${original}-${counter}`;
     counter++;
   }
 }
 
-export async function createTeam(data: CreateTeamInput): Promise<Team> {
-  const slug = data.slug || await generateUniqueSlug(data.name);
+export async function createTeam(data: CreateTeamInput, db: any = prisma): Promise<Team> {
+  const slug = data.slug || await generateUniqueSlug(data.name, undefined, db);
 
-  const team = await prisma.team.create({
+  const team = await db.team.create({
     data: { ...data, slug, approved: data.approved ?? true },
   });
 

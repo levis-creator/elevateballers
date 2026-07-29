@@ -213,9 +213,10 @@ export default function RegistrationFormV2() {
 		setError(null);
 		setSuccess(null);
 		try {
+			const idempotencyKey = crypto.randomUUID();
 			const response = await fetch("/api/registration/team", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
 				body: JSON.stringify({
 					name: teamFormData.name.trim(),
 					coachName: teamFormData.coachName.trim(),
@@ -254,9 +255,10 @@ export default function RegistrationFormV2() {
 		setError(null);
 		setSuccess(null);
 		try {
+			const idempotencyKey = crypto.randomUUID();
 			const response = await fetch("/api/registration/player", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
 				body: JSON.stringify({
 					firstName: playerFormData.firstName.trim(),
 					lastName: playerFormData.lastName.trim(),
