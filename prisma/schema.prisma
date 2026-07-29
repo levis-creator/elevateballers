@@ -27,6 +27,8 @@ model User {
   notificationSettings UserNotificationSetting?
   twoFactorOtps        TwoFactorOtp[]
   emailHistory         UserEmailHistory[]
+  seasonRegistrationReviews SeasonRegistrationApplication[] @relation("SeasonRegistrationReviewer")
+  teamOwnerships       TeamOwnership[]
 
   @@map("users")
 }
@@ -269,6 +271,10 @@ model LeagueSeason {
   conferences          Conference[]         @relation("LeagueSeasonConferences")
   seasonTeams          SeasonTeam[]         @relation("LeagueSeasonTeams")
   matches              Match[]              @relation("LeagueSeasonMatches")
+  registrationApplications SeasonRegistrationApplication[]
+  seasonTeamPlayers     SeasonTeamPlayer[]
+  seasonPlayerTransfers SeasonPlayerTransfer[]
+  seasonRosterHistory   SeasonRosterHistory[]
 
   @@unique([leagueId, seasonId])
   @@index([seasonId])
@@ -408,6 +414,10 @@ model Team {
   timeouts           Timeout[]
   teamHistory        PlayerTeamHistory[]
   seasonTeams        SeasonTeam[]
+  seasonRegistrationApplications SeasonRegistrationApplication[]
+  ownerships         TeamOwnership[]
+  ownershipClaims    TeamOwnershipClaim[]
+  seasonTeamPlayers  SeasonTeamPlayer[]
 
   @@index([name])
   @@index([slug])
@@ -429,6 +439,11 @@ model SeasonTeam {
   leagueSeason   LeagueSeason  @relation("LeagueSeasonTeams", fields: [leagueSeasonId], references: [id], onDelete: Cascade)
   team           Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
   conference     Conference?   @relation(fields: [conferenceId], references: [id], onDelete: SetNull)
+  players        SeasonTeamPlayer[]
+  registrationApplications SeasonRegistrationApplication[]
+  transfersFrom   SeasonPlayerTransfer[] @relation("TransferFromTeam")
+  transfersTo     SeasonPlayerTransfer[] @relation("TransferToTeam")
+  rosterHistory   SeasonRosterHistory[]
 
   @@unique([leagueSeasonId, teamId])
   @@index([seasonId])
@@ -437,6 +452,170 @@ model SeasonTeam {
   @@index([teamId])
   @@index([conferenceId])
   @@map("season_teams")
+}
+
+// A season-specific request to enter a new or returning team. This is append-only;
+// approving it creates a SeasonTeam without changing historical seasons.
+model SeasonRegistrationApplication {
+  id             String                       @id @default(cuid())
+  leagueSeasonId String                       @map("league_season_id")
+  teamId         String?                      @map("team_id")
+  requestedTeamName String?                   @map("requested_team_name")
+  type           SeasonRegistrationType
+  status         SeasonRegistrationStatus    @default(PENDING)
+  applicantName  String                       @map("applicant_name")
+  applicantEmail String                       @map("applicant_email")
+  notes          String?                      @db.Text
+  adminNotes     String?                      @map("admin_notes") @db.Text
+  reviewedById   String?                      @map("reviewed_by_id")
+  reviewedAt     DateTime?                    @map("reviewed_at")
+  createdAt      DateTime                     @default(now()) @map("created_at")
+  updatedAt      DateTime                     @updatedAt @map("updated_at")
+  leagueSeason   LeagueSeason                 @relation(fields: [leagueSeasonId], references: [id], onDelete: Cascade)
+  team           Team?                        @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  reviewedBy     User?                        @relation("SeasonRegistrationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  ownershipClaim TeamOwnershipClaim?
+  rosterChanges  SeasonRegistrationRosterChange[]
+  seasonTeam     SeasonTeam?                  @relation(fields: [seasonTeamId], references: [id], onDelete: SetNull)
+  seasonTeamId   String?                       @map("season_team_id")
+
+  @@index([leagueSeasonId, status])
+  @@index([teamId])
+  @@index([applicantEmail])
+  @@map("season_registration_applications")
+}
+
+model TeamOwnershipClaim {
+  id            String                    @id @default(cuid())
+  applicationId String                    @unique @map("application_id")
+  teamId        String                    @map("team_id")
+  email         String
+  tokenHash     String                    @unique @map("token_hash")
+  status        OwnershipClaimStatus      @default(PENDING)
+  expiresAt     DateTime                  @map("expires_at")
+  verifiedAt    DateTime?                 @map("verified_at")
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  application   SeasonRegistrationApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  team          Team                      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, status])
+  @@index([expiresAt])
+  @@map("team_ownership_claims")
+}
+
+model TeamOwnership {
+  id         String    @id @default(cuid())
+  teamId     String    @map("team_id")
+  userId     String?   @map("user_id")
+  email      String
+  role       String    @default("OWNER")
+  verifiedAt DateTime  @map("verified_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, revokedAt])
+  @@index([email])
+  @@map("team_ownerships")
+}
+
+model SeasonRegistrationRosterChange {
+  id            String                  @id @default(cuid())
+  applicationId String                  @map("application_id")
+  playerId      String                  @map("player_id")
+  action        RosterChangeAction
+  status        RosterChangeStatus      @default(PENDING)
+  jerseyNumber  Int?                    @map("jersey_number")
+  position      String?
+  processedAt   DateTime?               @map("processed_at")
+  createdAt     DateTime                @default(now()) @map("created_at")
+  application   SeasonRegistrationApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  player        Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, playerId])
+  @@index([playerId, status])
+  @@map("season_registration_roster_changes")
+}
+
+model SeasonTeamPlayer {
+  id           String      @id @default(cuid())
+  leagueSeasonId String    @map("league_season_id")
+  seasonTeamId String      @map("season_team_id")
+  teamId       String      @map("team_id")
+  playerId     String      @map("player_id")
+  status       SeasonRosterStatus @default(PENDING)
+  jerseyNumber Int?        @map("jersey_number")
+  position     String?
+  joinedAt     DateTime    @default(now()) @map("joined_at")
+  leftAt       DateTime?   @map("left_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  leagueSeason LeagueSeason @relation(fields: [leagueSeasonId], references: [id], onDelete: Cascade)
+  seasonTeam   SeasonTeam  @relation(fields: [seasonTeamId], references: [id], onDelete: Cascade)
+  team         Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  player       Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  transferFrom SeasonPlayerTransfer[] @relation("TransferFromRoster")
+  transferTo   SeasonPlayerTransfer[] @relation("TransferToRoster")
+  history      SeasonRosterHistory[]
+
+  @@unique([seasonTeamId, playerId])
+  @@unique([leagueSeasonId, teamId, playerId])
+  @@index([leagueSeasonId, status])
+  @@index([leagueSeasonId, teamId, leftAt])
+  @@index([playerId])
+  @@map("season_team_players")
+}
+
+model SeasonPlayerTransfer {
+  id               String             @id @default(cuid())
+  leagueSeasonId   String             @map("league_season_id")
+  playerId         String             @map("player_id")
+  fromSeasonTeamId String             @map("from_season_team_id")
+  toSeasonTeamId   String             @map("to_season_team_id")
+  fromRosterId     String?            @map("from_roster_id")
+  toRosterId       String?            @map("to_roster_id")
+  status           SeasonRosterStatus @default(PENDING)
+  requestedById    String?            @map("requested_by_id")
+  reviewedById     String?            @map("reviewed_by_id")
+  reason           String?            @db.Text
+  reviewedAt       DateTime?          @map("reviewed_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  leagueSeason     LeagueSeason       @relation(fields: [leagueSeasonId], references: [id], onDelete: Cascade)
+  player           Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  fromSeasonTeam   SeasonTeam         @relation("TransferFromTeam", fields: [fromSeasonTeamId], references: [id], onDelete: Cascade)
+  toSeasonTeam     SeasonTeam         @relation("TransferToTeam", fields: [toSeasonTeamId], references: [id], onDelete: Cascade)
+  fromRoster       SeasonTeamPlayer?  @relation("TransferFromRoster", fields: [fromRosterId], references: [id], onDelete: SetNull)
+  toRoster         SeasonTeamPlayer?  @relation("TransferToRoster", fields: [toRosterId], references: [id], onDelete: SetNull)
+
+  @@index([leagueSeasonId, status])
+  @@index([playerId, leagueSeasonId])
+  @@index([fromSeasonTeamId])
+  @@index([toSeasonTeamId])
+  @@map("season_player_transfers")
+}
+
+model SeasonRosterHistory {
+  id             String            @id @default(cuid())
+  leagueSeasonId String            @map("league_season_id")
+  playerId       String            @map("player_id")
+  seasonTeamId   String            @map("season_team_id")
+  rosterId       String?           @map("roster_id")
+  action         String
+  fromTeamId     String?           @map("from_team_id")
+  toTeamId       String?           @map("to_team_id")
+  reason         String?           @db.Text
+  changedById    String?           @map("changed_by_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  leagueSeason   LeagueSeason      @relation(fields: [leagueSeasonId], references: [id], onDelete: Cascade)
+  player         Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  seasonTeam     SeasonTeam        @relation(fields: [seasonTeamId], references: [id], onDelete: Cascade)
+  roster         SeasonTeamPlayer? @relation(fields: [rosterId], references: [id], onDelete: SetNull)
+
+  @@index([leagueSeasonId, playerId, createdAt])
+  @@index([seasonTeamId, createdAt])
+  @@map("season_roster_history")
 }
 
 model LeagueStaff {
@@ -513,6 +692,10 @@ model Player {
   substitutionsIn    Substitution[]             @relation("SubstitutionIn")
   substitutionsOut   Substitution[]             @relation("SubstitutionOut")
   teamHistory        PlayerTeamHistory[]
+  seasonRegistrationRosterChanges SeasonRegistrationRosterChange[]
+  seasonTeamPlayers  SeasonTeamPlayer[]
+  seasonPlayerTransfers SeasonPlayerTransfer[]
+  seasonRosterHistory SeasonRosterHistory[]
 
   @@index([teamId])
   @@index([slug])
@@ -750,6 +933,40 @@ model MatchEvent {
   @@index([isUndone])
   @@index([assistPlayerId], map: "match_events_assist_player_id_fkey")
   @@map("match_events")
+}
+
+model PublicRegistrationSubmission {
+  idempotencyKey String                       @id @map("idempotency_key")
+  kind          String
+  emailHash     String                       @map("email_hash")
+  entityId      String?                      @map("entity_id")
+  response      Json?
+  createdAt     DateTime                     @default(now()) @map("created_at")
+  expiresAt     DateTime?                    @map("expires_at")
+  emailJobs     PublicRegistrationEmailJob[]
+
+  @@index([kind, createdAt])
+  @@index([expiresAt])
+  @@map("public_registration_submissions")
+}
+
+model PublicRegistrationEmailJob {
+  id             String                        @id @default(cuid())
+  submissionKey  String                        @map("submission_key")
+  jobType        String                        @map("job_type")
+  payload        Json
+  status         String                        @default("PENDING")
+  attempts       Int                           @default(0)
+  lockedUntil    DateTime?                     @map("locked_until")
+  sentAt         DateTime?                     @map("sent_at")
+  lastError      String?                       @map("last_error")
+  createdAt      DateTime                      @default(now()) @map("created_at")
+  updatedAt      DateTime                      @updatedAt @map("updated_at")
+  submission     PublicRegistrationSubmission  @relation(fields: [submissionKey], references: [idempotencyKey], onDelete: Cascade)
+
+  @@unique([submissionKey, jobType])
+  @@index([status, lockedUntil])
+  @@map("public_registration_email_jobs")
 }
 
 model RegistrationNotification {
@@ -1092,6 +1309,45 @@ enum LeagueSeasonStatus {
   ACTIVE
   PLAYOFFS
   COMPLETED
+}
+
+enum SeasonRegistrationType {
+  NEW_TEAM
+  RETURNING_TEAM
+}
+
+enum SeasonRegistrationStatus {
+  PENDING
+  OWNERSHIP_VERIFICATION
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum OwnershipClaimStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  REVOKED
+}
+
+enum RosterChangeAction {
+  ADD
+  REMOVE
+}
+
+enum RosterChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum SeasonRosterStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
 }
 
 enum MatchStatus {

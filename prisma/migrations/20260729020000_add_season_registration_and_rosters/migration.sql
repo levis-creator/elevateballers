@@ -1,0 +1,100 @@
+CREATE TABLE `season_registration_applications` (
+    `id` VARCHAR(191) NOT NULL,
+    `league_season_id` VARCHAR(191) NOT NULL,
+    `team_id` VARCHAR(191) NULL,
+    `requested_team_name` VARCHAR(191) NULL,
+    `type` VARCHAR(191) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    `applicant_name` VARCHAR(191) NOT NULL,
+    `applicant_email` VARCHAR(191) NOT NULL,
+    `notes` TEXT NULL,
+    `admin_notes` TEXT NULL,
+    `reviewed_by_id` VARCHAR(191) NULL,
+    `reviewed_at` DATETIME(3) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+    `season_team_id` VARCHAR(191) NULL,
+    PRIMARY KEY (`id`),
+    INDEX `season_registration_applications_league_season_id_status_idx` (`league_season_id`, `status`),
+    INDEX `season_registration_applications_team_id_idx` (`team_id`),
+    INDEX `season_registration_applications_applicant_email_idx` (`applicant_email`),
+    INDEX `season_registration_applications_season_team_id_idx` (`season_team_id`),
+    CONSTRAINT `season_registration_applications_league_season_id_fkey` FOREIGN KEY (`league_season_id`) REFERENCES `league_seasons` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `season_registration_applications_team_id_fkey` FOREIGN KEY (`team_id`) REFERENCES `teams` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT `season_registration_applications_reviewed_by_id_fkey` FOREIGN KEY (`reviewed_by_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT `season_registration_applications_season_team_id_fkey` FOREIGN KEY (`season_team_id`) REFERENCES `season_teams` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `team_ownership_claims` (
+    `id` VARCHAR(191) NOT NULL,
+    `application_id` VARCHAR(191) NOT NULL,
+    `team_id` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `token_hash` VARCHAR(191) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    `expires_at` DATETIME(3) NOT NULL,
+    `verified_at` DATETIME(3) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `team_ownership_claims_application_id_key` (`application_id`),
+    UNIQUE INDEX `team_ownership_claims_token_hash_key` (`token_hash`),
+    INDEX `team_ownership_claims_team_id_status_idx` (`team_id`, `status`),
+    INDEX `team_ownership_claims_expires_at_idx` (`expires_at`),
+    CONSTRAINT `team_ownership_claims_application_id_fkey` FOREIGN KEY (`application_id`) REFERENCES `season_registration_applications` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `team_ownership_claims_team_id_fkey` FOREIGN KEY (`team_id`) REFERENCES `teams` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `team_ownerships` (
+    `id` VARCHAR(191) NOT NULL,
+    `team_id` VARCHAR(191) NOT NULL,
+    `user_id` VARCHAR(191) NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `role` VARCHAR(191) NOT NULL DEFAULT 'OWNER',
+    `verified_at` DATETIME(3) NOT NULL,
+    `revoked_at` DATETIME(3) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (`id`),
+    INDEX `team_ownerships_team_id_revoked_at_idx` (`team_id`, `revoked_at`),
+    INDEX `team_ownerships_email_idx` (`email`),
+    CONSTRAINT `team_ownerships_team_id_fkey` FOREIGN KEY (`team_id`) REFERENCES `teams` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `team_ownerships_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `season_registration_roster_changes` (
+    `id` VARCHAR(191) NOT NULL,
+    `application_id` VARCHAR(191) NOT NULL,
+    `player_id` VARCHAR(191) NOT NULL,
+    `action` VARCHAR(191) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    `jersey_number` INTEGER NULL,
+    `position` VARCHAR(191) NULL,
+    `processed_at` DATETIME(3) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `season_registration_roster_changes_application_id_player_id_key` (`application_id`, `player_id`),
+    INDEX `season_registration_roster_changes_player_id_status_idx` (`player_id`, `status`),
+    CONSTRAINT `season_registration_roster_changes_application_id_fkey` FOREIGN KEY (`application_id`) REFERENCES `season_registration_applications` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `season_registration_roster_changes_player_id_fkey` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `season_team_players` (
+    `id` VARCHAR(191) NOT NULL,
+    `league_season_id` VARCHAR(191) NOT NULL,
+    `season_team_id` VARCHAR(191) NOT NULL,
+    `team_id` VARCHAR(191) NOT NULL,
+    `player_id` VARCHAR(191) NOT NULL,
+    `jersey_number` INTEGER NULL,
+    `position` VARCHAR(191) NULL,
+    `joined_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `left_at` DATETIME(3) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `season_team_players_season_team_id_player_id_key` (`season_team_id`, `player_id`),
+    INDEX `season_team_players_league_season_id_team_id_left_at_idx` (`league_season_id`, `team_id`, `left_at`),
+    INDEX `season_team_players_player_id_idx` (`player_id`),
+    CONSTRAINT `season_team_players_league_season_id_fkey` FOREIGN KEY (`league_season_id`) REFERENCES `league_seasons` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `season_team_players_season_team_id_fkey` FOREIGN KEY (`season_team_id`) REFERENCES `season_teams` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `season_team_players_team_id_fkey` FOREIGN KEY (`team_id`) REFERENCES `teams` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `season_team_players_player_id_fkey` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

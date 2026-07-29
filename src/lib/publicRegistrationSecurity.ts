@@ -40,6 +40,11 @@ export function isHoneypotTriggered(value: unknown): boolean {
   return normalizeText(value).length > 0;
 }
 
+export function getIdempotencyKey(request: Request, body: Record<string, unknown>): string | null {
+  const key = normalizeText(request.headers.get('idempotency-key') ?? body.idempotencyKey);
+  return key && key.length <= 128 ? key : null;
+}
+
 function tooLong(value: string | undefined, limit: number): boolean {
   return Boolean(value && value.length > limit);
 }

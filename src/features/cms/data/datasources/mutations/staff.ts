@@ -9,7 +9,7 @@ import type {
   TeamStaff,
 } from '../../../types';
 
-async function generateUniqueStaffSlug(baseSlug: string, excludeId?: string): Promise<string> {
+async function generateUniqueStaffSlug(baseSlug: string, excludeId?: string, db: any = prisma): Promise<string> {
   let slug = generateSlug(baseSlug);
   let counter = 1;
   const original = slug;
@@ -17,18 +17,18 @@ async function generateUniqueStaffSlug(baseSlug: string, excludeId?: string): Pr
   while (true) {
     const where: any = { slug };
     if (excludeId) where.id = { not: excludeId };
-    const existing = await prisma.staff.findFirst({ where });
+    const existing = await db.staff.findFirst({ where });
     if (!existing) return slug;
     slug = `${original}-${counter}`;
     counter++;
   }
 }
 
-export async function createStaff(data: CreateStaffInput): Promise<Staff> {
+export async function createStaff(data: CreateStaffInput, db: any = prisma): Promise<Staff> {
   const baseName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'staff';
-  const slug = data.slug || await generateUniqueStaffSlug(baseName);
+  const slug = data.slug || await generateUniqueStaffSlug(baseName, undefined, db);
 
-  const staff = await prisma.staff.create({
+  const staff = await db.staff.create({
     data: { ...data, slug, approved: data.approved ?? true },
   });
 
@@ -90,14 +90,14 @@ export async function deleteStaff(id: string): Promise<boolean> {
   }
 }
 
-export async function assignStaffToTeam(data: CreateTeamStaffInput): Promise<TeamStaff> {
-  const existing = await prisma.teamStaff.findUnique({
+export async function assignStaffToTeam(data: CreateTeamStaffInput, db: any = prisma): Promise<TeamStaff> {
+  const existing = await db.teamStaff.findUnique({
     where: { teamId_staffId: { teamId: data.teamId, staffId: data.staffId } },
   });
 
   if (existing) throw new Error('This staff member is already assigned to this team');
 
-  return await prisma.teamStaff.create({ data });
+  return await db.teamStaff.create({ data });
 }
 
 export async function updateTeamStaff(id: string, data: UpdateTeamStaffInput): Promise<TeamStaff | null> {
