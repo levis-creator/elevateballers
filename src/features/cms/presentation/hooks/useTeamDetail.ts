@@ -3,6 +3,9 @@ import type { SeasonWithCounts, TeamStaffWithStaff, TeamWithPlayers } from '../.
 
 type Match = Record<string, any>;
 type Registration = {
+  seasonId: string;
+  leagueSeasonId: string;
+  teamId: string;
   season: string;
   league: string;
   structure: string;
@@ -43,12 +46,16 @@ export function useTeamDetail(teamId: string) {
       const registrationRows: Registration[] = [];
       await Promise.all(
         seasonData.slice(0, 8).map(async (season) => {
-          const seasonTeams = await getJson<Array<{ id: string }>>(
+          const seasonTeams = await getJson<Array<{ id: string; leagueSeasonId?: string }>>(
             `/api/seasons/${season.id}/teams`
           ).catch(() => []);
-          if (!seasonTeams.some((entry) => entry.id === teamId)) return;
-          for (const leagueSeason of season.leagueSeasons ?? []) {
+          for (const seasonTeam of seasonTeams.filter((entry) => entry.id === teamId && entry.leagueSeasonId)) {
+            const leagueSeason = season.leagueSeasons?.find((entry) => entry.id === seasonTeam.leagueSeasonId);
+            if (!leagueSeason) continue;
             registrationRows.push({
+              seasonId: season.id,
+              leagueSeasonId: leagueSeason.id,
+              teamId,
               season: season.name,
               league: leagueSeason.league.name,
               structure: String(leagueSeason.competitionStructure ?? 'single').replaceAll('_', ' '),

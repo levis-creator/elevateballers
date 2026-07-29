@@ -1,0 +1,9 @@
+---
+export const prerender = false;
+export const ssr = false;
+import AdminLayout from '../../features/cms/components/AdminLayout.astro';
+import RegistrationReviewQueue from '../../features/registration/presentation/RegistrationReviewQueue';
+---
+<AdminLayout title="Registration Review - Admin" permission="players:read">
+  <RegistrationReviewQueue client:load />
+</AdminLayout>

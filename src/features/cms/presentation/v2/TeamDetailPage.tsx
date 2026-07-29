@@ -14,6 +14,7 @@ import {
 export default function TeamDetailPage({ teamId }: { teamId: string }) {
   const data = useTeamDetail(teamId);
   const [tab, setTab] = useState<DetailTab>('roster');
+  const [registrationRequested, setRegistrationRequested] = useState(false);
   if (data.loading)
     return (
       <div className="eb-detail-loading">
@@ -37,14 +38,14 @@ export default function TeamDetailPage({ teamId }: { teamId: string }) {
   return (
     <div className="eb-detail-page">
       <div className="eb-detail-breadcrumb"><a href="/admin/teams">Teams</a><span>/</span><strong>{data.team.name}</strong></div>
-      <TeamDetailHero team={data.team} staff={data.staff} />
+      <TeamDetailHero team={data.team} staff={data.staff} onRegister={() => { setTab('registrations'); setRegistrationRequested(true); }} />
       <CompetitionContext
         seasons={data.seasons}
         registrations={data.registrations}
         matches={data.matches}
       />
       <TeamDetailTabs active={tab} onChange={setTab} counts={counts} />
-      {tab === 'registrations' && <RegistrationsSection rows={data.registrations} />}
+      {tab === 'registrations' && <RegistrationsSection rows={data.registrations} teamId={data.team.id} seasons={data.seasons} autoOpen={registrationRequested} onAutoOpened={() => setRegistrationRequested(false)} />}
       {tab === 'roster' && <RosterSection team={data.team} />}
       {tab === 'staff' && <StaffSection staff={data.staff} />}
       {tab === 'matches' && <MatchesSection matches={data.matches} />}

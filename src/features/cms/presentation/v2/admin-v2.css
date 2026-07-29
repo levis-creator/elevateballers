@@ -217,3 +217,16 @@
 @media (max-width:700px) { .eb-players-scope { align-items:flex-start; flex-wrap:wrap; }.eb-scope-meta { width:100%; margin-left:0; text-align:left; }.eb-players-kpis { grid-template-columns:repeat(2,1fr); }.eb-players-toolbar>label { width:100%; }.eb-players-toolbar select { flex:1; min-width:135px; }.eb-players-footer { align-items:flex-start; flex-direction:column; }.eb-players-footer>div { width:100%; overflow:auto; }.eb-players-footer button { flex:none; }.mobile-team { display:inline; }.team-col { display:none; } }
 @media (max-width:480px) { .eb-players-heading h1 { font-size:30px; }.eb-players-kpis { gap:8px; }.eb-player-kpi { padding:12px; }.eb-player-kpi strong { font-size:22px; }.eb-players-actions button,.eb-players-actions a { flex:1; justify-content:center; }.eb-players-actions { gap:6px; }.eb-players-bulk { flex-wrap:wrap; }.eb-players-bulk strong { width:100%; } }
 .eb-player-menu { display:none; }.eb-player-menu.open { display:block; }
+.eb-detail-dialog-backdrop { position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,.6); }
+.eb-detail-dialog { width:min(100%,520px); border:1px solid var(--bord); border-radius:14px; background:var(--surf); box-shadow:0 24px 70px rgba(0,0,0,.45); padding:20px; color:var(--tx); }
+.eb-detail-dialog-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:18px; }
+.eb-detail-dialog-head small { color:var(--txm); font:10px "Space Mono",monospace; text-transform:uppercase; letter-spacing:.14em; }
+.eb-detail-dialog-head h3 { margin:6px 0 0; font:22px "Anton",sans-serif; text-transform:uppercase; }
+.eb-detail-dialog-head button { border:0; background:transparent; color:var(--txm); font-size:22px; cursor:pointer; }
+.eb-detail-dialog label { display:block; margin-top:14px; color:var(--txm); font:11px "Space Mono",monospace; text-transform:uppercase; }
+.eb-detail-dialog select { display:block; width:100%; margin-top:7px; padding:10px; border:1px solid var(--bord); border-radius:8px; background:var(--surf2); color:var(--tx); font:13px "Archivo",sans-serif; }
+.eb-detail-dialog p { color:var(--txm); font:12px "Archivo",sans-serif; }
+.eb-detail-dialog-error { color:var(--brand)!important; }
+.eb-detail-dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+.eb-detail-dialog-actions button { border:1px solid var(--bord); border-radius:7px; background:var(--surf2); color:var(--txd); padding:9px 13px; font:700 11px "Archivo",sans-serif; cursor:pointer; }
+.eb-detail-dialog-actions button.eb-detail-primary { background:var(--brand); border-color:var(--brand); color:#fff; }
