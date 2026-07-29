@@ -4,18 +4,24 @@ import { syncPermissions } from './lib/syncPermissions';
 // Runs once per server process — all concurrent first requests
 // await the same promise so the sync never executes more than once.
 let syncPromise: Promise<void> | null = null;
+let permissionsSynced = false;
+let nextPermissionSyncAt = 0;
 
 export const onRequest = defineMiddleware(async (_context, next) => {
-  if (!syncPromise) {
+  // Permission syncing is maintenance work. It must never hold up page
+  // rendering while the production database is unavailable.
+  if (!permissionsSynced && !syncPromise && Date.now() >= nextPermissionSyncAt) {
+    nextPermissionSyncAt = Date.now() + 60_000;
     syncPromise = syncPermissions().catch((err) => {
       console.error('[permissions] Auto-sync failed:', err);
-      syncPromise = null; // allow retry on the next request
-    });
+    }).then(() => { permissionsSynced = true; }).finally(() => { syncPromise = null; });
   }
 
-  await syncPromise;
-
   const response = await next();
+  // Mutate Astro's response in place. Re-wrapping a streaming response with
+  // `new Response(response.body, ...)` can make Astro attempt to write to a
+  // response that has already started.
+  const headers = response.headers;
 
   // Audit logging moved OUT of middleware — it was causing an extra DB write
   // on every mutation, blocking responses and duplicating logs that individual
@@ -23,23 +29,23 @@ export const onRequest = defineMiddleware(async (_context, next) => {
   // it matters (high-value actions); high-frequency mutations (events, clock
   // toggles, subs) are no longer audit-logged twice.
 
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('X-XSS-Protection', '1; mode=block');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   // Guarantee Content-Type charset on HTML responses. Astro/Vercel usually
   // emits "text/html; charset=utf-8", but the parameter can be dropped at
   // the edge — Seobility flags this. Only touches HTML; APIs and binary
   // assets keep their own Content-Type untouched.
-  const contentType = response.headers.get('Content-Type');
+  const contentType = headers.get('Content-Type');
   if (contentType && contentType.toLowerCase().includes('text/html') && !/charset=/i.test(contentType)) {
-    response.headers.set('Content-Type', `${contentType}; charset=UTF-8`);
+    headers.set('Content-Type', `${contentType}; charset=UTF-8`);
   }
 
   if (process.env.NODE_ENV === 'production') {
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
 
   return response;

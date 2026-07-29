@@ -45,11 +45,9 @@ if (!user) {
 }
 
 if (redirectUrl) {
-  try {
-    return Astro.redirect(redirectUrl, 302);
-  } catch (e) {
-    // Fall back to meta refresh if response stream already started
-  }
+  // Return immediately. Continuing to render the layout after Astro has
+  // created a redirect response causes ResponseSentError during streaming.
+  return Astro.redirect(redirectUrl, 302);
 }
 
 // v2 admin shell is flag-gated (same PUBLIC_ADMIN_UI_VERSION as the auth pages).
@@ -61,6 +59,7 @@ const isTeamsList = Astro.url.pathname === '/admin/teams' || Astro.url.pathname 
 const isTeamDetail = /^\/admin\/teams\/view\/[^/]+\/?$/.test(Astro.url.pathname);
 const isTeamForm = /^\/admin\/teams\/(new|[^/]+)\/?$/.test(Astro.url.pathname);
 const isPlayersList = Astro.url.pathname === '/admin/players' || Astro.url.pathname === '/admin/players/';
+const isPlayerDetail = /^\/admin\/players\/[^/]+\/?$/.test(Astro.url.pathname);
 ---
 
 <!doctype html>
@@ -167,7 +166,7 @@ const isPlayersList = Astro.url.pathname === '/admin/players' || Astro.url.pathn
         </script>
         <AdminShellV2 client:load transition:persist />
         <main class="eb-content ml-[var(--admin-sidebar-width,260px)] min-h-screen pt-[57px] transition-[margin] duration-[280ms] ease-out max-md:ml-0">
-          <div class={`mx-auto w-full ${isPlayersList ? 'max-w-[1320px] px-6 py-6' : isDashboard || isTeamsList || isTeamDetail || isTeamForm ? 'max-w-[1280px] px-6 py-6' : 'max-w-[1400px] p-8 max-md:p-4 max-[480px]:p-3'} max-md:px-4 admin-page scroll-smooth`}>
+          <div class={`mx-auto w-full ${isPlayersList || isPlayerDetail ? 'max-w-[1320px] px-6 py-6' : isDashboard || isTeamsList || isTeamDetail || isTeamForm ? 'max-w-[1280px] px-6 py-6' : 'max-w-[1400px] p-8 max-md:p-4 max-[480px]:p-3'} max-md:px-4 admin-page scroll-smooth`}>
             <slot />
           </div>
         </main>

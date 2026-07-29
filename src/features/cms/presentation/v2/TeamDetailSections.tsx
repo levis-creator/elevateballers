@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Grid2X2, List, Plus, Search, Shield, Trophy, Users } from 'lucide-react';
 import type { TeamStaffWithStaff, TeamWithPlayers } from '../../types';
 
@@ -40,22 +40,50 @@ function Avatar({
 
 export function RegistrationsSection({
   rows,
+  teamId,
+  seasons,
+  autoOpen = false,
+  onAutoOpened,
 }: {
   rows: Array<{
+    seasonId: string;
+    leagueSeasonId: string;
+    teamId: string;
     season: string;
     league: string;
     structure: string;
     conference: string;
     status: string;
   }>;
+  teamId: string;
+  seasons: any[];
+  autoOpen?: boolean;
+  onAutoOpened?: () => void;
 }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedLeagueSeasonId, setSelectedLeagueSeasonId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const activeStatuses = new Set(['REGISTRATION', 'SCHEDULED', 'ACTIVE', 'PLAYOFFS']);
+  const options = seasons.flatMap((season: any) => (season.leagueSeasons ?? []).map((leagueSeason: any) => ({ season, leagueSeason }))).filter(({ leagueSeason }: any) => activeStatuses.has(String(leagueSeason.status).toUpperCase()) && !rows.some((row: any) => row.leagueSeasonId === leagueSeason.id));
+  const openDialog = () => { setError(''); setSelectedLeagueSeasonId(options[0]?.leagueSeason?.id ?? ''); setDialogOpen(true); };
+  useEffect(() => { if (autoOpen) { openDialog(); onAutoOpened?.(); } }, [autoOpen]);
+  const registerTeam = async () => {
+    if (!selectedLeagueSeasonId) { setError('Select a league season first.'); return; }
+    const option = options.find(({ leagueSeason }: any) => leagueSeason.id === selectedLeagueSeasonId);
+    if (!option) return;
+    setSaving(true); setError('');
+    const response = await fetch(`/api/seasons/${option.season.id}/teams`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leagueSeasonId: selectedLeagueSeasonId, teamIds: [teamId] }) });
+    if (!response.ok) { setError((await response.json().catch(() => ({}))).error || 'Unable to register team.'); setSaving(false); return; }
+    window.location.reload();
+  };
   return (
     <section>
       <SectionHead
         title="Registrations"
         description="One SeasonTeam record per competition edition this team plays in. The conference only applies where that LeagueSeason uses conferences."
         action={
-          <button className="eb-detail-primary">
+          <button className="eb-detail-primary" onClick={openDialog}>
             <Plus size={14} /> Register in LeagueSeason
           </button>
         }
@@ -109,6 +137,7 @@ export function RegistrationsSection({
           </table>
         </div>
       </div>
+      {dialogOpen && <div className="eb-detail-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialogOpen(false); }}><div className="eb-detail-dialog"><div className="eb-detail-dialog-head"><div><small>Team registration</small><h3>Register team in LeagueSeason</h3></div><button onClick={() => setDialogOpen(false)} aria-label="Close">×</button></div><label>League season<select value={selectedLeagueSeasonId} onChange={(event) => setSelectedLeagueSeasonId(event.target.value)}><option value="">Select a league season</option>{options.map(({ season, leagueSeason }: any) => <option value={leagueSeason.id} key={leagueSeason.id}>{season.name} · {leagueSeason.league?.name ?? 'League'}</option>)}</select></label>{!options.length && <p>This team is already registered in all available league seasons.</p>}{error && <p className="eb-detail-dialog-error">{error}</p>}<div className="eb-detail-dialog-actions"><button onClick={() => setDialogOpen(false)}>Cancel</button><button className="eb-detail-primary" onClick={() => void registerTeam()} disabled={saving || !options.length}>{saving ? 'Registering…' : 'Register team'}</button></div></div></div>}
     </section>
   );
 }

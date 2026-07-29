@@ -12,9 +12,11 @@ import type { TeamStaffWithStaff, TeamWithPlayers } from '../../types';
 export default function TeamDetailHero({
   team,
   staff,
+  onRegister,
 }: {
   team: TeamWithPlayers;
   staff: TeamStaffWithStaff[];
+  onRegister?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const playerCount = team.players?.length ?? 0;
@@ -60,7 +62,7 @@ export default function TeamDetailHero({
           </a>
           <div className="eb-detail-menu-wrap"><button className="eb-detail-icon-button" aria-label="More actions" onClick={() => setMenuOpen((value) => !value)}>
             <MoreHorizontal size={17} />
-          </button>{menuOpen && <div className="eb-detail-menu"><button>Register in a LeagueSeason…</button><button>Duplicate team</button><button className="danger">{team.approved ? 'Revoke approval' : 'Approve team'}</button></div>}</div>
+          </button>{menuOpen && <div className="eb-detail-menu"><button onClick={() => { setMenuOpen(false); onRegister?.(); }}>Register in a LeagueSeason…</button><button>Duplicate team</button><button className="danger">{team.approved ? 'Revoke approval' : 'Approve team'}</button></div>}</div>
         </div>
       </div>
     </div>
