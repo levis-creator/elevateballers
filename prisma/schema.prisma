@@ -562,6 +562,8 @@ model SeasonTeamPlayer {
   @@unique([seasonTeamId, playerId])
   @@unique([leagueSeasonId, teamId, playerId])
   @@index([leagueSeasonId, status])
+  @@index([seasonTeamId, status, leftAt])
+  @@index([playerId, status, leftAt])
   @@index([leagueSeasonId, teamId, leftAt])
   @@index([playerId])
   @@map("season_team_players")
@@ -591,6 +593,7 @@ model SeasonPlayerTransfer {
 
   @@index([leagueSeasonId, status])
   @@index([playerId, leagueSeasonId])
+  @@index([status, createdAt])
   @@index([fromSeasonTeamId])
   @@index([toSeasonTeamId])
   @@map("season_player_transfers")
@@ -615,6 +618,7 @@ model SeasonRosterHistory {
 
   @@index([leagueSeasonId, playerId, createdAt])
   @@index([seasonTeamId, createdAt])
+  @@index([playerId, createdAt])
   @@map("season_roster_history")
 }
 

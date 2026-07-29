@@ -5,14 +5,14 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec prisma db execute --stdin
-8 verbose argv "exec" "--" "prisma" "db" "execute" "--stdin"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-29T05_35_09_002Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-29T05_35_09_002Z-debug-0.log
+7 verbose title npm run audit:season-registration:production
+8 verbose argv "run" "audit:season-registration:production"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-29T05_45_11_985Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-29T05_45_11_985Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
-13 notice run elevateballers@0.0.1 npx
-14 notice run prisma db execute --stdin
+13 notice run elevateballers@0.0.1 audit:season-registration:production
+14 notice run tsx scripts/audit-season-registration-production.ts
 15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 16 verbose os Windows_NT 10.0.26200
 17 verbose node v24.18.0
