@@ -6,6 +6,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { checkRegistrationOpen } from '../../../lib/registrationGate';
+import { allowPublicRegistration, genericRegistrationResponse, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
 
 export const prerender = false;
 
@@ -17,7 +18,29 @@ const getClientIp = (request: Request): string =>
 export const POST: APIRoute = async ({ request }) => {
   try {
     const ip = getClientIp(request);
-    const data = await request.json();
+    const rawData = await request.json();
+    if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return genericRegistrationResponse();
+    if (isHoneypotTriggered(rawData.website)) return genericRegistrationResponse();
+    const jerseyNumber = rawData.jerseyNumber === undefined || rawData.jerseyNumber === null || rawData.jerseyNumber === '' ? undefined : Number(rawData.jerseyNumber);
+    const data = {
+      ...rawData,
+      firstName: normalizeText(rawData.firstName),
+      lastName: normalizeText(rawData.lastName),
+      email: normalizeEmail(rawData.email),
+      phone: normalizePhone(rawData.phone),
+      position: normalizeText(rawData.position),
+      jerseyNumber,
+      height: normalizeOptionalText(rawData.height),
+      weight: normalizeOptionalText(rawData.weight),
+      teamName: normalizeOptionalText(rawData.teamName),
+      leagueId: normalizeId(rawData.leagueId),
+      seasonId: normalizeId(rawData.seasonId),
+      leagueSeasonId: normalizeId(rawData.leagueSeasonId),
+      additionalInfo: normalizeOptionalText(rawData.additionalInfo),
+    };
+    const validationError = validatePlayerRegistration(data);
+    if (validationError) return new Response(JSON.stringify({ error: validationError }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    if (!await allowPublicRegistration('player', ip, data.email)) return genericRegistrationResponse(429);
 
     // Cloudflare Turnstile verification
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
@@ -25,17 +48,6 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate required fields
-    if (!data.firstName || !data.lastName || !data.email || !data.phone || !data.position) {
-      return new Response(
-        JSON.stringify({ error: 'First name, last name, email, phone, and position are required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
       );
     }
 
@@ -61,6 +73,10 @@ export const POST: APIRoute = async ({ request }) => {
       });
       teamId = team?.id;
     }
+
+    const duplicateEmail = await prisma.player.findFirst({ where: { email: data.email }, select: { id: true } });
+    const duplicateName = await prisma.player.findFirst({ where: { firstName: data.firstName, lastName: data.lastName, ...(teamId ? { teamId } : {}) }, select: { id: true } });
+    if (duplicateEmail || duplicateName) return genericRegistrationResponse();
 
     // Create player with bio excluding private contact info
     const bioParts = [

@@ -376,6 +376,7 @@ export default function RegistrationFormV2() {
 					{/* ================= TEAM ================= */}
 					{activeTab === "team" && (
 						<form onSubmit={handleTeamSubmit} className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
+							<input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-px w-px opacity-0" />
 							<label className="col-span-full block">
 								<Label icon={Shield} required>Team Name</Label>
 								<input type="text" name="name" value={teamFormData.name} onChange={handleTeamChange} placeholder="Enter team name" required className={inputCls} />
@@ -447,6 +448,7 @@ export default function RegistrationFormV2() {
 					{/* ================= PLAYER ================= */}
 					{activeTab === "player" && (
 						<form onSubmit={handlePlayerSubmit} className="grid grid-cols-2 gap-5 max-[600px]:grid-cols-1">
+							<input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-px w-px opacity-0" />
 							<label className="block">
 								<Label icon={User} required>First Name</Label>
 								<input type="text" name="firstName" value={playerFormData.firstName} onChange={handlePlayerChange} placeholder="Enter first name" required className={inputCls} />
