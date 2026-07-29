@@ -6,6 +6,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { checkRegistrationOpen } from '../../../lib/registrationGate';
+import { allowPublicRegistration, genericRegistrationResponse, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, validateTeamRegistration } from '../../../lib/publicRegistrationSecurity';
 
 export const prerender = false;
 
@@ -40,13 +41,23 @@ const getClientIp = (request: Request): string =>
 export const POST: APIRoute = async ({ request }) => {
   try {
     const ip = getClientIp(request);
-    const data = await request.json();
-    if (data.seasonId && !data.leagueSeasonId) {
-      return new Response(
-        JSON.stringify({ error: 'leagueSeasonId is required when registering for a season' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
-    }
+    const rawData = await request.json();
+    if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) return genericRegistrationResponse();
+    if (isHoneypotTriggered(rawData.website)) return genericRegistrationResponse();
+    const data = {
+      ...rawData,
+      name: normalizeText(rawData.name),
+      coachName: normalizeText(rawData.coachName),
+      contactEmail: normalizeEmail(rawData.contactEmail),
+      contactPhone: normalizePhone(rawData.contactPhone),
+      leagueId: normalizeId(rawData.leagueId),
+      seasonId: normalizeId(rawData.seasonId),
+      leagueSeasonId: normalizeId(rawData.leagueSeasonId),
+      additionalInfo: normalizeOptionalText(rawData.additionalInfo),
+    };
+    const validationError = validateTeamRegistration(data);
+    if (validationError) return new Response(JSON.stringify({ error: validationError }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    if (!await allowPublicRegistration('team', ip, data.contactEmail)) return genericRegistrationResponse(429);
 
     // Cloudflare Turnstile verification
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
@@ -54,17 +65,6 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate required fields
-    if (!data.name || !data.coachName || !data.contactEmail || !data.contactPhone) {
-      return new Response(
-        JSON.stringify({ error: 'Team name, coach name, contact email, and contact phone are required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
       );
     }
 
@@ -88,13 +88,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     if (existing) {
-      return new Response(
-        JSON.stringify({ error: 'A team with this name already exists' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      return genericRegistrationResponse();
     }
 
     // Get league name if leagueId is provided
