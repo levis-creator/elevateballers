@@ -15,7 +15,12 @@ function filterValidDates(articles: any[]): any[] {
 
 /** Get published news articles (public access) */
 export async function getNewsArticles(category?: string): Promise<NewsArticleWithAuthor[]> {
-  const where: any = { published: true };
+  const where: any = {
+    OR: [
+      { published: true },
+      { published: false, publishedAt: { lte: new Date() } },
+    ],
+  };
   if (category && category !== 'All' && categoryMap[category]) {
     where.category = categoryMap[category];
   }
@@ -78,7 +83,13 @@ export async function getNewsArticleBySlug(slug: string): Promise<NewsArticleWit
 export async function getFeaturedNewsArticles(): Promise<NewsArticleWithAuthor[]> {
   try {
     const articles = await prisma.newsArticle.findMany({
-      where: { published: true, feature: true },
+      where: {
+        feature: true,
+        OR: [
+          { published: true },
+          { published: false, publishedAt: { lte: new Date() } },
+        ],
+      },
       include: { author: { select: { id: true, name: true, email: true } } },
       orderBy: { publishedAt: 'desc' },
       take: 5,

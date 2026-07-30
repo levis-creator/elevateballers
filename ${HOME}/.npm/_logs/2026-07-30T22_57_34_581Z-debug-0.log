@@ -5,17 +5,17 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec eslint src/features/news/presentation/v2/NewsDetailPage.astro src/pages/news/[slug].astro
-8 verbose argv "exec" "--" "eslint" "src/features/news/presentation/v2/NewsDetailPage.astro" "src/pages/news/[slug].astro"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-30T22_08_22_365Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-30T22_08_22_365Z-debug-0.log
+7 verbose title npm exec eslint src/features/news/presentation/v2/NewsFormV2.tsx
+8 verbose argv "exec" "--" "eslint" "src/features/news/presentation/v2/NewsFormV2.tsx"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-30T22_57_34_581Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-30T22_57_34_581Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 notice run elevateballers@0.0.1 npx
-14 notice run eslint src/features/news/presentation/v2/NewsDetailPage.astro src/pages/news/[slug].astro
+14 notice run eslint src/features/news/presentation/v2/NewsFormV2.tsx
 15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 16 verbose os Windows_NT 10.0.26200
 17 verbose node v24.18.0
 18 verbose npm  v12.0.1
-19 verbose exit 0
-20 info ok
+19 verbose exit 1
+20 verbose code 1

@@ -33,7 +33,7 @@ const pageSize = 8;
 
 function getStatus(article: NewsArticleDTO): Status {
   if (article.published) return 'published';
-  if (article.publishedAt && new Date(article.publishedAt).getTime() > Date.now()) return 'scheduled';
+  if (article.publishedAt) return new Date(article.publishedAt).getTime() > Date.now() ? 'scheduled' : 'published';
   return 'draft';
 }
 

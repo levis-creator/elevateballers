@@ -3,8 +3,8 @@ export const prerender = false;
 export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import NewsEditor from '../../../features/cms/components/NewsEditor';
 import AdminNewsDetailV2 from '../../../features/news/presentation/v2/AdminNewsDetailV2';
+import NewsFormV2 from '../../../features/news/presentation/v2/NewsFormV2';
 import { getNewsArticleById } from '../../../features/cms/lib/queries';
 import { sanitizeHtml } from '../../../lib/sanitize';
 
@@ -15,6 +15,6 @@ const initialBodyHtml = initialArticle ? sanitizeHtml(initialArticle.content) : 
 ---
 
 <AdminLayout title="Edit News Article - Admin" permission="news_articles:update">
-  {editMode ? <NewsEditor articleId={id} client:load /> : <AdminNewsDetailV2 articleId={id!} initialArticle={initialArticle} initialBodyHtml={initialBodyHtml} client:load />}
+  {editMode ? <NewsFormV2 articleId={id} client:load /> : <AdminNewsDetailV2 articleId={id!} initialArticle={initialArticle} initialBodyHtml={initialBodyHtml} client:load />}
 </AdminLayout>
 

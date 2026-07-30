@@ -94,6 +94,15 @@ const articleImage = view.seo.socialImage || view.heroImage
 			if (event.target instanceof Element && event.target.closest("[data-news-share]")) {
 				fetch(`/api/news/${articleId}/engagement`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "SHARE" }) }).catch(() => {});
 			}
+			const copyButton = event.target instanceof Element ? event.target.closest("[data-news-copy]") : null;
+			if (copyButton) {
+				event.preventDefault();
+				navigator.clipboard?.writeText(window.location.href).then(() => {
+					copyButton.textContent = "Copied";
+					setTimeout(() => { copyButton.textContent = "Copy link"; }, 1600);
+				}).catch(() => {});
+				fetch(`/api/news/${articleId}/engagement`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "COPY_LINK" }) }).catch(() => {});
+			}
 		});
 	</script>
 </LayoutV2>

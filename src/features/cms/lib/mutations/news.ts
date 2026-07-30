@@ -1,5 +1,4 @@
 import { prisma } from '../../../../lib/prisma';
-import { generateSlug } from '../utils';
 import type {
   CreateNewsArticleInput,
   UpdateNewsArticleInput,
@@ -52,7 +51,11 @@ export async function createNewsArticle(data: CreateNewsArticleInput): Promise<N
   const article = await prisma.newsArticle.create({
     data: {
       ...data,
-      publishedAt: data.published ? (data.publishedAt || new Date()) : null,
+      publishedAt: data.published
+        ? (data.publishedAt || new Date())
+        : data.publishedAt && new Date(data.publishedAt).getTime() > Date.now()
+          ? data.publishedAt
+          : null,
     },
     include: {
       author: { select: { id: true, name: true, email: true } },
@@ -80,7 +83,9 @@ export async function updateNewsArticle(
   if (data.published === true) {
     updateData.publishedAt = data.publishedAt || new Date();
   } else if (data.published === false) {
-    updateData.publishedAt = null;
+    updateData.publishedAt = data.publishedAt && new Date(data.publishedAt).getTime() > Date.now()
+      ? data.publishedAt
+      : null;
   }
 
   const willBeFeatured = data.feature === true;
