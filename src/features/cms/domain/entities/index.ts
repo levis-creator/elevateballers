@@ -284,8 +284,12 @@ export type CreatePlayerInput = {
   slug?: string;
   email?: string;
   phone?: string;
+  dateOfBirth?: Date | string;
+  nationality?: string;
   height?: string; // Height in feet format (e.g., "6'2\"")
+  heightCm?: number;
   weight?: string; // Weight in kilograms (e.g., "84 kg")
+  weightKg?: number;
   image?: string;
   bio?: string;
   teamId?: string;

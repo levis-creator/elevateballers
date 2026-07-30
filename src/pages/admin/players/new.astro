@@ -3,10 +3,10 @@ export const prerender = false;
 export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
-import PlayerEditor from '../../../features/cms/components/PlayerEditor';
+import PlayerFormV2 from '../../../features/player/presentation/v2/PlayerFormV2';
 ---
 
 <AdminLayout title="Create Player - Admin" permission="players:create">
-  <PlayerEditor client:load />
+  <PlayerFormV2 client:load />
 </AdminLayout>
 

@@ -15,6 +15,7 @@ type Registration = {
 
 type TeamFormState = {
   name: string;
+  nickname: string;
   shortName: string;
   abbreviation: string;
   slug: string;
@@ -30,7 +31,7 @@ type TeamFormState = {
 };
 
 const emptyForm: TeamFormState = {
-  name: '', shortName: '', abbreviation: '', slug: '', venue: '', city: '', founded: '',
+  name: '', nickname: '', shortName: '', abbreviation: '', slug: '', venue: '', city: '', founded: '',
   contactEmail: '', logo: '', primaryColor: '#e4002b', secondaryColor: '#ffffff',
   description: '', approved: true,
 };
@@ -41,7 +42,7 @@ function slugify(value: string) {
 
 function asState(team: Record<string, any>): TeamFormState {
   return {
-    name: team.name ?? '', shortName: team.shortName ?? '', abbreviation: team.abbreviation ?? '',
+    name: team.name ?? '', nickname: team.nickname ?? '', shortName: team.shortName ?? '', abbreviation: team.abbreviation ?? '',
     slug: team.slug ?? '', venue: team.venue ?? '', city: team.city ?? '',
     founded: team.founded ? String(team.founded) : '', contactEmail: team.contactEmail ?? '',
     logo: team.logo ?? '', primaryColor: team.primaryColor ?? '#e4002b',
@@ -219,6 +220,7 @@ export default function TeamFormV2({ teamId }: { teamId?: string }) {
         <main className="eb-form-main">
           <section className="eb-form-card"><FormSection title="Identity" description="How this team is named across the public site and standings."><div className="eb-form-grid">
             <Field className="wide" label="Team name" required error={nameError}><input value={form.name} onChange={(e) => { const name = e.target.value; update('name', name); if (!slugTouched) update('slug', slugify(name)); }} placeholder="e.g. Alliance Girls High School (Queens)" /></Field>
+            <Field label="Nickname" hint={`${form.nickname.length}/18`}><input maxLength={18} value={form.nickname} onChange={(e) => update('nickname', e.target.value)} placeholder="Queens" /><small>Optional team identity used on public pages.</small></Field>
             <Field label="Short name" hint={`${form.shortName.length}/18`}><input maxLength={18} value={form.shortName} onChange={(e) => update('shortName', e.target.value)} placeholder="AGHS Queens" /><small>Used in tables and fixtures.</small></Field>
             <Field label="Abbreviation" error={abbreviationError}><input maxLength={5} value={form.abbreviation} onChange={(e) => update('abbreviation', e.target.value.toUpperCase())} placeholder="AGHS" /><small>3–5 letters, shown on scoreboards.</small></Field>
             <Field className="wide" label="URL slug"><div className="eb-form-slug"><span>elevateballers.com/teams/</span><input value={form.slug} onChange={(e) => { setSlugTouched(true); update('slug', slugify(e.target.value)); }} /><button type="button" onClick={() => { setSlugTouched(false); update('slug', slugify(form.name)); }}>Reset</button></div></Field>
