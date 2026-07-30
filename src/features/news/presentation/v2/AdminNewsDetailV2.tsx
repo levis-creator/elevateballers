@@ -14,7 +14,7 @@ type Revision = { id: string; version: number; title: string; createdAt: string;
 
 function status(article: NewsArticleWithAuthor) {
   if (article.published) return 'Published';
-  if (article.publishedAt && new Date(article.publishedAt).getTime() > Date.now()) return 'Scheduled';
+  if (article.publishedAt) return new Date(article.publishedAt).getTime() > Date.now() ? 'Scheduled' : 'Published';
   return 'Draft';
 }
 
@@ -99,7 +99,7 @@ export default function AdminNewsDetailV2({ articleId, initialArticle, initialBo
   const publishedDate = article.publishedAt || article.createdAt;
 
   return <section className="eb-news-detail">
-    <div className="eb-news-detail-actions"><a href="/admin/news"><ArrowLeft size={14} /> All articles</a><span>/</span><strong>{article.title}</strong><span className={`eb-news-detail-badge ${articleStatus.toLowerCase()}`}><i />{articleStatus}</span><span className="eb-news-detail-spacer" /><a href={`/news/${article.slug}`} target="_blank" rel="noreferrer"><Eye size={14} /> View public</a><a className="primary" href={`/admin/news/${article.id}?edit=1`}><Pencil size={14} /> Edit article</a><button aria-label="More options"><MoreHorizontal size={17} /></button></div>
+    <div className="eb-news-detail-actions"><a href="/admin/news"><ArrowLeft size={14} /> All articles</a><span>/</span><strong>{article.title}</strong><span className={`eb-news-detail-badge ${articleStatus.toLowerCase()}`}><i />{articleStatus}</span><span className="eb-news-detail-spacer" /><a href={`/news/${article.slug}`} target="_blank" rel="noreferrer"><Eye size={14} /> View public</a><a className="primary" href={`/admin/news/${article.id}/edit`}><Pencil size={14} /> Edit article</a><button aria-label="More options"><MoreHorizontal size={17} /></button></div>
     {notice && <div className="eb-news-detail-notice"><CheckCircle2 size={15} /> {notice}</div>}
     <div className="eb-news-detail-layout">
       <main>

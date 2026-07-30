@@ -23,7 +23,7 @@ import ImageUpload from '@/components/ImageUpload';
 import { sanitizeHtml } from '@/lib/sanitize';
 
 // Quill-based rich text editor component
-function RichTextEditor({ 
+export function RichTextEditor({ 
   content, 
   onChange, 
   disabled 

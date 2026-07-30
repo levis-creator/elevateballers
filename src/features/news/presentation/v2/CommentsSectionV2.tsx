@@ -76,6 +76,11 @@ export default function CommentsSectionV2({ articleId, initialComments, initialC
 			setCount((c) => c + 1);
 			setStatus("success");
 			setFeedback("Thanks — your comment has been posted.");
+			fetch(`/api/news/${articleId}/engagement`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ type: "COMMENT" }),
+			}).catch(() => {});
 			setName("");
 			setEmail("");
 			setBody("");
