@@ -137,6 +137,14 @@ export async function fetchArticleView(slug: string): Promise<ArticleView | null
 			sidebar: { recent, categories, latest },
 			comments,
 			commentCount: commentCount ?? comments.length,
+			seo: {
+				title: article.metadata?.seoTitle || article.title,
+				description: article.metadata?.seoDescription || article.excerpt || article.title,
+				canonicalUrl: article.metadata?.canonicalUrl || null,
+				socialTitle: article.metadata?.socialTitle || article.title,
+				socialDescription: article.metadata?.socialDescription || article.excerpt || article.title,
+				socialImage: getDisplayImageUrl(article.metadata?.socialImage || article.image),
+			},
 		};
 	} catch {
 		return null;

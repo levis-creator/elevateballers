@@ -19,19 +19,19 @@ import { getArticleView } from "@/features/news/domain/usecases/get-article-view
 const view = await getArticleView(slug);
 if (!view) return Astro.rewrite("/404");
 
-const seoTitle = `${view.title} - Elevate Ballers`;
-const seoDescription = view.excerpt || view.title;
+const seoTitle = view.seo.title;
+const seoDescription = view.seo.description;
 const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
-const canonicalUrl = `${siteBase}/news/${view.slug}/`;
-const articleImage = view.heroImage
-	? new URL(view.heroImage, `${siteBase}/`).toString()
+const canonicalUrl = view.seo.canonicalUrl || `${siteBase}/news/${view.slug}/`;
+const articleImage = view.seo.socialImage || view.heroImage
+	? new URL(view.seo.socialImage || view.heroImage || "", `${siteBase}/`).toString()
 	: `${siteBase}/images/Elevate_Icon-200x200.png`;
 ---
 
 <LayoutV2
 	title={seoTitle}
 	description={seoDescription}
-	image={view.heroImage ?? undefined}
+	image={view.seo.socialImage || view.heroImage || undefined}
 	canonicalURL={canonicalUrl}
 	type="article"
 	publishedTime={view.publishedTime}
@@ -84,4 +84,16 @@ const articleImage = view.heroImage
 		})}
 	/>
 	<NewsDetailPage view={view} />
+	<script is:inline define:vars={{ articleId: view.id }}>
+		const key = `news-viewed:${articleId}`;
+		if (!sessionStorage.getItem(key)) {
+			sessionStorage.setItem(key, "1");
+			fetch(`/api/news/${articleId}/engagement`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "VIEW" }) }).catch(() => {});
+		}
+		document.addEventListener("click", (event) => {
+			if (event.target instanceof Element && event.target.closest("[data-news-share]")) {
+				fetch(`/api/news/${articleId}/engagement`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "SHARE" }) }).catch(() => {});
+			}
+		});
+	</script>
 </LayoutV2>
