@@ -7,7 +7,7 @@ export async function getPlayers(teamId?: string, isAdmin = false): Promise<Play
 
   const select: any = {
     id: true, slug: true, firstName: true, lastName: true, image: true,
-    bio: true, height: true, weight: true, position: true, jerseyNumber: true,
+    bio: true, dateOfBirth: true, nationality: true, height: true, heightCm: true, weight: true, weightKg: true, position: true, jerseyNumber: true,
     stats: true, approved: true, teamId: true, createdAt: true, updatedAt: true,
     team: { select: { id: true, name: true, slug: true, approved: true } },
   };
@@ -22,7 +22,7 @@ export async function getPlayers(teamId?: string, isAdmin = false): Promise<Play
 export async function getPlayerById(id: string, isAdmin = false): Promise<Player | null> {
   const select: any = {
     id: true, slug: true, firstName: true, lastName: true, image: true,
-    bio: true, height: true, weight: true, position: true, jerseyNumber: true,
+    bio: true, dateOfBirth: true, nationality: true, height: true, heightCm: true, weight: true, weightKg: true, position: true, jerseyNumber: true,
     stats: true, approved: true, teamId: true, createdAt: true, updatedAt: true, team: true,
   };
   if (isAdmin) { select.email = true; select.phone = true; }
@@ -33,7 +33,7 @@ export async function getPlayerById(id: string, isAdmin = false): Promise<Player
 export async function getPlayerBySlug(slug: string): Promise<Player | null> {
   const select: any = {
     id: true, slug: true, firstName: true, lastName: true, image: true,
-    bio: true, height: true, weight: true, position: true, jerseyNumber: true,
+    bio: true, dateOfBirth: true, nationality: true, height: true, heightCm: true, weight: true, weightKg: true, position: true, jerseyNumber: true,
     stats: true, approved: true, teamId: true, createdAt: true, updatedAt: true, team: true,
   };
 

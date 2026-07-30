@@ -680,9 +680,13 @@ model Player {
   updatedAt          DateTime                   @updatedAt @map("updated_at")
   teamId             String?                    @map("team_id")
   firstName          String?                    @map("first_name")
+  dateOfBirth        DateTime?                  @map("date_of_birth")
+  nationality        String?
   height             String?
+  heightCm           Int?                       @map("height_cm")
   lastName           String?                    @map("last_name")
   weight             String?
+  weightKg           Int?                       @map("weight_kg")
   email              String?
   phone              String?
   jumpBallsAsPlayer1 JumpBall[]                 @relation("JumpBallPlayer1")

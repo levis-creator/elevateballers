@@ -89,6 +89,16 @@ export const PUT: APIRoute = async ({ params, request }) => {
       data.teamId = undefined;
     }
 
+    if (data.dateOfBirth !== undefined) {
+      data.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+    }
+    if (data.heightCm !== undefined) {
+      data.heightCm = data.heightCm === null || data.heightCm === '' ? null : Number(data.heightCm);
+    }
+    if (data.weightKg !== undefined) {
+      data.weightKg = data.weightKg === null || data.weightKg === '' ? null : Number(data.weightKg);
+    }
+
     if ('stats' in data) {
       try {
         data.stats = sanitizeStats(data.stats);
