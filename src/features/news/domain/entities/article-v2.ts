@@ -63,4 +63,5 @@ export interface ArticleView {
 	};
 	comments: ArticleComment[];
 	commentCount: number;
+	seo: { title: string; description: string; canonicalUrl: string | null; socialTitle: string; socialDescription: string; socialImage: string | null };
 }

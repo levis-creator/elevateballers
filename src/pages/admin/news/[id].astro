@@ -4,11 +4,17 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import NewsEditor from '../../../features/cms/components/NewsEditor';
+import AdminNewsDetailV2 from '../../../features/news/presentation/v2/AdminNewsDetailV2';
+import { getNewsArticleById } from '../../../features/cms/lib/queries';
+import { sanitizeHtml } from '../../../lib/sanitize';
 
 const { id } = Astro.params;
+const editMode = Astro.url.searchParams.get('edit') === '1';
+const initialArticle = id && !editMode ? await getNewsArticleById(id) : null;
+const initialBodyHtml = initialArticle ? sanitizeHtml(initialArticle.content) : '';
 ---
 
 <AdminLayout title="Edit News Article - Admin" permission="news_articles:update">
-  <NewsEditor articleId={id} client:load />
+  {editMode ? <NewsEditor articleId={id} client:load /> : <AdminNewsDetailV2 articleId={id!} initialArticle={initialArticle} initialBodyHtml={initialBodyHtml} client:load />}
 </AdminLayout>
 

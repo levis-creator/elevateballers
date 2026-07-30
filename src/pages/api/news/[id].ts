@@ -32,6 +32,12 @@ export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'news_articles:update');
     const data = await request.json();
+    const current = await prisma.newsArticle.findUnique({ where: { id: params.id! } });
+    if (current) {
+      const latest = await prisma.newsArticleRevision.findFirst({ where: { articleId: current.id }, orderBy: { version: 'desc' } });
+      const changedById = getUserIdFromRequest(request);
+      await prisma.newsArticleRevision.create({ data: { articleId: current.id, version: (latest?.version ?? 0) + 1, title: current.title, slug: current.slug, content: current.content, excerpt: current.excerpt, category: current.category, image: current.image, published: current.published, feature: current.feature, publishedAt: current.publishedAt, changedById, changeNote: data.changeNote || 'Article updated' } });
+    }
 
     // If slug is being updated, check if it's unique
     if (data.slug) {

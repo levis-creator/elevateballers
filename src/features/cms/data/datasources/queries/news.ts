@@ -61,7 +61,7 @@ export async function getAllNewsArticles(includeUnpublished = false): Promise<Ne
 export async function getNewsArticleById(id: string): Promise<NewsArticleWithAuthor | null> {
   const article = await prisma.newsArticle.findUnique({
     where: { id },
-    include: { author: { select: { id: true, name: true, email: true } } },
+    include: { author: { select: { id: true, name: true, email: true } }, metadata: true },
   });
   return article as NewsArticleWithAuthor | null;
 }
@@ -69,7 +69,7 @@ export async function getNewsArticleById(id: string): Promise<NewsArticleWithAut
 export async function getNewsArticleBySlug(slug: string): Promise<NewsArticleWithAuthor | null> {
   const article = await prisma.newsArticle.findUnique({
     where: { slug },
-    include: { author: { select: { id: true, name: true, email: true } } },
+    include: { author: { select: { id: true, name: true, email: true } }, metadata: true },
   });
   return article as NewsArticleWithAuthor | null;
 }
