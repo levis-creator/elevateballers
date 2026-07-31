@@ -10,7 +10,7 @@ export const prerender = false;
  * GET /api/folders/[id]
  * Get a single folder by ID
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const folder = await getFolderById(params.id!);
 

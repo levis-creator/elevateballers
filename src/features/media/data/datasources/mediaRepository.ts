@@ -177,15 +177,16 @@ export async function getMediaStats(
   }
   const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
   const rows = await prisma.$queryRawUnsafe<
-    Array<{ bytes: number; legacyCount: number; untagged: number }>
+    Array<{ bytes: number; legacyCount: number; legacyBytes: number; untagged: number }>
   >(
-    `SELECT COALESCE(SUM(m.size), 0) as bytes, SUM(CASE WHEN m.url LIKE '%supabase%' THEN 1 ELSE 0 END) as legacyCount, SUM(CASE WHEN m.tags IS NULL OR CAST(m.tags AS CHAR) IN ('[]', '') THEN 1 ELSE 0 END) as untagged FROM media m${where}`,
+    `SELECT COALESCE(SUM(m.size), 0) as bytes, SUM(CASE WHEN m.url LIKE '%supabase%' THEN 1 ELSE 0 END) as legacyCount, COALESCE(SUM(CASE WHEN m.url LIKE '%supabase%' THEN m.size ELSE 0 END), 0) as legacyBytes, SUM(CASE WHEN m.tags IS NULL OR CAST(m.tags AS CHAR) IN ('[]', '') THEN 1 ELSE 0 END) as untagged FROM media m${where}`,
     ...params
   );
   return {
     count: result.total,
     bytes: Number(rows[0]?.bytes || 0),
     legacyCount: Number(rows[0]?.legacyCount || 0),
+    legacyBytes: Number(rows[0]?.legacyBytes || 0),
     untagged: Number(rows[0]?.untagged || 0),
   };
 }

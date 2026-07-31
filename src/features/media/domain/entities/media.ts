@@ -80,5 +80,6 @@ export interface MediaStats {
   count: number;
   bytes: number;
   legacyCount: number;
+  legacyBytes: number;
   untagged: number;
 }
