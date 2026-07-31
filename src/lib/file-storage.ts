@@ -277,8 +277,6 @@ export async function getFileStats(filePath: string, storageType: StorageType = 
   mimeType: string | null;
   exists: boolean;
 }> {
-  const storageType = getStorageType();
-
   if (storageType === 'r2' && r2Configured) {
     try {
       const metadata = await headR2Object(toR2Key(filePath));

@@ -43,3 +43,42 @@ export type CreateMediaInput = {
 
 export type UpdateMediaInput = Partial<CreateMediaInput>;
 
+export type MediaStorage = 'r2' | 'supabase';
+
+export interface MediaLibraryRow extends MediaEntity {
+  fileName: string;
+  thumbUrl: string | null;
+  mime: string | null;
+  originalSize: number | null;
+  folderName: string | null;
+  folderPrivate: boolean;
+  uploaderName: string | null;
+  storage: MediaStorage;
+  dimensions?: string;
+}
+
+export interface MediaLibraryQuery {
+  type?: MediaType;
+  folderId?: string;
+  storage?: MediaStorage;
+  q?: string;
+  sort?: 'createdAt' | 'name' | 'size' | 'type';
+  dir?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface MediaLibraryResult {
+  items: MediaLibraryRow[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface MediaStats {
+  count: number;
+  bytes: number;
+  legacyCount: number;
+  untagged: number;
+}

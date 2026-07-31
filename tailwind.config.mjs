@@ -22,6 +22,9 @@ export default {
       fontFamily: {
         sans: ['Rubik', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         heading: ['Teko', 'sans-serif'],
+        anton: ['Anton', 'sans-serif'],
+        archivo: ['Archivo', 'sans-serif'],
+        mono: ['Space Mono', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -72,6 +75,12 @@ export default {
           mid:    '#2a2847',
         },
         'table-alt': '#e8e8e8',
+        surf: '#faf9f5',
+        surf2: '#f1efe9',
+        txm: '#6b6860',
+        txd: '#403d37',
+        bord: '#dedbd3',
+        bord2: '#ebe8e0',
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -1,11 +1,11 @@
 import { ToastProvider } from '@/components/ui/toast';
-import MediaGallery from './MediaGallery';
+import MediaGalleryV2 from '../v2/MediaLibraryV2';
 
 export default function MediaGalleryWrapper() {
   try {
     return (
       <ToastProvider>
-        <MediaGallery />
+        <MediaGalleryV2 />
       </ToastProvider>
     );
   } catch (error: any) {
@@ -26,5 +26,4 @@ export default function MediaGalleryWrapper() {
     );
   }
 }
-
 

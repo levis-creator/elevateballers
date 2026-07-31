@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Search, Loader2, X, Image as ImageIcon, Check } from 'lucide-react';
+import { Search, Loader2, Image as ImageIcon, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { MediaWithFolderAndUploader } from '../../types';
 
@@ -25,7 +23,7 @@ export function MediaLibraryPicker({
   open,
   onOpenChange,
   onSelect,
-  title = "Select Image from Library"
+  title = 'Select Image from Library',
 }: MediaLibraryPickerProps) {
   const [items, setItems] = React.useState<MediaWithFolderAndUploader[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -55,11 +53,14 @@ export function MediaLibraryPicker({
     }
   };
 
-  const filteredItems = items.filter(item => 
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.tags && Array.isArray(item.tags) && item.tags.some(tag => 
-      typeof tag === 'string' && tag.toLowerCase().includes(searchTerm.toLowerCase())
-    ))
+  const filteredItems = items.filter(
+    (item) =>
+      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.tags &&
+        Array.isArray(item.tags) &&
+        item.tags.some(
+          (tag) => typeof tag === 'string' && tag.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
   );
 
   const handleSelect = () => {
@@ -152,9 +153,7 @@ export function MediaLibraryPicker({
           </Button>
         </div>
 
-        {uploadError && (
-          <p className="text-sm text-red-600 mt-1">{uploadError}</p>
-        )}
+        {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
 
         <div className="flex-1 overflow-y-auto pr-4">
           {loading ? (
@@ -166,7 +165,9 @@ export function MediaLibraryPicker({
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <ImageIcon className="h-12 w-12 text-muted-foreground mb-2" />
               <p className="text-lg font-semibold">No images found</p>
-              <p className="text-muted-foreground">Try a different search term or upload new media.</p>
+              <p className="text-muted-foreground">
+                Try a different search term or upload new media.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-4">
@@ -174,18 +175,14 @@ export function MediaLibraryPicker({
                 <div
                   key={item.id}
                   className={cn(
-                    "relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all hover:scale-105",
-                    selectedUrl === item.url 
-                      ? "border-primary ring-2 ring-primary ring-offset-2" 
-                      : "border-transparent hover:border-muted-foreground/50"
+                    'relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all hover:scale-105',
+                    selectedUrl === item.url
+                      ? 'border-primary ring-2 ring-primary ring-offset-2'
+                      : 'border-transparent hover:border-muted-foreground/50'
                   )}
                   onClick={() => setSelectedUrl(item.url)}
                 >
-                  <img
-                    src={item.url}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
                   {selectedUrl === item.url && (
                     <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                       <div className="bg-primary text-primary-foreground rounded-full p-1 shadow-lg">
@@ -208,10 +205,7 @@ export function MediaLibraryPicker({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSelect} 
-            disabled={!selectedUrl}
-          >
+          <Button onClick={handleSelect} disabled={!selectedUrl}>
             Select Image
           </Button>
         </DialogFooter>
@@ -220,4 +214,4 @@ export function MediaLibraryPicker({
   );
 }
 
-
+export default MediaLibraryPicker;
