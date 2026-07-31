@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { putR2Object, r2Configured } from '../src/lib/r2';
 
 const folders = ['general', 'players', 'teams', 'news', 'staff', 'leagues', 'matches', 'documents'];
