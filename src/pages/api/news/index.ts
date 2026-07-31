@@ -129,6 +129,8 @@ export const POST: APIRoute = async ({ request }) => {
       excerpt: data.excerpt,
       category,
       image: data.image,
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      leagueSeasonId: typeof data.leagueSeasonId === 'string' && data.leagueSeasonId ? data.leagueSeasonId : undefined,
       published: data.published || false,
       feature: data.feature || false,
       publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,

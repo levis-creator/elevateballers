@@ -19,10 +19,10 @@ export const POST: APIRoute = async ({ params, request }) => {
     await requirePermission(request, 'news_articles:update');
     const revision = await prisma.newsArticleRevision.findUnique({ where: { id: (await request.json()).revisionId } });
     if (!revision || revision.articleId !== params.id) return new Response(JSON.stringify({ error: 'Revision not found' }), { status: 404 });
-    const restored = await prisma.newsArticle.update({ where: { id: params.id! }, data: { title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, category: revision.category, image: revision.image, published: revision.published, feature: revision.feature, publishedAt: revision.publishedAt } });
+    const restored = await prisma.newsArticle.update({ where: { id: params.id! }, data: { title: revision.title, slug: revision.slug, content: revision.content, excerpt: revision.excerpt, category: revision.category, image: revision.image, tags: revision.tags ?? undefined, leagueSeasonId: revision.leagueSeasonId, published: revision.published, feature: revision.feature, publishedAt: revision.publishedAt } });
     const userId = getUserIdFromRequest(request);
     const latest = await prisma.newsArticleRevision.findFirst({ where: { articleId: params.id! }, orderBy: { version: 'desc' } });
-    await prisma.newsArticleRevision.create({ data: { articleId: restored.id, version: (latest?.version ?? 0) + 1, title: restored.title, slug: restored.slug, content: restored.content, excerpt: restored.excerpt, category: restored.category, image: restored.image, published: restored.published, feature: restored.feature, publishedAt: restored.publishedAt, changedById: userId, changeNote: `Restored revision ${revision.version}` } });
+    await prisma.newsArticleRevision.create({ data: { articleId: restored.id, version: (latest?.version ?? 0) + 1, title: restored.title, slug: restored.slug, content: restored.content, excerpt: restored.excerpt, category: restored.category, image: restored.image, tags: restored.tags ?? undefined, leagueSeasonId: restored.leagueSeasonId, published: restored.published, feature: restored.feature, publishedAt: restored.publishedAt, changedById: userId, changeNote: `Restored revision ${revision.version}` } });
     return new Response(JSON.stringify(restored), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) { return handleApiError(error, 'restore article revision', request); }
 };

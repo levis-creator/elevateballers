@@ -148,8 +148,10 @@ export type CreateNewsArticleInput = {
   slug: string;
   content: string;
   excerpt?: string;
-  category: NewsCategory;
+  category: string;
   image?: string;
+  tags?: string[];
+  leagueSeasonId?: string;
   published?: boolean;
   feature?: boolean;
   publishedAt?: Date;
@@ -363,14 +365,14 @@ export type CreateFolderInput = {
 export type UpdateFolderInput = Partial<CreateFolderInput>;
 
 // Category mapping for frontend (matches existing NewsFilter type)
-export const categoryMap: Record<string, NewsCategory> = {
+export const categoryMap: Record<string, string> = {
   'Interviews': 'INTERVIEWS',
   'Championships': 'CHAMPIONSHIPS',
   'Match report': 'MATCH_REPORT',
   'Analysis': 'ANALYSIS',
 };
 
-export const reverseCategoryMap: Record<NewsCategory, string> = {
+export const reverseCategoryMap: Record<string, string> = {
   'INTERVIEWS': 'Interviews',
   'CHAMPIONSHIPS': 'Championships',
   'MATCH_REPORT': 'Match report',
