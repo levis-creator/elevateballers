@@ -20,7 +20,7 @@ interface ImageUploadProps {
   maxWidthOrHeight?: number;
   quality?: number;
   maxSizeMB?: number;
-  variant?: 'default' | 'player';
+  variant?: 'default' | 'player' | 'article';
 }
 
 type UploadMode = 'upload' | 'url';
@@ -194,6 +194,50 @@ export default function ImageUpload({
         {error && (
           <p className="text-sm text-destructive">{error}</p>
         )}
+      </div>
+    );
+  }
+
+  if (variant === 'article') {
+    return (
+      <div className={cn('eb-article-image-upload', className)}>
+        <div className="eb-article-image-tabs">
+          <button type="button" className={mode === 'upload' ? 'active' : ''} onClick={() => setMode('upload')} disabled={isProcessing || disabled}>
+            Upload
+          </button>
+          <button type="button" className={mode === 'url' ? 'active' : ''} onClick={() => setMode('url')} disabled={isProcessing || disabled}>
+            External URL
+          </button>
+        </div>
+
+        {mode === 'url' && (
+          <Input
+            type="url"
+            value={value || ''}
+            onChange={(event) => onChange(event.target.value)}
+            disabled={isProcessing || disabled}
+            placeholder="https://example.com/image.jpg"
+            className="eb-article-image-url"
+          />
+        )}
+
+        {mode === 'upload' && preview ? (
+          <div className="eb-article-image-selected">
+            <img src={preview} alt="Featured image preview" onError={(event) => { (event.target as HTMLImageElement).style.display = 'none'; }} />
+            <span>Selected cover image</span>
+            <button type="button" aria-label="Remove image" onClick={handleRemove} disabled={isProcessing || disabled}>×</button>
+          </div>
+        ) : mode === 'upload' ? (
+          <button type="button" className="eb-article-image-dropzone" onClick={handleUploadClick} disabled={isProcessing || disabled}>
+            <span className="eb-article-image-upload-icon"><Upload size={15} /></span>
+            <strong>Drop an image or browse</strong>
+            <small>JPG or WebP · 1600×900 recommended</small>
+          </button>
+        ) : null}
+
+        <input ref={fileInputRef} id={inputId} type="file" accept={accept} onChange={handleFileSelect} className="hidden" disabled={isProcessing || disabled} />
+        {isProcessing && <div className="eb-article-image-processing"><Loader2 size={18} className="animate-spin" /> {compressing ? 'Compressing image…' : 'Uploading image…'}</div>}
+        {error && <p className="eb-article-image-error">{error}</p>}
       </div>
     );
   }
