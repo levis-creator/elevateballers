@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  Archive,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import {
   Copy,
   Download,
   FileAudio,
@@ -13,15 +20,12 @@ import {
   HardDrive,
   ImagePlus,
   Link2,
+  Layers,
   List,
   Lock,
   MoreVertical,
-  Pencil,
-  RefreshCw,
+  Database,
   Search,
-  Star,
-  Tag,
-  Trash2,
   Upload,
   X,
 } from 'lucide-react';
@@ -53,6 +57,13 @@ function typeIcon(type: string, size = 18) {
   if (type === 'AUDIO') return <FileAudio size={size} />;
   if (type === 'DOCUMENT') return <FileText size={size} />;
   return <FileImage size={size} />;
+}
+
+function typeColor(type: string) {
+  if (type === 'VIDEO') return '#7c5cff';
+  if (type === 'AUDIO') return '#d98324';
+  if (type === 'DOCUMENT') return '#1f9d55';
+  return '#2a6fdb';
 }
 
 function useRouteState() {
@@ -130,6 +141,7 @@ export default function MediaLibraryV2() {
     count: 0,
     bytes: 0,
     legacyCount: 0,
+    legacyBytes: 0,
     untagged: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -374,10 +386,46 @@ export default function MediaLibraryV2() {
             </div>
           </header>
           <div className="mb-5 grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">
-            <Kpi label="Total assets" value={String(stats.count)} icon={<Archive />} />
-            <Kpi label="Storage used" value={formatBytes(stats.bytes)} icon={<HardDrive />} />
-            <Kpi label="Legacy Supabase" value={String(stats.legacyCount)} icon={<RefreshCw />} />
-            <Kpi label="Untagged" value={String(stats.untagged)} icon={<Tag />} />
+            <Kpi
+              label="Files In Library"
+              value={String(stats.count)}
+              icon={<Layers />}
+              iconColor="#2a6fdb"
+              iconBg="rgba(42,111,219,0.14)"
+              sub={`across ${folders.length} folders`}
+              action="Browse"
+              onAction={() => updateRoute({ folder: '', type: 'ALL', storage: 'all', page: 1 })}
+            />
+            <Kpi
+              label="Stored Across Folders"
+              value={formatBytes(stats.bytes)}
+              icon={<HardDrive />}
+              iconColor="#9b86ff"
+              iconBg="rgba(124,92,255,0.14)"
+              sub={`${formatBytes(stats.bytes - stats.legacyBytes)} of it on R2`}
+              action="On R2"
+              onAction={() => updateRoute({ folder: '', storage: 'r2', page: 1 })}
+            />
+            <Kpi
+              label="Still On Supabase"
+              value={String(stats.legacyCount)}
+              icon={<Database />}
+              iconColor="#e5a35c"
+              iconBg="rgba(217,131,36,0.14)"
+              sub={`${stats.bytes ? Math.round((stats.legacyBytes / stats.bytes) * 100) : 0}% of bytes · ${formatBytes(stats.legacyBytes)} left`}
+              action="Legacy"
+              onAction={() => updateRoute({ folder: '', storage: 'supabase', page: 1 })}
+            />
+            <Kpi
+              label="Untagged Files"
+              value={String(stats.untagged)}
+              icon={<Search />}
+              iconColor="#e4002b"
+              iconBg="rgba(228,0,43,0.14)"
+              sub="harder to find in pickers"
+              action={stats.untagged > 0 ? 'Tag them' : undefined}
+              onAction={() => updateRoute({ q: '', page: 1 })}
+            />
           </div>
           <main className="flex gap-4 max-[1000px]:flex-col">
             <FolderRail
@@ -405,7 +453,7 @@ export default function MediaLibraryV2() {
               onDelete={(folder) => void removeFolder(folder)}
             />
             <section className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-bord bg-surf">
-              <Toolbar route={route} onRoute={updateRoute} />
+              <Toolbar route={route} onRoute={updateRoute} items={page.items} total={page.total} />
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-bord2 bg-surf2 px-4 py-2.5">
                 <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
                   Upload target
@@ -430,35 +478,31 @@ export default function MediaLibraryV2() {
                   onClose={() => setUploads([])}
                 />
               )}
-              <div className="flex items-center justify-between border-b border-bord2 px-4 py-2 text-xs text-txm">
-                <span>
-                  {loading
-                    ? 'Loading…'
-                    : `${page.total ? (page.page - 1) * page.limit + 1 : 0}–${Math.min(page.page * page.limit, page.total)} of ${page.total} assets`}
-                </span>
-                {selected.size > 0 && (
-                  <BulkBar
-                    count={selected.size}
-                    size={selectedBytes}
-                    onFeature={() => void bulk('feature', { featured: true })}
-                    onTag={() =>
-                      void bulk('tag', {
-                        tags:
-                          window
-                            .prompt('Tags, comma separated')
-                            ?.split(',')
-                            .map((tag) => tag.trim())
-                            .filter(Boolean) || [],
-                      })
-                    }
-                    onMove={() =>
-                      void bulk('move', { folderId: window.prompt('Target folder ID') || null })
-                    }
-                    onDelete={() => void deleteSelected()}
-                    onClear={() => setSelected(new Set())}
-                  />
-                )}
-              </div>
+              {selected.size > 0 && (
+                <BulkBar
+                  count={selected.size}
+                  size={selectedBytes}
+                  onFeature={() => void bulk('feature', { featured: true })}
+                  onTag={() =>
+                    void bulk('tag', {
+                      tags:
+                        window
+                          .prompt('Tags, comma separated')
+                          ?.split(',')
+                          .map((tag) => tag.trim())
+                          .filter(Boolean) || [],
+                    })
+                  }
+                  onMove={() =>
+                    void bulk('move', { folderId: window.prompt('Target folder ID') || null })
+                  }
+                  onDownload={() =>
+                    addToast({ description: `Preparing ${selected.size} files for download` })
+                  }
+                  onDelete={() => void deleteSelected()}
+                  onClear={() => setSelected(new Set())}
+                />
+              )}
               {error ? (
                 <ErrorState message={error} onRetry={() => void load()} />
               ) : loading ? (
@@ -469,7 +513,10 @@ export default function MediaLibraryV2() {
                   onUpload={() => fileInput.current?.click()}
                 />
               ) : route.view === 'grid' ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div
+                  className="grid gap-3 p-4"
+                  style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(190px,1fr))' }}
+                >
                   {page.items.map((item) => (
                     <GridTile
                       key={item.id}
@@ -477,6 +524,11 @@ export default function MediaLibraryV2() {
                       checked={selected.has(item.id)}
                       onCheck={() => toggleSelected(item.id)}
                       onOpen={() => setActive(item)}
+                      onCopy={() =>
+                        navigator.clipboard
+                          .writeText(item.url)
+                          .then(() => addToast({ description: 'URL copied', variant: 'success' }))
+                      }
                     />
                   ))}
                 </div>
@@ -539,11 +591,34 @@ export default function MediaLibraryV2() {
   );
 }
 
-function Kpi({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+function Kpi({
+  label,
+  value,
+  icon,
+  iconColor,
+  iconBg,
+  sub,
+  action,
+  onAction,
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  iconColor: string;
+  iconBg: string;
+  sub: string;
+  action?: string;
+  onAction: () => void;
+}) {
   return (
-    <div className="kpi-card">
+    <div className="flex flex-col rounded-xl border border-bord bg-surf px-4 py-3.5">
       <div className="flex items-center gap-3">
-        <span className="kpi-icon">{icon}</span>
+        <span
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+          style={{ background: iconBg, color: iconColor }}
+        >
+          {icon}
+        </span>
         <div className="min-w-0">
           <strong className="font-anton text-[26px] leading-none text-tx">{value}</strong>
           <div className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.1em] text-txm">
@@ -551,14 +626,15 @@ function Kpi({ label, value, icon }: { label: string; value: string; icon: React
           </div>
         </div>
       </div>
-      <div className="mt-3 border-t border-bord2 pt-2.5 font-mono text-[9.5px] text-faint">
-        {label === 'Legacy Supabase'
-          ? 'legacy objects · read-only migration'
-          : label === 'Untagged'
-            ? 'rows without tags'
-            : label === 'Storage used'
-              ? 'R2 + legacy bytes'
-              : 'all media rows'}
+      <div className="mt-3 flex items-baseline justify-between gap-2 border-t border-bord2 pt-2.5">
+        <span className="min-w-0 flex-1 truncate font-mono text-[9.5px] text-faint" title={sub}>
+          {sub}
+        </span>
+        {action && (
+          <button className="kpi-action" onClick={onAction}>
+            {action} →
+          </button>
+        )}
       </div>
     </div>
   );
@@ -583,79 +659,182 @@ function FolderRail({
   onCopy: (folder: MediaFolderRow) => void;
   onDelete: (folder: MediaFolderRow) => void;
 }) {
+  const [folderQuery, setFolderQuery] = useState('');
+  const [openMenu, setOpenMenu] = useState<{
+    folder: MediaFolderRow;
+    top: number;
+    left: number;
+  } | null>(null);
+  const filteredFolders = folders.filter((folder) =>
+    folder.name.toLowerCase().includes(folderQuery.trim().toLowerCase())
+  );
+
   return (
-    <aside className="folder-rail">
-      <div className="folder-rail-head">
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
-          Folders
-        </span>
-        <button className="folder-add" onClick={onCreate} title="Create folder">
-          <FolderPlus size={12} />
-        </button>
-      </div>
-      <div className="p-2">
-        <button className={`folder-row ${!current ? 'active' : ''}`} onClick={() => onSelect('')}>
-          <Folder size={15} />{' '}
-          <span className="min-w-0 flex-1 text-left">
-            <span className="block truncate">All media</span>
-            <small className="block font-mono text-[9px] uppercase tracking-[0.08em]">
-              all files
-            </small>
-          </span>{' '}
-          <span>{total}</span>
-        </button>
-        {folders.map((folder) => (
-          <div className="group flex items-center gap-1" key={folder.id}>
-            <button
-              className={`folder-row flex-1 ${current === folder.id ? 'active' : ''}`}
-              onClick={() => onSelect(folder.id)}
-            >
-              <Folder size={16} />
-              <span className="min-w-0 flex-1 truncate">
-                <span className="block truncate">{folder.name}</span>
-                <small className="block truncate font-mono text-[9px] text-txm">
-                  {folder.path}/
-                </small>
-              </span>
-              {folder.isPrivate && <Lock size={12} />}
-              <span>{folder._count?.media || 0}</span>
-            </button>
-            <button className="invisible p-1 group-hover:visible" onClick={() => onEdit(folder)}>
-              <Pencil size={13} />
-            </button>
-            <button
-              className="invisible p-1 group-hover:visible"
-              title="Copy storage prefix"
-              onClick={() => onCopy(folder)}
-            >
-              <Copy size={13} />
-            </button>
-            <button
-              className="invisible p-1 text-red-600 group-hover:visible"
-              onClick={() => onDelete(folder)}
-            >
-              <Trash2 size={13} />
+    <>
+      <div className="folder-rail-wrap">
+        <aside className="folder-rail">
+          <div className="folder-rail-head">
+            <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-faint">
+              Folders <strong>{folders.length}</strong>
+            </span>
+            <button className="folder-add" onClick={onCreate} title="Create folder">
+              <FolderPlus size={12} />
             </button>
           </div>
-        ))}
+
+          {folders.length > 6 && (
+            <label className="folder-search">
+              <Search size={13} />
+              <input
+                value={folderQuery}
+                onChange={(event) => setFolderQuery(event.target.value)}
+                placeholder="Filter folders…"
+              />
+            </label>
+          )}
+
+          <div className="eb-scroll folder-list">
+            {(filteredFolders.length > 0 || folderQuery) && (
+              <div className="folder-item">
+                <button
+                  className={`folder-row all ${!current ? 'active' : ''}`}
+                  onClick={() => onSelect('')}
+                >
+                  <Folder size={15} />
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block truncate">All files</span>
+                    <small>every prefix</small>
+                  </span>
+                  <span>{total}</span>
+                </button>
+              </div>
+            )}
+
+            {filteredFolders.map((folder) => (
+              <div className="folder-item" key={folder.id}>
+                <button
+                  className={`folder-row ${current === folder.id ? 'active' : ''}`}
+                  onClick={() => onSelect(folder.id)}
+                >
+                  {folder.isPrivate ? <Lock size={15} /> : <Folder size={15} />}
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block truncate">{folder.name}</span>
+                    <small>{folder.path}/</small>
+                  </span>
+                  <span>{folder._count?.media || 0}</span>
+                </button>
+                <button
+                  className="folder-menu-trigger"
+                  aria-label={`Options for ${folder.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    setOpenMenu((value) =>
+                      value?.folder.id === folder.id
+                        ? null
+                        : {
+                            folder,
+                            top: Math.min(rect.bottom + 6, window.innerHeight - 200),
+                            left: Math.min(rect.right - 236, window.innerWidth - 248),
+                          }
+                    );
+                  }}
+                >
+                  <MoreVertical size={13} />
+                </button>
+              </div>
+            ))}
+
+            {folders.length === 0 && (
+              <div className="folder-empty">
+                <span>
+                  <Folder size={18} />
+                </span>
+                <b>No folders yet</b>
+                <small>Uploads create one on demand, or add the module folders now.</small>
+                <button onClick={onCreate}>New folder</button>
+              </div>
+            )}
+
+            {folders.length > 0 && filteredFolders.length === 0 && (
+              <div className="folder-query-empty">No folder matches “{folderQuery}”</div>
+            )}
+          </div>
+
+          <div className="folder-rail-foot">
+            <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-faint">
+              Writing new files to
+            </div>
+            <div className="mt-1.5 flex items-center gap-2 font-bold text-tx">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#1f9d55]" />
+              Cloudflare R2
+            </div>
+            <div className="mt-1 font-mono text-[9.5px] text-txm">bucket · elevateballers</div>
+          </div>
+        </aside>
       </div>
-      <div className="folder-rail-foot">
-        <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-faint">
-          Writing new files to
-        </div>
-        <div className="mt-1.5 flex items-center gap-2 font-bold text-tx">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#1f9d55]" />
-          Cloudflare R2
-        </div>
-        <div className="mt-1 font-mono text-[9.5px] text-txm">bucket · elevateballers</div>
-      </div>
-    </aside>
+
+      {openMenu && (
+        <>
+          <button
+            className="folder-menu-overlay"
+            aria-label="Close folder menu"
+            onClick={() => setOpenMenu(null)}
+          />
+          <div className="folder-menu" style={{ top: openMenu.top, left: openMenu.left }}>
+            <button
+              onClick={() => {
+                onEdit(openMenu.folder);
+                setOpenMenu(null);
+              }}
+            >
+              Rename folder…
+            </button>
+            <button
+              onClick={() => {
+                onEdit(openMenu.folder);
+                setOpenMenu(null);
+              }}
+            >
+              {openMenu.folder.isPrivate ? 'Make public' : 'Make private'}
+            </button>
+            <button
+              onClick={() => {
+                onCopy(openMenu.folder);
+                setOpenMenu(null);
+              }}
+            >
+              Copy prefix path
+            </button>
+            <button
+              className="danger"
+              disabled={(openMenu.folder._count?.media || 0) > 0}
+              title={
+                (openMenu.folder._count?.media || 0) > 0
+                  ? 'A folder holding media cannot be deleted'
+                  : 'Removes the empty R2 prefix'
+              }
+              onClick={() => {
+                onDelete(openMenu.folder);
+                setOpenMenu(null);
+              }}
+            >
+              {(openMenu.folder._count?.media || 0) > 0
+                ? `Delete — ${openMenu.folder._count?.media || 0} files inside`
+                : 'Delete folder'}
+            </button>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
 function Toolbar({
   route,
   onRoute,
+  items,
+  total,
 }: {
   route: {
     q: string;
@@ -666,42 +845,81 @@ function Toolbar({
     view: ViewMode;
   };
   onRoute: (next: Partial<typeof route> & { page?: number }) => void;
+  items: MediaLibraryRow[];
+  total: number;
 }) {
+  const choices: Array<{ key: TypeFilter; label: string }> = [
+    { key: 'ALL', label: 'All' },
+    { key: 'IMAGE', label: 'Image' },
+    { key: 'VIDEO', label: 'Video' },
+    { key: 'AUDIO', label: 'Audio' },
+    { key: 'DOCUMENT', label: 'Doc' },
+  ];
   return (
     <div className="media-toolbar flex flex-wrap items-center gap-2.5 border-b border-bord2 px-4 py-3">
-      <div className="media-search relative flex min-w-[200px] flex-1 items-center">
-        <Search className="absolute left-3 top-2.5 text-txm" size={17} />
+      <div className="media-search flex min-w-[200px] flex-1 items-center gap-2.5 px-3 py-2">
+        <Search className="flex-shrink-0 text-txm" size={15} />
         <input
-          className="media-input w-full pl-9"
+          className="w-full border-none bg-transparent text-[13px] text-tx outline-none placeholder:text-faint"
           value={route.q}
-          placeholder="Search title, filename, path, or tags…"
+          placeholder="File name, title or tag…"
           onChange={(event) => onRoute({ q: event.target.value, page: 1 })}
         />
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="asset-type-filters flex gap-1.5 max-[1280px]:hidden">
+        {choices.map((choice) => {
+          const color = choice.key === 'ALL' ? '#e4002b' : typeColor(choice.key);
+          return (
+            <button
+              key={choice.key}
+              className={`type-segment ${route.type === choice.key ? 'selected' : ''}`}
+              style={{ '--type-color': color } as CSSProperties}
+              onClick={() => onRoute({ type: choice.key, page: 1 })}
+            >
+              {choice.key === 'ALL' ? <Layers size={13} /> : typeIcon(choice.key, 13)}
+              {choice.label}
+              <span>
+                {choice.key === 'ALL'
+                  ? total
+                  : items.filter((item) => item.type === choice.key).length}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <label className="asset-select-wrap min-[1281px]:hidden">
         <select
-          className="media-input"
+          className="asset-select"
           value={route.type}
+          aria-label="Media type"
           onChange={(event) => onRoute({ type: event.target.value as TypeFilter, page: 1 })}
         >
-          <option value="ALL">All types</option>
-          <option>IMAGE</option>
-          <option>VIDEO</option>
-          <option>AUDIO</option>
-          <option>DOCUMENT</option>
+          <option value="ALL">All</option>
+          <option value="IMAGE">IMAGE</option>
+          <option value="VIDEO">VIDEO</option>
+          <option value="AUDIO">AUDIO</option>
+          <option value="DOCUMENT">DOCUMENT</option>
         </select>
+        <span aria-hidden="true">▾</span>
+      </label>
+      <label className="asset-select-wrap">
         <select
-          className="media-input"
+          className="asset-select"
           value={route.storage}
+          aria-label="Storage"
           onChange={(event) => onRoute({ storage: event.target.value as StorageFilter, page: 1 })}
         >
           <option value="all">All storage</option>
           <option value="r2">Cloudflare R2</option>
-          <option value="supabase">Supabase legacy</option>
+          <option value="supabase">Supabase (legacy)</option>
         </select>
+        <span aria-hidden="true">▾</span>
+      </label>
+      <label className="asset-select-wrap">
         <select
-          className="media-input"
+          className="asset-select"
           value={`${route.sort}:${route.dir}`}
+          aria-label="Sort media"
           onChange={(event) => {
             const [sort, dir] = event.target.value.split(':') as [SortKey, 'asc' | 'desc'];
             onRoute({ sort, dir, page: 1 });
@@ -712,17 +930,22 @@ function Toolbar({
           <option value="size:desc">Largest first</option>
           <option value="name:asc">Name A–Z</option>
         </select>
+        <span aria-hidden="true">▾</span>
+      </label>
+      <div className="ml-auto flex gap-1.5">
         <button
           className={`view-btn ${route.view === 'grid' ? 'selected' : ''}`}
+          aria-label="Grid view"
           onClick={() => onRoute({ view: 'grid' })}
         >
-          <Grid2X2 size={17} />
+          <Grid2X2 size={15} />
         </button>
         <button
           className={`view-btn ${route.view === 'list' ? 'selected' : ''}`}
+          aria-label="List view"
           onClick={() => onRoute({ view: 'list' })}
         >
-          <List size={17} />
+          <List size={15} />
         </button>
       </div>
     </div>
@@ -739,32 +962,38 @@ function UploadTray({
   onClose: () => void;
 }) {
   return (
-    <section className="mb-5 rounded-xl border border-bord bg-white p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-mono text-xs font-bold uppercase tracking-widest">Upload tray</h2>
-        <button onClick={onClose}>
-          <X size={16} />
+    <section className="border-b border-bord2 px-4 py-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[13px] font-bold text-tx">
+          Uploading {uploads.length} files → {prefix}
+        </h2>
+        <button className="text-[11px] font-bold text-txm hover:text-brand-red" onClick={onClose}>
+          Hide
         </button>
       </div>
-      <p className="mb-3 text-xs text-txm">
-        Writing new files to <code className="font-mono text-brand-red">{prefix}</code>
-      </p>
-      {uploads.map((item) => (
-        <div className="mb-2" key={item.name}>
-          <div className="flex justify-between text-xs">
-            <span>{item.name}</span>
-            <span className={item.error ? 'text-red-600' : 'text-txm'}>
-              {item.error || `${item.progress}%`}
+      <div className="mt-3 grid gap-2">
+        {uploads.map((item) => (
+          <div className="flex items-center gap-3" key={item.name}>
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-bord2 bg-surf2 text-txm">
+              <Upload size={13} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[12.5px] text-tx">{item.name}</span>
+              <span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-[var(--track)]">
+                <span
+                  className={`block h-full rounded-full ${item.error ? 'bg-red-600' : 'bg-[#2a6fdb]'}`}
+                  style={{ width: `${item.progress}%` }}
+                />
+              </span>
+            </span>
+            <span
+              className={`rounded px-1.5 py-[3px] font-mono text-[9px] font-bold uppercase tracking-[0.08em] ${item.error ? 'text-red-600' : 'text-txm'}`}
+            >
+              {item.error || (item.progress >= 100 ? 'Stored' : 'Uploading')}
             </span>
           </div>
-          <div className="mt-1 h-1.5 overflow-hidden rounded bg-surf2">
-            <div
-              className={`h-full ${item.error ? 'bg-red-600' : 'bg-brand-red'}`}
-              style={{ width: `${item.progress}%` }}
-            />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }
@@ -775,6 +1004,7 @@ function BulkBar({
   onFeature,
   onTag,
   onMove,
+  onDownload,
   onDelete,
   onClear,
 }: {
@@ -783,27 +1013,24 @@ function BulkBar({
   onFeature: () => void;
   onTag: () => void;
   onMove: () => void;
+  onDownload: () => void;
   onDelete: () => void;
   onClear: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-brand-red/30 bg-white px-3 py-2 text-txd">
-      <b>{count} selected</b>
-      <span>{formatBytes(size)}</span>
-      <button title="Feature" onClick={onFeature}>
-        <Star size={14} />
+    <div className="bulk-row">
+      <span className="bulk-count">
+        {count} selected · {formatBytes(size)}
+      </span>
+      <button onClick={onMove}>Move to folder…</button>
+      <button onClick={onTag}>Add tags…</button>
+      <button onClick={onDownload}>Download</button>
+      <button onClick={onFeature}>Feature</button>
+      <button className="danger" onClick={onDelete}>
+        Delete
       </button>
-      <button title="Tag" onClick={onTag}>
-        <Tag size={14} />
-      </button>
-      <button title="Move" onClick={onMove}>
-        <Folder size={14} />
-      </button>
-      <button title="Delete" onClick={onDelete} className="text-red-600">
-        <Trash2 size={14} />
-      </button>
-      <button title="Clear" onClick={onClear}>
-        <X size={14} />
+      <button className="clear" onClick={onClear}>
+        Clear
       </button>
     </div>
   );
@@ -814,17 +1041,20 @@ function GridTile({
   checked,
   onCheck,
   onOpen,
+  onCopy,
 }: {
   item: MediaLibraryRow;
   checked: boolean;
   onCheck: () => void;
   onOpen: () => void;
+  onCopy: () => void;
 }) {
+  const color = typeColor(item.type);
   return (
     <article
-      className={`overflow-hidden rounded-xl border bg-white transition hover:-translate-y-0.5 hover:shadow-lg ${checked ? 'border-brand-red ring-1 ring-brand-red' : 'border-bord'}`}
+      className={`eb-card overflow-hidden rounded-xl border bg-surf2 transition-colors ${checked ? 'asset-selected' : ''}`}
     >
-      <div className="relative flex h-44 items-center justify-center bg-surf2" onClick={onOpen}>
+      <button className="asset-preview" style={{ backgroundColor: `${color}1f` }} onClick={onOpen}>
         {item.type === 'IMAGE' ? (
           <img
             src={item.thumbUrl || item.url}
@@ -833,34 +1063,41 @@ function GridTile({
             alt={item.title}
           />
         ) : (
-          <span className="text-brand-red">{typeIcon(item.type, 44)}</span>
+          <span style={{ color }}>{typeIcon(item.type, 34)}</span>
         )}
-        <input
-          className="absolute left-3 top-3 h-4 w-4"
-          type="checkbox"
-          checked={checked}
-          onChange={(event) => {
-            event.stopPropagation();
-            onCheck();
-          }}
-        />
-        <span className="absolute right-3 top-3 rounded bg-black/70 px-2 py-1 font-mono text-[9px] text-white">
-          {item.storage === 'r2' ? 'R2' : 'SUPABASE'}
+        {item.dimensions && <span className="asset-dimensions">{item.dimensions}</span>}
+        <span className="asset-type-chip" style={{ background: `${color}2e` }}>
+          {typeIcon(item.type, 11)} {item.type === 'DOCUMENT' ? 'DOC' : item.type}
         </span>
-      </div>
-      <button className="block w-full p-3 text-left" onClick={onOpen}>
-        <h3 className="truncate font-semibold">{item.title}</h3>
-        <p className="mt-1 truncate font-mono text-[10px] text-txm">{item.filePath || item.url}</p>
-        <div className="mt-3 flex justify-between text-xs text-txm">
-          <span>{formatBytes(item.size)}</span>
-          <span>{item.folderName || 'No folder'}</span>
-        </div>
-        {item.originalSize && item.originalSize > (item.size || 0) && (
-          <p className="mt-1 text-[11px] text-emerald-600">
-            −{Math.round((1 - (item.size || 0) / item.originalSize) * 100)}% compressed
-          </p>
+        {item.folderPrivate && (
+          <span className="asset-private">
+            <Lock size={10} /> Private
+          </span>
         )}
+        {item.featured && <span className="asset-featured">★</span>}
       </button>
+      <div className="asset-card-foot">
+        <button
+          className={`asset-check ${checked ? 'selected' : ''}`}
+          aria-label="Select file"
+          onClick={onCheck}
+        >
+          ✓
+        </button>
+        <button className="min-w-0 flex-1 text-left" onClick={onOpen}>
+          <span className="asset-title" title={item.title}>
+            {item.title}
+          </span>
+          <span className="asset-meta">
+            <span>{formatBytes(item.size)}</span>
+            <span>·</span>
+            <span className={item.storage}>{item.storage === 'r2' ? 'R2' : 'Supabase'}</span>
+          </span>
+        </button>
+        <button className="eb-hover asset-copy" title="Copy public URL" onClick={onCopy}>
+          <Copy size={12} />
+        </button>
+      </div>
     </article>
   );
 }
