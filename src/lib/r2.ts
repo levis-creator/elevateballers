@@ -11,7 +11,9 @@ import {
 import { getEnv } from './env';
 
 const accountId = getEnv('R2_ACCOUNT_ID');
-const endpoint = getEnv('R2_ENDPOINT') || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined);
+const endpoint =
+  getEnv('R2_ENDPOINT') ||
+  (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined);
 const bucket = getEnv('R2_BUCKET_NAME');
 const accessKeyId = getEnv('R2_ACCESS_KEY_ID');
 const secretAccessKey = getEnv('R2_SECRET_ACCESS_KEY');
@@ -31,7 +33,9 @@ export const r2Client = r2Configured
 
 export function requireR2(): { client: S3Client; bucket: string } {
   if (!r2Client || !R2_BUCKET) {
-    throw new Error('R2 is not configured. Set R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY.');
+    throw new Error(
+      'R2 is not configured. Set R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY.'
+    );
   }
   return { client: r2Client, bucket: R2_BUCKET };
 }
@@ -40,14 +44,32 @@ export function toR2Key(filePath: string): string {
   return filePath.replace(/^uploads\//, '').replace(/^\/+/, '');
 }
 
-export async function putR2Object(key: string, body: Buffer, contentType = 'application/octet-stream') {
+export async function putR2Object(
+  key: string,
+  body: Buffer,
+  contentType = 'application/octet-stream'
+) {
   const { client, bucket: bucketName } = requireR2();
-  await client.send(new PutObjectCommand({ Bucket: bucketName, Key: key, Body: body, ContentType: contentType }));
+  await client.send(
+    new PutObjectCommand({ Bucket: bucketName, Key: key, Body: body, ContentType: contentType })
+  );
 }
 
 export async function deleteR2Object(key: string): Promise<void> {
   const { client, bucket: bucketName } = requireR2();
   await client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+}
+
+export async function moveR2Object(fromKey: string, toKey: string): Promise<void> {
+  const { client, bucket: bucketName } = requireR2();
+  await client.send(
+    new CopyObjectCommand({
+      Bucket: bucketName,
+      Key: toKey,
+      CopySource: `${bucketName}/${fromKey.split('/').map(encodeURIComponent).join('/')}`,
+    })
+  );
+  await deleteR2Object(fromKey);
 }
 
 export async function ensureR2Prefix(prefix: string): Promise<void> {
@@ -60,12 +82,14 @@ async function listR2Keys(prefix: string): Promise<string[]> {
   let continuationToken: string | undefined;
 
   do {
-    const response = await client.send(new ListObjectsV2Command({
-      Bucket: bucketName,
-      Prefix: prefix.replace(/^\/+/, ''),
-      ContinuationToken: continuationToken,
-    }));
-    keys.push(...(response.Contents || []).flatMap((object) => object.Key ? [object.Key] : []));
+    const response = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: prefix.replace(/^\/+/, ''),
+        ContinuationToken: continuationToken,
+      })
+    );
+    keys.push(...(response.Contents || []).flatMap((object) => (object.Key ? [object.Key] : [])));
     continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
   } while (continuationToken);
 
@@ -80,18 +104,22 @@ export async function moveR2Prefix(fromPrefix: string, toPrefix: string): Promis
 
   for (const sourceKey of keys) {
     const targetKey = `${targetPrefix}/${sourceKey.slice(sourcePrefix.length + 1)}`;
-    await client.send(new CopyObjectCommand({
-      Bucket: bucketName,
-      Key: targetKey,
-      CopySource: `${bucketName}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`,
-    }));
+    await client.send(
+      new CopyObjectCommand({
+        Bucket: bucketName,
+        Key: targetKey,
+        CopySource: `${bucketName}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`,
+      })
+    );
   }
 
   if (keys.length > 0) {
-    await client.send(new DeleteObjectsCommand({
-      Bucket: bucketName,
-      Delete: { Objects: keys.map((Key) => ({ Key })) },
-    }));
+    await client.send(
+      new DeleteObjectsCommand({
+        Bucket: bucketName,
+        Delete: { Objects: keys.map((Key) => ({ Key })) },
+      })
+    );
   }
 }
 
@@ -99,10 +127,12 @@ export async function deleteR2Prefix(prefix: string): Promise<void> {
   const { client, bucket: bucketName } = requireR2();
   const keys = await listR2Keys(`${prefix.replace(/\/+$/, '')}/`);
   if (keys.length === 0) return;
-  await client.send(new DeleteObjectsCommand({
-    Bucket: bucketName,
-    Delete: { Objects: keys.map((Key) => ({ Key })) },
-  }));
+  await client.send(
+    new DeleteObjectsCommand({
+      Bucket: bucketName,
+      Delete: { Objects: keys.map((Key) => ({ Key })) },
+    })
+  );
 }
 
 export async function headR2Object(key: string) {

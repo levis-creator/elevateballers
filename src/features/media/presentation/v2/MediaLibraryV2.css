@@ -1,0 +1,451 @@
+.media-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+.media-btn.primary {
+  background: #dd3333;
+  color: #fff;
+}
+.media-btn.primary:hover {
+  background: #bb2222;
+}
+.media-btn.secondary {
+  border: 1px solid #dedbd3;
+  background: #fff;
+  color: #403d37;
+}
+.media-btn.secondary:hover {
+  background: #f1efe9;
+}
+.media-input {
+  border: 1px solid #dedbd3;
+  border-radius: 0.55rem;
+  background: #fff;
+  padding: 0.62rem 0.75rem;
+  font-size: 0.8rem;
+  outline: none;
+}
+.media-input:focus {
+  border-color: #dd3333;
+  box-shadow: 0 0 0 2px rgba(221, 51, 51, 0.12);
+}
+.view-btn {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dedbd3;
+  border-radius: 0.55rem;
+  background: #fff;
+  padding: 0 0.65rem;
+  color: #6b6860;
+}
+.view-btn.selected {
+  background: #dd3333;
+  color: #fff;
+  border-color: #dd3333;
+}
+.folder-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.6rem;
+  text-align: left;
+  font-size: 0.78rem;
+  color: #6b6860;
+}
+.folder-row span:last-child {
+  margin-left: auto;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+}
+.folder-row:hover,
+.folder-row.active {
+  background: #f1efe9;
+  color: #dd3333;
+}
+.storage-pill {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.25rem 0.45rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+.storage-pill.r2 {
+  background: #e5f4ec;
+  color: #167342;
+}
+.storage-pill.supabase {
+  background: #fff0df;
+  color: #a86114;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1rem;
+}
+.modal-card {
+  width: min(100%, 32rem);
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1.5rem;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+}
+
+/* Media v2 reference surface */
+.eb-root {
+  --bg: #0c0b0a;
+  --surf: #111010;
+  --surf2: rgba(255, 255, 255, 0.03);
+  --surf3: rgba(0, 0, 0, 0.3);
+  --bord: rgba(255, 255, 255, 0.08);
+  --bord2: rgba(255, 255, 255, 0.06);
+  --tx: #f3efe9;
+  --txd: #b8afa6;
+  --txm: #8a817a;
+  --faint: #5f574e;
+  --hov: rgba(255, 255, 255, 0.06);
+  --chip: rgba(255, 255, 255, 0.08);
+  --track: rgba(255, 255, 255, 0.08);
+  background: var(--bg);
+  color: var(--txd);
+}
+
+/* The media surface is nested inside #eb-admin-root. Mirror its light theme
+   class instead of allowing the nested .eb-root to stay permanently dark. */
+#eb-admin-root.light .eb-root {
+  --bg: #f5f3ef;
+  --surf: #ffffff;
+  --surf2: #f4f1ea;
+  --surf3: #faf8f4;
+  --bord: #e6e1d8;
+  --bord2: #ece7df;
+  --tx: #141009;
+  --txd: #4a443d;
+  --txm: #6f665c;
+  --faint: #9a9084;
+  --hov: #f0ece5;
+  --chip: #eceae3;
+  --track: rgba(20, 16, 9, 0.09);
+}
+.eb-root .text-brand-soft {
+  color: #ff5a72;
+}
+.eb-root .text-tx {
+  color: var(--tx);
+}
+.eb-root .text-txd {
+  color: var(--txd);
+}
+.eb-root .text-txm {
+  color: var(--txm);
+}
+.eb-root .text-faint {
+  color: var(--faint);
+}
+.eb-root .bg-surf {
+  background: var(--surf);
+}
+.eb-root .bg-surf2 {
+  background: var(--surf2);
+}
+.eb-root .bg-white {
+  background: var(--surf) !important;
+}
+.eb-root .border-bord {
+  border-color: var(--bord);
+}
+.eb-root .border-bord2 {
+  border-color: var(--bord2);
+}
+.eb-root .border-brand-red {
+  border-color: #e4002b;
+}
+.eb-root .font-anton {
+  font-family: 'Anton', sans-serif;
+}
+.eb-root .font-archivo {
+  font-family: 'Archivo', sans-serif;
+}
+.eb-root .font-mono {
+  font-family: 'Space Mono', monospace;
+}
+.eb-root button,
+.eb-root input,
+.eb-root select {
+  font-family: 'Archivo', sans-serif;
+}
+.eb-root .media-btn {
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 12px;
+}
+.eb-root .media-btn.primary {
+  background: #e4002b;
+}
+.eb-root .media-btn.primary:hover {
+  background: #ff2d43;
+}
+.eb-root .media-btn.secondary {
+  border-color: var(--bord);
+  background: var(--surf);
+  color: var(--txd);
+}
+.eb-root .media-btn.secondary:hover {
+  border-color: #e4002b;
+  color: #e4002b;
+  background: var(--surf);
+}
+.eb-root .media-input,
+.eb-root select.media-input {
+  border-color: var(--bord);
+  border-radius: 0.5rem;
+  background: var(--surf2);
+  color: var(--txd);
+  padding: 0.5rem 0.75rem;
+}
+.eb-root .media-input::placeholder {
+  color: var(--faint);
+}
+.eb-root .media-input:focus {
+  border-color: #e4002b;
+  box-shadow: none;
+}
+.eb-root .eb-scroll {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.eb-root .kpi-card {
+  min-width: 0;
+  border: 1px solid var(--bord);
+  border-radius: 0.75rem;
+  background: var(--surf);
+  padding: 0.875rem 1rem;
+}
+.eb-root .kpi-icon {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: rgba(228, 0, 43, 0.13);
+  color: #ff5a72;
+}
+.eb-root .folder-rail {
+  width: 236px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--bord);
+  border-radius: 1rem;
+  background: var(--surf);
+}
+.eb-root .folder-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--bord2);
+  padding: 0.75rem 1rem;
+}
+.eb-root .folder-add {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--bord);
+  border-radius: 0.375rem;
+  background: var(--surf2);
+  color: var(--txm);
+}
+.eb-root .folder-add:hover {
+  border-color: #e4002b;
+  color: #e4002b;
+}
+.eb-root .folder-row {
+  min-height: 2.8rem;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  color: var(--txm);
+  font-size: 12px;
+}
+.eb-root .folder-row:hover,
+.eb-root .folder-row.active {
+  background: var(--hov);
+  color: var(--tx);
+}
+.eb-root .folder-row.active {
+  box-shadow: inset 2px 0 #e4002b;
+}
+.eb-root .folder-row span:last-child {
+  color: var(--txm);
+}
+.eb-root .folder-rail-foot {
+  border-top: 1px solid var(--bord2);
+  padding: 0.75rem 1rem;
+  font-size: 12px;
+}
+.eb-root .folder-rail .group > button:not(.folder-row) {
+  color: var(--txm);
+}
+.eb-root .folder-rail .group > button:not(.folder-row):hover {
+  color: #e4002b;
+}
+.eb-root .min-w-0.flex-1.overflow-hidden.rounded-2xl {
+  background: var(--surf);
+}
+.eb-root .media-scope-btn {
+  border: 1px solid var(--bord);
+  border-radius: 0.375rem;
+  background: var(--surf);
+  padding: 0.375rem 0.625rem;
+  color: var(--txd);
+  font-size: 11px;
+  font-weight: 700;
+}
+.eb-root .media-scope-btn:hover {
+  border-color: #e4002b;
+  color: #e4002b;
+}
+.eb-root .view-btn {
+  border-color: var(--bord);
+  background: var(--surf2);
+  color: var(--txm);
+}
+.eb-root .view-btn.selected {
+  border-color: #e4002b;
+  background: #e4002b;
+  color: #fff;
+}
+.eb-root .modal-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+.eb-root .modal-card {
+  border: 1px solid var(--bord);
+  background: var(--surf);
+  color: var(--tx);
+}
+.eb-root .modal-card .media-input {
+  background: var(--surf2);
+  color: var(--tx);
+}
+.eb-root .media-scope-btn + * {
+  color: var(--txm);
+}
+.eb-root .media-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+.eb-root .media-empty-icon {
+  display: flex;
+  height: 3rem;
+  width: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--surf2);
+  color: var(--txm);
+}
+.eb-root .media-empty-state p {
+  max-width: 340px;
+  color: var(--txm);
+  font-size: 13px;
+}
+.eb-root .media-empty-clear,
+.eb-root .media-pagination button,
+.eb-root .media-page-number {
+  border: 1px solid var(--bord);
+  border-radius: 0.5rem;
+  background: var(--surf2);
+  padding: 0.5rem 0.75rem;
+  color: var(--txd);
+  font-size: 12px;
+  font-weight: 700;
+}
+.eb-root .media-empty-clear:hover,
+.eb-root .media-pagination button:hover:not(:disabled) {
+  border-color: #e4002b;
+  color: #e4002b;
+}
+.eb-root .media-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--bord2);
+  padding: 0.75rem 1rem;
+  color: var(--txm);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+}
+.eb-root .media-pagination b {
+  color: var(--tx);
+}
+.eb-root .media-pagination button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.eb-root .media-page-number {
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 0.25rem;
+}
+.eb-root article {
+  border-color: var(--bord) !important;
+  background: var(--surf2);
+}
+.eb-root article > div:first-child {
+  background: var(--surf2);
+}
+.eb-root article > button {
+  border-color: var(--bord2);
+  color: var(--tx);
+}
+.eb-root article h3 {
+  color: var(--tx);
+}
+.eb-root article p {
+  color: var(--txm);
+}
+.eb-root table {
+  color: var(--txd);
+}
+.eb-root thead {
+  background: var(--surf2);
+  color: var(--txm);
+}
+.eb-root tbody tr:hover {
+  background: var(--hov);
+}
+.eb-root .storage-pill.r2 {
+  background: rgba(31, 157, 85, 0.14);
+  color: #55c77b;
+}
+.eb-root .storage-pill.supabase {
+  background: rgba(217, 131, 36, 0.14);
+  color: #e5a35c;
+}
+@media (max-width: 1000px) {
+  .eb-root .folder-rail {
+    width: 100%;
+  }
+}
