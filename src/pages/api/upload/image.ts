@@ -1,5 +1,4 @@
 import type { APIRoute } from 'astro';
-import { requireAdmin, getCurrentUser } from '../../../features/cms/lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { saveFile, sanitizeFolderName } from '../../../lib/file-storage';
 import { compressImage, shouldCompress } from '../../../lib/image-compression';
@@ -124,7 +123,7 @@ export const POST: APIRoute = async ({ request }) => {
     const fileName = `${timestamp}-${randomStr}.${fileExtension}`;
 
     // Save file to local storage with proper extension
-    const { filePath, publicUrl, fullPath } = await saveFile(
+    const { filePath, publicUrl } = await saveFile(
       sanitizedFolderName,
       finalBuffer,
       folder.isPrivate,

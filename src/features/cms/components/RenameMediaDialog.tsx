@@ -1,2 +1,2 @@
-export * from '../presentation/components/RenameMediaDialog';
-export { default } from '../presentation/components/RenameMediaDialog';
+export { default } from '../../media/presentation/admin/RenameMediaDialog.tsx';
+

@@ -1,1 +1,2 @@
-export * from '../presentation/hooks/useMediaOperations';
+export * from '../../media/presentation/hooks/useMediaOperations';
+

@@ -1,1 +1,2 @@
-export * from '../presentation/stores/mediaGalleryStore';
+export * from '../../media/presentation/stores/mediaGalleryStore';
+

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { MEDIA_FOLDERS } from '@/features/media/domain/entities/mediaFolders';
 
 type PlayerFormProps = { playerId?: string };
 type Team = { id: string; name: string; abbreviation?: string | null; logo?: string | null };
@@ -96,7 +97,7 @@ export default function PlayerFormV2({ playerId }: PlayerFormProps) {
     if (file.size > 5 * 1024 * 1024) { setError('Portrait must be 5 MB or smaller.'); return; }
     setUploading(true); setError('');
     try {
-      const body = new FormData(); body.append('file', file, file.name); body.append('folder', 'players');
+      const body = new FormData(); body.append('file', file, file.name); body.append('folder', MEDIA_FOLDERS.players);
       const response = await fetch('/api/upload/image', { method: 'POST', body }); const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'Failed to upload portrait'); update('image', result.url);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Failed to upload portrait'); }

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
-import { saveFile, sanitizeFolderName } from '../../../lib/file-storage';
+import { deleteFile, saveFile, sanitizeFolderName } from '../../../lib/file-storage';
 import { compressImage, shouldCompress } from '../../../lib/image-compression';
 import { getFolderByName } from '../../../lib/folder-access';
 import { handleApiError } from '../../../lib/apiError';
@@ -46,13 +46,17 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Validate file types
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    // Validate supported media types before creating a folder or writing files.
+    const validTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/webm', 'video/quicktime',
+      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm',
+    ];
     const invalidFiles = files.filter(file => !validTypes.includes(file.type));
     if (invalidFiles.length > 0) {
       return new Response(
         JSON.stringify({ 
-          error: `Invalid file types. Only JPEG, PNG, GIF, and WebP images are allowed. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}` 
+            error: `Invalid file types. Supported formats are JPEG, PNG, GIF, WebP, MP4, WebM, MOV, MP3, WAV, and OGG. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}` 
         }),
         {
           status: 400,
@@ -93,6 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
     const results: UploadResult[] = [];
 
     for (const file of files) {
+      let savedFilePath: string | null = null;
       try {
         // Convert File to Buffer
         const arrayBuffer = await file.arrayBuffer();
@@ -108,7 +113,7 @@ export const POST: APIRoute = async ({ request }) => {
           compressionRatio: 0,
         };
 
-        if (shouldCompress(originalSize, file.type)) {
+        if (file.type.startsWith('image/') && shouldCompress(originalSize, file.type)) {
           try {
             compressionResult = await compressImage(originalBuffer, {
               maxWidthOrHeight: 1920,
@@ -122,11 +127,14 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         // Determine file extension from MIME type
-        let fileExtension = 'jpg';
-        if (file.type === 'image/png') fileExtension = 'png';
-        else if (file.type === 'image/gif') fileExtension = 'gif';
-        else if (file.type === 'image/webp') fileExtension = 'webp';
-        else if (file.type === 'image/jpeg' || file.type === 'image/jpg') fileExtension = 'jpg';
+        const extensionByType: Record<string, string> = {
+          'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp',
+          'image/jpeg': 'jpg', 'image/jpg': 'jpg',
+          'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
+          'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/wav': 'wav',
+          'audio/ogg': 'ogg', 'audio/webm': 'webm',
+        };
+        const fileExtension = extensionByType[file.type];
         
         // Generate filename with correct extension
         const timestamp = Date.now();
@@ -140,10 +148,11 @@ export const POST: APIRoute = async ({ request }) => {
           folder.isPrivate,
           fileName
         );
+        savedFilePath = filePath;
 
         // Determine media type
-        const mediaType = file.type.startsWith('image/') ? 'IMAGE' : 
-                         file.type.startsWith('video/') ? 'VIDEO' : 'AUDIO';
+        const mediaType = file.type.startsWith('image/') ? 'IMAGE' :
+          file.type.startsWith('video/') ? 'VIDEO' : 'AUDIO';
 
         // For images, automatically set thumbnail to the same URL
         const thumbnailUrl = mediaType === 'IMAGE' ? publicUrl : undefined;
@@ -185,8 +194,13 @@ export const POST: APIRoute = async ({ request }) => {
           compressionRatio: media.compressionRatio || undefined,
           mimeType: media.mimeType || undefined,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Error uploading file ${file.name}:`, error);
+        if (savedFilePath) {
+          await deleteFile(savedFilePath).catch((cleanupError) => {
+            console.warn(`Could not remove incomplete upload ${savedFilePath}:`, cleanupError);
+          });
+        }
         results.push({
           id: '',
           url: '',
@@ -196,21 +210,24 @@ export const POST: APIRoute = async ({ request }) => {
             name: folder.name,
             isPrivate: folder.isPrivate,
           },
-          error: error.message || 'Failed to upload file',
+          error: error instanceof Error ? error.message : 'Failed to upload file',
         });
       }
     }
 
+    const successful = results.filter((result) => !result.error).length;
+    const failed = results.length - successful;
+
     return new Response(
       JSON.stringify({
-        success: true,
+        success: failed === 0,
         results,
         total: files.length,
-        successful: results.filter(r => !r.error).length,
-        failed: results.filter(r => r.error).length,
+        successful,
+        failed,
       }),
       {
-        status: 200,
+        status: successful === 0 ? 500 : failed > 0 ? 207 : 200,
         headers: { 'Content-Type': 'application/json' },
       }
     );

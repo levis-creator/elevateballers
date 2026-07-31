@@ -21,6 +21,7 @@ const TABS = [
   { id: 'all_medias', label: 'All' },
   { id: 'image_media', label: 'Images' },
   { id: 'audio_media', label: 'Audio' },
+  { id: 'video_media', label: 'Video' },
 ] as const;
 
 /**
@@ -47,9 +48,9 @@ export default function MediaGallery() {
         }
         const data = await response.json();
         setFeaturedMedia(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching featured media:', err);
-        setError(err.message || 'Failed to load featured images');
+        setError(err instanceof Error ? err.message : 'Failed to load featured images');
         setFeaturedMedia([]);
       } finally {
         setTimeout(() => setLoading(false), 600);
@@ -63,6 +64,7 @@ export default function MediaGallery() {
     if (activeMediaTab === 'all_medias') return featuredMedia;
     if (activeMediaTab === 'image_media') return featuredMedia.filter(item => item.type === 'IMAGE');
     if (activeMediaTab === 'audio_media') return featuredMedia.filter(item => item.type === 'AUDIO');
+    if (activeMediaTab === 'video_media') return featuredMedia.filter(item => item.type === 'VIDEO');
     return featuredMedia;
   }, [featuredMedia, activeMediaTab]);
 
@@ -125,7 +127,7 @@ export default function MediaGallery() {
                   className={styles.tabLink}
                   onClick={(e) => {
                     e.preventDefault();
-                    setActiveMediaTab(tab.id as any);
+                    setActiveMediaTab(tab.id);
                   }}
                 >
                   {tab.label}
@@ -156,25 +158,31 @@ export default function MediaGallery() {
                     {item.type === 'VIDEO' && <Play size={12} className="mr-1 inline" />}
                     {item.type}
                   </div>
-                  <a
-                    href={item.url}
-                    onClick={(e) => handleItemClick(item, e)}
-                    className={styles.unsplashImageLink}
-                    target={item.type !== 'IMAGE' ? '_blank' : undefined}
-                    rel={item.type !== 'IMAGE' ? 'noopener noreferrer' : undefined}
-                  >
+                  {item.type === 'IMAGE' && (
+                    <a href={item.url} onClick={(e) => handleItemClick(item, e)} className={styles.unsplashImageLink}>
+                      <div className={styles.unsplashImageWrapper}>
+                        <img src={optimizeImageUrl(item.thumbnail || item.url, { width: 600 })} alt={item.title || 'Media gallery item'} className={styles.unsplashImage} loading="lazy" />
+                        <div className={styles.unsplashImageOverlay}><h4 className={styles.unsplashImageTitle}>{item.title}</h4></div>
+                      </div>
+                    </a>
+                  )}
+                  {item.type === 'VIDEO' && (
+                    <video
+                      className={styles.unsplashImage}
+                      src={item.url}
+                      poster={item.thumbnail ? optimizeImageUrl(item.thumbnail, { width: 600 }) : undefined}
+                      controls
+                      preload="metadata"
+                      aria-label={item.title || 'Media gallery video'}
+                    />
+                  )}
+                  {item.type === 'AUDIO' && (
                     <div className={styles.unsplashImageWrapper}>
-                      <img
-                        src={optimizeImageUrl(item.thumbnail || item.url, { width: 600 })}
-                        alt={item.title || 'Media gallery item'}
-                        className={styles.unsplashImage}
-                        loading="lazy"
-                      />
-                      <div className={styles.unsplashImageOverlay}>
-                        <h4 className={styles.unsplashImageTitle}>{item.title}</h4>
+                      <div className="flex min-h-48 items-center justify-center p-4">
+                        <audio src={item.url} controls className="w-full" aria-label={item.title || 'Media gallery audio'} />
                       </div>
                     </div>
-                  </a>
+                  )}
                 </div>
               ))}
             </MasonryGrid>

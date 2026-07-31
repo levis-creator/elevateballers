@@ -17,7 +17,10 @@
  */
 export function getEnv(key: string, defaultValue?: string): string | undefined {
   // Try import.meta.env first (Astro's way)
-  let value = import.meta.env[key];
+  const astroEnv = (import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  }).env;
+  let value = astroEnv?.[key];
   
   // Fallback to process.env for server-side code (important for production)
   if (value === undefined && typeof process !== 'undefined' && process.env) {

@@ -1,2 +1,2 @@
-export * from '../presentation/components/MediaEditor';
-export { default } from '../presentation/components/MediaEditor';
+export { default } from '../../media/presentation/admin/MediaEditor.tsx';
+

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
-import { fileExists } from '../../../lib/file-storage';
+import { fileExists, getStorageTypeForUrl } from '../../../lib/file-storage';
 import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
@@ -23,6 +23,7 @@ export const POST: APIRoute = async ({ request }) => {
         id: true,
         title: true,
         filePath: true,
+        url: true,
       },
     });
 
@@ -34,7 +35,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (!media.filePath) continue;
 
       try {
-        const exists = await fileExists(media.filePath);
+        const exists = await fileExists(media.filePath, getStorageTypeForUrl(media.url));
         if (!exists) {
           orphanedIds.push(media.id);
           console.log(`Found orphaned record: ${media.id} (${media.title}) - ${media.filePath}`);

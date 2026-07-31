@@ -1,2 +1,2 @@
-export * from '../presentation/components/MediaContextMenu';
-export { default } from '../presentation/components/MediaContextMenu';
+export { default } from '../../media/presentation/admin/MediaContextMenu.tsx';
+

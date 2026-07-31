@@ -3,6 +3,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { getEnv } from './env';
 import { supabase, STORAGE_BUCKET } from './supabase';
+import { deleteR2Object, getR2Object, headR2Object, putR2Object, r2Configured, R2_PUBLIC_URL, toR2Key } from './r2';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,9 +18,15 @@ const uploadsBasePath = downloadsPath || join(projectRoot, 'public', 'uploads');
 /**
  * Get the storage type to use
  */
-export function getStorageType(): 'local' | 'supabase' {
-  const type = getEnv('STORAGE_TYPE') as 'local' | 'supabase';
+export type StorageType = 'local' | 'supabase' | 'r2';
+
+export function getStorageType(): StorageType {
+  const type = getEnv('STORAGE_TYPE') as StorageType;
   if (type === 'local' || type === 'supabase') return type;
+  if (type === 'r2') {
+    if (!r2Configured) throw new Error('STORAGE_TYPE is set to r2, but R2 credentials are incomplete.');
+    return 'r2';
+  }
 
   // Auto-detect based on environment
   // If VERCEL is defined or if we are in a serverless environment, default to supabase
@@ -30,6 +37,12 @@ export function getStorageType(): 'local' | 'supabase' {
   }
 
   return 'local';
+}
+
+/** Identify legacy objects from their persisted Supabase URL. */
+export function getStorageTypeForUrl(url?: string | null): StorageType {
+  if (url?.includes('.supabase.co/')) return 'supabase';
+  return getStorageType();
 }
 
 /**
@@ -47,7 +60,7 @@ export async function ensureDirectory(folderPath: string): Promise<void> {
       // Don't throw if we're in a deployment where we shouldn't be writing anyway
       // But if it's local development, we want to know
       if (getEnv('NODE_ENV') === 'development') {
-        throw new Error(`Failed to create directory: ${error.message}`);
+        throw new Error(`Failed to create directory: ${error.message}`, { cause: error });
       }
     }
   }
@@ -109,6 +122,11 @@ export async function saveFile(
     buffer = file;
   }
 
+  if (storageType === 'r2' && r2Configured) {
+    await putR2Object(toR2Key(dbFilePath), buffer, file instanceof File ? file.type : 'application/octet-stream');
+    return { filePath: dbFilePath, publicUrl: getFileUrl(dbFilePath, isPrivate), fullPath: toR2Key(dbFilePath) };
+  }
+
   if (storageType === 'supabase' && supabase) {
     // Save to Supabase Storage
     const { data, error } = await supabase.storage
@@ -152,10 +170,14 @@ export async function saveFile(
 /**
  * Delete a file from storage
  */
-export async function deleteFile(filePath: string): Promise<boolean> {
-  const storageType = getStorageType();
+export async function deleteFile(filePath: string, storageType: StorageType = getStorageType()): Promise<boolean> {
 
   try {
+    if (storageType === 'r2' && r2Configured) {
+      await deleteR2Object(toR2Key(filePath));
+      return true;
+    }
+
     if (storageType === 'supabase' && supabase) {
       // Remove 'uploads/' prefix to get the path in bucket
       const bucketPath = filePath.replace(/^uploads\//, '');
@@ -191,6 +213,12 @@ export async function deleteFile(filePath: string): Promise<boolean> {
 export function getFileUrl(filePath: string, isPrivate: boolean): string {
   const storageType = getStorageType();
 
+  if (storageType === 'r2' && r2Configured) {
+    const key = toR2Key(filePath);
+    if (isPrivate || !R2_PUBLIC_URL) return `/api/uploads/${key}`;
+    return `${R2_PUBLIC_URL}/${key.split('/').map(encodeURIComponent).join('/')}`;
+  }
+
   if (storageType === 'supabase' && supabase) {
     const bucketPath = filePath.replace(/^uploads\//, '');
     const { data: { publicUrl } } = supabase.storage
@@ -211,8 +239,16 @@ export function getFileUrl(filePath: string, isPrivate: boolean): string {
 /**
  * Check if a file exists
  */
-export async function fileExists(filePath: string): Promise<boolean> {
-  const storageType = getStorageType();
+export async function fileExists(filePath: string, storageType: StorageType = getStorageType()): Promise<boolean> {
+
+  if (storageType === 'r2' && r2Configured) {
+    try {
+      await headR2Object(toR2Key(filePath));
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   if (storageType === 'supabase' && supabase) {
     // This is expensive in Supabase, let's just assume it doesn't exist if we can't find it
@@ -236,12 +272,21 @@ export async function fileExists(filePath: string): Promise<boolean> {
 /**
  * Get file statistics
  */
-export async function getFileStats(filePath: string): Promise<{
+export async function getFileStats(filePath: string, storageType: StorageType = getStorageType()): Promise<{
   size: number;
   mimeType: string | null;
   exists: boolean;
 }> {
   const storageType = getStorageType();
+
+  if (storageType === 'r2' && r2Configured) {
+    try {
+      const metadata = await headR2Object(toR2Key(filePath));
+      return { size: metadata.ContentLength || 0, mimeType: metadata.ContentType || null, exists: true };
+    } catch {
+      return { size: 0, mimeType: null, exists: false };
+    }
+  }
 
   if (storageType === 'supabase' && supabase) {
     // For Supabase, we might not have easy access to stats without another API call
@@ -282,8 +327,22 @@ export function getUploadsBasePath(): string {
  * Read a file's content as a Buffer
  * @param relativePath - Path relative to uploads directory (e.g., "public/general/image.jpg")
  */
-export async function readFile(relativePath: string): Promise<Buffer> {
-  const storageType = getStorageType();
+export async function readFile(relativePath: string, storageType: StorageType = getStorageType()): Promise<Buffer> {
+
+  if (storageType === 'r2' && r2Configured) {
+    try {
+      return await getR2Object(toR2Key(relativePath));
+    } catch (error) {
+      // During the phased migration, private legacy objects may still be served
+      // through this route while new objects are already stored in R2.
+      if (!supabase) throw error;
+      const { data, error: supabaseError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .download(relativePath);
+      if (supabaseError) throw error;
+      return Buffer.from(await data.arrayBuffer());
+    }
+  }
 
   if (storageType === 'supabase' && supabase) {
     const { data, error } = await supabase.storage
