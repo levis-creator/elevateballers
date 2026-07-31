@@ -20,7 +20,8 @@ interface ImageUploadProps {
   maxWidthOrHeight?: number;
   quality?: number;
   maxSizeMB?: number;
-  variant?: 'default' | 'player' | 'article';
+  variant?: 'default' | 'player' | 'article' | 'potw';
+  onOpenMediaLibrary?: () => void;
 }
 
 type UploadMode = 'upload' | 'url';
@@ -38,6 +39,7 @@ export default function ImageUpload({
   quality = 0.8,
   maxSizeMB = 5,
   variant = 'default',
+  onOpenMediaLibrary,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [compressing, setCompressing] = useState(false);
@@ -238,6 +240,19 @@ export default function ImageUpload({
         <input ref={fileInputRef} id={inputId} type="file" accept={accept} onChange={handleFileSelect} className="hidden" disabled={isProcessing || disabled} />
         {isProcessing && <div className="eb-article-image-processing"><Loader2 size={18} className="animate-spin" /> {compressing ? 'Compressing image…' : 'Uploading image…'}</div>}
         {error && <p className="eb-article-image-error">{error}</p>}
+      </div>
+    );
+  }
+
+  if (variant === 'potw') {
+    return (
+      <div className={cn('eb-potw-image-upload', className)}>
+        <div className="eb-potw-image-actions">
+          <button type="button" onClick={handleUploadClick} disabled={isProcessing || disabled}>{isProcessing ? 'Uploading…' : 'Upload image'}</button>
+          <button type="button" onClick={onOpenMediaLibrary} disabled={isProcessing || disabled}>Media library</button>
+        </div>
+        <input ref={fileInputRef} id={inputId} type="file" accept={accept} onChange={handleFileSelect} className="hidden" disabled={isProcessing || disabled} />
+        {error && <p className="eb-potw-image-error">{error}</p>}
       </div>
     );
   }
