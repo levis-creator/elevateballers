@@ -7,8 +7,8 @@
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
 7 verbose title npm run initialize:r2-media-folders
 8 verbose argv "run" "initialize:r2-media-folders"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T08_56_20_088Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T08_56_20_088Z-debug-0.log
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T09_09_56_408Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T09_09_56_408Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 notice run elevateballers@0.0.1 initialize:r2-media-folders
