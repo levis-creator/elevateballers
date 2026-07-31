@@ -7,7 +7,7 @@ export const prerender = false;
 
 export const PUT: APIRoute = async ({ request }) => {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'media:update');
     const { mediaIds, folderId } = await request.json();
 
     if (!Array.isArray(mediaIds) || mediaIds.length === 0) {

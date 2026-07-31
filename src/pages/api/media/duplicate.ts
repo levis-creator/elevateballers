@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
-import { saveFile, readFile, getStorageType } from '../../../lib/file-storage';
+import { saveFile, readFile, getStorageTypeForUrl } from '../../../lib/file-storage';
 import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
         // filePath in DB is "uploads/public/folder/file.ext"
         // readFile expects path relative to uploads dir, so we remove "uploads/"
         const relativePath = originalMedia.filePath.replace(/^uploads\//, '');
-        const fileBuffer = await readFile(relativePath);
+        const fileBuffer = await readFile(relativePath, getStorageTypeForUrl(originalMedia.url));
 
         // Generate new filename
         const originalFileName = originalMedia.filePath.split('/').pop() || 'file';

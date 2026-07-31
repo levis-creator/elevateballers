@@ -1,1 +1,2 @@
-export * from '../presentation/hooks/useMediaGallery';
+export * from '../../media/presentation/hooks/useMediaGallery';
+

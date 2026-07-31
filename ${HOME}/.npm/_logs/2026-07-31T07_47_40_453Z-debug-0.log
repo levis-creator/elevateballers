@@ -1,0 +1,31 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\Levi\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@12.0.1
+2 info using node@v24.18.0
+3 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
+5 silly config load:file:C:\Users\Levi\.npmrc
+6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm exec eslint src/features/media/presentation/admin/SelectionToolbar.tsx src/features/media/presentation/hooks/useDragAndDrop.ts src/features/media/presentation/hooks/useKeyboardShortcuts.ts scripts/migrate-supabase-media-to-r2.ts --ext .ts,.tsx --no-error-on-unmatched-pattern
+8 verbose argv "exec" "eslint" "--no-ignore" "--" "src/features/media/presentation/admin/SelectionToolbar.tsx" "src/features/media/presentation/hooks/useDragAndDrop.ts" "src/features/media/presentation/hooks/useKeyboardShortcuts.ts" "scripts/migrate-supabase-media-to-r2.ts" "--ext" ".ts,.tsx" "--no-error-on-unmatched-pattern"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T07_47_40_453Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T07_47_40_453Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 verbose stack Error: Unknown cli flag:
+13 verbose stack   - --ignore
+13 verbose stack Run `npm help config` for supported options.
+13 verbose stack     at Exec.validateCli (C:\Users\Levi\AppData\Roaming\npm\node_modules\npm\lib\base-cmd.js:427:29)
+13 verbose stack     at Npm.execCommandClass (C:\Users\Levi\AppData\Roaming\npm\node_modules\npm\lib\npm.js:309:25)
+13 verbose stack     at async Npm.exec (C:\Users\Levi\AppData\Roaming\npm\node_modules\npm\lib\npm.js:194:9)
+13 verbose stack     at async module.exports (C:\Users\Levi\AppData\Roaming\npm\node_modules\npm\lib\cli\entry.js:67:5)
+14 error code EUNKNOWNCONFIG
+15 error Unknown cli flag:
+15 error   - --ignore
+15 error Run `npm help config` for supported options.
+16 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
+17 verbose os Windows_NT 10.0.26200
+18 verbose node v24.18.0
+19 verbose npm  v12.0.1
+20 verbose exit 1
+21 verbose code 1
+22 error A complete log of this run can be found in: C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T07_47_40_453Z-debug-0.log

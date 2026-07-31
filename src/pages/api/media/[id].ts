@@ -1,14 +1,15 @@
 import type { APIRoute } from 'astro';
-import { getMediaById } from '../../../features/cms/lib/queries';
-import { updateMedia, deleteMedia } from '../../../features/cms/lib/mutations';
+import { getMediaItem, updateMediaItem } from '../../../features/media/application';
+import { deleteMedia } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
-    const mediaItem = await getMediaById(params.id!);
+    await requirePermission(request, 'media:read');
+    const mediaItem = await getMediaItem(params.id!);
 
     if (!mediaItem) {
       return new Response(JSON.stringify({ error: 'Media not found' }), {
@@ -30,7 +31,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     await requirePermission(request, 'media:update');
     const data = await request.json();
 
-    const mediaItem = await updateMedia(params.id!, data);
+    const mediaItem = await updateMediaItem(params.id!, data);
 
     if (!mediaItem) {
       return new Response(JSON.stringify({ error: 'Media not found' }), {

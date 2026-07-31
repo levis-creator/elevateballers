@@ -1,2 +1,2 @@
-export * from '../presentation/components/BulkRenameDialog';
-export { default } from '../presentation/components/BulkRenameDialog';
+export { default } from '../../media/presentation/admin/BulkRenameDialog.tsx';
+

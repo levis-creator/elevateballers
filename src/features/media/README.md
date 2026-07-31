@@ -1,25 +1,23 @@
 # Media Feature
 
-This feature contains media gallery components and functionality.
+This feature owns the media domain and its presentation. New media code should be added here rather than under `features/cms`.
 
 ## Structure
 
 ```
 src/features/media/
-├── components/          # React components
-│   └── MediaGallery.tsx    # Media gallery with type tabs
-├── stores/              # Zustand stores
-│   └── useMediaStore.ts     # Media filtering state
-├── data/                # Static data
-│   └── mediaData.ts         # Media items data
-├── types.ts             # TypeScript type definitions
-└── README.md            # This file
+├── application/         # Use cases exposed to routes and adapters
+├── data/                # Prisma-backed repositories and datasources
+├── domain/              # Media entities and business types
+├── presentation/        # Public/admin React UI, stores, and view models
+│   └── admin/            # Extracted media-management UI
+├── lib/                 # Compatibility-free media query/mutation helpers
+└── README.md
 ```
 
 ## Components
 
-### MediaGallery
-Media gallery component with type filtering tabs (All, Images, Audio, Video).
+The application layer is the only layer API routes should call for media reads and writes. The data layer owns Prisma and storage-facing persistence details; the domain layer has no framework imports.
 
 ## State Management
 
@@ -27,7 +25,7 @@ Media gallery component with type filtering tabs (All, Images, Audio, Video).
 
 ## Data
 
-Static data is stored in `data/mediaData.ts`:
-- Contains media items (images, audio, video)
-- Provides filtering utilities by media type
+`data/mediaData.ts` is retained as a legacy fixture for the older gallery and should not be used for new features. CMS media paths now only re-export the implementations from this feature for backward compatibility.
+
+Reusable presentation pieces such as `MediaTags` belong in `presentation/admin`; shared formatting, type, and icon behavior belongs in `domain/usecases/mediaUtils`. Query and mutation logic has one canonical implementation under `data/datasources`.
 

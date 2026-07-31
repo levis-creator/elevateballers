@@ -1,1 +1,2 @@
-export * from '../domain/usecases/mediaUtils';
+export * from '../../media/domain/usecases/mediaUtils';
+

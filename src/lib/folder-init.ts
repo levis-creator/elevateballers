@@ -53,6 +53,11 @@ export const DEFAULT_FOLDERS: DefaultFolder[] = [
     description: 'Match photos and media',
     isPrivate: false,
   },
+  {
+    name: 'documents',
+    description: 'Uploaded documents and reference files',
+    isPrivate: false,
+  },
 ];
 
 /**
