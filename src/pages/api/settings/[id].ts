@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getSiteSettingByKey } from '../../../features/cms/lib/queries';
-import { updateSiteSetting, deleteSiteSetting } from '../../../features/cms/lib/mutations';
+import { siteSettingsService } from '../../../features/settings';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
@@ -10,8 +9,7 @@ export const prerender = false;
 export const GET: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'site_settings:read');
-    // Try to get by ID first, then by key
-    const setting = await getSiteSettingByKey(params.id!);
+    const setting = await siteSettingsService.get(params.id!);
 
     if (!setting) {
       return new Response(JSON.stringify({ error: 'Setting not found' }), {
@@ -34,7 +32,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     await requirePermission(request, 'site_settings:manage');
     const data = await request.json();
 
-    const setting = await updateSiteSetting(params.id!, data);
+    const setting = await siteSettingsService.update(params.id!, data);
 
     if (!setting) {
       return new Response(JSON.stringify({ error: 'Setting not found' }), {
@@ -61,7 +59,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'site_settings:manage');
-    const success = await deleteSiteSetting(params.id!);
+    const success = await siteSettingsService.remove(params.id!);
 
     if (!success) {
       return new Response(JSON.stringify({ error: 'Setting not found' }), {

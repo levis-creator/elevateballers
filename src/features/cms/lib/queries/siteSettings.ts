@@ -1,20 +1,14 @@
-import { prisma } from '../../../../lib/prisma';
-import type { SiteSetting } from '../../types';
+import { siteSettingsService } from '../../../../settings';
+import type { SiteSetting } from '../../../../settings';
 
 export async function getAllSiteSettings(category?: string): Promise<SiteSetting[]> {
-  return await prisma.siteSetting.findMany({
-    where: category ? { category } : {},
-    orderBy: { category: 'asc' },
-  });
+  return siteSettingsService.list(category);
 }
 
 export async function getSiteSettingByKey(key: string): Promise<SiteSetting | null> {
-  return await prisma.siteSetting.findUnique({ where: { key } });
+  return siteSettingsService.get(key);
 }
 
 export async function getSiteSettingsByCategory(category: string): Promise<SiteSetting[]> {
-  return await prisma.siteSetting.findMany({
-    where: { category },
-    orderBy: { label: 'asc' },
-  });
+  return siteSettingsService.list(category);
 }
