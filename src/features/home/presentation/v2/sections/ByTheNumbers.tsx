@@ -3,6 +3,8 @@ import type { CountTargets } from "@/features/home/domain/entities/home-v2";
 
 interface Props {
 	counts: CountTargets;
+	animate?: boolean;
+	respectReducedMotion?: boolean;
 }
 
 const CARDS = [
@@ -14,9 +16,14 @@ const CARDS = [
 
 /** Ease-out count-up. Runs on mount; the island is client:visible so mount ≈
  *  scrolled-into-view. Self-contained (no external dependency). */
-function Counter({ end }: { end: number }) {
-	const [val, setVal] = useState(0);
+function Counter({ end, animate, respectReducedMotion }: { end: number; animate: boolean; respectReducedMotion: boolean }) {
+	const [val, setVal] = useState(animate ? 0 : end);
 	useEffect(() => {
+		const reduced = respectReducedMotion && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (!animate || reduced) {
+			setVal(end);
+			return;
+		}
 		const dur = 1400;
 		const start = performance.now();
 		let raf = 0;
@@ -27,20 +34,20 @@ function Counter({ end }: { end: number }) {
 		};
 		raf = requestAnimationFrame(tick);
 		return () => cancelAnimationFrame(raf);
-	}, [end]);
+	}, [animate, end, respectReducedMotion]);
 	return <>{val}</>;
 }
 
 /** By The Numbers — React island (count-up animation). */
-export default function ByTheNumbers({ counts }: Props) {
+export default function ByTheNumbers({ counts, animate = true, respectReducedMotion = true }: Props) {
 	return (
 		<div>
 			<h2 className="mb-[22px] font-display text-[32px] uppercase text-ink">By The Numbers</h2>
 			<div className="grid grid-cols-2 gap-4">
 				{CARDS.map((c) => (
-					<div key={c.key} className="rounded-xl border border-black/10 bg-white p-[26px] shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div key={c.key} className="rounded-xl border border-black/10 bg-white p-[26px] shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div className={`font-display text-[52px] leading-none ${c.accent ? "text-brand" : "text-ink"}`}>
-							<Counter end={counts[c.key]} />
+							<Counter end={counts[c.key]} animate={animate} respectReducedMotion={respectReducedMotion} />
 						</div>
 						<div className="mt-2 font-mono text-[12px] uppercase tracking-[0.08em] text-muted">{c.label}</div>
 					</div>

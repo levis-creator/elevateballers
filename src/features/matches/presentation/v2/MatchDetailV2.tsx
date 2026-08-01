@@ -10,7 +10,7 @@ import { useMatchDetailData } from './hooks/useMatchDetailData';
 /* Presentational constants                                                   */
 /* -------------------------------------------------------------------------- */
 
-const HOME = '#e4002b';
+const HOME = 'var(--brand)';
 const AWAY = '#f5c518';
 const GOLD = '#f5c518';
 
@@ -20,12 +20,12 @@ const sideColor = (side: 'home' | 'away' | 'neutral') =>
 /** Play-by-play chip colour by category (made shots green, playmaking blue, negatives red). */
 function chipColor(cat: string): string {
   if (cat === '2PT' || cat === '3PT' || cat === 'FT') return '#1f9d55';
-  if (cat === 'TO' || cat === 'FOUL') return '#e4002b';
+  if (cat === 'TO' || cat === 'FOUL') return 'var(--brand)';
   return '#2a6fdb';
 }
 
 function statePill(state: MatchState): { label: string; color: string } {
-  if (state === 'live') return { label: 'Live', color: '#e4002b' };
+  if (state === 'live') return { label: 'Live', color: 'var(--brand)' };
   if (state === 'final') return { label: 'Completed', color: '#1f9d55' };
   return { label: 'Scheduled', color: '#d98324' };
 }
@@ -99,7 +99,7 @@ function Scoreboard({ view }: { view: MatchView }) {
     <Card className="relative overflow-hidden p-6 max-[600px]:p-4">
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(90% 130% at 50% -20%, rgba(228,0,43,0.10), transparent 60%)' }}
+        style={{ background: 'radial-gradient(90% 130% at 50% -20%, rgb(var(--site-brand-rgb) / 0.10), transparent 60%)' }}
       />
       <div className="relative mb-5 flex flex-wrap items-center justify-center gap-3 text-center">
         <span
@@ -484,7 +484,7 @@ function ConsoleButton({ matchId, state }: { matchId: string; state: MatchState 
   if (state === 'final' || !can('matches:update')) return null;
   const cfg =
     state === 'live'
-      ? { label: 'Live Console', color: '#e4002b' }
+      ? { label: 'Live Console', color: 'var(--brand)' }
       : { label: 'Score Console', color: '#2a6fdb' };
   return (
     <a

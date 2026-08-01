@@ -42,7 +42,7 @@ function SubscribersContent() {
 				<div className="flex items-center gap-2">
 					<button type="button" onClick={v.exportCsv} className="flex items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]"><Download className="h-[14px] w-[14px]" />Export CSV</button>
 					{v.canManage && (
-						<button type="button" onClick={() => setShowAdd(true)} className="flex items-center gap-2 rounded-lg bg-[var(--brand)] px-3.5 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-white hover:bg-[var(--brandlt)]"><Plus className="h-[14px] w-[14px]" />Add subscriber</button>
+						<button type="button" onClick={() => setShowAdd(true)} className="flex items-center gap-2 rounded-lg bg-[var(--brand)] px-3.5 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)] hover:bg-[var(--brandlt)]"><Plus className="h-[14px] w-[14px]" />Add subscriber</button>
 					)}
 				</div>
 			</div>
@@ -61,7 +61,7 @@ function SubscribersContent() {
 							const on = v.filter === f;
 							return (
 								<button key={f} type="button" onClick={() => v.setFilter(f)} className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 font-['Archivo'] text-[12px] font-bold uppercase tracking-[0.02em] ${on ? "border-[var(--brand)] bg-[var(--brand)]/[0.12] text-[var(--brandsoft)]" : "border-[var(--bord)] text-[var(--txm)]"}`}>
-									{f}<span className={`inline-flex min-w-[16px] justify-center rounded-full px-1 font-['Space_Mono'] text-[9.5px] ${on ? "bg-[var(--brand)] text-white" : "bg-[var(--chip)] text-[var(--txm)]"}`}>{v.counts[f]}</span>
+									{f}<span className={`inline-flex min-w-[16px] justify-center rounded-full px-1 font-['Space_Mono'] text-[9.5px] ${on ? "bg-[var(--brand)] text-[var(--brandfg)]" : "bg-[var(--chip)] text-[var(--txm)]"}`}>{v.counts[f]}</span>
 								</button>
 							);
 						})}
@@ -96,7 +96,7 @@ function SubscribersContent() {
 							<thead>
 								<tr>
 									<th className="w-[44px] border-b border-[var(--bord2)] px-4 py-3">
-										<button type="button" onClick={v.toggleAll} aria-label="Select all" className={`flex h-[18px] w-[18px] items-center justify-center rounded border ${allChecked ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--bord)] text-transparent hover:border-[var(--brand)]"}`}><Check className="h-3 w-3" strokeWidth={3} /></button>
+										<button type="button" onClick={v.toggleAll} aria-label="Select all" className={`flex h-[18px] w-[18px] items-center justify-center rounded border ${allChecked ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brandfg)]" : "border-[var(--bord)] text-transparent hover:border-[var(--brand)]"}`}><Check className="h-3 w-3" strokeWidth={3} /></button>
 									</th>
 									<th className="border-b border-[var(--bord2)] px-4 py-3 text-left font-['Space_Mono'] text-[10px] uppercase tracking-[0.1em] text-[var(--txm)]">Subscriber</th>
 									<th className="border-b border-[var(--bord2)] px-4 py-3 text-left font-['Space_Mono'] text-[10px] uppercase tracking-[0.1em] text-[var(--txm)]">Status</th>
@@ -110,7 +110,7 @@ function SubscribersContent() {
 									return (
 										<tr key={s.id} className={isChecked ? "bg-[var(--hov)]" : ""}>
 											<td className="border-b border-[var(--bord2)] px-4 py-3 align-middle">
-												<button type="button" onClick={() => v.toggleCheck(s.id)} aria-label="Select" className={`flex h-[18px] w-[18px] items-center justify-center rounded border ${isChecked ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--bord)] text-transparent hover:border-[var(--brand)]"}`}><Check className="h-3 w-3" strokeWidth={3} /></button>
+												<button type="button" onClick={() => v.toggleCheck(s.id)} aria-label="Select" className={`flex h-[18px] w-[18px] items-center justify-center rounded border ${isChecked ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brandfg)]" : "border-[var(--bord)] text-transparent hover:border-[var(--brand)]"}`}><Check className="h-3 w-3" strokeWidth={3} /></button>
 											</td>
 											<td className="border-b border-[var(--bord2)] px-4 py-3 align-middle">
 												<div className="flex items-center gap-3">

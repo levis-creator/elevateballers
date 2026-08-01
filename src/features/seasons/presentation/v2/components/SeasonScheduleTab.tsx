@@ -9,7 +9,7 @@ import {
 
 const TAG_COLOR: Record<FixtureResult, string> = {
 	Final: "var(--txm)",
-	Live: "#e4002b",
+	Live: "var(--brand)",
 	Upcoming: "#c9741d",
 };
 
@@ -64,7 +64,7 @@ export default function SeasonScheduleTab({ fixtures, seasonId }: { fixtures: Se
 								style={
 									isPlayed
 										? { background: "var(--chip)", color: "var(--tx)" }
-										: { background: "rgba(228,0,43,0.14)", color: "#e4002b" }
+										: { background: "rgb(var(--site-brand-rgb) / 0.14)", color: "var(--brand)" }
 								}
 							>
 								{fixtureScore(fixture)}

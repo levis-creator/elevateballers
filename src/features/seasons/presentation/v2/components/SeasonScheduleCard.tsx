@@ -8,7 +8,7 @@ import {
 import FormCard, { FieldError, Label } from "./FormCard";
 
 const STATUS_STYLE: Record<SeasonStatus, { bg: string; fg: string; dot: string }> = {
-	Live: { bg: "rgba(228,0,43,0.14)", fg: "#e4002b", dot: "#e4002b" },
+	Live: { bg: "rgb(var(--site-brand-rgb) / 0.14)", fg: "var(--brand)", dot: "var(--brand)" },
 	Upcoming: { bg: "rgba(217,131,36,0.16)", fg: "#c9741d", dot: "#d98324" },
 	Completed: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55", dot: "#1f9d55" },
 };

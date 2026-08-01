@@ -8,12 +8,12 @@ interface Props {
 	perPage?: number;
 }
 
-const STRIPE = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 10px,#f0ece5 10px,#f0ece5 20px)";
-const STRIPE_LG = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 12px,#f0ece5 12px,#f0ece5 24px)";
+const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 10px,var(--panel,#f0ece5) 10px,var(--panel,#f0ece5) 20px)";
+const STRIPE_LG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel,#f0ece5) 12px,var(--panel,#f0ece5) 24px)";
 
 const pagerBtn = (active: boolean) =>
 	`h-[38px] min-w-[38px] cursor-pointer rounded-lg border font-display text-[14px] ${
-		active ? "border-brand bg-brand text-white" : "border-black/15 bg-white text-muted hover:border-brand"
+		active ? "border-brand bg-brand text-brandfg" : "border-black/15 bg-white text-muted hover:border-brand"
 	}`;
 
 /** News list — featured + category filter + search + grid + pagination + sidebar.
@@ -66,7 +66,7 @@ export default function NewsBoard({ data, perPage = 6 }: Props) {
 				<section className="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 					<a
 						href={featured.href}
-						className="group grid grid-cols-[1.2fr_1fr] overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40 max-[760px]:grid-cols-1"
+						className="group grid grid-cols-[1.2fr_1fr] overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40 max-[760px]:grid-cols-1"
 					>
 						{featured.image ? (
 							<img src={featured.image} alt={featured.title} className="block min-h-[280px] w-full object-cover" />
@@ -100,7 +100,7 @@ export default function NewsBoard({ data, perPage = 6 }: Props) {
 									<a
 										key={`${p.href}-${i}`}
 										href={p.href}
-										className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40"
+										className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 									>
 										<span className="relative block aspect-[16/10]" style={p.image ? undefined : { background: STRIPE }}>
 											{p.image && <img src={p.image} alt={p.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />}
@@ -147,7 +147,7 @@ export default function NewsBoard({ data, perPage = 6 }: Props) {
 				{/* SIDEBAR */}
 				<aside className="flex flex-col gap-6">
 					{data.categories.length > 0 && (
-						<div className="rounded-2xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+						<div className="rounded-2xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 							<div className="mb-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Categories</div>
 							<div className="flex flex-col">
 								{data.categories.map((c) => (
@@ -156,7 +156,7 @@ export default function NewsBoard({ data, perPage = 6 }: Props) {
 										type="button"
 										onClick={() => setCat(c.label)}
 										className="flex items-center justify-between border-b border-black/[0.06] py-2.5 text-left font-body text-[14px] font-semibold last:border-0 hover:text-brand"
-										style={{ color: cat === c.label ? "#e4002b" : "#1a1712" }}
+										style={{ color: cat === c.label ? "var(--brand)" : "var(--night2,#1a1712)" }}
 									>
 										<span>{c.label}</span>
 										<span className="font-mono text-[11px] text-muted2">{c.count}</span>
@@ -167,7 +167,7 @@ export default function NewsBoard({ data, perPage = 6 }: Props) {
 					)}
 
 					{data.archives.length > 0 && (
-						<div className="rounded-2xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+						<div className="rounded-2xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 							<div className="mb-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Archives</div>
 							<div className="flex flex-col gap-2">
 								{data.archives.map((a) => (
@@ -180,7 +180,7 @@ export default function NewsBoard({ data, perPage = 6 }: Props) {
 						</div>
 					)}
 
-					<div className="rounded-2xl border border-black/10 bg-night p-5 text-cream shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div className="rounded-2xl border border-black/10 bg-night p-5 text-cream shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Newsletter</div>
 						<p className="mb-3 text-[13.5px] leading-[1.5] text-creamdim">Get the latest stories in your inbox.</p>
 						<SubscribeFormV2 />

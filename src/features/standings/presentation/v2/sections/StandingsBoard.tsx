@@ -13,12 +13,12 @@ interface Props {
 
 const GRID = "grid-cols-[60px_minmax(0,1fr)_44px_44px_44px_44px_60px_60px_64px_56px]";
 const diffLabel = (d: number) => `${d > 0 ? "+" : ""}${d}`;
-const diffColor = (d: number) => (d > 0 ? "#2f9e44" : d < 0 ? "#e4002b" : "#a49a8d");
+const diffColor = (d: number) => (d > 0 ? "#2f9e44" : d < 0 ? "var(--brand)" : "var(--muted2,#a49a8d)");
 const PLACE = ["1st Place", "2nd Place", "3rd Place"];
 const conferenceAccent = (name: string, index: number) => {
-	if (name.toLowerCase().includes("grind")) return "#e4002b";
-	if (name.toLowerCase().includes("clutch")) return "#141009";
-	return index % 2 === 0 ? "#e4002b" : "#141009";
+	if (name.toLowerCase().includes("grind")) return "var(--brand)";
+	if (name.toLowerCase().includes("clutch")) return "var(--ink,#141009)";
+	return index % 2 === 0 ? "var(--brand)" : "var(--ink,#141009)";
 };
 
 /** Standings — hero + league filter tabs + top-3 + full table + search.
@@ -78,7 +78,7 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 		<>
 			{/* HERO */}
 			<section className="relative overflow-hidden border-b border-black/[0.08] bg-paper">
-				<div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%)" }} />
+				<div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 82% -10%,rgb(var(--site-brand-rgb) / 0.12),transparent 58%)" }} />
 				<div className="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]" />
 				<div className="absolute right-[12%] top-12 hidden h-20 w-20 rounded-full border-[12px] border-brand/10 max-[960px]:hidden" />
 				<div className="relative mx-auto max-w-[1280px] px-8 pb-[48px] pt-[62px] max-[960px]:px-6">
@@ -150,11 +150,11 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 									<div
 										key={p.teamId}
 										className="relative overflow-hidden rounded-2xl border p-6"
-										style={first ? { background: "#0c0b0a", borderColor: "rgba(255,255,255,0.12)" } : { background: "#fff", borderColor: "rgba(0,0,0,0.1)" }}
+										style={first ? { background: "var(--night,#0c0b0a)", borderColor: "rgba(255,255,255,0.12)" } : { background: "#fff", borderColor: "rgba(0,0,0,0.1)" }}
 									>
 										<div className="mb-5 flex items-center justify-between">
-											<span className="font-display text-[40px] leading-none" style={{ color: first ? "#e4002b" : "#a49a8d" }}>#{p.rank}</span>
-											<span className="rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em]" style={first ? { background: "rgba(228,0,43,0.16)", color: "#ff5a72" } : { background: "#f0ede7", color: "#6f665c" }}>{PLACE[i]}</span>
+											<span className="font-display text-[40px] leading-none" style={{ color: first ? "var(--brand)" : "var(--muted2,#a49a8d)" }}>#{p.rank}</span>
+											<span className="rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em]" style={first ? { background: "rgb(var(--site-brand-rgb) / 0.16)", color: "var(--brandsoft)" } : { background: "var(--panel,#f0ede7)", color: "var(--muted,#6f665c)" }}>{PLACE[i]}</span>
 										</div>
 										<div className="mb-5 flex min-w-0 items-center gap-3">
 											<TeamName
@@ -163,19 +163,19 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 												withCrest
 												className="font-body text-[17px] font-extrabold uppercase leading-tight"
 												crestClassName="h-12 w-12 font-display text-[16px]"
-												textStyle={{ color: first ? "#f6f2ec" : "#1a1712" }}
+												textStyle={{ color: first ? "var(--cream,#f6f2ec)" : "var(--night2,#1a1712)" }}
 											/>
 											<div className="flex-shrink-0">
-												<div className="mt-0.5 font-mono text-[11px]" style={{ color: "#8a817a" }}>{p.w}-{p.l}{p.d ? `-${p.d}` : ""}</div>
+												<div className="mt-0.5 font-mono text-[11px]" style={{ color: "var(--muted2,#8a817a)" }}>{p.w}-{p.l}{p.d ? `-${p.d}` : ""}</div>
 											</div>
 										</div>
 										<div className="grid grid-cols-3 gap-2 border-t pt-4" style={{ borderColor: first ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }}>
 											<div>
-												<div className="font-display text-[26px] leading-none" style={{ color: "#e4002b" }}>{p.pts}</div>
+												<div className="font-display text-[26px] leading-none" style={{ color: "var(--brand)" }}>{p.pts}</div>
 												<div className="mt-1 font-mono text-[9px] uppercase tracking-[0.08em] text-muted2">Points</div>
 											</div>
 											<div>
-												<div className="font-display text-[26px] leading-none" style={{ color: first ? "#f6f2ec" : "#141009" }}>{p.p}</div>
+												<div className="font-display text-[26px] leading-none" style={{ color: first ? "var(--cream,#f6f2ec)" : "var(--ink,#141009)" }}>{p.p}</div>
 												<div className="mt-1 font-mono text-[9px] uppercase tracking-[0.08em] text-muted2">Played</div>
 											</div>
 											<div>
@@ -200,7 +200,7 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 							</div>
 							<div className="grid grid-cols-2 gap-5 max-[760px]:grid-cols-1">
 								{conferenceLeaders.map((conference) => (
-									<div key={conference.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+									<div key={conference.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 										<div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4">
 											<div>
 												<div className="font-display text-[24px] uppercase leading-none text-ink">{conference.name}</div>
@@ -214,7 +214,7 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 										<div className="divide-y divide-black/[0.06]">
 											{conference.rows.map((row) => (
 												<a key={row.teamId} href={row.href} className="grid grid-cols-[42px_minmax(0,1fr)_58px_54px] items-center gap-3 px-5 py-3 no-underline hover:bg-paper2">
-													<span className="font-display text-[18px]" style={{ color: row.rank === 1 ? conference.accent : "#b3a99c" }}>{row.rank}</span>
+													<span className="font-display text-[18px]" style={{ color: row.rank === 1 ? conference.accent : "var(--muted2,#b3a99c)" }}>{row.rank}</span>
 													<TeamName
 														team={{ name: row.name, nickname: row.nickname, logo: row.logo, initials: row.initials }}
 														variant="compact"
@@ -248,7 +248,7 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 
 						{table.length > 0 ? (
 							<>
-								<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+								<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 									<div className="min-w-[820px]">
 										<div className={`grid ${GRID} items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2`}>
 											<span>Rank</span><span>Team</span>
@@ -257,8 +257,8 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 										</div>
 										{table.map((t) => (
 											<div key={t.teamId}>
-												<a href={t.href} className={`grid ${GRID} items-center gap-2 border-b border-black/[0.06] px-5 py-3 no-underline hover:bg-paper2`} style={t.rank <= playoffSpots ? { background: "rgba(228,0,43,0.04)" } : undefined}>
-													<span className="font-display text-[16px]" style={{ color: t.rank <= 3 ? "#e4002b" : "#1a1712" }}>{t.rank}</span>
+												<a href={t.href} className={`grid ${GRID} items-center gap-2 border-b border-black/[0.06] px-5 py-3 no-underline hover:bg-paper2`} style={t.rank <= playoffSpots ? { background: "rgb(var(--site-brand-rgb) / 0.04)" } : undefined}>
+													<span className="font-display text-[16px]" style={{ color: t.rank <= 3 ? "var(--brand)" : "var(--night2,#1a1712)" }}>{t.rank}</span>
 													<TeamName
 														team={{ name: t.name, nickname: t.nickname, logo: t.logo, initials: t.initials }}
 														variant="table"

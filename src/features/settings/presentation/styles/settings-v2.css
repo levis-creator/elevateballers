@@ -163,8 +163,8 @@
   color: var(--tx);
 }
 .eb-settings-rail button.is-active {
-  border-color: rgba(228, 0, 43, 0.35);
-  background: rgba(228, 0, 43, 0.1);
+  border-color: rgb(var(--site-brand-rgb) / 0.35);
+  background: rgb(var(--site-brand-rgb) / 0.1);
   color: var(--tx);
   font-weight: 700;
 }
@@ -186,9 +186,9 @@
 }
 .eb-settings-rail-badge {
   min-width: 17px;
-  border: 1px solid rgba(228, 0, 43, 0.4);
+  border: 1px solid rgb(var(--site-brand-rgb) / 0.4);
   border-radius: 999px;
-  background: rgba(228, 0, 43, 0.12);
+  background: rgb(var(--site-brand-rgb) / 0.12);
   color: var(--brandsoft);
   padding: 2px 5px;
   text-align: center;
@@ -246,7 +246,7 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: rgba(228, 0, 43, 0.14);
+  background: rgb(var(--site-brand-rgb) / 0.14);
   color: var(--brand);
 }
 .eb-settings-section-head h2 {
@@ -274,8 +274,8 @@
   line-height: 1.2;
 }
 .eb-settings-unsaved {
-  border: 1px solid rgba(228, 0, 43, 0.4);
-  background: rgba(228, 0, 43, 0.12);
+  border: 1px solid rgb(var(--site-brand-rgb) / 0.4);
+  background: rgb(var(--site-brand-rgb) / 0.12);
   color: var(--brand);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -356,6 +356,38 @@
   font-size: 11.5px;
   line-height: 1.45;
 }
+.eb-settings-color-input {
+  position: relative;
+}
+.eb-settings-color-input .eb-in {
+  padding-right: 48px;
+}
+.eb-settings-color-swatch {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  transform: translateY(-50%);
+  border: 1px solid rgba(20, 16, 9, 0.16);
+  border-radius: 7px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24) inset;
+  pointer-events: none;
+}
+.eb-settings-color-swatch.is-invalid {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #d9d4cc 25%, transparent 25%),
+    linear-gradient(-45deg, #d9d4cc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #d9d4cc 75%),
+    linear-gradient(-45deg, transparent 75%, #d9d4cc 75%);
+  background-position:
+    0 0,
+    0 7px,
+    7px -7px,
+    -7px 0;
+  background-size: 14px 14px;
+}
 .eb-settings-reset {
   width: fit-content;
   margin-top: 6px;
@@ -402,7 +434,7 @@
 }
 
 .eb-settings-toggle-track.is-on {
-  background: #e4002b;
+  background: var(--brand);
 }
 
 .eb-settings-toggle-knob {
@@ -622,7 +654,7 @@
   gap: 12px;
   background: #141210;
   padding: 7px 16px;
-  color: #b8afa6;
+  color: var(--creamdim, #b8afa6);
   font:
     9.5px 'Space Mono',
     monospace;
@@ -648,7 +680,7 @@
   background: var(--brand);
 }
 .eb-settings-header-preview-login {
-  color: #f3efe9;
+  color: var(--cream, #f3efe9);
 }
 .eb-settings-header-preview-nav {
   display: flex;
@@ -672,7 +704,7 @@
   gap: 16px;
 }
 .eb-settings-header-preview-links span {
-  color: #6f665c;
+  color: var(--muted, #6f665c);
   font:
     600 10.5px 'Archivo',
     sans-serif;
@@ -680,12 +712,12 @@
   text-transform: uppercase;
 }
 .eb-settings-header-preview-links span.is-active {
-  color: #141009;
+  color: var(--ink, #141009);
 }
 .eb-settings-header-preview-cta {
   border-radius: 4px;
   background: var(--brand);
-  color: #fff;
+  color: var(--brandfg);
   padding: 8px 16px;
   font:
     800 10.5px 'Archivo',
@@ -742,15 +774,15 @@
 .eb-settings-savebar button.primary {
   border-color: var(--brand);
   background: var(--brand);
-  color: #fff;
+  color: var(--brandfg);
 }
 .eb-settings-readonly {
   position: fixed;
   right: 30px;
   bottom: 70px;
-  border: 1px solid rgba(228, 0, 43, 0.3);
+  border: 1px solid rgb(var(--site-brand-rgb) / 0.3);
   border-radius: 8px;
-  background: rgba(228, 0, 43, 0.1);
+  background: rgb(var(--site-brand-rgb) / 0.1);
   color: var(--brandsoft);
   padding: 9px 12px;
   font:

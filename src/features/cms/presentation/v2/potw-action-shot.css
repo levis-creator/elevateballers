@@ -44,7 +44,7 @@
   border: 0;
   border-radius: 6px;
   background: var(--brand);
-  color: #fff;
+  color: var(--brandfg);
   font: 15px/1 "Archivo", sans-serif;
 }
 
@@ -141,7 +141,7 @@
   border-radius: 8px;
   background: var(--brand);
   padding: 10px 12px;
-  color: #fff;
+  color: var(--brandfg);
   font: 800 11.5px "Archivo", sans-serif;
 }
 

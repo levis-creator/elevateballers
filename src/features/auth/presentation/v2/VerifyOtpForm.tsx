@@ -38,7 +38,7 @@ export default function VerifyOtpForm() {
 				<div>
 					<label className="mb-2.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-creamdim">Verification Code</label>
 					<OtpInput value={f.code} onChange={f.setCode} disabled={f.loading || f.verified} autoFocus />
-					<p className="mt-2.5 font-mono text-[11px] tracking-[0.04em] text-[#5f574e]">Paste supported — you can paste the whole code at once.</p>
+					<p className="mt-2.5 font-mono text-[11px] tracking-[0.04em] text-[rgb(var(--site-cream-dim-rgb,95 87 78)/0.55)]">Paste supported — you can paste the whole code at once.</p>
 				</div>
 
 				<button
@@ -61,7 +61,7 @@ export default function VerifyOtpForm() {
 				<a href="/admin/login" className="inline-flex items-center gap-2 font-body text-[13px] font-semibold text-brandsoft no-underline hover:text-brand">
 					<span className="font-mono text-[13px]">←</span>Back to login
 				</a>
-				<span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#5f574e]">Nairobi</span>
+				<span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[rgb(var(--site-cream-dim-rgb,95 87 78)/0.55)]">Nairobi</span>
 			</div>
 		</div>
 	);

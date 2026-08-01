@@ -55,7 +55,7 @@ export default function AddSubscriberModal({ onClose, onAdd }: Props) {
 					</div>
 					<div className="flex items-center justify-end gap-2 pt-2">
 						<button type="button" onClick={onClose} className="rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-4 py-2.5 font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]">Cancel</button>
-						<button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 font-['Anton'] text-[13px] uppercase tracking-[0.06em] text-white hover:bg-[var(--brandlt)] disabled:opacity-60">
+						<button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 font-['Anton'] text-[13px] uppercase tracking-[0.06em] text-[var(--brandfg)] hover:bg-[var(--brandlt)] disabled:opacity-60">
 							{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
 						</button>
 					</div>

@@ -7,8 +7,8 @@ interface Props {
 	tabs: string[];
 }
 
-const STRIPES = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 10px,#f0ece5 10px,#f0ece5 20px)";
-const AUDIO_BG = "linear-gradient(135deg,#ece7df,#f4f0ea)";
+const STRIPES = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 10px,var(--panel,#f0ece5) 10px,var(--panel,#f0ece5) 20px)";
+const AUDIO_BG = "linear-gradient(135deg,rgb(var(--site-paper-border-rgb,236 231 223)),var(--paper2,#f4f0ea))";
 
 /** Featured Media — React island; active type tab lives in a Zustand store. */
 export default function FeaturedMedia({ media, tabs }: Props) {
@@ -49,7 +49,7 @@ export default function FeaturedMedia({ media, tabs }: Props) {
 							}
 						>
 							{!mi.image && (
-								<span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#a49a8d]">{mi.label}</span>
+								<span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--muted2,#a49a8d)]">{mi.label}</span>
 							)}
 						</div>
 					))}
@@ -57,8 +57,8 @@ export default function FeaturedMedia({ media, tabs }: Props) {
 			) : (
 				<div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-14 text-center">
 					<div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-panel">
-						<div className="relative h-4 w-5 rounded-[3px] border-2 border-[#b3a99c]">
-							<div className="absolute left-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[#b3a99c]" />
+						<div className="relative h-4 w-5 rounded-[3px] border-2 border-[var(--muted2,#b3a99c)]">
+							<div className="absolute left-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--muted2,#b3a99c)]" />
 						</div>
 					</div>
 					<div className="font-display text-[22px] uppercase text-ink">{emptyTitle}</div>

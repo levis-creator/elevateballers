@@ -23,7 +23,7 @@ const { ghostWord = "Admin", badge, headlineTop, headlineAccent, description, st
 <div class="relative flex flex-col justify-between overflow-hidden border-r border-white/[0.06] px-14 py-12 max-[1200px]:px-10 max-[900px]:min-h-[300px] max-[900px]:border-b max-[900px]:border-r-0 max-[600px]:px-7 max-[600px]:py-9">
 	<!-- diagonal weave + gradients -->
 	<div class="pointer-events-none absolute inset-0" aria-hidden="true" style="background:repeating-linear-gradient(45deg,#141210,#141210 22px,#100e0d 22px,#100e0d 44px);"></div>
-	<div class="pointer-events-none absolute inset-0" aria-hidden="true" style="background:linear-gradient(160deg,rgba(12,11,10,0.55),rgba(12,11,10,0.9));"></div>
+	<div class="pointer-events-none absolute inset-0" aria-hidden="true" style="background:linear-gradient(160deg,rgb(var(--site-night-rgb)/0.55),rgb(var(--site-night-rgb)/0.9));"></div>
 	<div class="pointer-events-none absolute inset-0" aria-hidden="true" style="background:radial-gradient(90% 80% at 88% -10%,rgba(228,0,43,0.30),transparent 55%);"></div>
 
 	<!-- ghost word -->
@@ -63,7 +63,7 @@ const { ghostWord = "Admin", badge, headlineTop, headlineAccent, description, st
 		<div class="mb-5 inline-flex items-center gap-2.5 rounded-full border border-white/[0.12] bg-white/[0.03] py-[7px] pl-3 pr-[14px] font-mono text-[11px] uppercase tracking-[0.14em] text-creamdim">
 			<span class="inline-block h-[7px] w-[7px] rounded-full bg-brand"></span>{badge}
 		</div>
-		<h1 class="mb-4 font-display text-[clamp(44px,4.6vw,72px)] uppercase leading-[0.86] text-[#f6f2ec]">
+		<h1 class="mb-4 font-display text-[clamp(44px,4.6vw,72px)] uppercase leading-[0.86] text-[var(--cream,#f6f2ec)]">
 			{headlineTop}<br /><span class="text-brand">{headlineAccent}</span>
 		</h1>
 		<p class="max-w-[380px] text-[15px] leading-[1.65] text-creamdim">{description}</p>

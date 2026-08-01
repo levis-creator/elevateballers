@@ -4,6 +4,7 @@ export const prerender = false;
 import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 import VerifyOtpPage from '../../features/auth/presentation/v2/VerifyOtpPage.astro';
 import { checkAuth } from '../../features/cms/lib/auth-astro';
+import ManagedFavicon from '../../features/settings/presentation/components/ManagedFavicon.astro';
 
 // Admin redesign is flag-gated SEPARATELY from the public site
 // (PUBLIC_ADMIN_UI_VERSION). When off, serve the legacy OTP at the same URL —
@@ -27,7 +28,7 @@ try {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Verify Login - Elevate Ballers CMS</title>
-  <link rel="icon" href="/images/Elevate_Icon-32x32.png" sizes="32x32">
+  <ManagedFavicon />
 </head>
 <body>
   <VerifyOtpPage />

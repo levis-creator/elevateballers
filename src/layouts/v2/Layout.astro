@@ -9,6 +9,7 @@
 import "@/styles/v2.css";
 // v2 design fonts, self-hosted via Fontsource (no external Google Fonts request).
 import "@fontsource/anton"; // 400 (display headings)
+import "@fontsource/archivo-black";
 import "@fontsource/archivo/400.css";
 import "@fontsource/archivo/500.css";
 import "@fontsource/archivo/600.css";
@@ -16,11 +17,23 @@ import "@fontsource/archivo/700.css";
 import "@fontsource/archivo/800.css";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+import "@fontsource/inter/800.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/700.css";
 // v2 loading-UI animations (boot splash + skeleton shimmer) — global so every page can use them.
 import "@/features/loading/lib/loading.css";
 import SEO from "@/components/SEO.astro";
 import LoadingSplash from "@/features/loading/presentation/v2/LoadingSplash.astro";
 import CookieConsent from "@/components/CookieConsent.astro";
+import {
+	buildThemeColorPalette,
+	resolvePublicBrandSettings,
+	siteSettingsService,
+} from "@/features/settings";
 
 interface Props {
 	title?: string;
@@ -57,15 +70,69 @@ const {
 	nextURL,
 	preloadImage,
 } = Astro.props;
+
+const brandSettings = resolvePublicBrandSettings(
+	await siteSettingsService.list("brand").catch(() => [])
+);
+const palette = buildThemeColorPalette(brandSettings);
+
+const resolvedTitle = title
+	? title.replaceAll("Elevate Ballers", brandSettings.siteName)
+	: brandSettings.siteName;
+const themeStyle = [
+	`--site-brand-rgb:${palette.brand}`,
+	`--site-brand-light-rgb:${palette.brandLight}`,
+	`--site-brand-soft-rgb:${palette.brandSoft}`,
+	`--site-brand-foreground-rgb:${palette.brandForeground}`,
+	`--site-paper-rgb:${palette.paper}`,
+	`--site-paper-raised-rgb:${palette.paperRaised}`,
+	`--site-paper-soft-rgb:${palette.paperSoft}`,
+	`--site-paper-panel-rgb:${palette.paperPanel}`,
+	`--site-paper-border-rgb:${palette.paperBorder}`,
+	`--site-night-rgb:${palette.night}`,
+	`--site-night-raised-rgb:${palette.nightRaised}`,
+	`--site-night-soft-rgb:${palette.nightSoft}`,
+	`--site-night-border-rgb:${palette.nightBorder}`,
+	`--site-ink-rgb:${palette.ink}`,
+	`--site-ink-muted-rgb:${palette.inkMuted}`,
+	`--site-ink-soft-rgb:${palette.inkSoft}`,
+	`--site-cream-rgb:${palette.cream}`,
+	`--site-cream-dim-rgb:${palette.creamDim}`,
+	`--brand:${brandSettings.brand}`,
+	`--brandlt:rgb(${palette.brandLight})`,
+	`--brandsoft:rgb(${palette.brandSoft})`,
+	`--brandfg:rgb(${palette.brandForeground})`,
+	`--paper:rgb(${palette.paper})`,
+	`--paper2:rgb(${palette.paperSoft})`,
+	`--panel:rgb(${palette.paperPanel})`,
+	`--night:rgb(${palette.night})`,
+	`--night2:rgb(${palette.nightRaised})`,
+	`--ink:rgb(${palette.ink})`,
+	`--muted:rgb(${palette.inkMuted})`,
+	`--muted2:rgb(${palette.inkSoft})`,
+	`--cream:rgb(${palette.cream})`,
+	`--creamdim:rgb(${palette.creamDim})`,
+	`--site-font-display:"${brandSettings.display}"`,
+	`--site-font-body:"${brandSettings.body}"`,
+	`--site-font-label:"${brandSettings.label}"`,
+].join(";");
 ---
 
 <!doctype html>
-<html lang="en-US">
+<html
+	lang="en-US"
+	style={themeStyle}
+	data-uppercase-headings={String(brandSettings.uppercaseHeadings)}
+	data-hero-art={String(brandSettings.heroArt)}
+	data-animated-counters={String(brandSettings.counters)}
+	data-respect-reduced-motion={String(brandSettings.reducedMotion)}
+>
 	<head>
 		<meta name="format-detection" content="telephone=no" />
 		<SEO
-			title={title}
-			description={description}
+			title={resolvedTitle}
+			description={description || brandSettings.tagline}
+			siteName={brandSettings.siteName}
 			image={image}
 			imageWidth={imageWidth}
 			imageHeight={imageHeight}
@@ -88,14 +155,13 @@ const {
 		     Google Fonts request. Supabase serves most images. -->
 		<link rel="preconnect" href="https://zjnlvnyjsidnelgciqmz.supabase.co" crossorigin />
 
-		<!-- Favicons -->
-		<link rel="icon" href="/images/Elevate_Icon-32x32.png" sizes="32x32" />
-		<link rel="icon" href="/images/Elevate_Icon-200x200.png" sizes="192x192" />
-		<link rel="apple-touch-icon" href="/images/Elevate_Icon-200x200.png" />
+		<!-- Brand favicon is managed in Site Settings → Brand & Theme. -->
+		<link rel="icon" href={brandSettings.favicon} />
+		<link rel="apple-touch-icon" href={brandSettings.favicon} />
 	</head>
-	<!-- Theme-neutral: each v2 page owns its own background/text colour on its
-	     root wrapper (e.g. the home page uses cream #f5f3ef). -->
-	<body class="min-h-screen antialiased">
+	<!-- Paper and Ink are the document defaults; individual night sections
+	     override them through the same derived theme palette. -->
+	<body class="min-h-screen bg-paper text-ink antialiased">
 		<!-- Boot splash: shown once per session on first paint, then removed on load. -->
 		<LoadingSplash />
 		<slot />

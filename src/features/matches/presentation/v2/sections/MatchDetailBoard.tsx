@@ -3,12 +3,12 @@ import { useMatchViewStore } from "@/features/matches/presentation/stores/v2/use
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { MatchView } from "@/features/matches/domain/entities/match-detail-v2";
 
-const STRIPE = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 4px,#f0ece5 4px,#f0ece5 8px)";
+const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
 
 /** Segmented tab (box team / play-by-play period). */
 const seg = (active: boolean) =>
 	`cursor-pointer rounded-md px-4 py-2 font-body text-[12px] uppercase tracking-[0.05em] ${
-		active ? "border-none bg-brand font-bold text-white" : "border border-black/15 bg-white font-semibold text-muted hover:border-brand"
+		active ? "border-none bg-brand font-bold text-brandfg" : "border border-black/15 bg-white font-semibold text-muted hover:border-brand"
 	}`;
 
 /** Round player/team avatar — image when present, else a neutral stripe. */
@@ -57,13 +57,13 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 	const activePeriod = period && view.pbpPeriods.includes(period) ? period : (view.pbpPeriods[view.pbpPeriods.length - 1] ?? "");
 	const boxRows = view.box[activeBox];
 	const pbpRows = activePeriod ? (view.pbpByPeriod[activePeriod] ?? []) : [];
-	const barColor = (textColor: string) => (textColor === "#e4002b" ? "#e4002b" : "rgba(228,0,43,0.35)");
+	const barColor = (textColor: string) => (textColor === "var(--brand)" ? "var(--brand)" : "rgb(var(--site-brand-rgb) / 0.35)");
 
 	return (
 		<>
 			{/* SCOREBOARD HERO */}
 			<section className="relative overflow-hidden border-b border-black/[0.08] bg-night text-cream">
-				<div className="absolute inset-0" style={{ background: "radial-gradient(100% 130% at 50% -20%,rgba(228,0,43,0.2),transparent 60%)" }} />
+				<div className="absolute inset-0" style={{ background: "radial-gradient(100% 130% at 50% -20%,rgb(var(--site-brand-rgb) / 0.2),transparent 60%)" }} />
 				<div className="relative mx-auto max-w-[1000px] px-8 py-9 max-[960px]:px-6">
 					<div className="mb-7 flex items-center justify-between gap-3">
 						<a href={view.backHref} className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2 no-underline hover:text-brandsoft">{view.backLabel}</a>
@@ -99,7 +99,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 								<span className="rounded bg-white/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-creamdim">Full Time</span>
 							)}
 							{view.state === "live" && (
-								<span className="flex items-center gap-2 rounded bg-brand px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-white">
+								<span className="flex items-center gap-2 rounded bg-brand px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-brandfg">
 									<span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />{view.liveTag}
 								</span>
 							)}
@@ -130,7 +130,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 					{view.quarters.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 							<SectionTitle>Scoring by Quarter</SectionTitle>
-							<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+							<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 								<div className="min-w-[520px]">
 									<div className="grid items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2" style={{ gridTemplateColumns: `1fr repeat(${view.periodLabels.length},52px) 72px` }}>
 										<span>Team</span>
@@ -161,7 +161,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 							<SectionTitle>Top Performers</SectionTitle>
 							<div className="grid grid-cols-3 gap-4 max-[600px]:grid-cols-1">
 								{view.performers.map((p, i) => (
-									<div key={i} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+									<div key={i} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 										<div className="mb-4 flex items-center gap-3">
 											<Avatar image={p.image} size={44} />
 											<div>
@@ -184,7 +184,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 					{view.comparison.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 							<SectionTitle>Team Comparison</SectionTitle>
-							<div className="rounded-xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+							<div className="rounded-xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 								<div className="mb-5 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.08em]">
 									<span className="font-bold text-ink2">{view.home.abbr}</span>
 									<span className="text-muted2">Team Stats</span>
@@ -216,7 +216,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 								<button type="button" onClick={() => setBox("home")} className={seg(activeBox === "home")}>{view.home.name}</button>
 								<button type="button" onClick={() => setBox("away")} className={seg(activeBox === "away")}>{view.away.name}</button>
 							</div>
-							<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+							<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 								<div className="min-w-[640px]">
 									<div className="grid grid-cols-[1fr_52px_52px_52px_52px_52px_56px] items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
 										<span>Player</span><span className="text-center">MIN</span><span className="text-center">PTS</span><span className="text-center">REB</span><span className="text-center">AST</span><span className="text-center">STL</span><span className="text-center">3PT</span>
@@ -250,7 +250,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 								<h2 className="flex items-center gap-3 font-display text-[22px] uppercase text-ink">
 									Play-by-Play
 									{view.state === "live" && (
-										<span className="flex items-center gap-1.5 rounded bg-brand px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-white"><span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white" />LIVE</span>
+										<span className="flex items-center gap-1.5 rounded bg-brand px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-brandfg"><span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white" />LIVE</span>
 									)}
 								</h2>
 								<div className="flex items-center gap-2">
@@ -263,11 +263,11 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 								<span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full bg-brand" />{view.home.abbr}</span>
 								<span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />{view.away.abbr}</span>
 							</div>
-							<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+							<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 								{pbpRows.map((e, i) => (
 									<div key={i} className="flex items-center gap-4 border-b border-black/[0.06] px-5 py-3 last:border-0">
 										<span className="w-[46px] flex-shrink-0 font-mono text-[12px] text-muted2">{e.t}</span>
-										<span className="inline-block h-[9px] w-[9px] flex-shrink-0 rounded-full" style={{ background: e.side === "home" ? "#e4002b" : e.side === "away" ? "#141009" : "#b3a99c" }} />
+										<span className="inline-block h-[9px] w-[9px] flex-shrink-0 rounded-full" style={{ background: e.side === "home" ? "var(--brand)" : e.side === "away" ? "var(--ink,#141009)" : "var(--muted2,#b3a99c)" }} />
 										<span className="flex-1 font-body text-[14px] text-ink2">{e.text}</span>
 										<span className="flex-shrink-0 font-display text-[17px] text-ink">{e.score}</span>
 									</div>
@@ -293,7 +293,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 							<SectionTitle>Recent Form</SectionTitle>
 							<div className="grid grid-cols-2 gap-4 max-[600px]:grid-cols-1">
 								{view.formGuide.map((f) => (
-									<div key={f.team} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+									<div key={f.team} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 										<TeamName
 											team={{ name: f.team, nickname: f.nickname, logo: f.logo, initials: f.abbr }}
 											variant="compact"
@@ -303,7 +303,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 										<div className="flex items-center gap-2">
 											<span className="mr-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">Last {f.chips.length}</span>
 											{f.chips.map((c, i) => (
-												<span key={i} className="flex h-6 w-6 items-center justify-center rounded-md font-mono text-[11px] font-bold" style={c === "W" ? { background: "rgba(31,157,85,0.14)", color: "#1f9d55" } : c === "L" ? { background: "rgba(228,0,43,0.1)", color: "#e4002b" } : { background: "#f0ede7", color: "#8a817a" }}>{c}</span>
+												<span key={i} className="flex h-6 w-6 items-center justify-center rounded-md font-mono text-[11px] font-bold" style={c === "W" ? { background: "rgba(31,157,85,0.14)", color: "#1f9d55" } : c === "L" ? { background: "rgb(var(--site-brand-rgb) / 0.1)", color: "var(--brand)" } : { background: "var(--panel,#f0ede7)", color: "var(--muted2,#8a817a)" }}>{c}</span>
 											))}
 										</div>
 									</div>
@@ -316,7 +316,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 					{view.h2h.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 							<SectionTitle>Head to Head</SectionTitle>
-							<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+							<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 								{view.h2h.map((g, i) => (
 									<div key={i} className="flex items-center gap-3 border-b border-black/[0.06] px-5 py-3.5 last:border-0 max-[600px]:flex-wrap">
 										<span className="w-[92px] flex-shrink-0 font-mono text-[11px] text-muted2">{g.dateText}</span>
@@ -335,7 +335,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 							<SectionTitle>Players to Watch</SectionTitle>
 							<div className="grid grid-cols-3 gap-4 max-[600px]:grid-cols-1">
 								{view.watch.map((p, i) => (
-									<div key={i} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+									<div key={i} className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 										<div className="flex items-center gap-3">
 											<Avatar image={p.image} size={44} />
 											<div>

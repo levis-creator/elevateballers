@@ -300,7 +300,7 @@ export default function RegistrationFormV2() {
 			type="button"
 			onClick={() => switchTab(t)}
 			className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-3 font-display text-[15px] uppercase tracking-[0.04em] transition-colors ${
-				activeTab === t ? "bg-brand text-white" : "text-muted hover:text-ink2"
+				activeTab === t ? "bg-brand text-brandfg" : "text-muted hover:text-ink2"
 			}`}
 		>
 			<Icon className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
@@ -313,7 +313,7 @@ export default function RegistrationFormV2() {
 		const modeLabel = activeTab === "team" ? "team" : "player";
 		return (
 			<div className="mx-auto w-full max-w-[560px]">
-				<div className="rounded-2xl border border-black/10 bg-white p-9 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-6">
+				<div className="rounded-2xl border border-black/10 bg-white p-9 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] max-[600px]:p-6">
 					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1f9d55]/[0.12] text-[#1f9d55]">
 						<Check className="h-7 w-7" strokeWidth={2.5} aria-hidden />
 					</div>
@@ -326,7 +326,7 @@ export default function RegistrationFormV2() {
 						<button
 							type="button"
 							onClick={() => setSuccess(null)}
-							className="rounded-lg bg-brand px-6 py-3.5 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-white hover:bg-brandlt"
+							className="rounded-lg bg-brand px-6 py-3.5 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg hover:bg-brandlt"
 						>
 							Register another
 						</button>
@@ -345,12 +345,12 @@ export default function RegistrationFormV2() {
 	const canSubmitTeam = !submitting && !!teamTurnstileToken && !registrationBlocked && agreed;
 	const canSubmitPlayer = !submitting && !!playerTurnstileToken && agreed;
 	const submitCls =
-		"col-span-full mt-2 inline-flex items-center justify-center gap-2 justify-self-start rounded-lg bg-brand px-9 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-white transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#b9b3aa] disabled:opacity-70 max-[600px]:w-full";
+		"col-span-full mt-2 inline-flex items-center justify-center gap-2 justify-self-start rounded-lg bg-brand px-9 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#b9b3aa] disabled:opacity-70 max-[600px]:w-full";
 
 	return (
 		<div>
 			{/* SEGMENTED TABS */}
-			<div className="mb-7 inline-flex w-full max-w-[440px] gap-1 rounded-xl border border-black/10 bg-white p-1.5 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+			<div className="mb-7 inline-flex w-full max-w-[440px] gap-1 rounded-xl border border-black/10 bg-white p-1.5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 				{tabBtn("team", "Team", Users)}
 				{tabBtn("player", "Player", User)}
 			</div>
@@ -363,7 +363,7 @@ export default function RegistrationFormV2() {
 			)}
 
 			{/* FORM CARD */}
-			<div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+			<div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 				<div className="flex items-center justify-between border-b border-black/[0.07] bg-paper2 px-7 py-5 max-[600px]:px-5">
 					<div>
 						<h2 className="font-display text-[24px] uppercase text-ink">{activeTab === "team" ? "Team Registration" : "Player Registration"}</h2>

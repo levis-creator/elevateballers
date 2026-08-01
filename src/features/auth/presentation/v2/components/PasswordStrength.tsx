@@ -1,6 +1,6 @@
 import { passwordRequirements, passwordScore } from "@/features/auth/lib/password-rules";
 
-const SEG_COLORS = ["#4a443d", "#e4002b", "#ff8a3d", "#f5c518", "#3fbf6f"];
+const SEG_COLORS = ["var(--muted,var(--muted,#4a443d))", "#e4002b", "#ff8a3d", "#f5c518", "#3fbf6f"];
 const SEG_LABELS = ["Too short", "Weak", "Fair", "Good", "Strong"];
 
 /**
@@ -11,7 +11,7 @@ const SEG_LABELS = ["Too short", "Weak", "Fair", "Good", "Strong"];
 export default function PasswordStrength({ password }: { password: string }) {
 	const score = passwordScore(password); // 0..4
 	const reqs = passwordRequirements(password);
-	const activeColor = password ? SEG_COLORS[score] : "#4a443d";
+	const activeColor = password ? SEG_COLORS[score] : "var(--muted,var(--muted,#4a443d))";
 	const label = password ? SEG_LABELS[score] : "Enter a password";
 
 	return (
@@ -32,7 +32,7 @@ export default function PasswordStrength({ password }: { password: string }) {
 			</div>
 			<div className="grid grid-cols-2 gap-x-4 gap-y-2">
 				{reqs.map((r) => (
-					<span key={r.label} className="flex items-center gap-2 font-body text-[12px]" style={{ color: r.ok ? "#8fd3aa" : "#6f665c" }}>
+					<span key={r.label} className="flex items-center gap-2 font-body text-[12px]" style={{ color: r.ok ? "#8fd3aa" : "var(--muted,var(--muted,#6f665c))" }}>
 						<span
 							className="flex h-[15px] w-[15px] flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold leading-none"
 							style={

@@ -5,6 +5,12 @@ import AdminShell from './AdminShell';
 import AdminShellV2 from '../presentation/v2/AdminShellV2';
 import { hasPermission, hasAnyPermission, hasAllPermissions } from '../../rbac/permissions';
 import { usePublicAdminV2 } from '@/lib/admin-ui-version';
+import {
+  buildThemeColorPalette,
+  resolvePublicBrandSettings,
+  siteSettingsService,
+} from '@/features/settings';
+import ManagedFavicon from '@/features/settings/presentation/components/ManagedFavicon.astro';
 import '../../../styles/admin.css';
 import '../presentation/v2/admin-v2.css';
 import '@fontsource/anton';
@@ -48,6 +54,47 @@ if (!user) {
 // The redesigned dashboard lives at /admin; every other admin page keeps its v1
 // content on a light surface inside the v2 chrome until individually redesigned.
 const useV2 = usePublicAdminV2;
+const adminBrandSettings = useV2
+  ? resolvePublicBrandSettings(await siteSettingsService.list('brand').catch(() => []))
+  : null;
+const adminPalette = adminBrandSettings ? buildThemeColorPalette(adminBrandSettings) : null;
+
+const adminBrandStyle = adminBrandSettings
+  ? [
+      `--site-brand-rgb:${adminPalette!.brand}`,
+      `--site-brand-light-rgb:${adminPalette!.brandLight}`,
+      `--site-brand-soft-rgb:${adminPalette!.brandSoft}`,
+      `--site-brand-foreground-rgb:${adminPalette!.brandForeground}`,
+      `--site-paper-rgb:${adminPalette!.paper}`,
+      `--site-paper-raised-rgb:${adminPalette!.paperRaised}`,
+      `--site-paper-soft-rgb:${adminPalette!.paperSoft}`,
+      `--site-paper-panel-rgb:${adminPalette!.paperPanel}`,
+      `--site-paper-border-rgb:${adminPalette!.paperBorder}`,
+      `--site-night-rgb:${adminPalette!.night}`,
+      `--site-night-raised-rgb:${adminPalette!.nightRaised}`,
+      `--site-night-soft-rgb:${adminPalette!.nightSoft}`,
+      `--site-night-border-rgb:${adminPalette!.nightBorder}`,
+      `--site-ink-rgb:${adminPalette!.ink}`,
+      `--site-ink-muted-rgb:${adminPalette!.inkMuted}`,
+      `--site-ink-soft-rgb:${adminPalette!.inkSoft}`,
+      `--site-cream-rgb:${adminPalette!.cream}`,
+      `--site-cream-dim-rgb:${adminPalette!.creamDim}`,
+      `--brand:${adminBrandSettings.brand}`,
+      `--brandlt:rgb(${adminPalette!.brandLight})`,
+      `--brandsoft:rgb(${adminPalette!.brandSoft})`,
+      `--brandfg:rgb(${adminPalette!.brandForeground})`,
+      `--paper:rgb(${adminPalette!.paper})`,
+      `--paper2:rgb(${adminPalette!.paperSoft})`,
+      `--panel:rgb(${adminPalette!.paperPanel})`,
+      `--night:rgb(${adminPalette!.night})`,
+      `--night2:rgb(${adminPalette!.nightRaised})`,
+      `--ink:rgb(${adminPalette!.ink})`,
+      `--muted:rgb(${adminPalette!.inkMuted})`,
+      `--muted2:rgb(${adminPalette!.inkSoft})`,
+      `--cream:rgb(${adminPalette!.cream})`,
+      `--creamdim:rgb(${adminPalette!.creamDim})`,
+    ].join(';')
+  : undefined;
 const isDashboard = Astro.url.pathname === '/admin' || Astro.url.pathname === '/admin/';
 const isTeamsList = Astro.url.pathname === '/admin/teams' || Astro.url.pathname === '/admin/teams/';
 const isTeamDetail = /^\/admin\/teams\/view\/[^/]+\/?$/.test(Astro.url.pathname);
@@ -65,6 +112,7 @@ const isMediaLibrary = Astro.url.pathname === '/admin/media' || Astro.url.pathna
     <meta name="robots" content="noindex, nofollow" />
     {redirectUrl && <meta http-equiv="refresh" content={`0;url=${redirectUrl}`} />}
     <title>{title}</title>
+    <ManagedFavicon href={adminBrandSettings?.favicon} />
     <ClientRouter />
 
     <!-- Resolve sidebar collapsed state before paint. Stored preference wins; match-detail auto-hides by default. -->
@@ -132,7 +180,7 @@ const isMediaLibrary = Astro.url.pathname === '/admin/media' || Astro.url.pathna
         window.location.href = url;
       </script>
     ) : useV2 ? (
-      <div id="eb-admin-root" class="eb-root h-screen w-full overflow-hidden">
+      <div id="eb-admin-root" class="eb-root h-screen w-full overflow-hidden" style={adminBrandStyle}>
         <script is:inline>
           (function () {
             function applyAdminTheme() {

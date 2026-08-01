@@ -10,7 +10,7 @@ import {
 import type { SeasonDetailStats } from "@/features/seasons/domain/entities/season-detail";
 
 const STATUS_STYLE: Record<SeasonStatus, { bg: string; fg: string; dot: string }> = {
-	Live: { bg: "rgba(228,0,43,0.14)", fg: "#e4002b", dot: "#e4002b" },
+	Live: { bg: "rgb(var(--site-brand-rgb) / 0.14)", fg: "var(--brand)", dot: "var(--brand)" },
 	Upcoming: { bg: "rgba(217,131,36,0.16)", fg: "#c9741d", dot: "#d98324" },
 	Completed: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55", dot: "#1f9d55" },
 };
@@ -39,7 +39,7 @@ export default function SeasonHero({ season, stats, canUpdate, canCreateMatch }:
 		<div className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)] p-6 max-[600px]:p-5">
 			<div
 				className="pointer-events-none absolute inset-0"
-				style={{ background: "radial-gradient(70% 130% at 92% -20%,rgba(228,0,43,0.22),transparent 55%)" }}
+				style={{ background: "radial-gradient(70% 130% at 92% -20%,rgb(var(--site-brand-rgb) / 0.22),transparent 55%)" }}
 			/>
 
 			<div className="relative flex flex-wrap items-start gap-5">
@@ -123,7 +123,7 @@ export default function SeasonHero({ season, stats, canUpdate, canCreateMatch }:
 						className="h-full rounded-full"
 						style={{
 							width: `${progress}%`,
-							background: status === "Completed" ? "#1f9d55" : "linear-gradient(to right,#e4002b,#ff2d43)",
+							background: status === "Completed" ? "#1f9d55" : "linear-gradient(to right,var(--brand),var(--brandlt))",
 						}}
 					/>
 				</div>

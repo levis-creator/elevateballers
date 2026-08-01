@@ -41,7 +41,7 @@ export default function LeagueHero({ league, stats, canUpdate, canCreateSeason, 
 		<div className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)] p-6 max-[600px]:p-5">
 			<div
 				className="pointer-events-none absolute inset-0"
-				style={{ background: "radial-gradient(70% 130% at 92% -20%, rgba(228,0,43,0.22), transparent 55%)" }}
+				style={{ background: "radial-gradient(70% 130% at 92% -20%, rgb(var(--site-brand-rgb) / 0.22), transparent 55%)" }}
 			/>
 			{/* Decorative half-court arc, mirroring the mockup. */}
 			<svg
@@ -55,8 +55,8 @@ export default function LeagueHero({ league, stats, canUpdate, canCreateSeason, 
 						<circle cx="204" cy="204" r="180" />
 					</clipPath>
 				</defs>
-				<circle cx="204" cy="204" r="180" fill="none" stroke="#e4002b" strokeWidth="2" strokeOpacity="0.18" />
-				<g clipPath="url(#league-hero-clip)" stroke="#e4002b" strokeWidth="2" strokeOpacity="0.18" fill="none">
+				<circle cx="204" cy="204" r="180" fill="none" stroke="var(--brand)" strokeWidth="2" strokeOpacity="0.18" />
+				<g clipPath="url(#league-hero-clip)" stroke="var(--brand)" strokeWidth="2" strokeOpacity="0.18" fill="none">
 					<line x1="204" y1="20" x2="204" y2="388" />
 					<line x1="20" y1="204" x2="388" y2="204" />
 					<path d="M92 40 C 168 150, 168 258, 92 368" />

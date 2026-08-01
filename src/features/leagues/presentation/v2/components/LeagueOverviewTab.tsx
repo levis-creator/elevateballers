@@ -7,7 +7,7 @@ const dayFmt = (iso: string) => {
 };
 
 /** A rank medal for the top three, plain muted numerals below. */
-const rankColor = (rank: number) => (rank === 1 ? "#e4002b" : rank <= 3 ? "var(--tx)" : "var(--txm)");
+const rankColor = (rank: number) => (rank === 1 ? "var(--brand)" : rank <= 3 ? "var(--tx)" : "var(--txm)");
 
 export default function LeagueOverviewTab({ detail }: { detail: LeagueDetail }) {
 	const { standings, recentMatches, currentSeason } = detail;
@@ -104,7 +104,7 @@ export default function LeagueOverviewTab({ detail }: { detail: LeagueDetail }) 
 										style={
 											played
 												? { background: "var(--chip)", color: "var(--tx)" }
-												: { background: "rgba(228,0,43,0.12)", color: "var(--brandsoft)" }
+												: { background: "rgb(var(--site-brand-rgb) / 0.12)", color: "var(--brandsoft)" }
 										}
 									>
 										{played ? `${match.team1Score}–${match.team2Score}` : match.status === "LIVE" ? "LIVE" : "vs"}

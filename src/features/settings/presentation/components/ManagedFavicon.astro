@@ -1,0 +1,15 @@
+---
+import { resolvePublicBrandSettings, siteSettingsService } from '@/features/settings';
+
+interface Props {
+  href?: string | null;
+}
+
+const { href } = Astro.props;
+const faviconHref = href ?? resolvePublicBrandSettings(
+  await siteSettingsService.list('brand').catch(() => []),
+).favicon;
+---
+
+<link rel="icon" href={faviconHref} />
+<link rel="apple-touch-icon" href={faviconHref} />

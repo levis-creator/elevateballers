@@ -2,7 +2,7 @@ import { Trophy, CheckCircle2, UserPlus, CalendarDays } from "lucide-react";
 import type { LeagueStats } from "@/features/leagues/domain/entities/league";
 
 const CARDS = [
-	{ key: "total", label: "Total Leagues", icon: Trophy, tint: "#e4002b" },
+	{ key: "total", label: "Total Leagues", icon: Trophy, tint: "var(--brand)" },
 	{ key: "active", label: "Active", icon: CheckCircle2, tint: "#1f8a5b" },
 	{ key: "registering", label: "Registration Open", icon: UserPlus, tint: "#2a6fdb" },
 	{ key: "matches", label: "Matches Scheduled", icon: CalendarDays, tint: "#7c5cff" },

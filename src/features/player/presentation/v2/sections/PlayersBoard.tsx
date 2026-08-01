@@ -7,19 +7,19 @@ interface Props {
 	perPage?: number;
 }
 
-const STRIPE = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 12px,#f0ece5 12px,#f0ece5 24px)";
+const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel,#f0ece5) 12px,var(--panel,#f0ece5) 24px)";
 
 const selectCls =
 	"cursor-pointer appearance-none rounded-lg border border-black/15 bg-white py-2.5 pl-3.5 pr-9 font-body text-[13px] font-semibold text-ink2 outline-none";
 
 const posPill = (on: boolean): string =>
 	`cursor-pointer rounded-lg border px-3.5 py-[9px] text-[12px] uppercase tracking-[0.04em] ${
-		on ? "border-brand bg-brand font-bold text-white" : "border-black/15 bg-white font-semibold text-muted hover:border-brand"
+		on ? "border-brand bg-brand font-bold text-brandfg" : "border-black/15 bg-white font-semibold text-muted hover:border-brand"
 	}`;
 
 const pagerBtn = (active: boolean): string =>
 	`h-[38px] min-w-[38px] cursor-pointer rounded-lg border font-display text-[14px] ${
-		active ? "border-brand bg-brand text-white" : "border-black/15 bg-white text-muted hover:border-brand"
+		active ? "border-brand bg-brand text-brandfg" : "border-black/15 bg-white text-muted hover:border-brand"
 	}`;
 
 const POS_TABS: Array<[PosFilter, string]> = [
@@ -149,7 +149,7 @@ function PlayerTile({ p }: { p: PlayerCard }) {
 	return (
 		<Tag
 			{...(Tag === "a" ? { href: p.href } : {})}
-			className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40"
+			className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 		>
 			<span className="relative flex aspect-[4/5] items-center justify-center overflow-hidden" style={p.image ? undefined : { background: STRIPE }}>
 				{p.image ? (

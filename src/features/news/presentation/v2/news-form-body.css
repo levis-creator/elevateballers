@@ -18,7 +18,7 @@
 
 .eb-news-body-modes button.active {
   border-color: var(--brand);
-  background: rgba(228, 0, 43, 0.1);
+  background: rgb(var(--site-brand-rgb) / 0.1);
   color: var(--brand);
 }
 

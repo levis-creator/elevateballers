@@ -12,10 +12,10 @@ interface Props {
 	image?: string | null;
 }
 const { name, role, initials, email = null, image = null } = Astro.props;
-const STRIPE = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 12px,#f0ece5 12px,#f0ece5 24px)";
+const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel, #f0ece5) 12px,var(--panel, #f0ece5) 24px)";
 ---
 
-<div class="flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+<div class="flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 	<div class="relative flex aspect-square items-center justify-center overflow-hidden" style={image ? undefined : `background:${STRIPE};`}>
 		{image ? (
 			<img src={image} alt={name} loading="lazy" class="absolute inset-0 h-full w-full object-cover" />

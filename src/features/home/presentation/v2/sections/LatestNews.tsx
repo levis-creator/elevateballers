@@ -7,7 +7,7 @@ interface Props {
 	categories: string[];
 }
 
-const PLACEHOLDER = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 10px,#f0ece5 10px,#f0ece5 20px)";
+const PLACEHOLDER = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 10px,var(--panel,#f0ece5) 10px,var(--panel,#f0ece5) 20px)";
 
 /** Latest News — React island; category filter state lives in a Zustand store. */
 export default function LatestNews({ news, categories }: Props) {
@@ -35,20 +35,20 @@ export default function LatestNews({ news, categories }: Props) {
 					<a
 						key={n.title}
 						href={n.url}
-						className="flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40"
+						className="flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white text-inherit no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 					>
 						{n.image ? (
 							<img src={n.image} alt={n.title} className="aspect-[16/10] w-full object-cover" loading="lazy" />
 						) : (
 							<div className="flex aspect-[16/10] items-center justify-center" style={{ background: PLACEHOLDER }}>
-								<span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#a49a8d]">article image</span>
+								<span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--muted2,#a49a8d)]">article image</span>
 							</div>
 						)}
 						<div className="flex flex-1 flex-col p-5">
 							<span className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-brand">{n.cat}</span>
 							<h3 className="mb-2.5 font-body text-[18px] font-extrabold leading-[1.25] text-ink2">{n.title}</h3>
 							<p className="flex-1 text-[13.5px] leading-[1.55] text-muted">{n.excerpt}</p>
-							<span className="mt-3.5 font-mono text-[11px] text-[#a49a8d]">{n.date}</span>
+							<span className="mt-3.5 font-mono text-[11px] text-[var(--muted2,#a49a8d)]">{n.date}</span>
 						</div>
 					</a>
 				))}

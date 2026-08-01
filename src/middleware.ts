@@ -44,6 +44,16 @@ export const onRequest = defineMiddleware(async (_context, next) => {
     headers.set('Content-Type', `${contentType}; charset=UTF-8`);
   }
 
+  // V2 brand settings are emitted as CSS variables in the rendered document.
+  // Apply this at the final response boundary because individual page routes
+  // set their own CDN cache policy after layouts have rendered. Otherwise a
+  // successfully saved colour can remain invisible until s-maxage expires.
+  if (contentType?.toLowerCase().includes('text/html') && import.meta.env.PUBLIC_UI_VERSION === 'v2') {
+    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    headers.set('CDN-Cache-Control', 'no-store');
+    headers.set('Vercel-CDN-Cache-Control', 'no-store');
+  }
+
   if (process.env.NODE_ENV === 'production') {
     headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }

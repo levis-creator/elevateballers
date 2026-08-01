@@ -24,7 +24,7 @@ const RING_CIRC = 326.73;
 
 	<!-- HERO -->
 	<section class="relative overflow-hidden border-b border-black/[0.08] bg-night text-cream">
-		<div class="absolute inset-0" style="background:radial-gradient(100% 130% at 20% 20%,rgba(228,0,43,0.22),transparent 55%);"></div>
+		<div class="absolute inset-0" style="background:radial-gradient(100% 130% at 20% 20%,rgb(var(--site-brand-rgb) / 0.22),transparent 55%);"></div>
 		<div class="absolute -top-24 right-[-120px] h-[520px] w-[520px] rounded-full border border-brand/[0.16]"></div>
 		<div class="relative mx-auto max-w-[1280px] px-8 pt-[36px] max-[960px]:px-6">
 			<a href={view.hero.backHref} class="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2 no-underline hover:text-brandsoft">← {view.hero.backLabel}</a>
@@ -38,7 +38,7 @@ const RING_CIRC = 326.73;
 						<div class="flex h-full items-end justify-center pb-6"><span class="font-mono text-[12px] uppercase tracking-[0.14em] text-[#6b635a]">player photo</span></div>
 					)}
 				</div>
-				<div class="absolute -right-4 -top-4 flex h-[68px] w-[68px] items-center justify-center rounded-full bg-brand font-display text-[30px] text-white shadow-[0_10px_30px_rgba(228,0,43,0.4)]">{view.hero.number}</div>
+				<div class="absolute -right-4 -top-4 flex h-[68px] w-[68px] items-center justify-center rounded-full bg-brand font-display text-[30px] text-brandfg shadow-[0_10px_30px_rgb(var(--site-brand-rgb) / 0.4)]">{view.hero.number}</div>
 			</div>
 			<div>
 				<div class="mb-4 inline-flex items-center gap-2 rounded bg-white/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-creamdim">
@@ -63,7 +63,7 @@ const RING_CIRC = 326.73;
 					<div class="grid grid-cols-6 gap-4 max-[600px]:grid-cols-3 max-[960px]:grid-cols-3">
 						{view.averages.map((a) => (
 							<div>
-								<div class="font-display text-[42px] leading-none" style={`color:${a.accent ? "#e4002b" : "#141009"};`}>{a.value}</div>
+								<div class="font-display text-[42px] leading-none" style={`color:${a.accent ? "var(--brand)" : "var(--ink, #141009)"};`}>{a.value}</div>
 								<div class="mt-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">{a.label}</div>
 							</div>
 						))}
@@ -76,7 +76,7 @@ const RING_CIRC = 326.73;
 				<!-- LEFT -->
 				<div>
 					<h2 class="mb-4 font-display text-[24px] uppercase text-ink">Per-Game Splits</h2>
-					<div class="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div class="min-w-[560px]">
 							<div class="grid grid-cols-[1.4fr_repeat(6,1fr)] items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
 								<span>Split</span><span class="text-center">GP</span><span class="text-center">PTS</span><span class="text-center">REB</span><span class="text-center">AST</span><span class="text-center">STL</span><span class="text-center">FG%</span>
@@ -100,15 +100,15 @@ const RING_CIRC = 326.73;
 						<h2 class="font-display text-[24px] uppercase text-ink">Shooting Breakdown</h2>
 						<span class="font-mono text-[11px] text-muted2">{view.breakdown.fgm}/{view.breakdown.fga} FG · {view.breakdown.fgPct}%</span>
 					</div>
-					<div class="rounded-2xl border border-black/10 bg-white p-7 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-5">
+					<div class="rounded-2xl border border-black/10 bg-white p-7 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] max-[600px]:p-5">
 						<!-- efficiency rings -->
 						<div class="grid grid-cols-4 gap-4 max-[600px]:grid-cols-2">
 							{view.breakdown.rings.map((r) => (
 								<div class="flex flex-col items-center gap-3">
 									<div class="relative" style="width:116px;height:116px;">
 										<svg viewBox="0 0 120 120" class="w-full" style="display:block;transform:rotate(-90deg);">
-											<circle cx="60" cy="60" r="52" fill="none" stroke="rgba(20,16,9,0.08)" stroke-width="12"></circle>
-											<circle cx="60" cy="60" r="52" fill="none" stroke={r.accent ? "#e4002b" : "#141009"} stroke-width="12" stroke-linecap="round" stroke-dasharray={`${(r.pct / 100) * RING_CIRC} ${RING_CIRC}`}></circle>
+											<circle cx="60" cy="60" r="52" fill="none" stroke="rgb(var(--site-ink-rgb)/0.08)" stroke-width="12"></circle>
+											<circle cx="60" cy="60" r="52" fill="none" stroke={r.accent ? "var(--brand)" : "var(--ink, #141009)"} stroke-width="12" stroke-linecap="round" stroke-dasharray={`${(r.pct / 100) * RING_CIRC} ${RING_CIRC}`}></circle>
 										</svg>
 										<div class="absolute inset-0 flex flex-col items-center justify-center">
 											<span class="font-display text-[26px] leading-none text-ink">{r.pct}%</span>
@@ -126,13 +126,13 @@ const RING_CIRC = 326.73;
 								<div class="mb-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">Shot Selection · Field-goal attempts</div>
 								<div class="flex h-3 overflow-hidden rounded-full bg-black/[0.06]">
 									{view.breakdown.shotDiet.map((diet) => (
-										<span style={`height:100%;width:${diet.share}%;background:${diet.accent ? "#e4002b" : "#141009"};`}></span>
+										<span style={`height:100%;width:${diet.share}%;background:${diet.accent ? "var(--brand)" : "var(--ink, #141009)"};`}></span>
 									))}
 								</div>
 								<div class="mt-4 flex flex-col gap-2.5">
 									{view.breakdown.shotDiet.map((diet) => (
 										<div class="flex items-center justify-between">
-											<span class="flex items-center gap-2.5 font-body text-[13.5px] text-ink2"><span class="inline-block h-3 w-3 flex-shrink-0 rounded-sm" style={`background:${diet.accent ? "#e4002b" : "#141009"};`}></span>{diet.label}</span>
+											<span class="flex items-center gap-2.5 font-body text-[13.5px] text-ink2"><span class="inline-block h-3 w-3 flex-shrink-0 rounded-sm" style={`background:${diet.accent ? "var(--brand)" : "var(--ink, #141009)"};`}></span>{diet.label}</span>
 											<span class="font-mono text-[12px] text-muted2">{diet.att} att · <span class="text-ink2">{diet.share}%</span></span>
 										</div>
 									))}
@@ -154,7 +154,7 @@ const RING_CIRC = 326.73;
 					<!-- RECENT GAMES -->
 					<h2 class="mb-4 mt-10 font-display text-[24px] uppercase text-ink">Recent Games</h2>
 					{view.gamelog.length > 0 ? (
-						<div class="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+						<div class="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 							<div class="min-w-[560px]">
 								<div class="grid grid-cols-[1.6fr_60px_repeat(4,1fr)] items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
 									<span>Opponent</span><span class="text-center">Res</span><span class="text-center">PTS</span><span class="text-center">REB</span><span class="text-center">AST</span><span class="text-center">3PT</span>
@@ -162,7 +162,7 @@ const RING_CIRC = 326.73;
 								{view.gamelog.map((g) => (
 									<a href={g.href} class="grid grid-cols-[1.6fr_60px_repeat(4,1fr)] items-center gap-2 border-b border-black/[0.06] px-5 py-3 no-underline last:border-0 hover:bg-paper2">
 										<span class="flex items-center gap-2"><span class="font-mono text-[11px] text-muted2">{g.va}</span><span class="font-body text-[14px] font-bold text-ink2">{g.opp}</span></span>
-										<span class="text-center font-mono text-[12px] font-bold" style={`color:${g.res === "W" ? "#1f9d55" : g.res === "L" ? "#e4002b" : "#a49a8d"};`}>{g.res}</span>
+										<span class="text-center font-mono text-[12px] font-bold" style={`color:${g.res === "W" ? "#1f9d55" : g.res === "L" ? "var(--brand)" : "var(--muted2,#a49a8d)"};`}>{g.res}</span>
 										<span class="text-center font-mono text-[13px] font-bold text-ink2">{g.pts}</span>
 										<span class="text-center font-mono text-[13px] text-muted">{g.reb}</span>
 										<span class="text-center font-mono text-[13px] text-muted">{g.ast}</span>
@@ -178,7 +178,7 @@ const RING_CIRC = 326.73;
 
 				<!-- RIGHT -->
 				<div class="flex flex-col gap-5">
-					<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Shooting</div>
 						<div class="flex flex-col gap-5">
 							{view.shooting.map((s) => (
@@ -187,14 +187,14 @@ const RING_CIRC = 326.73;
 										<span class="font-body text-[14px] font-bold text-ink2">{s.label}</span>
 										<span class="font-display text-[18px] text-ink">{s.pct}</span>
 									</div>
-									<div class="h-2.5 overflow-hidden rounded-full bg-black/[0.06]"><div style={`height:100%;border-radius:9999px;width:${s.value}%;background:${s.accent ? "#e4002b" : "#141009"};`}></div></div>
+									<div class="h-2.5 overflow-hidden rounded-full bg-black/[0.06]"><div style={`height:100%;border-radius:9999px;width:${s.value}%;background:${s.accent ? "var(--brand)" : "var(--ink, #141009)"};`}></div></div>
 								</div>
 							))}
 						</div>
 					</div>
 
 					{view.highs.length > 0 && (
-						<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+						<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 							<div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Season Highs</div>
 							<div class="flex flex-col gap-4">
 								{view.highs.map((h) => (

@@ -108,16 +108,16 @@
 
 /* Media v2 reference surface */
 .eb-root {
-  --bg: #0c0b0a;
-  --surf: #111010;
+  --bg: var(--night, #0c0b0a);
+  --surf: var(--night2, #111010);
   --surf2: rgba(255, 255, 255, 0.03);
   --surf3: rgba(0, 0, 0, 0.3);
   --bord: rgba(255, 255, 255, 0.08);
   --bord2: rgba(255, 255, 255, 0.06);
-  --tx: #f3efe9;
-  --txd: #b8afa6;
-  --txm: #8a817a;
-  --faint: #5f574e;
+  --tx: var(--cream, #f3efe9);
+  --txd: var(--creamdim, #b8afa6);
+  --txm: var(--muted2, #8a817a);
+  --faint: rgb(var(--site-cream-dim-rgb,95 87 78)/0.55);
   --hov: rgba(255, 255, 255, 0.06);
   --chip: rgba(255, 255, 255, 0.08);
   --track: rgba(255, 255, 255, 0.08);
@@ -128,22 +128,22 @@
 /* The media surface is nested inside #eb-admin-root. Mirror its light theme
    class instead of allowing the nested .eb-root to stay permanently dark. */
 #eb-admin-root.light .eb-root {
-  --bg: #f5f3ef;
+  --bg: var(--paper, #f5f3ef);
   --surf: #ffffff;
-  --surf2: #f4f1ea;
-  --surf3: #faf8f4;
-  --bord: #e6e1d8;
-  --bord2: #ece7df;
-  --tx: #141009;
-  --txd: #4a443d;
-  --txm: #6f665c;
-  --faint: #9a9084;
-  --hov: #f0ece5;
-  --chip: #eceae3;
-  --track: rgba(20, 16, 9, 0.09);
+  --surf2: var(--paper2, #f4f1ea);
+  --surf3: var(--paper2, #faf8f4);
+  --bord: rgb(var(--site-paper-border-rgb, 230 225 216));
+  --bord2: rgb(var(--site-paper-border-rgb, 236 231 223));
+  --tx: var(--ink, #141009);
+  --txd: var(--muted, #4a443d);
+  --txm: var(--muted, #6f665c);
+  --faint: var(--muted2, #9a9084);
+  --hov: var(--panel, #f0ece5);
+  --chip: var(--panel, #eceae3);
+  --track: rgb(var(--site-ink-rgb)/0.09);
 }
 .eb-root .text-brand-soft {
-  color: #ff5a72;
+  color: var(--brandsoft);
 }
 .eb-root .text-tx {
   color: var(--tx);
@@ -173,7 +173,7 @@
   border-color: var(--bord2);
 }
 .eb-root .border-brand-red {
-  border-color: #e4002b;
+  border-color: var(--brand);
 }
 .eb-root .font-anton {
   font-family: 'Anton', sans-serif;
@@ -195,10 +195,10 @@
   font-size: 12px;
 }
 .eb-root .media-btn.primary {
-  background: #e4002b;
+  background: var(--brand);
 }
 .eb-root .media-btn.primary:hover {
-  background: #ff2d43;
+  background: var(--brandlt);
 }
 .eb-root .media-btn.secondary {
   border-color: var(--bord);
@@ -206,8 +206,8 @@
   color: var(--txd);
 }
 .eb-root .media-btn.secondary:hover {
-  border-color: #e4002b;
-  color: #e4002b;
+  border-color: var(--brand);
+  color: var(--brand);
   background: var(--surf);
 }
 .eb-root .media-input,
@@ -222,7 +222,7 @@
   color: var(--faint);
 }
 .eb-root .media-input:focus {
-  border-color: #e4002b;
+  border-color: var(--brand);
   box-shadow: none;
 }
 .eb-root .eb-scroll {
@@ -243,22 +243,22 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.5rem;
-  background: rgba(228, 0, 43, 0.13);
-  color: #ff5a72;
+  background: rgb(var(--site-brand-rgb) / 0.13);
+  color: var(--brandsoft);
 }
 .eb-root .kpi-action {
   flex-shrink: 0;
   border: 0;
   background: transparent;
   padding: 0;
-  color: #e4002b;
+  color: var(--brand);
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .eb-root .kpi-action:hover {
-  color: #ff2d43;
+  color: var(--brandlt);
 }
 .eb-root .folder-rail-wrap {
   width: 236px;
@@ -290,8 +290,8 @@
   color: var(--txm);
 }
 .eb-root .folder-add:hover {
-  border-color: #e4002b;
-  color: #e4002b;
+  border-color: var(--brand);
+  color: var(--brand);
 }
 .eb-root .folder-rail-head strong {
   color: var(--txm);
@@ -360,17 +360,17 @@
   background: var(--hov);
 }
 .eb-root .folder-row.active {
-  background: rgba(228, 0, 43, 0.12);
+  background: rgb(var(--site-brand-rgb) / 0.12);
   color: var(--tx);
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(228, 0, 43, 0.4);
+  box-shadow: inset 0 0 0 1px rgb(var(--site-brand-rgb) / 0.4);
 }
 .eb-root .folder-row > svg {
   flex-shrink: 0;
   color: var(--txm);
 }
 .eb-root .folder-row.active > svg {
-  color: #ff5a72;
+  color: var(--brandsoft);
 }
 .eb-root .folder-row small {
   display: block;
@@ -391,7 +391,7 @@
   font-weight: 700;
 }
 .eb-root .folder-row.active span:last-child {
-  color: #ff5a72;
+  color: var(--brandsoft);
 }
 .eb-root .folder-rail-foot {
   border-top: 1px solid var(--bord2);
@@ -417,7 +417,7 @@
 }
 .eb-root .folder-menu-trigger:hover {
   background: var(--hov);
-  color: #e4002b;
+  color: var(--brand);
 }
 .eb-root .folder-menu-overlay {
   position: fixed;
@@ -451,7 +451,7 @@
   background: var(--hov);
 }
 .eb-root .folder-menu button.danger {
-  color: #e4002b;
+  color: var(--brand);
 }
 .eb-root .folder-menu button:disabled {
   color: var(--faint);
@@ -513,8 +513,8 @@
   font-weight: 700;
 }
 .eb-root .media-scope-btn:hover {
-  border-color: #e4002b;
-  color: #e4002b;
+  border-color: var(--brand);
+  color: var(--brand);
 }
 .eb-root .media-search {
   max-width: 300px;
@@ -575,7 +575,7 @@
   outline: none;
 }
 .eb-root .asset-select:focus {
-  border-color: #e4002b;
+  border-color: var(--brand);
 }
 .eb-root .media-toolbar .view-btn {
   width: 36px;
@@ -589,7 +589,7 @@
   align-items: center;
   gap: 0.5rem;
   border-bottom: 1px solid var(--bord2);
-  background: rgba(228, 0, 43, 0.07);
+  background: rgb(var(--site-brand-rgb) / 0.07);
   padding: 0.625rem 1rem;
 }
 .eb-root .bulk-count {
@@ -608,13 +608,13 @@
   font-weight: 700;
 }
 .eb-root .bulk-row button:hover {
-  border-color: #e4002b;
-  color: #e4002b;
+  border-color: var(--brand);
+  color: var(--brand);
 }
 .eb-root .bulk-row button.danger {
-  border-color: rgba(228, 0, 43, 0.4);
-  background: rgba(228, 0, 43, 0.1);
-  color: #e4002b;
+  border-color: rgb(var(--site-brand-rgb) / 0.4);
+  background: rgb(var(--site-brand-rgb) / 0.1);
+  color: var(--brand);
 }
 .eb-root .bulk-row button.clear {
   margin-left: auto;
@@ -627,10 +627,10 @@
   background: var(--surf2);
 }
 .eb-root .eb-card:hover {
-  border-color: rgba(228, 0, 43, 0.45) !important;
+  border-color: rgb(var(--site-brand-rgb) / 0.45) !important;
 }
 .eb-root .eb-card.asset-selected {
-  border-color: rgba(228, 0, 43, 0.55) !important;
+  border-color: rgb(var(--site-brand-rgb) / 0.55) !important;
 }
 .eb-root .asset-preview {
   position: relative;
@@ -702,7 +702,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.375rem;
-  background: #e4002b;
+  background: var(--brand);
   color: #fff;
   font-size: 10px;
 }
@@ -728,8 +728,8 @@
   line-height: 1;
 }
 .eb-root .asset-check.selected {
-  border-color: #e4002b;
-  background: #e4002b;
+  border-color: var(--brand);
+  background: var(--brand);
   color: #fff;
 }
 .eb-root .asset-title {
@@ -771,8 +771,8 @@
   color: var(--txm);
 }
 .eb-root .asset-copy:hover {
-  border-color: #e4002b;
-  color: #e4002b;
+  border-color: var(--brand);
+  color: var(--brand);
 }
 .eb-root .view-btn {
   border-color: var(--bord);
@@ -780,8 +780,8 @@
   color: var(--txm);
 }
 .eb-root .view-btn.selected {
-  border-color: #e4002b;
-  background: #e4002b;
+  border-color: var(--brand);
+  background: var(--brand);
   color: #fff;
 }
 .eb-root .modal-backdrop {
@@ -835,8 +835,8 @@
 }
 .eb-root .media-empty-clear:hover,
 .eb-root .media-pagination button:hover:not(:disabled) {
-  border-color: #e4002b;
-  color: #e4002b;
+  border-color: var(--brand);
+  color: var(--brand);
 }
 .eb-root .media-pagination {
   display: flex;

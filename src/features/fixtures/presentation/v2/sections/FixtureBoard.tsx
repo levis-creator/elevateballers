@@ -12,12 +12,12 @@ interface Props {
 	defaultLeagueSeasonId: string;
 }
 
-const CREST_BG = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 4px,#f0ece5 4px,#f0ece5 8px)";
+const CREST_BG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
 
 /** Segmented view toggle (Upcoming / Results). */
 const segClass = (active: boolean) =>
 	`cursor-pointer rounded-md border-none px-[18px] py-[9px] font-body text-[12px] uppercase tracking-[0.05em] ${
-		active ? "bg-brand font-bold text-white" : "bg-transparent font-semibold text-muted"
+		active ? "bg-brand font-bold text-brandfg" : "bg-transparent font-semibold text-muted"
 	}`;
 
 interface Group {
@@ -87,7 +87,7 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 		<>
 			{/* HERO */}
 			<section className="relative overflow-hidden border-b border-black/[0.08]">
-				<div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%)" }} />
+				<div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 82% -10%,rgb(var(--site-brand-rgb) / 0.12),transparent 58%)" }} />
 				<div className="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]" />
 				<div className="relative mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-6 px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
 					<div>
@@ -180,18 +180,18 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 								<div className="flex flex-col gap-3">
 									{g.matches.map((m) => {
 										const scored = m.score !== "";
-										const homeColor = scored ? (m.homeWin ? "#141009" : "#a49a8d") : "#1a1712";
-										const awayColor = scored ? (m.awayWin ? "#141009" : "#a49a8d") : "#1a1712";
+										const homeColor = scored ? (m.homeWin ? "var(--ink,#141009)" : "var(--muted2,#a49a8d)") : "var(--night2,#1a1712)";
+										const awayColor = scored ? (m.awayWin ? "var(--ink,#141009)" : "var(--muted2,#a49a8d)") : "var(--night2,#1a1712)";
 										const statusText = m.status === "done" ? "Final" : m.status === "live" ? "Live" : "Upcoming";
-										const statusColor = m.status === "done" ? "#8a817a" : "#e4002b";
+										const statusColor = m.status === "done" ? "var(--muted2,#8a817a)" : "var(--brand)";
 										return (
 											<a
 												key={m.id}
 												href={m.href}
-												className="block rounded-xl border border-black/10 bg-white px-5 py-4 no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40"
+												className="block rounded-xl border border-black/10 bg-white px-5 py-4 no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 											>
 												<div className="mb-3 flex items-center justify-between gap-3">
-													<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgba(20,16,9,0.06)", color: "#6f665c" }}>
+													<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgb(var(--site-ink-rgb)/0.06)", color: "var(--muted,#6f665c)" }}>
 														{m.league}
 													</span>
 													<span className="font-mono text-[11px]" style={{ color: statusColor }}>
@@ -236,9 +236,9 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 				) : (
 					<div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-20 text-center">
 						<div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-panel">
-							<div className="relative h-[22px] w-[22px] rounded-full border-2 border-[#b3a99c]">
-								<span className="absolute bottom-0 left-1/2 top-0 w-0.5 -translate-x-1/2 bg-[#b3a99c]" />
-								<span className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-[#b3a99c]" />
+							<div className="relative h-[22px] w-[22px] rounded-full border-2 border-[var(--muted2,#b3a99c)]">
+								<span className="absolute bottom-0 left-1/2 top-0 w-0.5 -translate-x-1/2 bg-[var(--muted2,#b3a99c)]" />
+								<span className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-[var(--muted2,#b3a99c)]" />
 							</div>
 						</div>
 						<div className="font-display text-[22px] uppercase text-ink">{emptyTitle}</div>

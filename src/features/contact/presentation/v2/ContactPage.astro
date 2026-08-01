@@ -26,7 +26,7 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 
 	<!-- HERO -->
 	<section class="relative overflow-hidden border-b border-black/[0.08]">
-		<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%);"></div>
+		<div class="absolute inset-0" style="background:radial-gradient(120% 80% at 82% -10%,rgb(var(--site-brand-rgb) / 0.12),transparent 58%);"></div>
 		<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
 		<div class="relative mx-auto max-w-[1280px] px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
 			<div class="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
@@ -41,7 +41,7 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 	<section class="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 		<div class="grid grid-cols-3 gap-5 max-[600px]:grid-cols-1">
 			{data.channels.map((c) => (
-				<a href={c.href} class="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-6 no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+				<a href={c.href} class="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-6 no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
 					<span class="flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-brand">
 						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={iconFor(c.icon)} />
 					</span>
@@ -56,7 +56,7 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 	<!-- FORM + INFO -->
 	<section class="mx-auto grid max-w-[1280px] grid-cols-[1.15fr_0.85fr] gap-14 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6">
 		<!-- FORM -->
-		<div class="rounded-2xl border border-black/10 bg-white p-8 shadow-[0_1px_2px_rgba(20,16,9,0.04)] max-[600px]:p-5">
+		<div class="rounded-2xl border border-black/10 bg-white p-8 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] max-[600px]:p-5">
 			<h2 class="font-display text-[26px] uppercase text-ink">{data.form.heading}</h2>
 			<p class="mt-2 text-[14px] leading-[1.6] text-muted">{data.form.intro}</p>
 			<ContactFormV2 topics={data.topics} client:load />
@@ -64,7 +64,7 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 
 		<!-- INFO -->
 		<div class="flex flex-col gap-5">
-			<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+			<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 				<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Visit Us</div>
 				<div class="flex flex-col gap-4">
 					{data.info.map((i) => (
@@ -79,17 +79,17 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 			{data.mapImage ? (
 				<img src={data.mapImage} alt="Elevate Ballers venue" loading="lazy" class="min-h-[200px] w-full rounded-2xl border border-black/10 object-cover" />
 			) : (
-				<div class="rounded-2xl border border-black/10" style="background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 12px,#f0ece5 12px,#f0ece5 24px);min-height:200px;"></div>
+				<div class="rounded-2xl border border-black/10" style="background:repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel, #f0ece5) 12px,var(--panel, #f0ece5) 24px);min-height:200px;"></div>
 			)}
 
 			{data.socials.length > 0 && (
-				<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 					<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Follow the League</div>
 					<div class="flex gap-2.5">
 						{data.socials.map((s) => {
 							const icon = socialIcon(s.label);
 							return (
-								<a href={s.url} target="_blank" rel="noopener" aria-label={icon?.name ?? s.label} class="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-white/[0.14] font-mono text-[12px] text-[#c9c1b8] no-underline hover:border-brand hover:text-brand">
+								<a href={s.url} target="_blank" rel="noopener" aria-label={icon?.name ?? s.label} class="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-white/[0.14] font-mono text-[12px] text-[var(--creamdim, #c9c1b8)] no-underline hover:border-brand hover:text-brand">
 									{icon ? (
 										<svg viewBox="0 0 24 24" fill="currentColor" class="h-[18px] w-[18px]" aria-hidden="true"><path d={icon.path} /></svg>
 									) : (

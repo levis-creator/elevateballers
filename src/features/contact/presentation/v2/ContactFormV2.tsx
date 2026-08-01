@@ -143,7 +143,7 @@ export default function ContactFormV2({ topics }: { topics: string[] }) {
 			<button
 				type="submit"
 				disabled={busy}
-				className="self-start rounded-lg bg-brand px-8 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-white hover:bg-brandlt disabled:cursor-not-allowed disabled:opacity-60"
+				className="self-start rounded-lg bg-brand px-8 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg hover:bg-brandlt disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{status === "loading" ? "Sending…" : "Send Message"}
 			</button>
