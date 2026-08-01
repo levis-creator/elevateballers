@@ -5,14 +5,14 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec prettier --check src/features/media/presentation/v2/MediaLibraryV2.tsx src/features/media/presentation/v2/MediaLibraryV2.css
-8 verbose argv "exec" "--" "prettier" "--check" "src/features/media/presentation/v2/MediaLibraryV2.tsx" "src/features/media/presentation/v2/MediaLibraryV2.css"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T18_26_18_992Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-07-31T18_26_18_992Z-debug-0.log
+7 verbose title npm exec eslint src/features/settings/presentation/components/SettingsField.tsx
+8 verbose argv "exec" "--" "eslint" "src/features/settings/presentation/components/SettingsField.tsx"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-01T13_22_59_653Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-01T13_22_59_653Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 notice run elevateballers@0.0.1 npx
-14 notice run prettier --check src/features/media/presentation/v2/MediaLibraryV2.tsx src/features/media/presentation/v2/MediaLibraryV2.css
+14 notice run eslint src/features/settings/presentation/components/SettingsField.tsx
 15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 16 verbose os Windows_NT 10.0.26200
 17 verbose node v24.18.0

@@ -29,7 +29,7 @@ export class SiteSettingsService {
   }
 
   create(input: CreateSiteSettingInput): Promise<SiteSetting> {
-    if (!input.key?.trim() || !input.value || !input.label?.trim()) {
+    if (!input.key?.trim() || input.value == null || !input.label?.trim()) {
       throw new Error('Key, value, and label are required');
     }
 
