@@ -198,9 +198,9 @@ export default function MediaPickerV2({
 													<>
 														<span
 															className="absolute inset-0 rounded-xl"
-															style={{ boxShadow: "inset 0 0 0 3px #e4002b" }}
+													style={{ boxShadow: "inset 0 0 0 3px var(--brand)" }}
 														/>
-														<span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--brand)] text-[11px] font-bold leading-none text-white">
+														<span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--brand)] text-[11px] font-bold leading-none text-[var(--brandfg)]">
 															✓
 														</span>
 													</>
@@ -243,7 +243,7 @@ export default function MediaPickerV2({
 										e.target.value = "";
 									}}
 								/>
-								<span className="mt-1 rounded-lg bg-[var(--brand)] px-4 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-white">
+								<span className="mt-1 rounded-lg bg-[var(--brand)] px-4 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)]">
 									Browse files
 								</span>
 							</label>
@@ -279,7 +279,7 @@ export default function MediaPickerV2({
 						type="button"
 						onClick={confirm}
 						disabled={!selected}
-						className="rounded-lg bg-[var(--brand)] px-4 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-white hover:bg-[var(--brandlt)] disabled:cursor-not-allowed disabled:opacity-40"
+						className="rounded-lg bg-[var(--brand)] px-4 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)] hover:bg-[var(--brandlt)] disabled:cursor-not-allowed disabled:opacity-40"
 					>
 						Use selected
 					</button>

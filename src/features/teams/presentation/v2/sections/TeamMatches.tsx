@@ -13,12 +13,12 @@ const tagStyle = (r: string): React.CSSProperties =>
 	r === "win"
 		? { background: "rgba(63,191,111,0.14)", color: "#2f9e44" }
 		: r === "loss"
-			? { background: "rgba(228,0,43,0.1)", color: "#e4002b" }
-			: { background: "#f0ede7", color: "#a49a8d" };
+			? { background: "rgb(var(--site-brand-rgb) / 0.1)", color: "var(--brand)" }
+			: { background: "var(--panel,#f0ede7)", color: "var(--muted2,#a49a8d)" };
 
 const pagerBtn = (active: boolean) =>
 	`cursor-pointer rounded-md border px-3.5 py-2 font-mono text-[12px] ${
-		active ? "border-brand bg-brand text-white" : "border-black/15 bg-white text-ink2 hover:border-brand"
+		active ? "border-brand bg-brand text-brandfg" : "border-black/15 bg-white text-ink2 hover:border-brand"
 	}`;
 
 /** Recent (season filter + pager) + Upcoming matches. React island; season and
@@ -64,7 +64,7 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 				{pageItems.length > 0 ? (
 					<div className="flex flex-col gap-3">
 						{pageItems.map((m) => (
-							<a key={m.id} href={m.href} className="block rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+							<a key={m.id} href={m.href} className="block rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
 								<div className="mb-3 flex items-center justify-between">
 									<span className="rounded px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em]" style={tagStyle(m.result)}>
 										{m.tag}
@@ -126,7 +126,7 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 				{upcoming.length > 0 ? (
 					<div className="flex flex-col gap-3">
 						{upcoming.map((m) => (
-							<a key={m.id} href={m.href} className="block rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+							<a key={m.id} href={m.href} className="block rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
 								<div className="mb-3 flex items-center justify-between gap-2">
 									<span className="rounded bg-brand/[0.08] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-brand">{m.when}</span>
 									<span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{m.league}</span>
@@ -140,7 +140,7 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 										align="right"
 										className="font-body text-[15px] font-bold text-ink2"
 									/>
-									<span className="font-display text-[15px] text-[#a49a8d]">VS</span>
+									<span className="font-display text-[15px] text-[var(--muted2,#a49a8d)]">VS</span>
 									<TeamName
 										team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo }}
 										variant="compact"

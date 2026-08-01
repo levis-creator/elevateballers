@@ -13,8 +13,8 @@ interface Props {
 	defaultLeagueSeasonId: string;
 }
 
-const WON = "#141009";
-const LOST = "#a49a8d";
+const WON = "var(--ink,#141009)";
+const LOST = "var(--muted2,#a49a8d)";
 
 interface Group {
 	isoDate: string;
@@ -68,7 +68,7 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 		<>
 			{/* HERO */}
 			<section className="relative overflow-hidden border-b border-black/[0.08]">
-				<div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 82% -10%,rgba(228,0,43,0.12),transparent 58%)" }} />
+				<div className="absolute inset-0" style={{ background: "radial-gradient(120% 80% at 82% -10%,rgb(var(--site-brand-rgb) / 0.12),transparent 58%)" }} />
 				<div className="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]" />
 				<div className="relative mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-6 px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
 					<div>
@@ -115,7 +115,7 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 					{/* FEATURED LATEST RESULT */}
 					<section className="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 						<div className="relative overflow-hidden rounded-2xl border border-white/10 bg-night px-8 py-8 text-cream max-[600px]:px-5">
-							<div className="absolute inset-0" style={{ background: "radial-gradient(90% 130% at 12% 50%,rgba(228,0,43,0.18),transparent 55%)" }} />
+							<div className="absolute inset-0" style={{ background: "radial-gradient(90% 130% at 12% 50%,rgb(var(--site-brand-rgb) / 0.18),transparent 55%)" }} />
 							<div className="relative">
 								<div className="mb-6 flex items-center justify-between gap-3">
 									<span className="font-mono text-[11px] uppercase tracking-[0.14em] text-brandsoft">Latest Result</span>
@@ -129,13 +129,13 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 										align="center"
 										className="flex-col gap-3 font-display text-[19px] uppercase leading-none max-[600px]:text-[15px]"
 										crestClassName="h-[76px] w-[76px] max-[600px]:h-14 max-[600px]:w-14"
-										textStyle={{ color: feature.homeWin ? "#f6f2ec" : "#8a817a" }}
+										textStyle={{ color: feature.homeWin ? "var(--cream,#f6f2ec)" : "var(--muted2,#8a817a)" }}
 									/>
 									<div className="flex flex-col items-center gap-1">
 										<div className="font-display text-[54px] leading-none max-[600px]:text-[34px]">
-											<span style={{ color: feature.homeWin ? "#f6f2ec" : "#8a817a" }}>{feature.homeScore}</span>
+											<span style={{ color: feature.homeWin ? "var(--cream,#f6f2ec)" : "var(--muted2,#8a817a)" }}>{feature.homeScore}</span>
 											<span className="mx-2 text-[#6b635a]">–</span>
-											<span style={{ color: feature.awayWin ? "#f6f2ec" : "#8a817a" }}>{feature.awayScore}</span>
+											<span style={{ color: feature.awayWin ? "var(--cream,#f6f2ec)" : "var(--muted2,#8a817a)" }}>{feature.awayScore}</span>
 										</div>
 										<span className="rounded bg-white/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-creamdim">Final · {feature.league}</span>
 									</div>
@@ -146,7 +146,7 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 										align="center"
 										className="flex-col gap-3 font-display text-[19px] uppercase leading-none max-[600px]:text-[15px]"
 										crestClassName="h-[76px] w-[76px] max-[600px]:h-14 max-[600px]:w-14"
-										textStyle={{ color: feature.awayWin ? "#f6f2ec" : "#8a817a" }}
+										textStyle={{ color: feature.awayWin ? "var(--cream,#f6f2ec)" : "var(--muted2,#8a817a)" }}
 									/>
 								</div>
 								<div className="mt-6 border-t border-white/10 pt-4 text-center font-body text-[14px] text-creamdim">{featureSummary(feature)}</div>
@@ -196,10 +196,10 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 												<a
 													key={m.id}
 													href={m.href}
-													className="block rounded-xl border border-black/10 bg-white px-5 py-4 no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40"
+													className="block rounded-xl border border-black/10 bg-white px-5 py-4 no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 												>
 													<div className="mb-3 flex items-center justify-between gap-3">
-														<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgba(20,16,9,0.06)", color: "#6f665c" }}>
+														<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgb(var(--site-ink-rgb)/0.06)", color: "var(--muted,#6f665c)" }}>
 															{m.league}
 														</span>
 														<span className="font-mono text-[11px] text-muted2">Final · {m.time}</span>
@@ -228,7 +228,7 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 														/>
 													</div>
 													<div className="mt-3 flex items-center justify-center border-t border-black/[0.06] pt-3 font-mono text-[11px] text-muted2">
-														<span style={{ color: m.homeWin || m.awayWin ? "#1f9d55" : "#8a817a" }}>{winnerText(m)}</span>
+														<span style={{ color: m.homeWin || m.awayWin ? "#1f9d55" : "var(--muted2,#8a817a)" }}>{winnerText(m)}</span>
 													</div>
 												</a>
 											))}

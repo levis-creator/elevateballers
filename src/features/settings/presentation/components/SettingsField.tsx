@@ -19,6 +19,8 @@ export default function SettingsField({
   onChange,
   onReset,
 }: Props) {
+  const validPreviewColor = /^#[0-9a-f]{6}$/i.test(value.trim());
+
   return (
     <div className="eb-settings-field">
       <div className="eb-settings-field-copy">
@@ -85,6 +87,24 @@ export default function SettingsField({
             placeholder={field.placeholder}
             disabled={!canManage}
           />
+        ) : field.colorPreview ? (
+          <div className="eb-settings-color-input">
+            <input
+              id={`setting-${field.key}`}
+              className="eb-in"
+              value={value}
+              onChange={(event) => onChange(field.key, event.target.value)}
+              placeholder={field.placeholder}
+              disabled={!canManage}
+              spellCheck={false}
+            />
+            <span
+              className={`eb-settings-color-swatch ${validPreviewColor ? '' : 'is-invalid'}`}
+              style={validPreviewColor ? { backgroundColor: value } : undefined}
+              aria-label={validPreviewColor ? `Colour preview ${value}` : 'Invalid hex colour'}
+              title={validPreviewColor ? value : 'Enter a 6-digit hex colour'}
+            />
+          </div>
         ) : (
           <input
             id={`setting-${field.key}`}

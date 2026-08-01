@@ -9,7 +9,7 @@ import {
 } from "@/features/seasons/domain/entities/season";
 
 const STATUS_STYLE: Record<SeasonStatus, { bg: string; fg: string; dot: string }> = {
-	Live: { bg: "rgba(228,0,43,0.14)", fg: "#e4002b", dot: "#e4002b" },
+	Live: { bg: "rgb(var(--site-brand-rgb) / 0.14)", fg: "var(--brand)", dot: "var(--brand)" },
 	Upcoming: { bg: "rgba(217,131,36,0.16)", fg: "#c9741d", dot: "#d98324" },
 	Completed: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55", dot: "#1f9d55" },
 };
@@ -63,7 +63,7 @@ export default function SeasonCard({
 				if (e.key === "Enter") open();
 			}}
 			className={`group relative cursor-pointer rounded-2xl border bg-[var(--surf)] p-5 transition-colors hover:border-[var(--brand)]/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.28)] max-[600px]:p-4 ${
-				checked ? "border-[var(--brand)]/60 shadow-[inset_0_0_0_2px_rgba(228,0,43,0.5)]" : "border-[var(--bord)]"
+				checked ? "border-[var(--brand)]/60 shadow-[inset_0_0_0_2px_rgb(var(--site-brand-rgb) / 0.5)]" : "border-[var(--bord)]"
 			}`}
 		>
 			<div className="flex items-start gap-4 max-[600px]:flex-col">
@@ -147,7 +147,7 @@ export default function SeasonCard({
 								className="h-full rounded-full"
 								style={{
 									width: `${progress}%`,
-									background: isCompleted ? "#1f9d55" : "linear-gradient(to right,#e4002b,#ff2d43)",
+									background: isCompleted ? "#1f9d55" : "linear-gradient(to right,var(--brand),var(--brandlt))",
 								}}
 							/>
 						</div>

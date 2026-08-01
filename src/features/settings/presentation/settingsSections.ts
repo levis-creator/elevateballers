@@ -19,6 +19,7 @@ export type Field = {
   meta?: string;
   addLabel?: string;
   maxItems?: number;
+  colorPreview?: boolean;
 };
 
 export type Group = { label: string; fields: Field[] };
@@ -173,41 +174,188 @@ export const SECTIONS: Section[] = [
       },
     ]
   ),
-  siteWide('footer', 'Footer', 'The footer logo, links, contact visibility and legal strip.', [
-    {
-      label: 'Footer content',
-      fields: [
-        f('footer_logo', 'Footer logo', '', {
-          type: 'text',
-          placeholder: '/media/general/elevate-logo.png',
-        }),
-        f('footer_tagline', 'Tagline', '', { defaultValue: "Kenya's Premier Basketball League" }),
-        f('footer_links', 'Footer links', 'One JSON object per line: label and path.', {
-          type: 'json',
-        }),
-      ],
-    },
-    {
-      label: 'Visibility',
-      fields: [
-        f('footer_showContact', 'Show contact details', '', {
-          type: 'toggle',
-          defaultValue: 'true',
-        }),
-        f('footer_socialRow', 'Social buttons', '', { type: 'toggle', defaultValue: 'true' }),
-      ],
-    },
-  ]),
-  siteWide('brand', 'Brand & Theme', 'Colors and visual language used across the public site.', [
-    {
-      label: 'Palette',
-      fields: [
-        f('brand_accent', 'Accent', '', { type: 'text', defaultValue: '#e4002b' }),
-        f('brand_night', 'Night', '', { type: 'text', defaultValue: '#0c0b0a' }),
-        f('brand_surface', 'Surface', '', { type: 'text', defaultValue: '#111010' }),
-      ],
-    },
-  ]),
+  siteWide(
+    'footer',
+    'Footer',
+    'The dark closing block on every public page: venue details, link column, email signup, partners and the legal bar.',
+    [
+      {
+        label: 'Venue column',
+        fields: [
+          f(
+            'footer_logo',
+            'Footer logo',
+            'Sits on a white chip, 34px tall. Leave blank to reuse the header logo.',
+            {
+              type: 'image',
+              placeholder: 'Footer logo',
+              meta: 'elevate-logo.png · 640 × 200 · 24 KB',
+              defaultValue: 'assets/elevate-logo.png',
+            }
+          ),
+          f(
+            'footer_showContact',
+            'Show contact details',
+            'Address, hours, phones and email all print from Contact & Social.',
+            { type: 'toggle', defaultValue: 'true' }
+          ),
+        ],
+      },
+      {
+        label: 'Link column',
+        fields: [
+          f('footer_linksHeading', 'Column heading', '', { defaultValue: 'Explore' }),
+          f('footer_links', 'Links', 'Five fit the column without wrapping.', {
+            type: 'list',
+            addLabel: 'Add link',
+            maxItems: 5,
+            defaultValue:
+              '[{"label":"Teams","path":"/teams"},{"label":"Standings","path":"/standings"},{"label":"Fixtures & Results","path":"/fixtures"},{"label":"About","path":"/about"},{"label":"Rules","path":"/rules"}]',
+          }),
+        ],
+      },
+      {
+        label: 'Email signup',
+        fields: [
+          f('footer_newsletter', 'Show signup', 'Submissions land in Subscribers.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('footer_newsletterHeading', 'Heading', '', {
+            defaultValue: 'Sign up for email alerts',
+          }),
+          f('footer_newsletterBlurb', 'Blurb', 'One line above the field.', {
+            defaultValue: 'Select topics and stay current with our latest news.',
+          }),
+          f('footer_newsletterPlaceholder', 'Field placeholder', '', {
+            defaultValue: 'your@email.com',
+          }),
+          f('footer_newsletterButton', 'Button label', '', { defaultValue: 'Join' }),
+          f(
+            'footer_socialRow',
+            'Social buttons',
+            'Square icon buttons using the accounts in Contact & Social.',
+            { type: 'toggle', defaultValue: 'true' }
+          ),
+        ],
+      },
+      {
+        label: 'Partners',
+        fields: [
+          f(
+            'footer_partners',
+            'Partner strip',
+            'Renders active sponsors from the Sponsors collection.',
+            { type: 'toggle', defaultValue: 'true' }
+          ),
+          f('footer_partnersHeading', 'Strip heading', '', { defaultValue: 'Our Partners' }),
+          f('footer_partnersGrayscale', 'Grayscale logos', 'Colour returns on hover.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+        ],
+      },
+      {
+        label: 'Legal bar',
+        fields: [
+          f('footer_copyright', 'Left line', 'The year range updates automatically.', {
+            defaultValue: '© 2024–2026 Elevate Ballers · All Rights Reserved',
+          }),
+          f('footer_legalRight', 'Right line', 'Blank leaves the right side empty.', {
+            defaultValue: 'Kenya’s Premier Basketball League',
+          }),
+        ],
+      },
+    ]
+  ),
+  siteWide(
+    'brand',
+    'Brand & Theme',
+    'Name, accent colour and typography applied across the public site.',
+    [
+      {
+        label: 'Identity',
+        fields: [
+          f('brand_siteName', 'Site name', 'Page titles, share cards and the alt text on the logo.', {
+            defaultValue: 'Elevate Ballers',
+          }),
+          f('brand_tagline', 'Tagline', 'Right-hand line in the footer legal bar and the share card subtitle.', {
+            defaultValue: 'Kenya’s Premier Basketball League',
+          }),
+          f('brand_favicon', 'Favicon', '512 × 512 PNG.', {
+            type: 'image',
+            placeholder: 'Favicon',
+            meta: 'favicon-512.png · 512 × 512 · 9 KB',
+            defaultValue: '/media/general/favicon-512.png',
+          }),
+        ],
+      },
+      {
+        label: 'Colour',
+        fields: [
+          f(
+            'brand_brand',
+            'Brand red',
+            'Hex. Primary buttons, live dots, active nav and scores only — never as a background wash.',
+            { defaultValue: '#e4002b', colorPreview: true }
+          ),
+          f('brand_paper', 'Paper', 'The light page background behind news, teams, standings and the nav.', {
+            defaultValue: '#f5f3ef',
+            colorPreview: true,
+          }),
+          f('brand_night', 'Night', 'The dark background used by the hero, footer and scoreboard blocks.', {
+            defaultValue: '#0c0b0a',
+            colorPreview: true,
+          }),
+          f('brand_ink', 'Ink', 'Body text on paper. Cream (#f3efe9) is used on night automatically.', {
+            defaultValue: '#141009',
+            colorPreview: true,
+          }),
+        ],
+      },
+      {
+        label: 'Typography',
+        fields: [
+          f('brand_display', 'Display typeface', 'Headlines, scores and stat numbers.', {
+            type: 'select',
+            options: ['Anton', 'Archivo Black'],
+            defaultValue: 'Anton',
+          }),
+          f('brand_body', 'Body typeface', 'Paragraphs, tables and buttons.', {
+            type: 'select',
+            options: ['Archivo', 'Inter'],
+            defaultValue: 'Archivo',
+          }),
+          f('brand_label', 'Label typeface', 'The small uppercase mono labels — eyebrows, column heads, timestamps.', {
+            type: 'select',
+            options: ['Space Mono', 'IBM Plex Mono'],
+            defaultValue: 'Space Mono',
+          }),
+          f('brand_uppercaseHeadings', 'Uppercase headings', 'Off leaves headlines in sentence case.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+        ],
+      },
+      {
+        label: 'Motion',
+        fields: [
+          f('brand_counters', 'Animated counters', 'The homepage stat rail counts up on first view.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('brand_heroArt', 'Hero court graphics', 'The spinning wireframe ball, arcs and halftone field in the hero.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('brand_reducedMotion', 'Respect reduced motion', 'Freezes the spin and counters for visitors who ask the OS for less motion.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+        ],
+      },
+    ]
+  ),
   siteWide(
     'seo',
     'SEO & Sharing',

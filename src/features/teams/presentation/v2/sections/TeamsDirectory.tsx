@@ -18,7 +18,7 @@ function tint(hex: string, a: number): string {
 
 const pagerBtn = (active: boolean) =>
 	`cursor-pointer rounded-md border px-3.5 py-2 font-mono text-[12px] ${
-		active ? "border-brand bg-brand text-white" : "border-black/15 bg-white text-ink2 hover:border-brand"
+		active ? "border-brand bg-brand text-brandfg" : "border-black/15 bg-white text-ink2 hover:border-brand"
 	}`;
 
 /** Teams directory — filter bar + grid + pager + empty state. React island;
@@ -80,7 +80,7 @@ export default function TeamsDirectory({ teams, leagues, perPage = 9 }: Props) {
 								<a
 									key={t.id}
 									href={t.href}
-									className="flex flex-col rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgba(20,16,9,0.04)] no-underline hover:border-brand/40"
+									className="flex flex-col rounded-xl border border-black/10 bg-white p-5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] no-underline hover:border-brand/40"
 								>
 									<div className="flex items-center gap-4">
 										{t.logo ? (

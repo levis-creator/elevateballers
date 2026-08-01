@@ -82,7 +82,7 @@ export default function AdminHeaderV2() {
       <div className="ml-auto flex items-center gap-2.5">
         <a
           href="/admin"
-          className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--brand)] px-3.5 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-white no-underline hover:bg-[var(--brandlt)]"
+          className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--brand)] px-3.5 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)] no-underline hover:bg-[var(--brandlt)]"
         >
           <Plus className="h-[14px] w-[14px]" />
           <span className="max-[600px]:hidden">Create</span>
@@ -106,7 +106,7 @@ export default function AdminHeaderV2() {
             onClick={() => setMenu((m) => (m === 'user' ? null : 'user'))}
             className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] py-1.5 pl-1.5 pr-3 hover:border-[var(--brand)]"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] font-['Anton'] text-[13px] leading-none text-white">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] font-['Anton'] text-[13px] leading-none text-[var(--brandfg)]">
               {initial}
             </span>
             <span className="font-['Archivo'] text-[12.5px] font-bold text-[var(--tx)] max-[600px]:hidden">

@@ -7,7 +7,7 @@ interface Props {
 	initialCount: number;
 }
 
-const COMMENT_COLORS = ["#e4002b", "#1f6feb", "#2f9e44", "#f08c00", "#7048e8", "#0c8599"];
+const COMMENT_COLORS = ["var(--brand)", "#1f6feb", "#2f9e44", "#f08c00", "#7048e8", "#0c8599"];
 const initialsOf = (name: string): string =>
 	name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 const colorFor = (name: string): string => {
@@ -106,7 +106,7 @@ export default function CommentsSectionV2({ articleId, initialComments, initialC
 				<textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} disabled={busy} placeholder="Add a comment…" className={`mt-3 w-full resize-y ${field}`} />
 				<div className="mt-3 flex items-center justify-between gap-3 max-[600px]:flex-col max-[600px]:items-stretch">
 					<span className="font-mono text-[11px] text-muted2">Be respectful — comments are moderated.</span>
-					<button type="submit" disabled={busy} className="rounded-lg bg-brand px-6 py-3 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-white hover:bg-brandlt disabled:cursor-not-allowed disabled:opacity-60">
+					<button type="submit" disabled={busy} className="rounded-lg bg-brand px-6 py-3 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg hover:bg-brandlt disabled:cursor-not-allowed disabled:opacity-60">
 						{busy ? "Posting…" : "Post Comment"}
 					</button>
 				</div>

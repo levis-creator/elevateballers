@@ -452,7 +452,7 @@ function Pagination({
             onClick={() => go(tok)}
             className={`flex h-8 min-w-8 items-center justify-center rounded-md px-2 font-['Space_Mono'] text-[12px] font-bold ${
               tok === page
-                ? 'bg-[var(--brand)] text-white'
+                ? 'bg-[var(--brand)] text-[var(--brandfg)]'
                 : 'border border-[var(--bord)] text-[var(--txd)] hover:border-[var(--brand)]/50 hover:text-[var(--tx)]'
             }`}
           >
@@ -478,7 +478,7 @@ function MatchListContent() {
   const canDelete = d.can('matches:delete');
 
   const statCards = [
-    { key: 'total' as const, label: 'Total Matches', value: d.stats.total, color: '#e4002b' },
+    { key: 'total' as const, label: 'Total Matches', value: d.stats.total, color: 'var(--brand)' },
     { key: 'completed' as const, label: 'Completed', value: d.stats.completed, color: '#1f9d55' },
     { key: 'live' as const, label: 'Live Now', value: d.stats.live, color: '#e4002b' },
     { key: 'scheduled' as const, label: 'Scheduled', value: d.stats.scheduled, color: '#d98324' },
@@ -499,7 +499,7 @@ function MatchListContent() {
           <a
             href="/admin/matches/new"
             data-astro-prefetch
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.05em] text-white no-underline shadow-[0_6px_18px_rgba(228,0,43,0.3)] transition-colors hover:bg-[var(--brandlt)]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--brandfg)] no-underline shadow-[0_6px_18px_rgb(var(--site-brand-rgb)/0.3)] transition-colors hover:bg-[var(--brandlt)]"
           >
             <Plus className="h-4 w-4" /> Create Match
           </a>
@@ -566,7 +566,7 @@ function MatchListContent() {
                 onClick={() => d.setViewMode(mode)}
                 aria-label={`${mode} view`}
                 aria-pressed={on}
-                className={`flex h-8 w-8 items-center justify-center rounded-md ${on ? 'bg-[var(--brand)] text-white' : 'text-[var(--txm)] hover:bg-[var(--hov)]'}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-md ${on ? 'bg-[var(--brand)] text-[var(--brandfg)]' : 'text-[var(--txm)] hover:bg-[var(--hov)]'}`}
               >
                 <Icon className="h-[16px] w-[16px]" />
               </button>
@@ -585,7 +585,7 @@ function MatchListContent() {
                 type="button"
                 onClick={d.deleteSelected}
                 disabled={d.bulkBusy}
-                className="inline-flex items-center gap-1.5 rounded-md bg-[var(--brand)] px-3 py-2 font-['Archivo'] text-[11px] font-extrabold uppercase tracking-[0.04em] text-white hover:bg-[var(--brandlt)] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[var(--brand)] px-3 py-2 font-['Archivo'] text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)] hover:bg-[var(--brandlt)] disabled:opacity-50"
               >
                 <Trash2 className="h-[14px] w-[14px]" /> {d.bulkBusy ? 'Deleting…' : 'Delete'}
               </button>
@@ -716,7 +716,7 @@ function EmptyState({
           <a
             href="/admin/matches/new"
             data-astro-prefetch
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.05em] text-white no-underline hover:bg-[var(--brandlt)]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--brandfg)] no-underline hover:bg-[var(--brandlt)]"
           >
             <Plus className="h-4 w-4" /> Create Match
           </a>

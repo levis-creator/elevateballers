@@ -18,8 +18,14 @@ import RegisterCta from "./sections/RegisterCta.astro";
 import { getHomeData } from "@/features/home/domain/usecases/get-home-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { buildHomeJsonLd } from "./lib/structured-data";
+import { resolvePublicBrandSettings, siteSettingsService } from "@/features/settings";
 
-const [home, footer] = await Promise.all([getHomeData(), getFooterData()]);
+const [home, footer, brandRecords] = await Promise.all([
+	getHomeData(),
+	getFooterData(),
+	siteSettingsService.list("brand").catch(() => []),
+]);
+const brandSettings = resolvePublicBrandSettings(brandRecords);
 const heroCtaLabel = home.registrationOpen ? "Register Your Team" : "Join the Waitlist";
 // Use the canonical site URL (matches SEO.astro's WebSite @id and keeps schema
 // URLs on the canonical domain regardless of the request host).
@@ -31,12 +37,18 @@ const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url))
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header registrationOpen={home.registrationOpen} active="home" />
-	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} counts={home.counts} />
+	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} counts={home.counts} showArt={brandSettings.heroArt} />
 	<NewsTicker items={home.ticker} />
 	<FixturesResults upcoming={home.upcoming} results={home.results} />
 	<PlayerOfTheWeek potw={home.potw} />
 	<LatestNews news={home.news} categories={home.newsCategories} client:visible />
-	<StatsSection leaderData={home.leaderData} leaderTabs={home.leaderTabs} counts={home.counts} />
+	<StatsSection
+		leaderData={home.leaderData}
+		leaderTabs={home.leaderTabs}
+		counts={home.counts}
+		animateCounters={brandSettings.counters}
+		respectReducedMotion={brandSettings.reducedMotion}
+	/>
 	{home.media.length > 0 && <FeaturedMedia media={home.media} tabs={home.mediaTabs} client:visible />}
 	<About />
 	<RegisterCta registrationOpen={home.registrationOpen} />

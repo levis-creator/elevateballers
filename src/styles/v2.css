@@ -16,4 +16,27 @@
 [x-cloak] { display: none !important; }
 
 /* Brand text selection (design detail). */
-::selection { background: #e4002b; color: #fff; }
+::selection {
+  background: rgb(var(--site-brand-rgb, 228 0 43));
+  color: rgb(var(--site-brand-foreground-rgb, 255 255 255));
+}
+
+/* Site Settings → Brand & Theme behaviour. */
+html[data-uppercase-headings="false"] :is(h1, h2, h3, h4, h5, h6) {
+  text-transform: none !important;
+}
+
+html[data-hero-art="false"] .eb-hero-art {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-respect-reduced-motion="true"] *,
+  html[data-respect-reduced-motion="true"] *::before,
+  html[data-respect-reduced-motion="true"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

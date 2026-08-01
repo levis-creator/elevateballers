@@ -420,8 +420,8 @@ export default function MediaLibraryV2() {
               label="Untagged Files"
               value={String(stats.untagged)}
               icon={<Search />}
-              iconColor="#e4002b"
-              iconBg="rgba(228,0,43,0.14)"
+              iconColor="var(--brand)"
+              iconBg="rgb(var(--site-brand-rgb) / 0.14)"
               sub="harder to find in pickers"
               action={stats.untagged > 0 ? 'Tag them' : undefined}
               onAction={() => updateRoute({ q: '', page: 1 })}
@@ -868,7 +868,7 @@ function Toolbar({
       </div>
       <div className="asset-type-filters flex gap-1.5 max-[1280px]:hidden">
         {choices.map((choice) => {
-          const color = choice.key === 'ALL' ? '#e4002b' : typeColor(choice.key);
+          const color = choice.key === 'ALL' ? 'var(--brand)' : typeColor(choice.key);
           return (
             <button
               key={choice.key}

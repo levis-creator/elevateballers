@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { PermissionProvider, usePermissions } from '@/features/rbac/usePermissions';
+import {
+  buildThemeColorPalette,
+  DEFAULT_PUBLIC_BRAND_SETTINGS,
+} from '@/features/settings/application/brandSettings';
 import { SECTIONS, type Field, type SettingRecord } from '../settingsSections';
 import SettingsRail from '../components/SettingsRail';
 import SettingsSaveBar from '../components/SettingsSaveBar';
@@ -58,6 +62,54 @@ function SettingsPageV2Content() {
     });
   }
 
+  function applyAdminColors() {
+    const root = document.getElementById('eb-admin-root');
+    if (!root) return;
+
+    const value = (key: string, fallback: string) => draft[key] ?? settings[key]?.value ?? fallback;
+    const palette = buildThemeColorPalette({
+      brand: value('brand_brand', value('brand_accent', DEFAULT_PUBLIC_BRAND_SETTINGS.brand)),
+      paper: value('brand_paper', DEFAULT_PUBLIC_BRAND_SETTINGS.paper),
+      night: value('brand_night', value('brand_surface', DEFAULT_PUBLIC_BRAND_SETTINGS.night)),
+      ink: value('brand_ink', DEFAULT_PUBLIC_BRAND_SETTINGS.ink),
+    });
+    const variables: Record<string, string> = {
+      '--site-brand-rgb': palette.brand,
+      '--site-brand-light-rgb': palette.brandLight,
+      '--site-brand-soft-rgb': palette.brandSoft,
+      '--site-brand-foreground-rgb': palette.brandForeground,
+      '--site-paper-rgb': palette.paper,
+      '--site-paper-raised-rgb': palette.paperRaised,
+      '--site-paper-soft-rgb': palette.paperSoft,
+      '--site-paper-panel-rgb': palette.paperPanel,
+      '--site-paper-border-rgb': palette.paperBorder,
+      '--site-night-rgb': palette.night,
+      '--site-night-raised-rgb': palette.nightRaised,
+      '--site-night-soft-rgb': palette.nightSoft,
+      '--site-night-border-rgb': palette.nightBorder,
+      '--site-ink-rgb': palette.ink,
+      '--site-ink-muted-rgb': palette.inkMuted,
+      '--site-ink-soft-rgb': palette.inkSoft,
+      '--site-cream-rgb': palette.cream,
+      '--site-cream-dim-rgb': palette.creamDim,
+      '--brand': `rgb(${palette.brand})`,
+      '--brandlt': `rgb(${palette.brandLight})`,
+      '--brandsoft': `rgb(${palette.brandSoft})`,
+      '--brandfg': `rgb(${palette.brandForeground})`,
+      '--paper': `rgb(${palette.paper})`,
+      '--paper2': `rgb(${palette.paperSoft})`,
+      '--panel': `rgb(${palette.paperPanel})`,
+      '--night': `rgb(${palette.night})`,
+      '--night2': `rgb(${palette.nightRaised})`,
+      '--ink': `rgb(${palette.ink})`,
+      '--muted': `rgb(${palette.inkMuted})`,
+      '--muted2': `rgb(${palette.inkSoft})`,
+      '--cream': `rgb(${palette.cream})`,
+      '--creamdim': `rgb(${palette.creamDim})`,
+    };
+    Object.entries(variables).forEach(([name, value]) => root.style.setProperty(name, value));
+  }
+
   async function saveChanges() {
     if (!canManage) return;
     setSaving(true);
@@ -100,6 +152,9 @@ function SettingsPageV2Content() {
           if (!response.ok) throw new Error(`Unable to save ${field?.label ?? key}`);
         })
       );
+      if (['brand_brand', 'brand_accent', 'brand_paper', 'brand_night', 'brand_surface', 'brand_ink'].some((key) => key in draft)) {
+        applyAdminColors();
+      }
       setDraft({});
       setNotice('Saved just now');
       await loadSettings();

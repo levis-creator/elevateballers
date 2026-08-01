@@ -49,7 +49,7 @@ export default function AdminSidebarV2() {
       >
         <path
           d="M200 20 A 130 130 0 0 0 20 200"
-          stroke="rgba(228,0,43,0.5)"
+          stroke="rgb(var(--site-brand-rgb) / 0.5)"
           strokeWidth="2"
           fill="none"
         />
@@ -57,7 +57,7 @@ export default function AdminSidebarV2() {
 
       {/* brand header */}
       <div className="sticky top-0 z-10 flex items-center gap-2.5 border-b border-[var(--bord2)] bg-[var(--sidebar)] px-5 py-[18px]">
-        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-[var(--brand)] shadow-[0_6px_18px_rgba(228,0,43,0.4)]">
+        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-[var(--brand)] text-[var(--brandfg)] shadow-[0_6px_18px_rgb(var(--site-brand-rgb)/0.4)]">
           <span className="font-['Anton'] text-[18px] leading-none text-white">E</span>
         </span>
         <span className="font-['Anton'] text-[17px] uppercase tracking-[0.06em] text-[var(--tx)]">
@@ -86,7 +86,7 @@ export default function AdminSidebarV2() {
                     onClick={() => isMobile && setSidebarOpen(false)}
                     className={`mb-0.5 flex items-center gap-[11px] rounded-[9px] px-[11px] py-[9px] font-['Archivo'] text-[13px] no-underline transition-colors ${
                       active
-                        ? 'bg-[var(--brand)] font-bold text-white shadow-[0_6px_16px_rgba(228,0,43,0.35)]'
+                        ? 'bg-[var(--brand)] font-bold text-[var(--brandfg)] shadow-[0_6px_16px_rgb(var(--site-brand-rgb)/0.35)]'
                         : 'font-medium text-[var(--txd)] hover:bg-[var(--hov)]'
                     }`}
                   >
@@ -105,7 +105,7 @@ export default function AdminSidebarV2() {
       {/* user footer */}
       <div className="sticky bottom-0 border-t border-[var(--bord2)] bg-[var(--sidebar)] px-3 py-3.5">
         <div className="mb-2.5 flex items-center gap-2.5 px-2">
-          <span className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand)] font-['Anton'] text-[15px] leading-none text-white">
+          <span className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand)] font-['Anton'] text-[15px] leading-none text-[var(--brandfg)]">
             {initial}
           </span>
           <span className="min-w-0 flex-1">

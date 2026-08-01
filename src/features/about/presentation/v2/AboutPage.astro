@@ -9,14 +9,14 @@ import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data
 
 const [data, footer] = await Promise.all([getAboutData(), getFooterData()]);
 
-const STRIPE = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 10px,#f0ece5 10px,#f0ece5 20px)";
-const STRIPE_LG = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 12px,#f0ece5 12px,#f0ece5 24px)";
+const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 10px,var(--panel, #f0ece5) 10px,var(--panel, #f0ece5) 20px)";
+const STRIPE_LG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel, #f0ece5) 12px,var(--panel, #f0ece5) 24px)";
 
 // Per-league card palette (first card dark, rest light).
 const palette = (dark: boolean) =>
 	dark
-		? { card: "background:#0c0b0a;border-color:rgba(255,255,255,0.1);", tag: "background:rgba(228,0,43,0.16);color:#ff5a72;", title: "#f6f2ec", body: "#b8afa6", stat: "#e4002b", sub: "#8a817a", divider: "rgba(255,255,255,0.1)" }
-		: { card: "background:#fff;border-color:rgba(0,0,0,0.1);", tag: "background:rgba(228,0,43,0.1);color:#e4002b;", title: "#141009", body: "#6f665c", stat: "#141009", sub: "#8a817a", divider: "rgba(0,0,0,0.08)" };
+		? { card: "background:var(--night, #0c0b0a);border-color:rgba(255,255,255,0.1);", tag: "background:rgb(var(--site-brand-rgb) / 0.16);color:var(--brandsoft);", title: "var(--cream,#f6f2ec)", body: "var(--creamdim, #b8afa6)", stat: "var(--brand)", sub: "var(--muted2, #8a817a)", divider: "rgba(255,255,255,0.1)" }
+		: { card: "background:#fff;border-color:rgba(0,0,0,0.1);", tag: "background:rgb(var(--site-brand-rgb) / 0.1);color:var(--brand);", title: "var(--ink, #141009)", body: "var(--muted, #6f665c)", stat: "var(--ink, #141009)", sub: "var(--muted2, #8a817a)", divider: "rgba(0,0,0,0.08)" };
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
@@ -24,7 +24,7 @@ const palette = (dark: boolean) =>
 
 	<!-- HERO -->
 	<section class="relative overflow-hidden border-b border-black/[0.08] bg-night text-cream">
-		<div class="absolute inset-0" style="background:radial-gradient(100% 120% at 78% -10%,rgba(228,0,43,0.22),transparent 58%);"></div>
+		<div class="absolute inset-0" style="background:radial-gradient(100% 120% at 78% -10%,rgb(var(--site-brand-rgb) / 0.22),transparent 58%);"></div>
 		<div class="absolute -top-24 right-[-120px] h-[520px] w-[520px] rounded-full border border-brand/[0.16]"></div>
 		<div class="absolute right-[-20px] top-10 h-[320px] w-[320px] rounded-full border border-brand/10"></div>
 		<div class="relative mx-auto max-w-[1280px] px-8 py-[84px] max-[960px]:px-6 max-[960px]:py-14">
@@ -41,7 +41,7 @@ const palette = (dark: boolean) =>
 		<div class="mx-auto grid max-w-[1280px] grid-cols-4 gap-6 px-8 py-9 max-[600px]:grid-cols-2 max-[960px]:px-6">
 			{data.stats.map((s) => (
 				<div>
-					<div class="font-display text-[44px] leading-none" style={`color:${s.accent ? "#e4002b" : "#141009"};`}>{s.value}</div>
+					<div class="font-display text-[44px] leading-none" style={`color:${s.accent ? "var(--brand)" : "var(--ink, #141009)"};`}>{s.value}</div>
 					<div class="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">{s.label}</div>
 				</div>
 			))}
@@ -75,7 +75,7 @@ const palette = (dark: boolean) =>
 				{data.leagues.map((l) => {
 					const p = palette(l.dark);
 					return (
-						<div class="overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgba(20,16,9,0.04)]" style={p.card}>
+						<div class="overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]" style={p.card}>
 							<div class="p-7">
 								<div class="mb-4 inline-flex items-center gap-2 rounded px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em]" style={p.tag}>{l.abbr}</div>
 								<h3 class="font-display text-[26px] uppercase leading-none" style={`color:${p.title};`}>{l.title}</h3>
@@ -100,7 +100,7 @@ const palette = (dark: boolean) =>
 		</div>
 		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-1 max-[960px]:grid-cols-2">
 			{data.values.map((v) => (
-				<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 					<div class="mb-4 font-display text-[30px] leading-none text-brand">{v.num}</div>
 					<h3 class="font-display text-[19px] uppercase text-ink2">{v.title}</h3>
 					<p class="mt-2.5 text-[14px] leading-[1.6] text-muted">{v.body}</p>
@@ -139,7 +139,7 @@ const palette = (dark: boolean) =>
 		</div>
 		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-2">
 			{data.people.map((person) => (
-				<div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+				<div class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 					{person.image ? (
 						<img src={person.image} alt={person.name} loading="lazy" class="aspect-square w-full object-cover" />
 					) : (
@@ -179,7 +179,7 @@ const palette = (dark: boolean) =>
 	</section>
 
 	<!-- CTA -->
-	<section class="relative overflow-hidden bg-brand text-white">
+	<section class="relative overflow-hidden bg-brand text-brandfg">
 		<div class="absolute -bottom-[140px] right-[-100px] h-[420px] w-[420px] rounded-full border-2 border-white/[0.18]"></div>
 		<div class="absolute -bottom-10 right-10 h-[220px] w-[220px] rounded-full border-2 border-white/[0.18]"></div>
 		<div class="relative mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-10 px-8 py-[70px] max-[960px]:px-6">

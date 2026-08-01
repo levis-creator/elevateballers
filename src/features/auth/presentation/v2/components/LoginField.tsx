@@ -40,7 +40,7 @@ export default function LoginField({
 	const active = focused || value.length > 0;
 	const borderColor = focused ? "#e4002b" : value.length ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.1)";
 	const boxShadow = focused ? "0 0 0 3px rgba(228,0,43,0.18)" : "none";
-	const iconColor = active ? "#ff5a72" : "#5f574e";
+	const iconColor = active ? "#ff5a72" : "rgb(var(--site-cream-dim-rgb,95 87 78)/0.55)";
 
 	return (
 		<div>
@@ -63,7 +63,7 @@ export default function LoginField({
 					autoComplete={autoComplete}
 					disabled={disabled}
 					required={required}
-					className="w-full border-none bg-transparent py-[15px] font-body text-[15px] text-cream outline-none placeholder:text-[#5f574e] disabled:opacity-60"
+					className="w-full border-none bg-transparent py-[15px] font-body text-[15px] text-cream outline-none placeholder:text-[rgb(var(--site-cream-dim-rgb,95 87 78)/0.55)] disabled:opacity-60"
 				/>
 				{rightSlot}
 			</div>

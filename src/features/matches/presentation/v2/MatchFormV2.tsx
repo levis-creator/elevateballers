@@ -305,7 +305,7 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
                     type="button"
                     onClick={() => f.setField('status', s)}
                     className={`rounded-md px-4 py-1.5 font-['Archivo'] text-[11px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
-                      on ? 'bg-[var(--brand)] text-white' : 'text-[var(--txm)] hover:text-[var(--tx)]'
+                      on ? 'bg-[var(--brand)] text-[var(--brandfg)]' : 'text-[var(--txm)] hover:text-[var(--tx)]'
                     }`}
                   >
                     {s}
@@ -347,7 +347,7 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
               type="button"
               onClick={() => f.submit('save')}
               disabled={!f.canSubmit}
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-5 py-2.5 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.05em] text-white shadow-[0_6px_18px_rgba(228,0,43,0.3)] hover:bg-[var(--brandlt)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-5 py-2.5 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--brandfg)] shadow-[0_6px_18px_rgb(var(--site-brand-rgb)/0.3)] hover:bg-[var(--brandlt)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
             >
               <Save className="h-4 w-4" /> {f.saving ? 'Saving…' : f.editing ? 'Save Changes' : 'Create Match'}
             </button>
@@ -373,7 +373,7 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
             <Card className="overflow-hidden">
             <div className="border-b border-[var(--bord2)] px-5 py-3 font-['Space_Mono'] text-[10px] uppercase tracking-[0.14em] text-[var(--txm)]">Live Preview</div>
             <div className="relative overflow-hidden p-5">
-              <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(90% 120% at 50% -10%, rgba(228,0,43,0.12), transparent 60%)' }} />
+              <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(90% 120% at 50% -10%, rgb(var(--site-brand-rgb) / 0.12), transparent 60%)' }} />
               <div className="relative">
                 <div className="mb-4 flex justify-center">
                   <span className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-['Space_Mono'] text-[10px] font-bold uppercase tracking-[0.1em]" style={{ background: `${status.color}1f`, color: status.color }}>

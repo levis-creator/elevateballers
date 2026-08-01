@@ -68,7 +68,7 @@ export default function ForgotPasswordForm() {
 				<a href="/admin/login" className="inline-flex items-center gap-2 font-body text-[13px] font-semibold text-brandsoft no-underline hover:text-brand">
 					<span className="font-mono text-[13px]">←</span>Back to login
 				</a>
-				<span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#5f574e]">Nairobi</span>
+				<span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[rgb(var(--site-cream-dim-rgb,95 87 78)/0.55)]">Nairobi</span>
 			</div>
 		</div>
 	);

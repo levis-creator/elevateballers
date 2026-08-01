@@ -7,7 +7,7 @@ interface Props {
 	playerCount: number;
 }
 
-const STRIPE = "repeating-linear-gradient(45deg,#e7e2da,#e7e2da 4px,#f0ece5 4px,#f0ece5 8px)";
+const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
 
 /** Squad — Roster/Stats tabs. React island; active tab lives in the Zustand store. */
 export default function TeamSquad({ players, playerCount }: Props) {
@@ -37,7 +37,7 @@ export default function TeamSquad({ players, playerCount }: Props) {
 						<p className="mt-1.5 font-body text-[13px] text-muted">This team's roster hasn't been published.</p>
 					</div>
 				) : tab === "roster" ? (
-					<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div className="grid grid-cols-[48px_1fr_150px_90px_90px] items-center gap-4 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted2 max-[600px]:grid-cols-[40px_1fr_60px]">
 							<span>#</span>
 							<span>Player</span>
@@ -73,7 +73,7 @@ export default function TeamSquad({ players, playerCount }: Props) {
 						))}
 					</div>
 				) : (
-					<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(20,16,9,0.04)]">
+					<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div className="min-w-[720px]">
 							<div className="grid grid-cols-[48px_1.6fr_repeat(6,1fr)] items-center gap-3 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
 								<span>#</span>

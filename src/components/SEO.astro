@@ -15,9 +15,9 @@ export interface Props {
 	modifiedTime?: string;
 	prevURL?: string;
 	nextURL?: string;
+	siteName?: string;
 }
 
-const siteName = "Elevate Ballers";
 const siteUrl = (Astro.site ? Astro.site.toString() : Astro.url.origin).replace(/\/$/, "");
 
 const {
@@ -35,6 +35,7 @@ const {
 	modifiedTime,
 	prevURL,
 	nextURL,
+	siteName = "Elevate Ballers",
 } = Astro.props;
 
 function normalizeCanonicalUrl(input: string): string {

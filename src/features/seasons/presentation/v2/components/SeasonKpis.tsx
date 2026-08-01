@@ -3,7 +3,7 @@ import type { SeasonStats } from "@/features/seasons/domain/entities/season";
 
 const CARDS = [
 	{ key: "total", label: "Total Seasons", tag: "All leagues", icon: CalendarDays, tint: "#2a6fdb" },
-	{ key: "live", label: "Live Now", tag: "● Active", icon: Radio, tint: "#e4002b" },
+	{ key: "live", label: "Live Now", tag: "● Active", icon: Radio, tint: "var(--brand)" },
 	{ key: "upcoming", label: "Upcoming", tag: "Scheduled", icon: Star, tint: "#d98324" },
 	{ key: "matches", label: "Total Matches", tag: "Season-wide", icon: Volleyball, tint: "#1f8a5b" },
 ] as const;

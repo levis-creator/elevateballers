@@ -20,7 +20,7 @@ const { upcoming, results } = Astro.props;
 			{upcoming.map((m) => {
 				const Tag = m.href ? "a" : "div";
 				return (
-				<Tag href={m.href ?? undefined} class="flex min-h-[142px] flex-col justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
+				<Tag href={m.href ?? undefined} class="flex min-h-[142px] flex-col justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
 					<div class="flex items-center justify-between gap-2">
 						<span class="rounded bg-brand/[0.08] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-brand">{m.day} {m.mon} · {m.time}</span>
 						<span class="font-mono text-[11px] text-muted2">{m.venue}</span>
@@ -28,11 +28,11 @@ const { upcoming, results } = Astro.props;
 					<div class="flex flex-col gap-[11px]">
 						<div class="flex min-w-0 items-center gap-3">
 							<TeamName team={{ name: m.home, nickname: m.homeNickname, logo: m.homeLogo }} variant="compact" withCrest className="flex-1 font-body text-[15px] font-bold text-ink2" />
-							<span class="font-mono text-[10px] tracking-[0.1em] text-[#a49a8d]">HOME</span>
+							<span class="font-mono text-[10px] tracking-[0.1em] text-[var(--muted2,#a49a8d)]">HOME</span>
 						</div>
 						<div class="flex min-w-0 items-center gap-3">
 							<TeamName team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo }} variant="compact" withCrest className="flex-1 font-body text-[15px] font-bold text-ink2" />
-							<span class="font-mono text-[10px] tracking-[0.1em] text-[#a49a8d]">AWAY</span>
+							<span class="font-mono text-[10px] tracking-[0.1em] text-[var(--muted2,#a49a8d)]">AWAY</span>
 						</div>
 					</div>
 				</Tag>
@@ -49,8 +49,8 @@ const { upcoming, results } = Astro.props;
 			{results.map((r) => {
 				const Tag = r.href ? "a" : "div";
 				return (
-				<Tag href={r.href ?? undefined} class="flex min-h-[142px] flex-col justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgba(20,16,9,0.04)] hover:border-brand/40">
-					<span class="self-start rounded bg-[#f0ede7] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-[#a49a8d]">Final</span>
+				<Tag href={r.href ?? undefined} class="flex min-h-[142px] flex-col justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
+					<span class="self-start rounded bg-[var(--panel,#f0ede7)] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--muted2,#a49a8d)]">Final</span>
 					<div class="flex flex-col gap-[11px]">
 						<div class="flex min-w-0 items-center gap-3">
 							<TeamName team={{ name: r.home, nickname: r.homeNickname, logo: r.homeLogo }} variant="compact" withCrest className="flex-1 font-body text-[15px] font-bold" textStyle={{ color: r.homeColor }} />

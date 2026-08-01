@@ -38,7 +38,7 @@ export default function LeagueLeaders({ leaderData, tabs }: Props) {
 							href={p.href ?? undefined}
 							className="flex items-center gap-4 border-b border-black/[0.08] px-1 py-3.5 text-inherit no-underline hover:bg-paper2"
 						>
-							<span className="w-[26px] font-display text-[20px]" style={{ color: first ? "#e4002b" : "#b3a99c" }}>
+								<span className="w-[26px] font-display text-[20px]" style={{ color: first ? "var(--brand)" : "var(--muted2,#b3a99c)" }}>
 								{i + 1}
 							</span>
 							<div className="h-10 w-10 flex-shrink-0 rounded-full bg-[#ddd7cd]" />
@@ -50,7 +50,7 @@ export default function LeagueLeaders({ leaderData, tabs }: Props) {
 								<div className="h-1.5 overflow-hidden rounded-[3px] bg-black/[0.08]">
 									<div
 										className="h-full rounded-[3px]"
-										style={{ width: `${pct}%`, background: first ? "#e4002b" : "rgba(228,0,43,0.4)" }}
+										style={{ width: `${pct}%`, background: first ? "var(--brand)" : "rgb(var(--site-brand-rgb) / 0.4)" }}
 									/>
 								</div>
 							</div>

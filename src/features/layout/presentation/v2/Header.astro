@@ -1,7 +1,11 @@
 ---
 // v2 public site header — top utility bar + sticky nav + mobile menu.
 // Tailwind utilities throughout (v2 config: brand/ink/paper/night tokens).
-import { resolvePublicHeaderSettings, siteSettingsService } from '@/features/settings';
+import {
+	resolvePublicBrandSettings,
+	resolvePublicHeaderSettings,
+	siteSettingsService,
+} from '@/features/settings';
 
 interface NavLink {
 	label: string;
@@ -18,8 +22,9 @@ interface Props {
 
 const { registrationOpen = true, active = "home" } = Astro.props;
 
-const records = await siteSettingsService.list('header').catch(() => []);
+const records = await siteSettingsService.list().catch(() => []);
 const headerSettings = resolvePublicHeaderSettings(records);
+const brandSettings = resolvePublicBrandSettings(records);
 const navLinks: NavLink[] = headerSettings.navItems.map((item) => ({
 	label: item.label,
 	href: item.path,
@@ -27,7 +32,7 @@ const navLinks: NavLink[] = headerSettings.navItems.map((item) => ({
 }));
 
 const navCtaClass = registrationOpen
-	? "flex-shrink-0 rounded bg-brand px-5 py-3 text-[12px] font-extrabold uppercase tracking-[0.06em] text-white no-underline"
+	? "flex-shrink-0 rounded bg-brand px-5 py-3 text-[12px] font-extrabold uppercase tracking-[0.06em] text-brandfg no-underline"
 	: "flex-shrink-0 rounded border border-black/20 bg-transparent px-5 py-[11px] text-[12px] font-bold uppercase tracking-[0.06em] text-muted no-underline";
 const navCtaLabel = registrationOpen ? headerSettings.ctaLabel : 'Registration Closed';
 const showCta = Boolean(headerSettings.ctaLabel.trim());
@@ -49,11 +54,11 @@ const showCta = Boolean(headerSettings.ctaLabel.trim());
 <header x-data="{ menuOpen: false }" class:list={["z-50 border-b border-black/10 bg-paper/90 backdrop-blur-md", headerSettings.sticky ? "sticky top-0" : "relative"]}>
 	<div class="mx-auto flex max-w-[1280px] items-center justify-between gap-8 px-8 py-4 max-[960px]:px-6">
 		<a href="/" class="flex flex-shrink-0 items-center text-inherit no-underline">
-			<img src={headerSettings.logo} alt="Elevate Ballers League" class="h-[46px] w-auto max-[600px]:h-[38px]" />
+			<img src={headerSettings.logo} alt={brandSettings.siteName} class="h-[46px] w-auto max-[600px]:h-[38px]" />
 		</a>
 		<nav class="flex items-center gap-[26px] text-[13px] font-semibold uppercase tracking-[0.04em] max-[960px]:hidden">
 			{navLinks.map((link) => (
-				<a href={link.href} class={`no-underline hover:text-brand ${link.key === active ? "text-ink2" : "text-muted"}`}>{link.label}</a>
+				<a href={link.href} class={`no-underline hover:text-brand ${link.key === active ? "text-brand" : "text-muted"}`}>{link.label}</a>
 			))}
 		</nav>
 		{showCta && <a href={headerSettings.ctaHref} class={`max-[960px]:hidden ${navCtaClass}`}>{navCtaLabel}</a>}
@@ -65,9 +70,9 @@ const showCta = Boolean(headerSettings.ctaLabel.trim());
 			aria-label="Toggle menu"
 			class="hidden h-11 w-11 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-black/15 bg-transparent max-[960px]:inline-flex"
 		>
-			<span :style="`display:block;width:20px;height:2px;background:#1a1712;border-radius:2px;transition:transform .2s,opacity .2s;transform:${menuOpen ? 'translateY(6px) rotate(45deg)' : 'none'};`"></span>
-			<span :style="`display:block;width:20px;height:2px;background:#1a1712;border-radius:2px;margin:4px 0;transition:opacity .2s;opacity:${menuOpen ? '0' : '1'};`"></span>
-			<span :style="`display:block;width:20px;height:2px;background:#1a1712;border-radius:2px;transition:transform .2s,opacity .2s;transform:${menuOpen ? 'translateY(-6px) rotate(-45deg)' : 'none'};`"></span>
+			<span :style="`display:block;width:20px;height:2px;background:var(--night2,#1a1712);border-radius:2px;transition:transform .2s,opacity .2s;transform:${menuOpen ? 'translateY(6px) rotate(45deg)' : 'none'};`"></span>
+			<span :style="`display:block;width:20px;height:2px;background:var(--night2,#1a1712);border-radius:2px;margin:4px 0;transition:opacity .2s;opacity:${menuOpen ? '0' : '1'};`"></span>
+			<span :style="`display:block;width:20px;height:2px;background:var(--night2,#1a1712);border-radius:2px;transition:transform .2s,opacity .2s;transform:${menuOpen ? 'translateY(-6px) rotate(-45deg)' : 'none'};`"></span>
 		</button>
 	</div>
 
@@ -92,7 +97,7 @@ const showCta = Boolean(headerSettings.ctaLabel.trim());
 			{showCta && <a
 				href={headerSettings.ctaHref}
 				@click="menuOpen = false"
-				class="mt-4 rounded-md bg-brand px-4 py-[15px] text-center text-[13px] font-extrabold uppercase tracking-[0.06em] text-white no-underline"
+				class="mt-4 rounded-md bg-brand px-4 py-[15px] text-center text-[13px] font-extrabold uppercase tracking-[0.06em] text-brandfg no-underline"
 			>{navCtaLabel}</a>}
 		</nav>
 	</div>

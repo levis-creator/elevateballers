@@ -4,6 +4,8 @@ import { PrismaSiteSettingsRepository } from './data/prismaSiteSettingsRepositor
 
 export * from './application/siteSettingsService';
 export * from './application/headerSettings';
+export * from './application/footerSettings';
+export * from './application/brandSettings';
 export * from './domain/siteSetting';
 
 export const siteSettingsService = new SiteSettingsService(

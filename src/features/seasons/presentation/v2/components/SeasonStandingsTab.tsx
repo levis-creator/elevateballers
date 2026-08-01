@@ -48,7 +48,7 @@ export default function SeasonStandingsTab({ standings, seasonName }: Props) {
 								<td className="border-b border-[var(--bord2)] px-5 py-2.5">
 									<span
 										className="font-['Anton'] text-[16px]"
-										style={{ color: row.rank === 1 ? "#e4002b" : "var(--txm)" }}
+										style={{ color: row.rank === 1 ? "var(--brand)" : "var(--txm)" }}
 									>
 										{row.rank}
 									</span>

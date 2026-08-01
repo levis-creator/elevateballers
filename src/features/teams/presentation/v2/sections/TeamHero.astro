@@ -11,12 +11,12 @@ const formStyle = (r: string) =>
 	r === "win"
 		? "background:rgba(63,191,111,0.16);color:#3fbf6f;"
 		: r === "loss"
-			? "background:rgba(228,0,43,0.16);color:#ff5a72;"
-			: "background:rgba(255,255,255,0.08);color:#b8afa6;";
+			? "background:rgb(var(--site-brand-rgb) / 0.16);color:var(--brandsoft);"
+			: "background:rgba(255,255,255,0.08);color:var(--creamdim, #b8afa6);";
 ---
 
 <section class="relative overflow-hidden bg-night text-cream">
-	<div class="absolute inset-0" style="background:radial-gradient(90% 130% at 12% 20%,rgba(228,0,43,0.18),transparent 55%);"></div>
+	<div class="absolute inset-0" style="background:radial-gradient(90% 130% at 12% 20%,rgb(var(--site-brand-rgb) / 0.18),transparent 55%);"></div>
 	<div class="relative mx-auto max-w-[1280px] px-8 pb-9 pt-8 max-[960px]:px-6">
 		<div class="mb-7 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">
 			<a href="/teams" class="text-muted2 no-underline hover:text-brand">Teams</a><span>/</span><span class="text-creamdim">{detail.name}</span>
@@ -32,7 +32,7 @@ const formStyle = (r: string) =>
 					<span class="rounded bg-brand/[0.14] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-brandsoft">{detail.leagueAbbr}</span>
 					<span class="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">{detail.league}</span>
 				</div>
-				<h1 class="mb-3 font-display text-[clamp(40px,6vw,80px)] uppercase leading-[0.88] text-[#f6f2ec]">
+				<h1 class="mb-3 font-display text-[clamp(40px,6vw,80px)] uppercase leading-[0.88] text-[var(--cream,#f6f2ec)]">
 					<TeamName team={{ name: detail.name, nickname: detail.nickname, logo: detail.logo, initials: detail.initials }} variant="full" />
 				</h1>
 				<div class="flex items-center gap-2 font-mono text-[13px] text-creamdim"><span class="text-muted2">Head Coach</span> · {detail.headCoach}</div>
