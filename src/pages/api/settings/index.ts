@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getAllSiteSettings } from '../../../features/cms/lib/queries';
-import { createSiteSetting } from '../../../features/cms/lib/mutations';
+import { siteSettingsService } from '../../../features/settings';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
@@ -13,7 +12,7 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const category = url.searchParams.get('category') || undefined;
 
-    const settings = await getAllSiteSettings(category || undefined);
+    const settings = await siteSettingsService.list(category || undefined);
 
     return new Response(JSON.stringify(settings), {
       headers: { 'Content-Type': 'application/json' },
@@ -29,17 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
     await requirePermission(request, 'site_settings:manage');
     const data = await request.json();
 
-    if (!data.key || !data.value || !data.label) {
-      return new Response(
-        JSON.stringify({ error: 'Key, value, and label are required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const setting = await createSiteSetting({
+    const setting = await siteSettingsService.create({
       key: data.key,
       value: data.value,
       type: data.type || 'text',
