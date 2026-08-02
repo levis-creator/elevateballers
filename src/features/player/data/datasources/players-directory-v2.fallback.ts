@@ -55,4 +55,5 @@ export const FALLBACK_PLAYERS_DIRECTORY: PlayersDirectoryData = {
 	players,
 	teams: ["All Teams", ...[...new Set(players.map((p) => p.team))].sort()],
 	total: players.length,
+	season: '2026',
 };

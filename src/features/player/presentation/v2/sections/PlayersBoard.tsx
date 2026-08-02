@@ -1,10 +1,12 @@
 import { usePlayersDirectoryStore } from "@/features/player/presentation/stores/v2/usePlayersDirectoryStore";
 import type { PlayerSort, PosFilter } from "@/features/player/presentation/stores/v2/usePlayersDirectoryStore";
 import type { PlayersDirectoryData, PlayerCard } from "@/features/player/domain/entities/players-directory-v2";
+import { useEffect } from 'react';
+import { playersListToken, type PublicPlayersListSettings } from '@/features/settings';
 
 interface Props {
 	data: PlayersDirectoryData;
-	perPage?: number;
+	settings: PublicPlayersListSettings;
 }
 
 const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel,#f0ece5) 12px,var(--panel,#f0ece5) 24px)";
@@ -33,12 +35,17 @@ const SORT_OPTIONS: Array<[PlayerSort, string]> = [
 	["rpg", "Sort: Rebounds"],
 	["apg", "Sort: Assists"],
 	["name", "Sort: Name (A–Z)"],
+	["team", "Sort: Team"],
+	["jersey", "Sort: Jersey number"],
 ];
+
+const sortKey = (value: PublicPlayersListSettings['sort']): PlayerSort => value === 'Name' ? 'name' : value === 'Team' ? 'team' : value === 'Jersey number' ? 'jersey' : 'ppg';
 
 /** Players directory — search + team + position + sort + paginated card grid.
  *  React island; all filter state lives in a Zustand store. */
-export default function PlayersBoard({ data, perPage = 12 }: Props) {
+export default function PlayersBoard({ data, settings }: Props) {
 	const { q, team, pos, sort, page, setQ, setTeam, setPos, setSort, setPage } = usePlayersDirectoryStore();
+	useEffect(() => { setSort(sortKey(settings.sort)); }, [settings.sort, setSort]);
 	const query = q.trim().toLowerCase();
 
 	let list = data.players
@@ -49,14 +56,16 @@ export default function PlayersBoard({ data, perPage = 12 }: Props) {
 	list =
 		sort === "name"
 			? [...list].sort((a, b) => a.name.localeCompare(b.name))
+			: sort === 'team' ? [...list].sort((a, b) => a.team.localeCompare(b.team))
+			: sort === 'jersey' ? [...list].sort((a, b) => (Number(a.number) || 999) - (Number(b.number) || 999))
 			: [...list].sort((a, b) => b[sort] - a[sort]);
 
-	const totalPages = Math.max(1, Math.ceil(list.length / perPage));
+	const totalPages = Math.max(1, Math.ceil(list.length / settings.perPage));
 	const current = Math.min(Math.max(1, page), totalPages);
-	const pageItems = list.slice((current - 1) * perPage, current * perPage);
+	const pageItems = list.slice((current - 1) * settings.perPage, current * settings.perPage);
 	const emptyBody = query
-		? `Nothing matches “${q}”. Try another name or team.`
-		: "No players match these filters. Try clearing them.";
+		? playersListToken(settings.emptyBody, { q })
+		: settings.emptyBodyFiltered;
 
 	return (
 		<>
@@ -69,12 +78,12 @@ export default function PlayersBoard({ data, perPage = 12 }: Props) {
 							type="text"
 							value={q}
 							onChange={(e) => setQ(e.target.value)}
-							placeholder="Search players…"
+							placeholder={settings.searchPlaceholder}
 							className="w-[220px] border-none bg-transparent font-body text-[14px] text-ink2 outline-none max-[600px]:w-[130px]"
 						/>
 					</div>
 
-					<div className="relative">
+					{settings.teamFilter && <div className="relative">
 						<select value={team} onChange={(e) => setTeam(e.target.value)} className={`${selectCls} max-w-[220px]`}>
 							{data.teams.map((t) => (
 								<option key={t} value={t}>
@@ -83,15 +92,15 @@ export default function PlayersBoard({ data, perPage = 12 }: Props) {
 							))}
 						</select>
 						<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-muted">▼</span>
-					</div>
+					</div>}
 
-					<div className="flex flex-wrap items-center gap-2">
+					{settings.positionFilter && <div className="flex flex-wrap items-center gap-2">
 						{POS_TABS.map(([v, label]) => (
 							<button key={v} type="button" onClick={() => setPos(v)} className={posPill(pos === v)}>
 								{label}
 							</button>
 						))}
-					</div>
+					</div>}
 
 					<div className="relative ml-auto">
 						<select value={sort} onChange={(e) => setSort(e.target.value as PlayerSort)} className={selectCls}>
@@ -112,7 +121,7 @@ export default function PlayersBoard({ data, perPage = 12 }: Props) {
 					<>
 						<div className="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
 							{pageItems.map((p) => (
-								<PlayerTile key={p.id} p={p} />
+								<PlayerTile key={p.id} p={p} showHeadshot={settings.headshots} />
 							))}
 						</div>
 
@@ -135,7 +144,7 @@ export default function PlayersBoard({ data, perPage = 12 }: Props) {
 				) : (
 					<div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-20 text-center">
 						<div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-panel font-mono text-[18px] text-muted2">⌕</div>
-						<div className="font-display text-[22px] uppercase text-ink">No players found</div>
+						<div className="font-display text-[22px] uppercase text-ink">{settings.emptyTitle}</div>
 						<p className="max-w-[360px] text-[14px] leading-[1.5] text-muted">{emptyBody}</p>
 					</div>
 				)}
@@ -144,15 +153,15 @@ export default function PlayersBoard({ data, perPage = 12 }: Props) {
 	);
 }
 
-function PlayerTile({ p }: { p: PlayerCard }) {
+function PlayerTile({ p, showHeadshot }: { p: PlayerCard; showHeadshot: boolean }) {
 	const Tag = p.href && p.href !== "#" ? "a" : "div";
 	return (
 		<Tag
 			{...(Tag === "a" ? { href: p.href } : {})}
 			className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 		>
-			<span className="relative flex aspect-[4/5] items-center justify-center overflow-hidden" style={p.image ? undefined : { background: STRIPE }}>
-				{p.image ? (
+			<span className="relative flex aspect-[4/5] items-center justify-center overflow-hidden" style={showHeadshot && p.image ? undefined : { background: STRIPE }}>
+				{showHeadshot && p.image ? (
 					<img src={p.image} alt={p.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
 				) : (
 					<span className="font-display text-[40px] text-[#cfc7bb]">{p.initials}</span>

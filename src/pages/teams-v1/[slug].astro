@@ -1,6 +1,6 @@
 ---
 import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
-import { applyTitlePattern, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
+import { applyTitlePattern, resolvePublicSeoSettings, resolvePublicTeamPageSettings, teamPageToken, siteSettingsService } from '@/features/settings';
 export const prerender = false;
 
 // Legacy single-team page on its own route. `/teams/<slug>` rewrites here when
@@ -22,6 +22,12 @@ import Spacing from "../../shared/components/ui/Spacing.astro";
 import PageLoader from "../../components/PageLoader";
 import { TeamDetailsTable } from "../../features/team/components/TeamDetailsTable";
 import { Image } from "astro:assets";
+import { getTeamDetail } from '../../features/teams/domain/usecases/get-team-detail';
+import TeamHero from '../../features/teams/presentation/v2/sections/TeamHero.astro';
+import TeamAbout from '../../features/teams/presentation/v2/sections/TeamAbout.astro';
+import TeamMatches from '../../features/teams/presentation/v2/sections/TeamMatches';
+import TeamSquad from '../../features/teams/presentation/v2/sections/TeamSquad';
+import TeamStaff from '../../features/teams/presentation/v2/sections/TeamStaff.astro';
 
 const { slug } = Astro.params;
 if (!slug) {
@@ -125,6 +131,11 @@ const formatStaffRole = (role: string): string => {
 
 // SEO Meta Tags
 const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+const teamPageSettings = resolvePublicTeamPageSettings(await siteSettingsService.list('team').catch(() => []));
+const legacyCoachRow = teamStaff.find((row: any) => String(row.role || '').toLowerCase().includes('coach'));
+const legacyCoach = legacyCoachRow?.staff ? `${legacyCoachRow.staff.firstName || ''} ${legacyCoachRow.staff.lastName || ''}`.trim() : '';
+const legacyLeague = [...teamMatches.completed, ...teamMatches.upcoming].find((match: any) => match.league)?.league?.name || '';
+const settingsAwareDetail = await getTeamDetail(slug);
 const pageTitle = applyTitlePattern(seoSettings.patternTeam, {
   team: team.name,
   league: '',
@@ -196,7 +207,14 @@ const pageImage = pageImageSource.startsWith("http")
         style="padding-top: 0; padding-bottom: 0px;"
       >
       </div>
-      <div class="container">
+      {settingsAwareDetail && <div class="legacy-v2-team-content">
+        <TeamHero detail={settingsAwareDetail} settings={teamPageSettings} />
+        <TeamAbout detail={settingsAwareDetail} settings={teamPageSettings} />
+        <TeamMatches recent={settingsAwareDetail.recent} upcoming={settingsAwareDetail.upcoming} seasons={settingsAwareDetail.seasons} settings={teamPageSettings} client:visible />
+        <TeamSquad players={settingsAwareDetail.players} playerCount={settingsAwareDetail.playerCount} settings={teamPageSettings} client:idle />
+        <TeamStaff staff={settingsAwareDetail.staff} heading={teamPageSettings.staffHeading} />
+      </div>}
+      <div class:list={["container", settingsAwareDetail && "legacy-team-content-hidden"]}>
         <section class="wpb-content-wrapper">
           <div class="vc_row wpb_row vc_row-fluid">
             <div class="wpb_column vc_column_container vc_col-sm-12">
@@ -214,7 +232,7 @@ const pageImage = pageImageSource.startsWith("http")
                   <div class="team-header">
                     <div class="team-header-content">
                       {
-                        resolveAssetUrl(team.logo) ? (
+                        teamPageSettings.crest && (resolveAssetUrl(team.logo) ? (
                           <div class="team-logo-large">
                             <Image
                               src={
@@ -231,13 +249,17 @@ const pageImage = pageImageSource.startsWith("http")
                               {team.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                        )
+                        ))
                       }
                       <div class="team-header-info">
+                        {teamPageSettings.leagueLine && legacyLeague && <div style="font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#777;margin-bottom:6px;">{legacyLeague}</div>}
                         <h1 class="team-title">{team.name}</h1>
+                        {teamPageSettings.coachLine && legacyCoach && <div style="font-size:14px;color:#666;">Head Coach · {legacyCoach}</div>}
                       </div>
                     </div>
                   </div>
+
+                  {teamPageSettings.aboutBlock && <div class="team-section"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--site-brand,#dd3333);">{teamPageSettings.aboutEyebrow}</div><p class="team-description-full" style="margin-top:12px;">{team.description || teamPageToken(teamPageSettings.aboutFallback, team.name)}</p></div>}
 
                   <Spacing
                     id="stm-spacing-team-content"
@@ -249,7 +271,7 @@ const pageImage = pageImageSource.startsWith("http")
 
                   <!-- Team Statistics Section -->
                   {
-                    teamStats.totalMatches > 0 && (
+                    teamPageSettings.heroStats && teamStats.totalMatches > 0 && (
                       <div class="team-section">
                         <h2 class="section-title">Team Statistics</h2>
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
@@ -333,9 +355,9 @@ const pageImage = pageImageSource.startsWith("http")
                     teamMatches.completed &&
                       teamMatches.completed.length > 0 && (
                         <div class="team-section">
-                          <h2 class="section-title">Recent Matches</h2>
+                          <h2 class="section-title">{teamPageSettings.recentHeading}</h2>
                           <div class="space-y-3 mt-6">
-                            {teamMatches.completed.map((match: any) => {
+                            {teamMatches.completed.slice(0, teamPageSettings.matchRows).map((match: any) => {
                               const isTeam1 = match.team1Id === team.id;
                               const teamScore = isTeam1
                                 ? match.team1Score
@@ -426,9 +448,9 @@ const pageImage = pageImageSource.startsWith("http")
                   {
                     teamMatches.upcoming && teamMatches.upcoming.length > 0 && (
                       <div class="team-section">
-                        <h2 class="section-title">Upcoming Matches</h2>
+                        <h2 class="section-title">{teamPageSettings.upcomingHeading}</h2>
                         <div class="space-y-3 mt-6">
-                          {teamMatches.upcoming.map((match: any) => {
+                          {teamMatches.upcoming.slice(0, teamPageSettings.matchRows).map((match: any) => {
                             const isTeam1 = match.team1Id === team.id;
                             const opponent = isTeam1
                               ? match.team2 || { name: match.team2Name }
@@ -486,7 +508,7 @@ const pageImage = pageImageSource.startsWith("http")
                   {
                     playersWithStats && playersWithStats.length > 0 && (
                       <div class="team-section">
-                        <h2 class="section-title">Players</h2>
+                        <h2 class="section-title">{teamPageSettings.squadHeading}</h2>
                         <div class="sp-template sp-template-player-list">
                           <TeamDetailsTable
                             players={playersWithStats}
@@ -500,7 +522,7 @@ const pageImage = pageImageSource.startsWith("http")
                   {
                     (!playersWithStats || playersWithStats.length === 0) && (
                       <div class="team-section">
-                        <h2 class="section-title">Players</h2>
+                        <h2 class="section-title">{teamPageSettings.squadHeading}</h2>
                         <p class="no-data-message">
                           No players available for this team.
                         </p>
@@ -520,7 +542,7 @@ const pageImage = pageImageSource.startsWith("http")
                   {
                     teamStaff.length > 0 && (
                       <div class="team-section">
-                        <h2 class="section-title">Staff</h2>
+                        <h2 class="section-title">{teamPageSettings.staffHeading}</h2>
                         <div class="staff-grid">
                           {teamStaff.map((teamStaffMember: any) => {
                             const staff = teamStaffMember.staff;
@@ -576,7 +598,7 @@ const pageImage = pageImageSource.startsWith("http")
                   {
                     teamStaff.length === 0 && (
                       <div class="team-section">
-                        <h2 class="section-title">Staff</h2>
+                        <h2 class="section-title">{teamPageSettings.staffHeading}</h2>
                         <p class="no-data-message">
                           No staff members assigned to this team.
                         </p>
@@ -651,6 +673,7 @@ const pageImage = pageImageSource.startsWith("http")
   </div>
 
   <style>
+    .legacy-team-content-hidden { display: none; }
     /* Team Detail Page Styles */
     .team-header {
       margin-bottom: 3rem;

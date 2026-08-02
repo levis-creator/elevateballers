@@ -10,10 +10,12 @@ if (!usePublicV2) return Astro.rewrite("/players-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import PlayersDirectoryPage from "@/features/player/presentation/v2/PlayersDirectoryPage.astro";
+import { resolvePublicPlayersListSettings, siteSettingsService } from '@/features/settings';
+const settings = resolvePublicPlayersListSettings(await siteSettingsService.list('players').catch(() => []));
 ---
 
 <LayoutV2
-	title="Players Directory - Elevate Ballers | Rosters, Positions & Stats"
+	title={`${settings.title} - Elevate Ballers`}
 	description="Meet the players of Elevate Ballers. Search the full roster by team and position, and see points, rebounds and assists per game for every athlete."
 	canonicalURL={`${Astro.url.origin}/players/`}
 	type="website"

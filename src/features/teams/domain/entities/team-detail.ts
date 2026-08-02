@@ -74,6 +74,8 @@ export interface StaffMember {
 
 export interface TeamDetail {
 	name: string;
+	description: string;
+	aboutImage: string | null;
 	nickname?: string | null;
 	slug: string;
 	initials: string;

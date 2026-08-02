@@ -5,13 +5,14 @@ import type { StaffMember } from "@/features/teams/domain/entities/team-detail";
 import StaffMemberCard from "@/features/staff/presentation/v2/StaffMemberCard.astro";
 interface Props {
 	staff: StaffMember[];
+	heading: string;
 }
-const { staff } = Astro.props;
+const { staff, heading } = Astro.props;
 ---
 
 {staff.length > 0 && (
 	<section class="mx-auto max-w-[1280px] px-8 py-[56px] max-[960px]:px-6 max-[960px]:py-10">
-		<h2 class="mb-6 font-display text-[26px] uppercase text-ink">Coaching Staff</h2>
+		<h2 class="mb-6 font-display text-[26px] uppercase text-ink">{heading}</h2>
 		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
 			{staff.map((s) => (
 				<StaffMemberCard name={s.name} role={s.role} initials={s.initials} image={s.image} />

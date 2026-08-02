@@ -50,7 +50,7 @@ function withOverride(base: number, overrides: any, key: string): number {
 
 export async function fetchPlayersDirectory(): Promise<PlayersDirectoryData | null> {
 	try {
-		const [players, matches] = await Promise.all([
+		const [players, matches, season] = await Promise.all([
 			prisma.player.findMany({
 				where: { approved: true },
 				select: {
@@ -76,6 +76,7 @@ export async function fetchPlayersDirectory(): Promise<PlayersDirectoryData | nu
 					},
 				},
 			}),
+			prisma.season.findFirst({ where: { active: true }, orderBy: { startDate: 'desc' }, select: { name: true } }).catch(() => null),
 		]);
 
 		if (!players.length) return null;
@@ -101,7 +102,7 @@ export async function fetchPlayersDirectory(): Promise<PlayersDirectoryData | nu
 		});
 
 		const teams = ["All Teams", ...[...new Set(cards.map((c) => c.team))].sort()];
-		return { players: cards, teams, total: cards.length };
+		return { players: cards, teams, total: cards.length, season: season?.name || String(new Date().getFullYear()) };
 	} catch {
 		return null;
 	}

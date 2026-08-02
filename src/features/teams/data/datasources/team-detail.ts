@@ -201,6 +201,8 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 
 	return {
 		name: team.name,
+		description: team.description || '',
+		aboutImage: getDisplayImageUrl((team as any).image || team.logo),
 		nickname: team.nickname,
 		slug: team.slug,
 		initials: initialsOf(team.name),

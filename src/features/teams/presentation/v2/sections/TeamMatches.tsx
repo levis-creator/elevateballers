@@ -1,12 +1,14 @@
 import { useTeamViewStore } from "@/features/teams/presentation/stores/v2/useTeamViewStore";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { ResultMatch, UpcomingMatch } from "@/features/teams/domain/entities/team-detail";
+import type { PublicTeamPageSettings } from '@/features/settings';
 
 interface Props {
 	recent: ResultMatch[];
 	upcoming: UpcomingMatch[];
 	seasons: string[];
 	perPage?: number;
+	settings: PublicTeamPageSettings;
 }
 
 const tagStyle = (r: string): React.CSSProperties =>
@@ -23,7 +25,8 @@ const pagerBtn = (active: boolean) =>
 
 /** Recent (season filter + pager) + Upcoming matches. React island; season and
  *  page live in the shared Zustand store. */
-export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: Props) {
+export default function TeamMatches({ recent, upcoming, seasons, settings }: Props) {
+	const perPage = settings.matchRows;
 	const { season, recentPage, setSeason, setRecentPage } = useTeamViewStore();
 
 	// Default to the current (most recent) season; guard against a stale choice
@@ -41,8 +44,8 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 			{/* RECENT */}
 			<div>
 				<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-					<h2 className="font-display text-[26px] uppercase text-ink">Recent Matches</h2>
-					{seasons.length > 0 && (
+					<h2 className="font-display text-[26px] uppercase text-ink">{settings.recentHeading}</h2>
+					{settings.seasonPicker && seasons.length > 0 && (
 						<div className="relative">
 							<select
 								value={activeSeason}
@@ -122,10 +125,10 @@ export default function TeamMatches({ recent, upcoming, seasons, perPage = 4 }: 
 
 			{/* UPCOMING */}
 			<div>
-				<h2 className="mb-6 font-display text-[26px] uppercase text-ink">Upcoming Matches</h2>
+				<h2 className="mb-6 font-display text-[26px] uppercase text-ink">{settings.upcomingHeading}</h2>
 				{upcoming.length > 0 ? (
 					<div className="flex flex-col gap-3">
-						{upcoming.map((m) => (
+						{upcoming.slice(0, settings.matchRows).map((m) => (
 							<a key={m.id} href={m.href} className="block rounded-[10px] border border-black/10 bg-white px-[18px] pb-4 pt-3.5 text-inherit no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
 								<div className="mb-3 flex items-center justify-between gap-2">
 									<span className="rounded bg-brand/[0.08] px-[9px] py-[3px] font-mono text-[10px] uppercase tracking-[0.12em] text-brand">{m.when}</span>

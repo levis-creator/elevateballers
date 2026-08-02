@@ -23,6 +23,11 @@ import type { TeamPlayer } from "../../features/team/data/teamData";
 import Spacing from "../../shared/components/ui/Spacing.astro";
 import PageLoader from "../../components/PageLoader";
 import { TeamPlayerTable } from "../../features/team/components/TeamPlayerTable.tsx";
+import { playersListToken, resolvePublicPlayersListSettings, siteSettingsService } from '../../features/settings';
+import PlayersBoard from '../../features/player/presentation/v2/sections/PlayersBoard';
+import { getPlayersDirectoryData } from '../../features/player/domain/usecases/get-players-directory-data';
+const settings = resolvePublicPlayersListSettings(await siteSettingsService.list('players').catch(() => []));
+const directoryData = await getPlayersDirectoryData();
 
 // Fetch all approved players (getPlayers filters by approved: true for public access)
 let players: Player[] = [];
@@ -67,7 +72,9 @@ function transformPlayerToTeamPlayer(player: Player): TeamPlayer {
 }
 
 // Transform all players
-const teamPlayers: TeamPlayer[] = players.map(transformPlayerToTeamPlayer);
+const teamPlayers: TeamPlayer[] = players.map(transformPlayerToTeamPlayer)
+    .sort((a, b) => settings.sort === 'Name' ? a.name.localeCompare(b.name) : settings.sort === 'Points per game' ? b.ppg - a.ppg : 0)
+    .slice(0, settings.perPage);
 
 // Create a single category with all approved players
 const playerCategories =
@@ -82,7 +89,7 @@ const playerCategories =
 ---
 
 <Layout
-    title="Players Directory - Elevate Basketball Rising Stars"
+    title={`${settings.title} - Elevate Ballers`}
     description="Meet the athletes of Elevate Basketball. View player profiles, stats, positions, and performance data for all our approved league participants."
     canonicalURL={`${Astro.url.origin}/players/`}
     type="website"
@@ -148,22 +155,12 @@ const playerCategories =
                                         class="heading-font"
                                         style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                                     >
-                                        PLAYERS
+                                        {settings.title}
                                     </h1>
 
-                                    {
-                                        playerCategories.map((category) => (
-                                            <div class="player-category-section">
-                                                <h3 class="heading-font category-heading">
-                                                    {category.name}
-                                                </h3>
-                                                <TeamPlayerTable
-                                                    players={category.players}
-                                                    client:load
-                                                />
-                                            </div>
-                                        ))
-                                    }
+                                    <p style="text-align:center;margin-top:-35px;margin-bottom:35px;color:#777;">{playersListToken(settings.eyebrow, { season: String(new Date().getFullYear()) })}{settings.totalLine ? ` · ${players.length} registered player${players.length === 1 ? '' : 's'}` : ''}</p>
+
+                                    <PlayersBoard data={directoryData} settings={settings} client:load />
 
                                     <Spacing
                                         id="stm-spacing-players-footer"
