@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { formatMatchDate, formatMatchTime, getRelativeTimeDescription } from '../../lib/utils';
 import TeamName from '@/features/teams/presentation/components/TeamName';
+import { DEFAULT_PUBLIC_FIXTURES_SETTINGS, type PublicFixturesSettings } from '@/features/settings/application/fixturesSettings';
+import { DEFAULT_PUBLIC_RESULTS_SETTINGS, type PublicResultsSettings } from '@/features/settings/application/resultsSettings';
 
 type FixtureRow = {
   id: string;
@@ -10,9 +12,11 @@ type FixtureRow = {
   team1Name: string;
   team1Nickname?: string | null;
   team1Logo?: string | null;
+  team1Id?: string | null;
   team2Name: string;
   team2Nickname?: string | null;
   team2Logo?: string | null;
+  team2Id?: string | null;
   league: string;
   venue?: string;
   status: string;
@@ -26,9 +30,11 @@ type ResultRow = {
   team1Name: string;
   team1Nickname?: string | null;
   team1Logo?: string | null;
+  team1Id?: string | null;
   team2Name: string;
   team2Nickname?: string | null;
   team2Logo?: string | null;
+  team2Id?: string | null;
   team1Score: number | string;
   team2Score: number | string;
   league: string;
@@ -46,6 +52,8 @@ interface MatchesTabbedTableProps {
   fixtures: FixtureRow[];
   results: ResultRow[];
   initialTab?: TabKey;
+  fixturesSettings?: PublicFixturesSettings;
+  resultsSettings?: PublicResultsSettings;
 }
 
 const PAGE_SIZE = 8;
@@ -80,9 +88,9 @@ function handleRowKeyDown(event: React.KeyboardEvent<HTMLElement>, matchId: stri
   }
 }
 
-function FixtureTable({ matches }: { matches: FixtureRow[] }) {
+function FixtureTable({ matches, settings }: { matches: FixtureRow[]; settings: PublicFixturesSettings }) {
   if (matches.length === 0) {
-    return <EmptyState title="No upcoming fixtures" copy="New games will appear here once the schedule is published." />;
+    return <EmptyState title={settings.emptyTitle} copy={settings.emptyBody} />;
   }
 
   return (
@@ -94,8 +102,8 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
               <th className="px-5 py-4 font-semibold">Date</th>
               <th className="px-5 py-4 font-semibold">Time</th>
               <th className="px-5 py-4 font-semibold">Match</th>
-              <th className="px-5 py-4 font-semibold">League</th>
-              <th className="px-5 py-4 font-semibold">Venue</th>
+              {settings.leagueTag && <th className="px-5 py-4 font-semibold">League</th>}
+              {settings.venue && <th className="px-5 py-4 font-semibold">Venue</th>}
               <th className="px-5 py-4 font-semibold">Status</th>
               <th className="px-5 py-4 font-semibold text-right">Details</th>
             </tr>
@@ -124,10 +132,11 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
                     awayNickname={match.team2Nickname}
                     homeLogo={match.team1Logo}
                     awayLogo={match.team2Logo}
+                    showCrests={settings.crests}
                   />
                 </td>
-                <td className="px-5 py-4 align-middle text-gray-300">{match.league}</td>
-                <td className="px-5 py-4 align-middle text-gray-300">{match.venue || 'TBA'}</td>
+                {settings.leagueTag && <td className="px-5 py-4 align-middle text-gray-300">{match.league}</td>}
+                {settings.venue && <td className="px-5 py-4 align-middle text-gray-300">{match.venue || 'TBA'}</td>}
                 <td className="px-5 py-4 align-middle">
                   <StatusBadge status={match.status} />
                 </td>
@@ -139,6 +148,7 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
                   >
                     View
                   </a>
+                  {settings.ics && <div className="mt-1 flex justify-end gap-2 text-[10px]">{match.team1Id && <a href={`/api/calendar/teams/${match.team1Id}.ics`} download onClick={(event) => event.stopPropagation()}>Home .ics</a>}{match.team2Id && <a href={`/api/calendar/teams/${match.team2Id}.ics`} download onClick={(event) => event.stopPropagation()}>Away .ics</a>}</div>}
                 </td>
               </tr>
             ))}
@@ -167,10 +177,11 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
               awayNickname={match.team2Nickname}
               homeLogo={match.team1Logo}
               awayLogo={match.team2Logo}
+              showCrests={settings.crests}
             />
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs text-gray-400">
-              <span className="truncate">{match.league}</span>
-              <span className="truncate">{match.venue || 'TBA'}</span>
+              <span className="truncate">{settings.leagueTag ? match.league : ''}</span>
+              <span className="truncate">{settings.venue ? match.venue || 'TBA' : ''}</span>
             </div>
           </a>
         ))}
@@ -179,9 +190,9 @@ function FixtureTable({ matches }: { matches: FixtureRow[] }) {
   );
 }
 
-function ResultsTableView({ matches }: { matches: ResultRow[] }) {
+function ResultsTableView({ matches, settings }: { matches: ResultRow[]; settings: PublicResultsSettings }) {
   if (matches.length === 0) {
-    return <EmptyState title="No recent results" copy="Completed games will show up here after the final whistle." />;
+    return <EmptyState title={settings.emptyTitle} copy={settings.emptyBody} />;
   }
 
   return (
@@ -200,8 +211,8 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
           </thead>
           <tbody>
             {matches.map((match) => {
-              const team1Won = match.winnerName === match.team1Name;
-              const team2Won = match.winnerName === match.team2Name;
+              const team1Won = settings.winnerHighlight && match.winnerName === match.team1Name;
+              const team2Won = settings.winnerHighlight && match.winnerName === match.team2Name;
 
               return (
                 <tr
@@ -209,9 +220,9 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
                   tabIndex={0}
                   role="link"
                   aria-label={`Open result: ${match.team1Name} vs ${match.team2Name}`}
-                  onClick={() => openMatch(matchPath(match))}
-                  onKeyDown={(event) => handleRowKeyDown(event, matchPath(match))}
-                  className="cursor-pointer border-b border-white/8 text-sm text-gray-100 transition-colors hover:bg-white/[0.03] focus:outline-none focus:ring-2 focus:ring-[#10b981]/70 focus:ring-inset"
+                  onClick={settings.boxLink ? () => openMatch(matchPath(match)) : undefined}
+                  onKeyDown={settings.boxLink ? (event) => handleRowKeyDown(event, matchPath(match)) : undefined}
+                  className={`${settings.boxLink ? 'cursor-pointer' : ''} border-b border-white/8 text-sm text-gray-100 transition-colors hover:bg-white/[0.03] focus:outline-none focus:ring-2 focus:ring-[#10b981]/70 focus:ring-inset`}
                 >
                   <td className="px-5 py-4 align-middle">
                     <div className="font-semibold text-white">{formatMatchDate(match.date)}</div>
@@ -242,13 +253,13 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
                     <StatusBadge status={match.status} />
                   </td>
                   <td className="px-5 py-4 align-middle text-right">
-                    <a
+                  {settings.boxLink && <a
                       href={`/matches/${matchPath(match)}/`}
                       onClick={(event) => event.stopPropagation()}
                       className="text-sm font-semibold text-[#10b981] no-underline transition-colors hover:text-white"
                     >
                       Recap
-                    </a>
+                  </a>}
                   </td>
                 </tr>
               );
@@ -259,13 +270,13 @@ function ResultsTableView({ matches }: { matches: ResultRow[] }) {
 
       <div className="grid gap-4 md:hidden">
         {matches.map((match) => {
-          const team1Won = match.winnerName === match.team1Name;
-          const team2Won = match.winnerName === match.team2Name;
+          const team1Won = settings.winnerHighlight && match.winnerName === match.team1Name;
+          const team2Won = settings.winnerHighlight && match.winnerName === match.team2Name;
 
           return (
             <a
               key={match.id}
-              href={`/matches/${matchPath(match)}/`}
+              href={settings.boxLink ? `/matches/${matchPath(match)}/` : undefined}
               className="block rounded-2xl border border-white/10 bg-[#151321] p-4 no-underline shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
             >
               <div className="mb-3 flex items-start justify-between gap-3">
@@ -307,6 +318,7 @@ function MatchupCell({
   awayLogo,
   homeHighlight = false,
   awayHighlight = false,
+  showCrests = true,
 }: {
   homeTeam: string;
   homeNickname?: string | null;
@@ -316,11 +328,12 @@ function MatchupCell({
   awayLogo?: string | null;
   homeHighlight?: boolean;
   awayHighlight?: boolean;
+  showCrests?: boolean;
 }) {
   return (
     <div className="grid gap-2">
-      <TeamLine name={homeTeam} nickname={homeNickname} logo={homeLogo} highlight={homeHighlight} />
-      <TeamLine name={awayTeam} nickname={awayNickname} logo={awayLogo} highlight={awayHighlight} />
+      <TeamLine name={homeTeam} nickname={homeNickname} logo={homeLogo} highlight={homeHighlight} showCrests={showCrests} />
+      <TeamLine name={awayTeam} nickname={awayNickname} logo={awayLogo} highlight={awayHighlight} showCrests={showCrests} />
     </div>
   );
 }
@@ -335,6 +348,7 @@ function MatchupCard({
   homeHighlight = false,
   awayHighlight = false,
   score,
+  showCrests = true,
 }: {
   homeTeam: string;
   homeNickname?: string | null;
@@ -345,15 +359,16 @@ function MatchupCard({
   homeHighlight?: boolean;
   awayHighlight?: boolean;
   score?: React.ReactNode;
+  showCrests?: boolean;
 }) {
   return (
     <div className="grid gap-3">
-      <TeamLine name={homeTeam} nickname={homeNickname} logo={homeLogo} highlight={homeHighlight} mobile />
+      <TeamLine name={homeTeam} nickname={homeNickname} logo={homeLogo} highlight={homeHighlight} mobile showCrests={showCrests} />
       <div className="flex items-center justify-center gap-3 text-xs uppercase tracking-[0.24em] text-gray-500">
         <span>vs</span>
         {score}
       </div>
-      <TeamLine name={awayTeam} nickname={awayNickname} logo={awayLogo} highlight={awayHighlight} mobile />
+      <TeamLine name={awayTeam} nickname={awayNickname} logo={awayLogo} highlight={awayHighlight} mobile showCrests={showCrests} />
     </div>
   );
 }
@@ -364,18 +379,20 @@ function TeamLine({
   logo,
   highlight = false,
   mobile = false,
+  showCrests = true,
 }: {
   name: string;
   nickname?: string | null;
   logo?: string | null;
   highlight?: boolean;
   mobile?: boolean;
+  showCrests?: boolean;
 }) {
   return (
     <TeamName
       team={{ name, nickname, logo, initials: teamAbbr(name) }}
       variant={mobile ? 'compact' : 'table'}
-      withCrest
+      withCrest={showCrests}
       className={`font-semibold ${mobile ? 'text-base' : 'text-sm'} ${highlight ? 'text-white' : 'text-gray-200'}`}
       crestClassName="h-9 w-9 bg-white/5 text-[0.72rem] font-black tracking-wide text-gray-200 ring-1 ring-white/10"
     />
@@ -489,14 +506,18 @@ export default function MatchesTabbedTable({
   fixtures,
   results,
   initialTab = 'fixtures',
+  fixturesSettings = DEFAULT_PUBLIC_FIXTURES_SETTINGS,
+  resultsSettings = DEFAULT_PUBLIC_RESULTS_SETTINGS,
 }: MatchesTabbedTableProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [fixturePage, setFixturePage] = useState(1);
   const [resultsPage, setResultsPage] = useState(1);
-  const fixtureTotalPages = Math.max(1, Math.ceil(fixtures.length / PAGE_SIZE));
-  const resultsTotalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-  const pagedFixtures = fixtures.slice((fixturePage - 1) * PAGE_SIZE, fixturePage * PAGE_SIZE);
-  const pagedResults = results.slice((resultsPage - 1) * PAGE_SIZE, resultsPage * PAGE_SIZE);
+  const horizonEnd = Date.now() + fixturesSettings.horizon * 24 * 60 * 60 * 1000;
+  const visibleFixtures = fixtures.filter((match) => new Date(match.date).getTime() <= horizonEnd || match.status === 'LIVE');
+  const fixtureTotalPages = Math.max(1, Math.ceil(visibleFixtures.length / PAGE_SIZE));
+  const resultsTotalPages = Math.max(1, Math.ceil(results.length / resultsSettings.perPage));
+  const pagedFixtures = visibleFixtures.slice((fixturePage - 1) * PAGE_SIZE, fixturePage * PAGE_SIZE);
+  const pagedResults = results.slice((resultsPage - 1) * resultsSettings.perPage, resultsPage * resultsSettings.perPage);
   const showFixtures = activeTab === 'fixtures';
 
   return (
@@ -505,14 +526,14 @@ export default function MatchesTabbedTable({
         <div>
           <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.28em] text-[#ffba00]">Match Center</p>
           <h2 className="m-0 mt-2 text-3xl font-bold uppercase tracking-[0.04em] text-white md:text-4xl">
-            Fixtures and Results
+            {showFixtures ? fixturesSettings.title : resultsSettings.title}
           </h2>
           <p className="m-0 mt-2 max-w-2xl text-sm leading-6 text-gray-400">
             Scan the next scheduled tip-offs or switch to recent finals without leaving the page.
           </p>
         </div>
 
-        <div className="inline-flex w-full gap-1 rounded-2xl border border-white/10 bg-[#100f19] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] md:w-auto">
+        {fixturesSettings.viewTabs && <div className="inline-flex w-full gap-1 rounded-2xl border border-white/10 bg-[#100f19] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] md:w-auto">
           <button
             type="button"
             data-match-tab="fixtures"
@@ -557,11 +578,11 @@ export default function MatchesTabbedTable({
             Results
             <span className="ml-2 text-xs opacity-80">{results.length}</span>
           </button>
-        </div>
+        </div>}
       </div>
 
       <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 md:p-6">
-        {showFixtures ? <FixtureTable matches={pagedFixtures} /> : <ResultsTableView matches={pagedResults} />}
+        {showFixtures ? <FixtureTable matches={pagedFixtures} settings={fixturesSettings} /> : <ResultsTableView matches={pagedResults} settings={resultsSettings} />}
       </div>
 
       <div className="rounded-[24px] border border-white/8 bg-white/[0.02] px-4 py-4 md:px-6">

@@ -13,6 +13,8 @@ export * from './application/rulesPageSettings';
 export * from './application/contactPageSettings';
 export * from './application/competitionSettings';
 export * from './application/standingsSettings';
+export * from './application/fixturesSettings';
+export * from './application/resultsSettings';
 export * from './application/headerSettings';
 export * from './application/footerSettings';
 export * from './application/brandSettings';

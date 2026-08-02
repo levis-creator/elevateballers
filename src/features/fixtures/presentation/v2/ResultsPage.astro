@@ -7,10 +7,11 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import ResultsBoard from "./sections/ResultsBoard.tsx";
 import { getFixturesData } from "@/features/fixtures/domain/usecases/get-fixtures-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
-import { applyCompetitionSettings, resolvePublicCompetitionSettings, siteSettingsService } from "@/features/settings";
+import { applyCompetitionSettings, resolvePublicCompetitionSettings, resolvePublicResultsSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer, leagueRecords] = await Promise.all([getFixturesData(), getFooterData(), siteSettingsService.list("leagues")]);
+const [data, footer, leagueRecords, resultRecords] = await Promise.all([getFixturesData(), getFooterData(), siteSettingsService.list("leagues"), siteSettingsService.list("results")]);
 const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
+const settings = resolvePublicResultsSettings(resultRecords);
 const competitions = applyCompetitionSettings(data.competitions, competitionSettings);
 const matches = data.matches
 	.filter((match) => !match.leagueSeasonId || competitions.some((item) => item.id === match.leagueSeasonId))
@@ -22,6 +23,6 @@ const matches = data.matches
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="results" />
-	<ResultsBoard matches={matches} seasons={[...new Set(competitions.map((item) => item.seasonLabel))]} defaultSeason={competitions[0]?.seasonLabel ?? data.defaultSeason} competitions={competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} client:load />
+	<ResultsBoard matches={matches} seasons={[...new Set(competitions.map((item) => item.seasonLabel))]} defaultSeason={competitions[0]?.seasonLabel ?? data.defaultSeason} competitions={competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={settings} client:load />
 	<Footer footer={footer} />
 </div>

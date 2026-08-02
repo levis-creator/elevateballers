@@ -929,24 +929,48 @@ export const SECTIONS: Section[] = [
       f('standings_cutLabel', 'Cut line label', 'Use {n} for the number of spots.', { defaultValue: 'Playoff cutoff · Top {n}' }),
     ] },
   ]),
-  competition('fixtures', 'Fixtures', 'Upcoming fixture headings and empty states.', [
-    {
-      label: 'Fixtures',
-      fields: [
-        f('fixtures_title', 'Page title'),
-        f('fixtures_empty', 'Empty message', '', { type: 'area' }),
-      ],
-    },
-  ]),
-  competition('results', 'Results', 'Results page headings and empty states.', [
-    {
-      label: 'Results',
-      fields: [
-        f('results_title', 'Page title'),
-        f('results_empty', 'Empty message', '', { type: 'area' }),
-      ],
-    },
-  ]),
+  competition('fixtures', 'Fixtures', 'Upcoming matches: how they are grouped, filtered and what each card shows.', [
+    { label: 'Hero', fields: [
+      f('fixtures_eyebrow', 'Eyebrow', 'Use {season} for the selected season.', { defaultValue: 'Match Calendar · Season {season}' }),
+      f('fixtures_title', 'Page title', '', { defaultValue: 'Fixtures' }),
+      f('fixtures_browseRow', 'Browse row', 'Teams / Standings / Fixtures / Results shortcuts under the hero.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Controls', fields: [
+      f('fixtures_viewTabs', 'Upcoming / Results toggle', 'Switches this page between the two views.', { type: 'toggle', defaultValue: 'true' }),
+      f('fixtures_leagueFilter', 'League filter', 'All / EBL / EWBL pills.', { type: 'toggle', defaultValue: 'true' }),
+      f('fixtures_dayNav', 'Day stepper', 'Previous / next match day above the list.', { type: 'toggle', defaultValue: 'true' }),
+      f('fixtures_horizon', 'Days ahead', 'How far into the schedule the public list runs.', { defaultValue: '30' }),
+    ] },
+    { label: 'Match cards', fields: [
+      f('fixtures_venue', 'Show venue', 'Printed beside the tip-off time.', { type: 'toggle', defaultValue: 'true' }),
+      f('fixtures_leagueTag', 'League tag', 'Small pill in the card header.', { type: 'toggle', defaultValue: 'true' }),
+      f('fixtures_crests', 'Team crests', 'Falls back to initials when a club has no crest.', { type: 'toggle', defaultValue: 'true' }),
+      f('fixtures_ics', 'Calendar export', 'Adds an .ics subscribe link per team.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Empty state', fields: [
+      f('fixtures_emptyTitle', 'Heading', 'Shown when the filters return nothing.', { defaultValue: 'No upcoming fixtures' }),
+      f('fixtures_emptyBody', 'Message', 'Shown when no league filter is applied.', { type: 'area', defaultValue: 'The schedule for this season hasn’t been published yet. Check back soon.' }),
+      f('fixtures_emptyBodyFiltered', 'Message · league filtered', 'Use {league} for the selected league code.', { type: 'area', defaultValue: 'No {league} fixtures are scheduled right now.' }),
+    ] },
+  ], '/upcoming-fixtures'),
+  competition('results', 'Results', 'Completed matches and what links out of each row.', [
+    { label: 'Hero', fields: [
+      f('results_eyebrow', 'Eyebrow', 'Use {season} for the selected season.', { defaultValue: 'Final Scores · Season {season}' }),
+      f('results_title', 'Page title', '', { defaultValue: 'Results' }),
+    ] },
+    { label: 'Listing', fields: [
+      f('results_perPage', 'Results per page', '', { defaultValue: '20' }),
+      f('results_groupBy', 'Group by', '', { type: 'select', options: ['Date', 'Round', 'Team'], defaultValue: 'Date' }),
+      f('results_boxLink', 'Box score link', 'Each row opens the match page.', { type: 'toggle', defaultValue: 'true' }),
+      f('results_winnerHighlight', 'Highlight the winner', 'Bolds the winning side and its score.', { type: 'toggle', defaultValue: 'true' }),
+      f('results_leadersStrip', 'Top performers strip', 'Best line from each match night.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Empty state', fields: [
+      f('results_emptyTitle', 'Heading', '', { defaultValue: 'No results yet' }),
+      f('results_emptyBody', 'Message', '', { type: 'area', defaultValue: 'Completed matches will appear here once games have been played this season.' }),
+      f('results_emptyBodyFiltered', 'Message · league filtered', 'Use {league} for the selected league code.', { type: 'area', defaultValue: 'No {league} results recorded yet for this season.' }),
+    ] },
+  ], '/matches'),
   competition('match', 'Match Page', 'Match detail labels and sharing copy.', [
     {
       label: 'Match detail',

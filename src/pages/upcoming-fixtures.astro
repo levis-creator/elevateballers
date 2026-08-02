@@ -12,10 +12,12 @@ if (!usePublicV2) return Astro.rewrite("/upcoming-fixtures-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import FixturesPage from "@/features/fixtures/presentation/v2/FixturesPage.astro";
+import { resolvePublicFixturesSettings, siteSettingsService } from "@/features/settings";
+const pageSettings = resolvePublicFixturesSettings(await siteSettingsService.list("fixtures"));
 ---
 
 <LayoutV2
-	title="Fixtures - Elevate Ballers | Match Calendar & Results"
+	title={`${pageSettings.title} - Elevate Ballers | Match Calendar & Results`}
 	description="Elevate Ballers match calendar — upcoming fixtures and final results by season and league, with tip-off times and scores."
 	canonicalURL={`${Astro.url.origin}/upcoming-fixtures/`}
 	type="website"
