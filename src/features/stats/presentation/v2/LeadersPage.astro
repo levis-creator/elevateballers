@@ -9,6 +9,10 @@ import { getLeadersData } from "@/features/stats/domain/usecases/get-leaders-dat
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { configuredLeagueName, resolvePublicCompetitionSettings, siteSettingsService } from "@/features/settings";
 import { ALL_LEAGUES } from "@/features/stats/domain/entities/leaders-v2";
+import type { PublicLeadersSettings } from "@/features/settings/application/leadersSettings";
+
+interface Props { settings: PublicLeadersSettings }
+const { settings } = Astro.props;
 
 const [rawData, footer, leagueRecords] = await Promise.all([getLeadersData(), getFooterData(), siteSettingsService.list("leagues")]);
 const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
@@ -27,6 +31,6 @@ const data = {
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="stats" />
-	<LeadersBoard data={data} competitionSettings={competitionSettings} client:load />
+	<LeadersBoard data={data} competitionSettings={competitionSettings} settings={settings} client:load />
 	<Footer footer={footer} />
 </div>

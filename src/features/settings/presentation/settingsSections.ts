@@ -971,21 +971,39 @@ export const SECTIONS: Section[] = [
       f('results_emptyBodyFiltered', 'Message · league filtered', 'Use {league} for the selected league code.', { type: 'area', defaultValue: 'No {league} results recorded yet for this season.' }),
     ] },
   ], '/matches'),
-  competition('match', 'Match Page', 'Match detail labels and sharing copy.', [
-    {
-      label: 'Match detail',
-      fields: [
-        f('match_title', 'Page title'),
-        f('match_shareText', 'Share text', '', { type: 'area' }),
-      ],
-    },
-  ]),
-  competition('leaders', 'Leaders', 'Stat leader headings and explanatory copy.', [
-    {
-      label: 'Leaders',
-      fields: [f('leaders_title', 'Page title'), f('leaders_intro', 'Intro', '', { type: 'area' })],
-    },
-  ]),
+  competition('match', 'Match Page', 'The single-match page: scoreboard, tabs and how live scoring reaches the public.', [
+    { label: 'Tabs', fields: [
+      f('match_tabs', 'Tabs', 'Shown in this order. The first is the default tab.', { type: 'list', addLabel: 'Add tab', maxItems: 3, columns: [{ key: 'label', label: 'Tab', placeholder: 'Box Score', width: '1fr' }], defaultValue: '[{"label":"Box Score"},{"label":"Play-by-Play"},{"label":"Timeline"}]' }),
+      f('match_boxScore', 'Box score visibility', 'Who can open a full box score.', { type: 'select', options: ['Public', 'Signed-in users', 'Staff only'], defaultValue: 'Public' }),
+      f('match_playRows', 'Plays per page', 'Before the “show more” step on Play-by-Play.', { defaultValue: '25' }),
+    ] },
+    { label: 'Scoreboard', fields: [
+      f('match_quarters', 'Quarter breakdown', 'Per-quarter scores under the final line.', { type: 'toggle', defaultValue: 'true' }),
+      f('match_lineups', 'Lineups', 'Starters and bench.', { type: 'toggle', defaultValue: 'true' }),
+      f('match_video', 'Highlight embed', 'YouTube embed when a link is attached.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Live', fields: [
+      f('match_delay', 'Live score delay (seconds)', 'Buffer between the Live Console and the public page.', { defaultValue: '30' }),
+      f('match_autoPublish', 'Auto-publish finals', 'Publishes when a scorer marks a match FINAL.', { type: 'toggle', defaultValue: 'false' }),
+      f('match_liveBadge', 'Live badge', 'Shown on in-progress matches everywhere on the site.', { defaultValue: 'LIVE' }),
+    ] },
+  ], '/matches'),
+  competition('leaders', 'Leaders', 'Statistical leaderboards, their categories and the qualification rule.', [
+    { label: 'Hero', fields: [
+      f('leaders_eyebrow', 'Eyebrow', 'Use {season} for the selected season.', { defaultValue: 'Statistical Leaders · Season {season}' }),
+      f('leaders_title', 'Page title', '', { defaultValue: 'League Leaders' }),
+    ] },
+    { label: 'Boards', fields: [
+      f('leaders_categories', 'Categories', 'Category pills, in this order. The first is selected on arrival.', { type: 'list', addLabel: 'Add category', maxItems: 6, columns: [{ key: 'name', label: 'Category', placeholder: 'Points', width: '1fr' }, { key: 'unit', label: 'Unit', placeholder: 'PPG', width: '.5fr' }], defaultValue: '[{"name":"Points","unit":"PPG"},{"name":"Rebounds","unit":"RPG"},{"name":"Assists","unit":"APG"},{"name":"Steals","unit":"SPG"},{"name":"Blocks","unit":"BPG"},{"name":"3-Pointers","unit":"3PG"}]' }),
+      f('leaders_podium', 'Top-three podium', 'Cards above the full leaderboard.', { type: 'toggle', defaultValue: 'true' }),
+      f('leaders_boardRows', 'Rows in the leaderboard', '', { defaultValue: '15' }),
+      f('leaders_perGame', 'Per-game averages', 'Off shows season totals.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Qualification', fields: [
+      f('leaders_minGames', 'Minimum games', 'Below this a player is not ranked.', { defaultValue: '3' }),
+      f('leaders_qualNote', 'Qualification note', 'Printed under the table. Use {n} for the minimum.', { defaultValue: 'Minimum {n} games to qualify' }),
+    ] },
+  ], '/stats/leaders'),
   competition(
     'registration',
     'Registration',

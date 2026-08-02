@@ -7,16 +7,19 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import MatchDetailBoard from "./sections/MatchDetailBoard.tsx";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import type { MatchView } from "@/features/matches/domain/entities/match-detail-v2";
+import type { PublicMatchPageSettings } from "@/features/settings/application/matchPageSettings";
 
 interface Props {
 	view: MatchView;
+	settings: PublicMatchPageSettings;
+	canViewBoxScore: boolean;
 }
-const { view } = Astro.props;
+const { view, settings, canViewBoxScore } = Astro.props;
 const footer = await getFooterData();
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active={view.state === "upcoming" ? "fixtures" : "results"} />
-	<MatchDetailBoard view={view} client:load />
+	<MatchDetailBoard view={view} settings={settings} canViewBoxScore={canViewBoxScore} client:load />
 	<Footer footer={footer} />
 </div>

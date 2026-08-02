@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMatchViewStore } from "@/features/matches/presentation/stores/v2/useMatchViewStore";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { MatchView } from "@/features/matches/domain/entities/match-detail-v2";
+import { resolveMatchTabs, type MatchTabKind, type PublicMatchPageSettings } from "@/features/settings/application/matchPageSettings";
 
 const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
 
@@ -22,13 +23,24 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 	<h2 className="mb-4 font-display text-[22px] uppercase text-ink">{children}</h2>
 );
 
+const youtubeEmbed = (url: string): string | null => {
+	const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{6,})/i);
+	return match ? `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1` : null;
+};
+
 /** Full match-detail view: scoreboard hero + state-driven sections
  *  (live/final: quarters, performers, comparison, box, play-by-play;
  *  upcoming: recent form, head-to-head, players to watch). React island;
  *  box team and play-by-play period live in a Zustand store. */
-export default function MatchDetailBoard({ view: initialView }: { view: MatchView }) {
+export default function MatchDetailBoard({ view: initialView, settings, canViewBoxScore }: { view: MatchView; settings: PublicMatchPageSettings; canViewBoxScore: boolean }) {
 	const [view, setView] = useState(initialView);
 	const { box, period, setBox, setPeriod } = useMatchViewStore();
+	const tabs = resolveMatchTabs(settings.tabs).filter((tab) => tab.kind !== "box" || canViewBoxScore);
+	const [activeTab, setActiveTab] = useState<MatchTabKind>(tabs[0]?.kind ?? "play");
+	const [visiblePlays, setVisiblePlays] = useState(settings.playRows);
+	useEffect(() => {
+		if (!tabs.some((tab) => tab.kind === activeTab)) setActiveTab(tabs[0]?.kind ?? "play");
+	}, [activeTab, canViewBoxScore, settings.tabs]);
 
 	// Live matches refresh themselves in place. Poll the computed view every 15s
 	// while LIVE; the effect re-runs and tears the timer down once the match ends
@@ -46,17 +58,19 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 			} catch {
 				/* transient network error — keep the last good view, retry next tick */
 			}
-		}, 15000);
+		}, Math.max(1, settings.delay) * 1000);
 		return () => {
 			cancelled = true;
 			clearInterval(timer);
 		};
-	}, [view.id, view.state]);
+	}, [view.id, view.state, settings.delay]);
 
 	const activeBox = box === "away" ? "away" : "home";
 	const activePeriod = period && view.pbpPeriods.includes(period) ? period : (view.pbpPeriods[view.pbpPeriods.length - 1] ?? "");
 	const boxRows = view.box[activeBox];
 	const pbpRows = activePeriod ? (view.pbpByPeriod[activePeriod] ?? []) : [];
+	const displayedPbpRows = pbpRows.slice(0, visiblePlays);
+	useEffect(() => setVisiblePlays(settings.playRows), [activePeriod, settings.playRows, view.id]);
 	const barColor = (textColor: string) => (textColor === "var(--brand)" ? "var(--brand)" : "rgb(var(--site-brand-rgb) / 0.35)");
 
 	return (
@@ -100,7 +114,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 							)}
 							{view.state === "live" && (
 								<span className="flex items-center gap-2 rounded bg-brand px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-brandfg">
-									<span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />{view.liveTag}
+									<span className="inline-block h-2 w-2 animate-pulse rounded-full bg-white" />{view.liveTag?.replace(/^LIVE/i, settings.liveBadge) || settings.liveBadge}
 								</span>
 							)}
 						</div>
@@ -124,10 +138,25 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 				</div>
 			</section>
 
+			{view.showStats && tabs.length > 0 && <nav aria-label="Match detail sections" className="border-b border-black/[0.08] bg-panel">
+				<div className="mx-auto flex max-w-[1000px] flex-wrap gap-2 px-8 py-4 max-[960px]:px-6">
+					{tabs.map((tab) => <button key={tab.kind} type="button" onClick={() => setActiveTab(tab.kind)} className={seg(activeTab === tab.kind)}>{tab.label}</button>)}
+				</div>
+			</nav>}
+
+			{settings.video && view.highlightUrl && <section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
+				<SectionTitle>Highlights</SectionTitle>
+				<div className="aspect-video overflow-hidden rounded-xl border border-black/10 bg-night">
+					{youtubeEmbed(view.highlightUrl)
+						? <iframe src={youtubeEmbed(view.highlightUrl)!} title="Match highlights" className="h-full w-full" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+						: <video src={view.highlightUrl} className="h-full w-full" controls preload="metadata" />}
+				</div>
+			</section>}
+
 			{view.showStats ? (
 				<>
 					{/* QUARTER BREAKDOWN */}
-					{view.quarters.length > 0 && (
+					{settings.quarters && view.quarters.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 							<SectionTitle>Scoring by Quarter</SectionTitle>
 							<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
@@ -156,7 +185,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 					)}
 
 					{/* TOP PERFORMERS */}
-					{view.performers.length > 0 && (
+					{activeTab === "box" && view.performers.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 							<SectionTitle>Top Performers</SectionTitle>
 							<div className="grid grid-cols-3 gap-4 max-[600px]:grid-cols-1">
@@ -181,7 +210,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 					)}
 
 					{/* TEAM COMPARISON */}
-					{view.comparison.length > 0 && (
+					{activeTab === "box" && view.comparison.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 							<SectionTitle>Team Comparison</SectionTitle>
 							<div className="rounded-xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
@@ -210,7 +239,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 					)}
 
 					{/* BOX SCORES */}
-					{(view.box.home.length > 0 || view.box.away.length > 0) && (
+					{activeTab === "box" && (view.box.home.length > 0 || view.box.away.length > 0) && (
 						<section className="mx-auto max-w-[1000px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
 							<div className="mb-4 flex items-center gap-2">
 								<button type="button" onClick={() => setBox("home")} className={seg(activeBox === "home")}>{view.home.name}</button>
@@ -226,7 +255,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 											<span className="flex items-center gap-3">
 												<span className="w-6 font-mono text-[11px] text-muted2">{p.num}</span>
 												<span className="font-body text-[14px] font-bold text-ink2">{p.name}</span>
-												{p.starter && <span className="rounded bg-brand/10 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.08em] text-brand">ST</span>}
+														{settings.lineups && p.starter && <span className="rounded bg-brand/10 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.08em] text-brand">ST</span>}
 											</span>
 											<span className="text-center font-mono text-[13px] text-muted">{p.min}</span>
 											<span className="text-center font-mono text-[13px] font-bold text-ink2">{p.pts}</span>
@@ -244,13 +273,13 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 					)}
 
 					{/* PLAY-BY-PLAY */}
-					{view.pbpPeriods.length > 0 && (
+					{activeTab === "play" && view.pbpPeriods.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pb-[48px] max-[960px]:px-6 max-[960px]:pb-9">
 							<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
 								<h2 className="flex items-center gap-3 font-display text-[22px] uppercase text-ink">
 									Play-by-Play
 									{view.state === "live" && (
-										<span className="flex items-center gap-1.5 rounded bg-brand px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-brandfg"><span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white" />LIVE</span>
+										<span className="flex items-center gap-1.5 rounded bg-brand px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-brandfg"><span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white" />{settings.liveBadge}</span>
 									)}
 								</h2>
 								<div className="flex items-center gap-2">
@@ -264,7 +293,7 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 								<span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />{view.away.abbr}</span>
 							</div>
 							<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
-								{pbpRows.map((e, i) => (
+								{displayedPbpRows.map((e, i) => (
 									<div key={i} className="flex items-center gap-4 border-b border-black/[0.06] px-5 py-3 last:border-0">
 										<span className="w-[46px] flex-shrink-0 font-mono text-[12px] text-muted2">{e.t}</span>
 										<span className="inline-block h-[9px] w-[9px] flex-shrink-0 rounded-full" style={{ background: e.side === "home" ? "var(--brand)" : e.side === "away" ? "var(--ink,#141009)" : "var(--muted2,#b3a99c)" }} />
@@ -273,14 +302,28 @@ export default function MatchDetailBoard({ view: initialView }: { view: MatchVie
 									</div>
 								))}
 							</div>
+							{visiblePlays < pbpRows.length && <div className="mt-4 text-center"><button type="button" onClick={() => setVisiblePlays((count) => count + settings.playRows)} className={seg(false)}>Show more</button></div>}
 						</section>
 					)}
 
-					{!view.quarters.length && !view.performers.length && !view.box.home.length && !view.box.away.length && !view.pbpPeriods.length && (
+					{activeTab === "timeline" && view.timeline.length > 0 && (
+						<section className="mx-auto max-w-[1000px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+							<SectionTitle>Timeline</SectionTitle>
+							<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
+								{view.timeline.map((event, index) => <div key={`${event.t}-${index}`} className="flex items-center gap-4 border-b border-black/[0.06] px-5 py-3 last:border-0">
+									<span className="w-[72px] flex-shrink-0 font-mono text-[11px] text-muted2">{event.t}</span>
+									<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.08em] text-white" style={{ background: event.color }}>{event.chip}</span>
+									<span className="flex-1 font-body text-[14px] text-ink2"><strong>{event.title}</strong>{event.team ? ` · ${event.team}` : ""}{event.detail ? ` — ${event.detail}` : ""}</span>
+								</div>)}
+							</div>
+						</section>
+					)}
+
+					{tabs.length === 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 py-[56px] max-[960px]:px-6">
 							<div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-16 text-center">
-								<div className="font-display text-[20px] uppercase text-ink">Stats coming soon</div>
-								<p className="max-w-[360px] text-[14px] leading-[1.5] text-muted">Detailed box scores and play-by-play for this match haven’t been recorded yet.</p>
+								<div className="font-display text-[20px] uppercase text-ink">Match details unavailable</div>
+								<p className="max-w-[360px] text-[14px] leading-[1.5] text-muted">The available match sections are restricted or currently disabled.</p>
 							</div>
 						</section>
 					)}

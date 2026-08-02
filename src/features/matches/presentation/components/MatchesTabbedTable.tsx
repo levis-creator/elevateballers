@@ -3,6 +3,7 @@ import { formatMatchDate, formatMatchTime, getRelativeTimeDescription } from '..
 import TeamName from '@/features/teams/presentation/components/TeamName';
 import { DEFAULT_PUBLIC_FIXTURES_SETTINGS, type PublicFixturesSettings } from '@/features/settings/application/fixturesSettings';
 import { DEFAULT_PUBLIC_RESULTS_SETTINGS, type PublicResultsSettings } from '@/features/settings/application/resultsSettings';
+import { DEFAULT_PUBLIC_MATCH_PAGE_SETTINGS, type PublicMatchPageSettings } from '@/features/settings/application/matchPageSettings';
 
 type FixtureRow = {
   id: string;
@@ -54,6 +55,7 @@ interface MatchesTabbedTableProps {
   initialTab?: TabKey;
   fixturesSettings?: PublicFixturesSettings;
   resultsSettings?: PublicResultsSettings;
+  matchSettings?: PublicMatchPageSettings;
 }
 
 const PAGE_SIZE = 8;
@@ -88,7 +90,7 @@ function handleRowKeyDown(event: React.KeyboardEvent<HTMLElement>, matchId: stri
   }
 }
 
-function FixtureTable({ matches, settings }: { matches: FixtureRow[]; settings: PublicFixturesSettings }) {
+function FixtureTable({ matches, settings, liveBadge }: { matches: FixtureRow[]; settings: PublicFixturesSettings; liveBadge: string }) {
   if (matches.length === 0) {
     return <EmptyState title={settings.emptyTitle} copy={settings.emptyBody} />;
   }
@@ -138,7 +140,7 @@ function FixtureTable({ matches, settings }: { matches: FixtureRow[]; settings: 
                 {settings.leagueTag && <td className="px-5 py-4 align-middle text-gray-300">{match.league}</td>}
                 {settings.venue && <td className="px-5 py-4 align-middle text-gray-300">{match.venue || 'TBA'}</td>}
                 <td className="px-5 py-4 align-middle">
-                  <StatusBadge status={match.status} />
+                  <StatusBadge status={match.status} liveBadge={liveBadge} />
                 </td>
                 <td className="px-5 py-4 align-middle text-right">
                   <a
@@ -168,7 +170,7 @@ function FixtureTable({ matches, settings }: { matches: FixtureRow[]; settings: 
                 <div className="text-sm font-semibold text-white">{formatMatchDate(match.date)}</div>
                 <div className="text-xs text-gray-400">{formatMatchTime(match.date)} • {getRelativeTimeDescription(match.date)}</div>
               </div>
-              <StatusBadge status={match.status} />
+              <StatusBadge status={match.status} liveBadge={liveBadge} />
             </div>
             <MatchupCard
               homeTeam={match.team1Name}
@@ -423,10 +425,10 @@ function ScoreCell({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, liveBadge = 'LIVE' }: { status: string; liveBadge?: string }) {
   return (
     <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.18em] ring-1 ${statusClass(status)}`}>
-      {status}
+      {status === 'LIVE' ? liveBadge : status}
     </span>
   );
 }
@@ -508,6 +510,7 @@ export default function MatchesTabbedTable({
   initialTab = 'fixtures',
   fixturesSettings = DEFAULT_PUBLIC_FIXTURES_SETTINGS,
   resultsSettings = DEFAULT_PUBLIC_RESULTS_SETTINGS,
+  matchSettings = DEFAULT_PUBLIC_MATCH_PAGE_SETTINGS,
 }: MatchesTabbedTableProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [fixturePage, setFixturePage] = useState(1);
@@ -582,7 +585,7 @@ export default function MatchesTabbedTable({
       </div>
 
       <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 md:p-6">
-        {showFixtures ? <FixtureTable matches={pagedFixtures} settings={fixturesSettings} /> : <ResultsTableView matches={pagedResults} settings={resultsSettings} />}
+        {showFixtures ? <FixtureTable matches={pagedFixtures} settings={fixturesSettings} liveBadge={matchSettings.liveBadge} /> : <ResultsTableView matches={pagedResults} settings={resultsSettings} />}
       </div>
 
       <div className="rounded-[24px] border border-white/8 bg-white/[0.02] px-4 py-4 md:px-6">

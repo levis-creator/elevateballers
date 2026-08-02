@@ -361,6 +361,17 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 	try {
 		const match = await getMatchWithFullDetails(slugOrId);
 		if (!match) return null;
+		const videos = await prisma.media.findMany({
+			where: { type: "VIDEO", isPrivate: false },
+			select: { url: true, tags: true },
+			orderBy: { createdAt: "desc" },
+			take: 100,
+		}).catch(() => []);
+		const attachmentKeys = new Set([`match:${match.id}`, `match:${(match as any).slug ?? ""}`, match.id, (match as any).slug].filter(Boolean));
+		const highlightUrl = videos.find((video) => {
+			const tags = Array.isArray(video.tags) ? video.tags : [];
+			return tags.some((tag) => attachmentKeys.has(String(tag).trim()));
+		})?.url ?? null;
 
 		const state: MatchState = match.status === "COMPLETED" ? "final" : match.status === "LIVE" ? "live" : "upcoming";
 		const hasScore = state === "final" || state === "live";
@@ -414,6 +425,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			dateText: `${weekday}, ${MON[p.month - 1]} ${p.day}`,
 			time: formatMatchTime(match.date),
 			venue: null as string | null,
+			highlightUrl,
 			liveTag:
 				state === "live"
 					? `LIVE · ${periodLabel(match.currentPeriod ?? 1)}${match.clockSeconds != null ? ` ${mmss(match.clockSeconds)}` : ""}`

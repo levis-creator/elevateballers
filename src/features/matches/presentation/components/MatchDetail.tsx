@@ -13,6 +13,7 @@ import TeamLogo from './TeamLogo';
 import TeamName from '@/features/teams/presentation/components/TeamName';
 import { getLeagueName } from '../../lib/league-helpers';
 import MatchImagesPublic from './MatchImagesPublic';
+import { resolveMatchTabs, type MatchTabKind, type PublicMatchPageSettings } from '@/features/settings/application/matchPageSettings';
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   TWO_POINT_MADE: '2-Point Made',
@@ -82,21 +83,30 @@ function computeRemainingFromTimestamp(m: {
 
 interface MatchDetailProps {
   match: MatchWithFullDetails;
+  settings: PublicMatchPageSettings;
+  canViewBoxScore: boolean;
 }
 
-export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
+export default function MatchDetail({ match: initialMatch, settings, canViewBoxScore }: MatchDetailProps) {
   const [match, setMatch] = useState(initialMatch);
   const [page1, setPage1] = useState(1);
   const [page2, setPage2] = useState(1);
   const [localClock, setLocalClock] = useState<number | null>(match.clockSeconds);
+  const tabs = resolveMatchTabs(settings.tabs).filter(tab => tab.kind !== 'box' || canViewBoxScore);
+  const [activeTab, setActiveTab] = useState<MatchTabKind>(tabs[0]?.kind ?? 'play');
+  const [visibleEvents, setVisibleEvents] = useState(settings.playRows);
   const itemsPerPage = 5;
+
+  useEffect(() => {
+    if (!tabs.some(tab => tab.kind === activeTab)) setActiveTab(tabs[0]?.kind ?? 'play');
+  }, [activeTab, canViewBoxScore, settings.tabs]);
 
   const matchRef = useRef(match);
   matchRef.current = match;
 
   useEffect(() => {
     if (match.status === 'COMPLETED') return;
-    const interval = match.status === 'LIVE' ? 5000 : 30000;
+    const interval = match.status === 'LIVE' ? Math.max(1, settings.delay) * 1000 : 30000;
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/matches/${matchRef.current.id}?includeDetails=true`);
@@ -110,7 +120,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
       }
     }, interval);
     return () => clearInterval(pollInterval);
-  }, [match.id, match.status]);
+  }, [match.id, match.status, settings.delay]);
 
   useEffect(() => {
     if (match.status !== 'LIVE' || !match.clockRunning) return;
@@ -158,6 +168,9 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
     () => [...(match.events || [])].sort((a, b) => b.minute - a.minute || (b.secondsRemaining || 0) - (a.secondsRemaining || 0)),
     [match.events],
   );
+  useEffect(() => setVisibleEvents(settings.playRows), [match.id, activeTab, settings.playRows]);
+  const periodRows = [...(((match as any).periods ?? []) as Array<{ periodNumber: number; team1Score: number; team2Score: number }>)]
+    .sort((a, b) => a.periodNumber - b.periodNumber);
 
   const getActivePlayers = (players: MatchPlayerWithDetails[]) => {
     const explicitlyActive = players.filter(mp => mp.isActive);
@@ -257,7 +270,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           </div>
           <div className={`md-status md-status--${match.status.toLowerCase()}`}>
             {isLive && <span className="md-status-dot" aria-hidden />}
-            <span>{statusLabel}</span>
+            <span>{isLive ? settings.liveBadge : statusLabel}</span>
           </div>
           <div className="md-hero-top-right">
             <span className="md-date-chip">{formatMatchDate(match.date)}</span>
@@ -276,7 +289,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
                   {formatClockTime(localClock)}
                 </span>
                 <span className="md-pylon-tag md-pylon-tag--live">
-                  <span className="md-live-pulse" aria-hidden /> LIVE
+                  <span className="md-live-pulse" aria-hidden /> {settings.liveBadge}
                 </span>
               </>
             ) : isCompleted ? (
@@ -337,7 +350,22 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
         )}
       </section>
 
-      <section className="md-section">
+      {settings.quarters && periodRows.length > 0 && (isLive || isCompleted) && (
+        <section className="md-section">
+          <header className="md-section-banner"><span className="md-section-bar" aria-hidden /><h2 className="md-section-title">Scoring by Quarter</h2></header>
+          <div className="md-quarter-grid" style={{ gridTemplateColumns: `minmax(130px,1fr) repeat(${periodRows.length},minmax(44px,64px))` }}>
+            <strong>Team</strong>{periodRows.map(period => <strong key={`head-${period.periodNumber}`}>Q{period.periodNumber}</strong>)}
+            <span>{team1Name}</span>{periodRows.map(period => <span key={`home-${period.periodNumber}`}>{period.team1Score}</span>)}
+            <span>{team2Name}</span>{periodRows.map(period => <span key={`away-${period.periodNumber}`}>{period.team2Score}</span>)}
+          </div>
+        </section>
+      )}
+
+      {(isLive || isCompleted) && tabs.length > 0 && <nav className="md-detail-tabs" aria-label="Match detail sections">
+        {tabs.map(tab => <button key={tab.kind} type="button" className={activeTab === tab.kind ? 'is-active' : ''} onClick={() => setActiveTab(tab.kind)}>{tab.label}</button>)}
+      </nav>}
+
+      {activeTab === 'box' && settings.lineups && canViewBoxScore && <section className="md-section">
         <header className="md-section-banner">
           <span className="md-section-bar" aria-hidden />
           <h2 className="md-section-title">Lineups</h2>
@@ -415,19 +443,19 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
             </div>
           ))}
         </div>
-      </section>
+      </section>}
 
-      {events.length > 0 && (
+      {(activeTab === 'play' || activeTab === 'timeline') && events.length > 0 && (
         <section className="md-section">
           <header className="md-section-banner">
             <span className="md-section-bar" aria-hidden />
-            <h2 className="md-section-title">Play-by-Play</h2>
+            <h2 className="md-section-title">{tabs.find(tab => tab.kind === activeTab)?.label ?? 'Play-by-Play'}</h2>
             <span className="md-section-sub">Most recent first</span>
           </header>
 
           <div className="md-timeline" role="list">
             <span className="md-timeline-spine" aria-hidden />
-            {events.map((event) => {
+            {events.slice(0, visibleEvents).map((event) => {
               const isTeam1 = event.teamId === team1Id;
               const category = getEventCategory(event.eventType);
               const label = event.eventType === 'OTHER'
@@ -466,6 +494,7 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
               );
             })}
           </div>
+          {visibleEvents < events.length && <div className="md-pager"><button type="button" className="md-pager-btn" onClick={() => setVisibleEvents(count => count + settings.playRows)}>Show more</button></div>}
         </section>
       )}
 
@@ -476,6 +505,13 @@ export default function MatchDetail({ match: initialMatch }: MatchDetailProps) {
           color: #f1f5f9;
           position: relative;
         }
+
+        .md-detail-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:24px 0; padding:12px; border:1px solid rgba(255,255,255,.1); border-radius:14px; background:rgba(255,255,255,.03); }
+        .md-detail-tabs button { border:1px solid rgba(255,255,255,.14); border-radius:9px; padding:10px 16px; background:transparent; color:#cbd5e1; font-weight:800; text-transform:uppercase; letter-spacing:.08em; cursor:pointer; }
+        .md-detail-tabs button.is-active { border-color:var(--brand); background:var(--brand); color:var(--brandfg,#fff); }
+        .md-quarter-grid { display:grid; overflow-x:auto; gap:1px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(255,255,255,.08); }
+        .md-quarter-grid > * { min-width:0; padding:12px; background:#151321; text-align:center; }
+        .md-quarter-grid > :nth-child(${periodRows.length + 1}n + 1) { text-align:left; }
 
         .md-sr-h1 {
           position: absolute;

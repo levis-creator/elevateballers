@@ -1,6 +1,7 @@
 ---
 import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
-import { applyTitlePattern, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
+import { applyTitlePattern, canViewMatchBoxScore, resolvePublicMatchPageSettings, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
+import { getCurrentUser } from '@/features/cms/lib/auth';
 // Legacy (v1) match-detail page on its own route. `/matches/<slug|id>` rewrites
 // here when PUBLIC_UI_VERSION !== 'v2'. Guard so it isn't served directly under v2.
 import { usePublicV2 } from "@/lib/ui-version";
@@ -65,6 +66,12 @@ const team1Logo = getDisplayImageUrl(match?.team1?.logo || match?.team1Logo);
 const team2Logo = getDisplayImageUrl(match?.team2?.logo || match?.team2Logo);
 const matchLeague = match?.league?.name || match?.leagueName || "Elevate Ballers";
 const matchStatus = match?.status || "UPCOMING";
+const [matchSettingRecords, currentUser] = await Promise.all([
+  siteSettingsService.list('match').catch(() => []),
+  getCurrentUser(Astro.request).catch(() => null),
+]);
+const matchSettings = resolvePublicMatchPageSettings(matchSettingRecords);
+const canViewBoxScore = canViewMatchBoxScore(matchSettings.boxScore, Boolean(currentUser), Boolean((currentUser as any)?.userRoles?.length));
 const matchDate = match?.date
   ? new Date(match.date).toLocaleDateString("en-US", {
       timeZone: MATCH_TIMEZONE,
@@ -288,7 +295,7 @@ const eventStatusUrl = "https://schema.org/EventScheduled";
                       />
                     ) : match ? (
                       <div style="max-width: 960px; margin: 0 auto;">
-                        <MatchDetail client:load match={match} />
+                        <MatchDetail client:load match={match} settings={matchSettings} canViewBoxScore={canViewBoxScore} />
                       </div>
                     ) : null
                   }
