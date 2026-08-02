@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
 import { isRegistrationOpen, registrationClosedMessage } from '../../../../lib/registration';
+import { registrationToken, type PublicRegistrationSettings } from '../../../settings';
 
 interface League {
   id: string;
@@ -56,7 +57,7 @@ interface PlayerFormData {
 
 type TabType = 'team' | 'player';
 
-export default function LeagueRegistrationForm() {
+export default function LeagueRegistrationForm({ settings, registrationOpen }: { settings: PublicRegistrationSettings; registrationOpen: boolean }) {
   const [activeTab, setActiveTab] = useState<TabType>('team');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,10 @@ export default function LeagueRegistrationForm() {
   const [teamsLoading, setTeamsLoading] = useState(true);
   const [teamTurnstileToken, setTeamTurnstileToken] = useState<string | null>(null);
   const [playerTurnstileToken, setPlayerTurnstileToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!settings.playerMode && activeTab === 'player') setActiveTab('team');
+  }, [activeTab, settings.playerMode]);
 
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonsLoading, setSeasonsLoading] = useState(false);
@@ -174,7 +179,7 @@ export default function LeagueRegistrationForm() {
   const registrationStatus = selectedLeague
     ? isRegistrationOpen(selectedLeague, registrationSeason)
     : { open: true };
-  const registrationBlocked = !registrationStatus.open;
+  const registrationBlocked = !registrationOpen || !registrationStatus.open;
 
   const handleTeamSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -198,6 +203,7 @@ export default function LeagueRegistrationForm() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Idempotency-Key': crypto.randomUUID(),
         },
         body: JSON.stringify({
           name: teamFormData.name.trim(),
@@ -228,7 +234,7 @@ export default function LeagueRegistrationForm() {
         additionalInfo: '',
       });
       setTeamTurnstileToken(null);
-      setSuccess('Team and coach registration submitted successfully! We will contact you soon.');
+      setSuccess(registrationToken(settings.successBody, 'team'));
     } catch (err) {
       console.error('Error submitting team registration:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit team registration');
@@ -239,6 +245,11 @@ export default function LeagueRegistrationForm() {
 
   const handlePlayerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!settings.playerMode || registrationBlocked) {
+      setError(settings.playerMode ? settings.closedBody : 'Individual player registration is currently disabled.');
+      return;
+    }
 
     if (!playerTurnstileToken) {
       setError('Please complete the security check before submitting.');
@@ -254,6 +265,7 @@ export default function LeagueRegistrationForm() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Idempotency-Key': crypto.randomUUID(),
         },
         body: JSON.stringify({
           firstName: playerFormData.firstName.trim(),
@@ -289,7 +301,7 @@ export default function LeagueRegistrationForm() {
         additionalInfo: '',
       });
       setPlayerTurnstileToken(null);
-      setSuccess('Player registration submitted successfully! We will contact you soon.');
+      setSuccess(registrationToken(settings.successBody, 'player'));
     } catch (err) {
       console.error('Error submitting player registration:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit player registration');
@@ -357,7 +369,7 @@ export default function LeagueRegistrationForm() {
         >
           Team Registration
         </button>
-        <button
+        {settings.playerMode && <button
           type="button"
           onClick={() => {
             setActiveTab('player');
@@ -379,7 +391,7 @@ export default function LeagueRegistrationForm() {
           }}
         >
           Player Registration
-        </button>
+        </button>}
       </div>
 
       {/* Success Message */}
@@ -396,7 +408,7 @@ export default function LeagueRegistrationForm() {
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            <p style={{ margin: 0, fontWeight: '500' }}>{success}</p>
+            <p style={{ margin: 0 }}><strong style={{ display: 'block' }}>{settings.successTitle}</strong>{success}</p>
           </div>
         </div>
       )}
@@ -594,7 +606,7 @@ export default function LeagueRegistrationForm() {
       )}
 
       {/* Player Registration Form */}
-      {activeTab === 'player' && (
+      {settings.playerMode && activeTab === 'player' && (
         <form onSubmit={handlePlayerSubmit} className="registration-form">
           <h3 className="heading-font" style={{ color: '#dd3333', marginBottom: '20px', fontSize: '24px', textAlign: 'center' }}>
             Player Registration Form
@@ -774,22 +786,22 @@ export default function LeagueRegistrationForm() {
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
-              disabled={submitting || !playerTurnstileToken}
+              disabled={submitting || !playerTurnstileToken || registrationBlocked}
               className="button btn-primary btn-lg"
               style={{
-                backgroundColor: (submitting || !playerTurnstileToken) ? '#999' : '#dd3333',
+                backgroundColor: (submitting || !playerTurnstileToken || registrationBlocked) ? '#999' : '#dd3333',
                 color: '#fff',
                 border: '2px solid #dd3333',
                 padding: '15px 40px',
                 fontFamily: 'Teko',
                 fontSize: '18px',
                 textTransform: 'uppercase',
-                cursor: (submitting || !playerTurnstileToken) ? 'not-allowed' : 'pointer',
+                cursor: (submitting || !playerTurnstileToken || registrationBlocked) ? 'not-allowed' : 'pointer',
                 borderRadius: '3px',
-                opacity: (submitting || !playerTurnstileToken) ? 0.5 : 1,
+                opacity: (submitting || !playerTurnstileToken || registrationBlocked) ? 0.5 : 1,
               }}
             >
-              {submitting ? 'Submitting...' : 'Submit Registration'}
+              {submitting ? 'Submitting...' : registrationBlocked ? 'Registration Closed' : 'Submit Registration'}
             </button>
           </div>
         </form>

@@ -9,13 +9,15 @@ if (!usePublicV2) return Astro.rewrite("/league-registration-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import RegistrationPage from "@/features/registration/presentation/v2/RegistrationPage.astro";
+import { resolvePublicRegistrationSettings, siteSettingsService } from "@/features/settings";
+const settings = resolvePublicRegistrationSettings(await siteSettingsService.list("registration").catch(() => []));
 ---
 
 <LayoutV2
-	title="League Registration - Elevate Ballers | Register a Team or Player"
-	description="Register your team or sign up as a player for the Elevate Ballers season. Tryouts run year-round for late entries — join Kenya's premier basketball league."
+	title={`${settings.title.replace(/\n/g, " ")} - Elevate Ballers`}
+	description={settings.intro}
 	canonicalURL={`${Astro.url.origin}/league-registration/`}
 	type="website"
 >
-	<RegistrationPage />
+	<RegistrationPage settings={settings} />
 </LayoutV2>

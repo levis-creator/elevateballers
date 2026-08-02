@@ -2,6 +2,7 @@ import { useState, useEffect, type ComponentType } from "react";
 import { PUBLIC_TURNSTILE_SITE_KEY } from "astro:env/client";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import { isRegistrationOpen, registrationClosedMessage } from "@/lib/registration";
+import { registrationToken, type PublicRegistrationSettings } from "@/features/settings/application/registrationSettings";
 import {
 	Users,
 	User,
@@ -86,7 +87,7 @@ function SelectChevron() {
 	return <ChevronDown className="pointer-events-none absolute right-3.5 top-[38px] h-4 w-4 text-muted" aria-hidden />;
 }
 
-export default function RegistrationFormV2() {
+export default function RegistrationFormV2({ settings, registrationOpen }: { settings: PublicRegistrationSettings; registrationOpen: boolean }) {
 	const [activeTab, setActiveTab] = useState<TabType>("team");
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -100,6 +101,9 @@ export default function RegistrationFormV2() {
 	const [seasons, setSeasons] = useState<Season[]>([]);
 	const [seasonsLoading, setSeasonsLoading] = useState(false);
 	const [agreed, setAgreed] = useState(false);
+	useEffect(() => {
+		if (!settings.playerMode && activeTab === "player") setActiveTab("team");
+	}, [activeTab, settings.playerMode]);
 
 	const [teamFormData, setTeamFormData] = useState<TeamFormData>({
 		name: "",
@@ -188,7 +192,7 @@ export default function RegistrationFormV2() {
 			}
 		: selectedSeason;
 	const registrationStatus = selectedLeague ? isRegistrationOpen(selectedLeague, registrationSeason) : { open: true };
-	const registrationBlocked = !registrationStatus.open;
+	const registrationBlocked = !registrationOpen || !registrationStatus.open;
 
 	const handleTeamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
 		const { name, value } = e.target;
@@ -247,6 +251,10 @@ export default function RegistrationFormV2() {
 
 	const handlePlayerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		if (!settings.playerMode || !registrationOpen) {
+			setError(settings.closedBody);
+			return;
+		}
 		if (!playerTurnstileToken) {
 			setError("Please complete the security check before submitting.");
 			return;
@@ -317,10 +325,9 @@ export default function RegistrationFormV2() {
 					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1f9d55]/[0.12] text-[#1f9d55]">
 						<Check className="h-7 w-7" strokeWidth={2.5} aria-hidden />
 					</div>
-					<h2 className="mt-5 font-display text-[30px] uppercase text-ink">You're in the queue</h2>
+					<h2 className="mt-5 font-display text-[30px] uppercase text-ink">{settings.successTitle}</h2>
 					<p className="mt-3 max-w-[440px] text-[15px] leading-[1.65] text-muted">
-						Thanks — your {modeLabel} registration has been received. We review entries within 3 working days and will email
-						confirmation and next steps to the address you provided.
+						{registrationToken(settings.successBody, modeLabel)}
 					</p>
 					<div className="mt-6 flex flex-wrap gap-3">
 						<button
@@ -343,7 +350,7 @@ export default function RegistrationFormV2() {
 	}
 
 	const canSubmitTeam = !submitting && !!teamTurnstileToken && !registrationBlocked && agreed;
-	const canSubmitPlayer = !submitting && !!playerTurnstileToken && agreed;
+	const canSubmitPlayer = !submitting && !!playerTurnstileToken && agreed && registrationOpen && settings.playerMode;
 	const submitCls =
 		"col-span-full mt-2 inline-flex items-center justify-center gap-2 justify-self-start rounded-lg bg-brand px-9 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#b9b3aa] disabled:opacity-70 max-[600px]:w-full";
 
@@ -352,7 +359,7 @@ export default function RegistrationFormV2() {
 			{/* SEGMENTED TABS */}
 			<div className="mb-7 inline-flex w-full max-w-[440px] gap-1 rounded-xl border border-black/10 bg-white p-1.5 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 				{tabBtn("team", "Team", Users)}
-				{tabBtn("player", "Player", User)}
+				{settings.playerMode && tabBtn("player", "Player", User)}
 			</div>
 
 			{error && (

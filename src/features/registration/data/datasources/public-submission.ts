@@ -17,6 +17,8 @@ export type TeamSubmissionInput = {
   leagueId?: string;
   additionalInfo?: string;
   leagueName?: string;
+  requireApproval: boolean;
+  entryFee: number;
 };
 
 export type PlayerSubmissionInput = {
@@ -32,6 +34,8 @@ export type PlayerSubmissionInput = {
   teamName?: string;
   teamId?: string;
   additionalInfo?: string;
+  requireApproval: boolean;
+  entryFee: number;
 };
 
 export async function findSubmission(idempotencyKey: string): Promise<any | null> {
@@ -42,9 +46,9 @@ export async function submitTeamRegistration(input: TeamSubmissionInput): Promis
   return prisma.$transaction(async (tx) => {
     const db = tx as any;
     const description = [input.leagueName && `League: ${input.leagueName}`, `Coach: ${input.coachName}`, input.additionalInfo && `Additional Info: ${input.additionalInfo}`].filter(Boolean).join('\n');
-    const team = await createTeam({ name: input.name, description: description || undefined, approved: false }, db);
+    const team = await createTeam({ name: input.name, description: description || undefined, approved: !input.requireApproval }, db);
     const parts = input.coachName.trim().split(/\s+/);
-    const coachStaff = await createStaff({ firstName: parts[0], lastName: parts.slice(1).join(' ') || parts[0], email: input.contactEmail, phone: input.contactPhone, role: 'COACH', bio: input.additionalInfo || undefined, approved: false }, db);
+    const coachStaff = await createStaff({ firstName: parts[0], lastName: parts.slice(1).join(' ') || parts[0], email: input.contactEmail, phone: input.contactPhone, role: 'COACH', bio: input.additionalInfo || undefined, approved: !input.requireApproval }, db);
     const assignment = await db.teamStaff.findUnique({ where: { teamId_staffId: { teamId: team.id, staffId: coachStaff.id } } });
     if (!assignment) await assignStaffToTeam({ teamId: team.id, staffId: coachStaff.id, role: 'COACH' }, db);
 
@@ -54,8 +58,8 @@ export async function submitTeamRegistration(input: TeamSubmissionInput): Promis
       for (const player of playersToLink) await db.registrationNotification.create({ data: { type: 'PLAYER_AUTO_LINKED', playerId: player.id, teamId: team.id, message: `Player ${player.firstName} ${player.lastName} was automatically linked to team ${team.name}`, metadata: { playerName: `${player.firstName} ${player.lastName}`, teamName: team.name } } });
     }
 
-    await db.registrationNotification.create({ data: { type: 'TEAM_REGISTERED', teamId: team.id, staffId: coachStaff.id, message: `New team registration: ${team.name} (Coach: ${input.coachName})`, metadata: { teamName: team.name, coachName: input.coachName, leagueName: input.leagueName ?? null, linkedPlayersCount: playersToLink.length } } });
-    const response = { success: true, message: 'Team registration submitted successfully', entityId: team.id };
+    await db.registrationNotification.create({ data: { type: 'TEAM_REGISTERED', teamId: team.id, staffId: coachStaff.id, message: `New team registration: ${team.name} (Coach: ${input.coachName})`, metadata: { teamName: team.name, coachName: input.coachName, leagueName: input.leagueName ?? null, linkedPlayersCount: playersToLink.length, entryFee: input.entryFee, approvalRequired: input.requireApproval } } });
+    const response = { success: true, message: 'Team registration submitted successfully', entityId: team.id, status: input.requireApproval ? 'pending' : 'approved', entryFee: input.entryFee };
     const submission = await db.publicRegistrationSubmission.create({ data: { idempotencyKey: input.idempotencyKey, kind: 'TEAM', emailHash: emailHash(input.contactEmail), entityId: team.id, response, expiresAt: expiresAt() } });
     const jobs = await Promise.all([
       db.publicRegistrationEmailJob.create({ data: { submissionKey: submission.idempotencyKey, jobType: 'team_registration_auto_reply', payload: { jobType: 'team_registration_auto_reply', data: { coachName: input.coachName, email: input.contactEmail, teamName: team.name, leagueName: input.leagueName ?? null } } } }),
@@ -69,9 +73,9 @@ export async function submitPlayerRegistration(input: PlayerSubmissionInput): Pr
   return prisma.$transaction(async (tx) => {
     const db = tx as any;
     const bio = input.additionalInfo ? `Additional Info: ${input.additionalInfo}` : undefined;
-    const player = await createPlayer({ firstName: input.firstName, lastName: input.lastName, email: input.email, phone: input.phone, height: input.height, weight: input.weight, position: input.position, jerseyNumber: input.jerseyNumber, teamId: input.teamId, bio, approved: false }, db);
-    await db.registrationNotification.create({ data: { type: 'PLAYER_REGISTERED', playerId: player.id, teamId: input.teamId || undefined, message: `New player registration: ${input.firstName} ${input.lastName}${input.teamId ? ` (Team: ${input.teamName})` : ''}`, metadata: { playerName: `${input.firstName} ${input.lastName}`, teamName: input.teamName || null, teamLinked: !!input.teamId } } });
-    const response = { success: true, message: 'Player registration submitted successfully', entityId: player.id };
+    const player = await createPlayer({ firstName: input.firstName, lastName: input.lastName, email: input.email, phone: input.phone, height: input.height, weight: input.weight, position: input.position, jerseyNumber: input.jerseyNumber, teamId: input.teamId, bio, approved: !input.requireApproval }, db);
+    await db.registrationNotification.create({ data: { type: 'PLAYER_REGISTERED', playerId: player.id, teamId: input.teamId || undefined, message: `New player registration: ${input.firstName} ${input.lastName}${input.teamId ? ` (Team: ${input.teamName})` : ''}`, metadata: { playerName: `${input.firstName} ${input.lastName}`, teamName: input.teamName || null, teamLinked: !!input.teamId, entryFee: input.entryFee, approvalRequired: input.requireApproval } } });
+    const response = { success: true, message: 'Player registration submitted successfully', entityId: player.id, status: input.requireApproval ? 'pending' : 'approved', entryFee: input.entryFee };
     const submission = await db.publicRegistrationSubmission.create({ data: { idempotencyKey: input.idempotencyKey, kind: 'PLAYER', emailHash: emailHash(input.email), entityId: player.id, response, expiresAt: expiresAt() } });
     const jobs = await Promise.all([
       db.publicRegistrationEmailJob.create({ data: { submissionKey: submission.idempotencyKey, jobType: 'player_registration_auto_reply', payload: { jobType: 'player_registration_auto_reply', data: { name: `${input.firstName} ${input.lastName}`.trim(), email: input.email, teamName: input.teamName || null } } } }),
