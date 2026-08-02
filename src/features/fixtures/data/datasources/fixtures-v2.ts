@@ -10,6 +10,7 @@ import { getDisplayImageUrl } from "@/lib/asset-url";
 import type { FixtureMatch, FixtureStatus, FixturesData } from "@/features/fixtures/domain/entities/fixtures-v2";
 import { prisma } from "@/lib/prisma";
 import { getPublicCompetitions } from "@/features/seasons/data/public-competitions";
+import { calculatePlayerMatchStats } from "@/features/player/domain/usecases/playerStats";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -49,6 +50,11 @@ function toFixture(m: any): FixtureMatch {
 		seasonId: m.seasonId ?? m.season?.id ?? null,
 		leagueSeasonId: m.leagueSeasonId ?? null,
 		conferenceIds: [],
+		homeTeamId: m.team1Id ?? null,
+		awayTeamId: m.team2Id ?? null,
+		venue: m.venue ?? m.team1?.venue ?? m.team2?.venue ?? null,
+		round: m.bracketRound ? `Round ${m.bracketRound}` : m.stage ? String(m.stage).toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter: string) => letter.toUpperCase()) : "Regular Season",
+		performer: null,
 		ts: new Date(m.date).getTime(),
 		isoDate,
 		day: String(p.day).padStart(2, "0"),
@@ -86,6 +92,31 @@ export async function fetchFixturesData(): Promise<FixturesData | null> {
 		]);
 		const raw = [...upcoming, ...completed];
 		const matches = raw.map(toFixture);
+		const completedIds = completed.map((match: any) => match.id);
+		if (completedIds.length) {
+			const statMatches = await prisma.match.findMany({
+				where: { id: { in: completedIds } },
+				select: {
+					id: true,
+					events: { where: { isUndone: false }, select: { eventType: true, playerId: true, assistPlayerId: true, isUndone: true } },
+					matchPlayers: { select: { playerId: true, team: { select: { abbreviation: true, name: true } }, player: { select: { firstName: true, lastName: true, image: true } } } },
+				},
+			});
+			const performers = new Map(statMatches.map((match) => {
+				const rows = match.matchPlayers.map((entry) => {
+					const stats = calculatePlayerMatchStats(entry.playerId, match.events);
+					return {
+						name: `${entry.player.firstName ?? ""} ${entry.player.lastName ?? ""}`.trim() || "Unknown player",
+						team: entry.team.abbreviation || entry.team.name,
+						image: getDisplayImageUrl(entry.player.image),
+						pts: stats.points, reb: stats.rebounds, ast: stats.assists,
+					};
+				}).filter((entry) => entry.pts || entry.reb || entry.ast)
+					.sort((a, b) => b.pts - a.pts || b.reb - a.reb || b.ast - a.ast);
+				return [match.id, rows[0] ?? null] as const;
+			}));
+			matches.forEach((match) => { match.performer = performers.get(match.id) ?? null; });
+		}
 		const conferenceByTeam = new Map(
 			memberships.map((row) => [`${row.leagueSeasonId}:${row.teamId}`, row.conferenceId]),
 		);

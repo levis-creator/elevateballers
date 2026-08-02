@@ -12,10 +12,12 @@ if (!usePublicV2) return Astro.rewrite("/matches/results");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import ResultsPage from "@/features/fixtures/presentation/v2/ResultsPage.astro";
+import { resolvePublicResultsSettings, siteSettingsService } from "@/features/settings";
+const pageSettings = resolvePublicResultsSettings(await siteSettingsService.list("results"));
 ---
 
 <LayoutV2
-	title="Results - Elevate Ballers | Final Scores"
+	title={`${pageSettings.title} - Elevate Ballers | Final Scores`}
 	description="Elevate Ballers results — final scores by season and league, with the latest result featured and every completed match grouped by date."
 	canonicalURL={`${Astro.url.origin}/matches/`}
 	type="website"

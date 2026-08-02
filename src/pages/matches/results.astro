@@ -12,6 +12,11 @@ import MatchesTabbedTable from "../../features/matches/presentation/components/M
 import PageLoader from "../../components/PageLoader";
 import ContentLoader from "../../components/ContentLoader";
 import { getDisplayImageUrl } from "../../lib/asset-url";
+import { resolvePublicFixturesSettings, resolvePublicResultsSettings, siteSettingsService } from "@/features/settings";
+
+const [fixtureSettingRecords, resultSettingRecords] = await Promise.all([siteSettingsService.list("fixtures"), siteSettingsService.list("results")]);
+const fixturesSettings = resolvePublicFixturesSettings(fixtureSettingRecords);
+const resultsSettings = resolvePublicResultsSettings(resultSettingRecords);
 
 Astro.response.headers.set("X-Robots-Tag", "noindex, follow");
 
@@ -32,9 +37,11 @@ try {
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Nickname: m.team1?.nickname ?? null,
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
+    team1Id: m.team1Id,
     team2Name: m.team2Name || m.team2?.name || "TBD",
     team2Nickname: m.team2?.nickname ?? null,
     team2Logo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
+    team2Id: m.team2Id,
     league: m.league?.name || m.leagueName || "Unknown League",
     venue: (m as any).venue || "Main Court",
     status: m.status,
@@ -47,9 +54,11 @@ try {
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Nickname: m.team1?.nickname ?? null,
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
+    team1Id: m.team1Id,
     team2Name: m.team2Name || m.team2?.name || "TBD",
     team2Nickname: m.team2?.nickname ?? null,
     team2Logo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
+    team2Id: m.team2Id,
     team1Score: m.team1Score ?? "-",
     team2Score: m.team2Score ?? "-",
     league: m.league?.name || m.leagueName || "Unknown League",
@@ -68,7 +77,7 @@ try {
 }
 
 const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
-const pageTitle = "Match Results - Elevate Ballers";
+const pageTitle = `${resultsSettings.title} - Elevate Ballers`;
 const pageDescription =
   "View the latest completed match results from the Elevate Ballers league.";
 const pageUrl = `${siteBase}/matches/`;
@@ -147,6 +156,8 @@ const pageUrl = `${siteBase}/matches/`;
                           fixtures={fixtures}
                           results={results}
                           initialTab="results"
+                          fixturesSettings={fixturesSettings}
+                          resultsSettings={resultsSettings}
                           client:load
                         />
                       </div>

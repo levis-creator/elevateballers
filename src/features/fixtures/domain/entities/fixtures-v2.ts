@@ -19,6 +19,11 @@ export interface FixtureMatch {
 	seasonId: string | null;
 	leagueSeasonId: string | null;
 	conferenceIds: string[];
+	homeTeamId: string | null;
+	awayTeamId: string | null;
+	venue: string | null;
+	round: string;
+	performer?: { name: string; team: string; image: string | null; pts: number; reb: number; ast: number } | null;
 
 	/** Epoch ms — precise sort key (upcoming ascending, results descending). */
 	ts: number;

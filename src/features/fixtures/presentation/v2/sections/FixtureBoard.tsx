@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { useFixturesStore } from "@/features/fixtures/presentation/stores/v2/useFixturesStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { FixtureMatch } from "@/features/fixtures/domain/entities/fixtures-v2";
 import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 import { configuredDefaultCompetitionId, type PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
+import { fixturesToken, type PublicFixturesSettings } from "@/features/settings/application/fixturesSettings";
 
 interface Props {
 	matches: FixtureMatch[];
@@ -12,6 +14,7 @@ interface Props {
 	competitions: PublicCompetitionOption[];
 	defaultLeagueSeasonId: string;
 	competitionSettings: PublicCompetitionSettings;
+	settings: PublicFixturesSettings;
 }
 
 const CREST_BG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
@@ -47,12 +50,18 @@ export function Crest({ logo, abbr, alt }: { logo: string | null; abbr: string; 
 /** Fixtures — season selector + Upcoming/Results toggle + league filter +
  *  date-grouped match list. React island; all three filters live in a Zustand
  *  store. Matches arrive with dates/times already formatted server-side. */
-export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId, competitionSettings }: Props) {
+export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId, competitionSettings, settings }: Props) {
 	const { leagueSeasonId, seasonId, conferenceId, view, setLeagueSeason, setSeason, setConference, setView } = useFixturesStore();
-	const selectedLeague = competitions.find((item) => item.id === leagueSeasonId);
+	const storedLeague = settings.leagueFilter ? competitions.find((item) => item.id === leagueSeasonId) : undefined;
 	const configuredDefaultId = configuredDefaultCompetitionId(competitions, competitionSettings, defaultLeagueSeasonId);
 	const defaultCompetition = competitions.find((item) => item.id === configuredDefaultId) ?? competitions[0];
-	const isOverall = Boolean(competitionSettings.allLabel) && !selectedLeague;
+	const selectedLeague = storedLeague ?? (
+		settings.leagueFilter &&
+		(competitionSettings.defaultLeague !== "Remember last choice" || !competitionSettings.allLabel)
+			? defaultCompetition
+			: undefined
+	);
+	const isOverall = !settings.leagueFilter || (Boolean(competitionSettings.allLabel) && !selectedLeague);
 	useEffect(() => {
 		if (competitionSettings.defaultLeague !== "Remember last choice") return;
 		const remembered = window.localStorage.getItem("eb-public-league-season");
@@ -69,11 +78,13 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 	const showConferences = !isOverall && selected?.structure === "CONFERENCES" && selected.conferences.length > 0;
 	const activeConferenceId = showConferences && selected.conferences.some((item) => item.id === conferenceId) ? conferenceId : "";
 
-	const isResults = view === "results";
+	const isResults = settings.viewTabs && view === "results";
+	const horizonEnd = Date.now() + settings.horizon * 24 * 60 * 60 * 1000;
 	const filtered = matches
 		.filter((m) => isOverall ? activeCompetitionIds.has(m.leagueSeasonId ?? "") : m.leagueSeasonId === selectedLeague?.id)
 		.filter((m) => !activeConferenceId || m.conferenceIds.includes(activeConferenceId))
 		.filter((m) => (isResults ? m.status === "done" : m.status !== "done"))
+		.filter((m) => isResults || m.status === "live" || m.ts <= horizonEnd)
 		.sort((a, b) => (isResults ? b.ts - a.ts : a.ts - b.ts));
 
 	// Group by match-day, preserving the sorted order.
@@ -88,11 +99,18 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 		}
 		g.matches.push(m);
 	}
+	const [dayIndex, setDayIndex] = useState(0);
+	useEffect(() => { setDayIndex(0); }, [leagueSeasonId, seasonId, conferenceId, view]);
+	const safeDayIndex = Math.min(dayIndex, Math.max(0, groups.length - 1));
+	const displayedGroups = settings.dayNav ? groups.slice(safeDayIndex, safeDayIndex + 1) : groups;
 
-	const emptyTitle = isResults ? "No results yet" : "No upcoming fixtures";
+	const emptyTitle = isResults ? "No results yet" : settings.emptyTitle;
 	const emptyBody = isResults
-		? `Completed matches will appear here once games have been played in this ${isOverall ? "season" : "competition"}.`
-		: `The schedule for this ${isOverall ? "season" : "competition"} hasn’t been published yet. Check back soon.`;
+		? "Completed matches will appear here once games have been played this season."
+		: selectedLeague ? fixturesToken(settings.emptyBodyFiltered, selectedLeague.leagueCode || selectedLeague.leagueLabel) : settings.emptyBody;
+	const heroSeason = competitionSettings.seasonLabel
+		? (selected?.seasonLabel ?? "").replace(new RegExp(`\\s+${competitionSettings.seasonLabel}$`, "i"), "")
+		: selected?.seasonLabel ?? "";
 
 	return (
 		<>
@@ -103,9 +121,9 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 				<div className="relative mx-auto flex max-w-[1280px] flex-wrap items-end justify-between gap-6 px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
 					<div>
 						<div className="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
-							<span className="h-px w-[26px] bg-brand" />Match Calendar{selected ? ` · ${selected.seasonLabel}` : ""}
+							<span className="h-px w-[26px] bg-brand" />{fixturesToken(settings.eyebrow, heroSeason)}
 						</div>
-						<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Fixtures</h1>
+						<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">{settings.title}</h1>
 					</div>
 					{seasonIds.length > 1 && selected && (
 						<div className="relative">
@@ -135,19 +153,25 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 					)}
 				</div>
 			</section>
+			{settings.browseRow && <nav aria-label="Browse competition pages" className="border-b border-black/[0.08] bg-white">
+				<div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-2 px-8 py-3 max-[960px]:px-6">
+					<span className="mr-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted2">Browse</span>
+					{[["Teams", "/teams"], ["Standings", "/standings"], [settings.title, "/upcoming-fixtures"], ["Results", "/matches"]].map(([label, href]) => <a key={href} href={href} className={`rounded-md px-3 py-2 text-[11px] font-bold uppercase tracking-[0.05em] no-underline ${href === "/upcoming-fixtures" ? "bg-brand text-brandfg" : "text-muted hover:text-brand"}`}>{label}</a>)}
+				</div>
+			</nav>}
 
 			{/* CONTROLS */}
 			<section className="border-b border-black/[0.08] bg-panel">
 				<div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-4 px-8 py-5 max-[960px]:px-6">
-					<div className="inline-flex rounded-lg border border-black/[0.12] bg-white p-1">
+					{settings.viewTabs && <div className="inline-flex rounded-lg border border-black/[0.12] bg-white p-1">
 						<button type="button" onClick={() => setView("upcoming")} className={segClass(!isResults)}>
 							Upcoming
 						</button>
 						<button type="button" onClick={() => setView("results")} className={segClass(isResults)}>
 							Results
 						</button>
-					</div>
-					{selected && (
+					</div>}
+					{settings.leagueFilter && selected && (
 						<div className="flex flex-wrap items-center gap-2">
 							<span className="mr-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Competition</span>
 							{competitionSettings.allLabel && <button type="button" onClick={() => setLeagueSeason("")} className={pillClass(isOverall)}>
@@ -170,9 +194,14 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 
 			{/* FIXTURE LIST */}
 			<section className="mx-auto max-w-[1000px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
+				{settings.dayNav && groups.length > 0 && <div className="mb-5 flex items-center justify-between rounded-xl border border-black/10 bg-white px-4 py-3">
+					<button type="button" disabled={safeDayIndex === 0} onClick={() => setDayIndex((index) => Math.max(0, index - 1))} className="rounded-md border border-black/10 px-3 py-2 text-[11px] font-bold uppercase disabled:opacity-35">← Previous day</button>
+					<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">{groups[safeDayIndex]?.weekday} · {groups[safeDayIndex]?.day} {groups[safeDayIndex]?.mon}</span>
+					<button type="button" disabled={safeDayIndex >= groups.length - 1} onClick={() => setDayIndex((index) => Math.min(groups.length - 1, index + 1))} className="rounded-md border border-black/10 px-3 py-2 text-[11px] font-bold uppercase disabled:opacity-35">Next day →</button>
+				</div>}
 				{groups.length > 0 ? (
 					<div className="flex flex-col gap-9">
-						{groups.map((g) => (
+						{displayedGroups.map((g) => (
 							<div key={g.isoDate}>
 								<div className="mb-4 flex items-center gap-4">
 									<div className="flex flex-col items-center justify-center rounded-lg bg-night px-3.5 py-2 text-center">
@@ -196,15 +225,18 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 										const statusText = m.status === "done" ? "Final" : m.status === "live" ? "Live" : "Upcoming";
 										const statusColor = m.status === "done" ? "var(--muted2,#8a817a)" : "var(--brand)";
 										return (
-											<a
-												key={m.id}
-												href={m.href}
-												className="block rounded-xl border border-black/10 bg-white px-5 py-4 no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
+										<div
+											key={m.id}
+											role="link"
+											tabIndex={0}
+											onClick={() => { window.location.href = m.href; }}
+											onKeyDown={(event) => { if (event.key === "Enter") window.location.href = m.href; }}
+											className="block cursor-pointer rounded-xl border border-black/10 bg-white px-5 py-4 no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 											>
 												<div className="mb-3 flex items-center justify-between gap-3">
-													<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgb(var(--site-ink-rgb)/0.06)", color: "var(--muted,#6f665c)" }}>
+											{settings.leagueTag && <span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgb(var(--site-ink-rgb)/0.06)", color: "var(--muted,#6f665c)" }}>
 												{m.leagueCode || m.league}
-													</span>
+											</span>}
 													<span className="font-mono text-[11px]" style={{ color: statusColor }}>
 														{statusText}
 													</span>
@@ -213,7 +245,7 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 													<TeamName
 														team={{ name: m.home, nickname: m.homeNickname, logo: m.homeLogo, initials: m.homeAbbr }}
 														variant="compact"
-														withCrest
+													withCrest={settings.crests}
 														crestPosition="end"
 														align="right"
 														className="justify-self-stretch font-body text-[15px] font-bold"
@@ -229,15 +261,19 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 													<TeamName
 														team={{ name: m.away, nickname: m.awayNickname, logo: m.awayLogo, initials: m.awayAbbr }}
 														variant="compact"
-														withCrest
+													withCrest={settings.crests}
 														className="justify-self-stretch font-body text-[15px] font-bold"
 														textStyle={{ color: awayColor }}
 													/>
 												</div>
 												<div className="mt-3 flex items-center justify-center gap-2 border-t border-black/[0.06] pt-3 font-mono text-[11px] text-muted2">
-													<span>{m.time}</span>
+												<span>{m.time}{settings.venue && m.venue ? ` · ${m.venue}` : ""}</span>
+												{settings.ics && (m.homeTeamId || m.awayTeamId) && <span className="ml-2 flex gap-2">
+													{m.homeTeamId && <a href={`/api/calendar/teams/${m.homeTeamId}.ics`} download onClick={(event) => event.stopPropagation()} className="text-brand no-underline">{m.homeAbbr} .ics</a>}
+													{m.awayTeamId && <a href={`/api/calendar/teams/${m.awayTeamId}.ics`} download onClick={(event) => event.stopPropagation()} className="text-brand no-underline">{m.awayAbbr} .ics</a>}
+												</span>}
 												</div>
-											</a>
+										</div>
 										);
 									})}
 								</div>
@@ -260,4 +296,3 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 		</>
 	);
 }
-import { useEffect } from "react";

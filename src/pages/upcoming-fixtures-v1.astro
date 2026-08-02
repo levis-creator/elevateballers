@@ -21,6 +21,11 @@ import MatchesTabbedTable from "../features/matches/presentation/components/Matc
 import PageLoader from "../components/PageLoader";
 import ContentLoader from "../components/ContentLoader";
 import { getDisplayImageUrl } from "../lib/asset-url";
+import { resolvePublicFixturesSettings, resolvePublicResultsSettings, siteSettingsService } from "@/features/settings";
+
+const [fixtureSettingRecords, resultSettingRecords] = await Promise.all([siteSettingsService.list("fixtures"), siteSettingsService.list("results")]);
+const fixturesSettings = resolvePublicFixturesSettings(fixtureSettingRecords);
+const resultsSettings = resolvePublicResultsSettings(resultSettingRecords);
 
 // Fetch match center data from database
 let fixtures: any[] = [];
@@ -39,9 +44,11 @@ try {
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Nickname: m.team1?.nickname ?? null,
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
+    team1Id: m.team1Id,
     team2Name: m.team2Name || m.team2?.name || "TBD",
     team2Nickname: m.team2?.nickname ?? null,
     team2Logo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
+    team2Id: m.team2Id,
     league: m.league?.name || m.leagueName || "Unknown League",
     venue: (m as any).venue || "Main Court",
     status: m.status,
@@ -54,9 +61,11 @@ try {
     team1Name: m.team1Name || m.team1?.name || "TBD",
     team1Nickname: m.team1?.nickname ?? null,
     team1Logo: getDisplayImageUrl(m.team1?.logo || m.team1Logo),
+    team1Id: m.team1Id,
     team2Name: m.team2Name || m.team2?.name || "TBD",
     team2Nickname: m.team2?.nickname ?? null,
     team2Logo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
+    team2Id: m.team2Id,
     team1Score: m.team1Score ?? "-",
     team2Score: m.team2Score ?? "-",
     league: m.league?.name || m.leagueName || "Unknown League",
@@ -76,7 +85,7 @@ try {
 ---
 
 <Layout
-  title="Upcoming Fixtures - Elevate Basketball Schedule"
+  title={`${fixturesSettings.title} - Elevate Basketball Schedule`}
   description="Never miss a game! View the complete schedule of upcoming basketball matches, venues, and tip-off times for the Elevate Basketball league."
   canonicalURL={`${Astro.url.origin}/upcoming-fixtures/`}
   type="website"
@@ -154,6 +163,8 @@ try {
                           fixtures={fixtures}
                           results={results}
                           initialTab="fixtures"
+                          fixturesSettings={fixturesSettings}
+                          resultsSettings={resultsSettings}
                           client:load
                         />
                       </div>
