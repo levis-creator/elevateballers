@@ -3,6 +3,7 @@ import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { FixtureMatch } from "@/features/fixtures/domain/entities/fixtures-v2";
 import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
+import type { PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 
 interface Props {
 	/** All matches for the site; the board keeps only completed ("done") games. */
@@ -11,6 +12,7 @@ interface Props {
 	defaultSeason: string;
 	competitions: PublicCompetitionOption[];
 	defaultLeagueSeasonId: string;
+	competitionSettings: PublicCompetitionSettings;
 }
 
 const WON = "var(--ink,#141009)";
@@ -31,7 +33,7 @@ const winnerText = (m: FixtureMatch): string =>
 /** Results — hero + featured latest result + league filter + date-grouped final
  *  scores. React island; season and league filters live in a Zustand store.
  *  Reuses the Fixtures data layer (completed matches only). */
-export default function ResultsBoard({ matches, seasons, defaultSeason }: Props) {
+export default function ResultsBoard({ matches, seasons, defaultSeason, competitionSettings }: Props) {
 	const { season, league, setSeason, setLeague } = useResultsStore();
 
 	// Open on the newest season that actually has results, so the page never
@@ -48,7 +50,8 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 	const feature = seasonDone[0]; // latest overall — independent of the league filter
 
 	const leagues = [...new Set(seasonDone.map((m) => m.league))];
-	const activeLeague = league === "all" || leagues.includes(league) ? league : "all";
+	const allowAll = Boolean(competitionSettings.allLabel);
+	const activeLeague = allowAll && league === "all" ? "all" : leagues.includes(league) ? league : (leagues[0] ?? "all");
 	const list = activeLeague === "all" ? seasonDone : seasonDone.filter((m) => m.league === activeLeague);
 
 	// Group by match-day, preserving the newest-first order.
@@ -159,9 +162,9 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 						<section className="mx-auto max-w-[1280px] px-8 pt-[36px] max-[960px]:px-6 max-[960px]:pt-7">
 							<div className="flex flex-wrap items-center gap-2">
 								<span className="mr-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">League</span>
-								<button type="button" onClick={() => setLeague("all")} className={pillClass(activeLeague === "all")}>
-									All
-								</button>
+								{allowAll && <button type="button" onClick={() => setLeague("all")} className={pillClass(activeLeague === "all")}>
+									{competitionSettings.allLabel}
+								</button>}
 								{leagues.map((lg) => (
 									<button key={lg} type="button" onClick={() => setLeague(lg)} className={pillClass(activeLeague === lg)}>
 										{lg}
@@ -200,7 +203,7 @@ export default function ResultsBoard({ matches, seasons, defaultSeason }: Props)
 												>
 													<div className="mb-3 flex items-center justify-between gap-3">
 														<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgb(var(--site-ink-rgb)/0.06)", color: "var(--muted,#6f665c)" }}>
-															{m.league}
+															{m.leagueCode || m.league}
 														</span>
 														<span className="font-mono text-[11px] text-muted2">Final · {m.time}</span>
 													</div>

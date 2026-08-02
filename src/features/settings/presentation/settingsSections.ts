@@ -882,25 +882,52 @@ export const SECTIONS: Section[] = [
   competition(
     'leagues',
     'Leagues',
-    'Directory headings and supporting copy for the league directory.',
+    'The two permanent competitions as visitors meet them — the codes on every filter pill, and how the season picker behaves. There is no public leagues page; these values drive the pickers on Standings, Fixtures, Results and Leaders.',
     [
       {
-        label: 'Directory',
+        label: 'Competitions',
         fields: [
-          f('leagues_title', 'Page title'),
-          f('leagues_intro', 'Intro', '', { type: 'area' }),
+          f('leagues_names', 'Leagues', 'The code tags match cards; the full name is the competition filter pill on Standings and the league line in the match header.', { type: 'list', addLabel: 'Add league', maxItems: 8, columns: [{ key: 'code', label: 'Code', placeholder: 'EBL', width: '.4fr' }, { key: 'name', label: 'Full name', placeholder: 'Elevate Ballers League (EBL)', width: '1.6fr' }], defaultValue: '[{"code":"EBL","name":"Elevate Ballers League (EBL)"},{"code":"EWBL","name":"Elevate Women\'s Basketball League (EWBL)"}]' }),
+          f('leagues_defaultLeague', 'Default league', 'What a first-time visitor sees selected.', { type: 'select', options: ['EBL', 'EWBL', 'Remember last choice'], defaultValue: 'Remember last choice' }),
+          f('leagues_allLabel', '“All leagues” label', 'The pill that clears the league filter. Blank forces a league to always be chosen.', { defaultValue: 'All Leagues' }),
         ],
       },
-    ]
+      {
+        label: 'Season picker',
+        fields: [
+          f('leagues_archive', 'Season archive', 'Lets visitors open completed League Seasons from the dropdown.', { type: 'toggle', defaultValue: 'true' }),
+          f('leagues_seasonLabel', 'Dropdown suffix', 'Appended to each year in the picker.', { defaultValue: 'Season' }),
+          f('leagues_archiveYears', 'Seasons listed', 'Most recent first, current season included.', { defaultValue: '3' }),
+        ],
+      },
+    ],
+    '/standings'
   ),
-  competition('standings', 'Standings', 'Headings and empty-state copy for standings.', [
+  competition('standings', 'Standings', 'The league table, its podium, the conference race and the playoff cut.', [
     {
-      label: 'Standings',
+      label: 'Hero',
       fields: [
-        f('standings_title', 'Page title'),
-        f('standings_empty', 'Empty message', '', { type: 'area' }),
+        f('standings_eyebrow', 'Eyebrow', 'Use {season} for the selected season.', { defaultValue: 'League Table · Season {season}' }),
+        f('standings_title', 'Page title', '', { defaultValue: 'Standings' }),
       ],
     },
+    { label: 'Table', fields: [
+      f('standings_columns', 'Columns', 'Left to right after rank, team and conference.', { type: 'list', addLabel: 'Add column', maxItems: 12, columns: [{ key: 'code', label: 'Header', placeholder: 'PF', width: '.4fr' }, { key: 'name', label: 'Means', placeholder: 'Points for', width: '1.6fr' }], defaultValue: '[{"code":"P","name":"Played"},{"code":"W","name":"Won"},{"code":"D","name":"Drawn"},{"code":"L","name":"Lost"},{"code":"PF","name":"Points For"},{"code":"PA","name":"Points Against"},{"code":"Diff","name":"Differential"},{"code":"Pts","name":"Table Points"}]' }),
+      f('standings_legend', 'Show legend', 'The column key printed under the table.', { type: 'toggle', defaultValue: 'true' }),
+      f('standings_search', 'Team search', 'Filter box above the table.', { type: 'toggle', defaultValue: 'true' }),
+      f('standings_tiebreak', 'Tiebreak note', 'How ties are ordered. Blank hides the note.', { type: 'area', defaultValue: 'Ties are broken by point differential, then points scored.' }),
+    ] },
+    { label: 'Podium & conference race', fields: [
+      f('standings_podium', 'Top-three podium', 'Three cards above the table; the leader renders dark.', { type: 'toggle', defaultValue: 'true' }),
+      f('standings_conferenceRace', 'Conference Race', 'Mini top-three table per conference. Only shows when the League Season uses conferences and the view is Overall.', { type: 'toggle', defaultValue: 'true' }),
+      f('standings_raceHeading', 'Race heading', '', { defaultValue: 'Conference Race' }),
+      f('standings_conferenceTabs', 'Conference tabs', 'Overall plus one pill per conference.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Playoffs', fields: [
+      f('standings_playoffLine', 'Show cut line', 'Rule across the table at the qualification cut.', { type: 'toggle', defaultValue: 'true' }),
+      f('standings_playoffSpots', 'Playoff spots', 'Teams above this line qualify. Counted within the current view.', { defaultValue: '8' }),
+      f('standings_cutLabel', 'Cut line label', 'Use {n} for the number of spots.', { defaultValue: 'Playoff cutoff · Top {n}' }),
+    ] },
   ]),
   competition('fixtures', 'Fixtures', 'Upcoming fixture headings and empty states.', [
     {

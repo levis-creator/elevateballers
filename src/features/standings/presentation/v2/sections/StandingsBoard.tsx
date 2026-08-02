@@ -1,17 +1,20 @@
+import { useEffect } from "react";
 import { useStandingsStore } from "@/features/standings/presentation/stores/v2/useStandingsStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { StandingTable } from "@/features/standings/domain/entities/standings-v2";
 import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
+import { configuredDefaultCompetitionId, type PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
+import { standingsCutLabel, standingsEyebrow, type PublicStandingsSettings } from "@/features/settings/application/standingsSettings";
 
 interface Props {
 	competitions: PublicCompetitionOption[];
 	tables: StandingTable[];
 	defaultLeagueSeasonId: string;
-	playoffSpots: number;
+	competitionSettings: PublicCompetitionSettings;
+	settings: PublicStandingsSettings;
 }
 
-const GRID = "grid-cols-[60px_minmax(0,1fr)_44px_44px_44px_44px_60px_60px_64px_56px]";
 const diffLabel = (d: number) => `${d > 0 ? "+" : ""}${d}`;
 const diffColor = (d: number) => (d > 0 ? "#2f9e44" : d < 0 ? "var(--brand)" : "var(--muted2,#a49a8d)");
 const PLACE = ["1st Place", "2nd Place", "3rd Place"];
@@ -24,22 +27,33 @@ const conferenceAccent = (name: string, index: number) => {
 /** Standings — hero + league filter tabs + top-3 + full table + search.
  *  React island; league filter and search live in a Zustand store. Rankings are
  *  computed within the active league filter. */
-export default function StandingsBoard({ competitions, tables, defaultLeagueSeasonId, playoffSpots }: Props) {
+export default function StandingsBoard({ competitions, tables, defaultLeagueSeasonId, competitionSettings, settings }: Props) {
 	const { leagueSeasonId, conferenceId, query, setLeagueSeason, setConference, setQuery } = useStandingsStore();
+	const allCompetitions = "__all__";
+	const isOverall = Boolean(competitionSettings.allLabel) && leagueSeasonId === allCompetitions;
+	const configuredDefaultId = configuredDefaultCompetitionId(competitions, competitionSettings, defaultLeagueSeasonId);
 	const selected = competitions.find((item) => item.id === leagueSeasonId)
-		?? competitions.find((item) => item.id === defaultLeagueSeasonId)
+		?? competitions.find((item) => item.id === configuredDefaultId)
 		?? competitions[0];
+	useEffect(() => {
+		if (competitionSettings.defaultLeague !== "Remember last choice") return;
+		const remembered = window.localStorage.getItem("eb-public-league-season");
+		if (remembered && (remembered === allCompetitions || competitions.some((item) => item.id === remembered)) && remembered !== selected?.id) setLeagueSeason(remembered);
+	}, []);
+	useEffect(() => {
+		if (competitionSettings.defaultLeague === "Remember last choice" && leagueSeasonId) window.localStorage.setItem("eb-public-league-season", leagueSeasonId);
+	}, [leagueSeasonId, competitionSettings.defaultLeague]);
 	const seasonIds = [...new Set(competitions.map((item) => item.seasonId))];
 	const seasonId = selected?.seasonId ?? seasonIds[0] ?? "";
 	const seasonCompetitions = competitions.filter((item) => item.seasonId === seasonId);
-	const showConferences = selected?.structure === "CONFERENCES" && selected.conferences.length > 0;
-	const activeConferenceId = showConferences && selected.conferences.some((item) => item.id === conferenceId)
+	const showConferences = !isOverall && selected?.structure === "CONFERENCES" && selected.conferences.length > 0;
+	const activeConferenceId = settings.conferenceTabs && showConferences && selected.conferences.some((item) => item.id === conferenceId)
 		? conferenceId
 		: "";
-	const rows = tables.find((table) =>
-		table.leagueSeasonId === selected?.id
-		&& (table.conferenceId ?? "") === activeConferenceId
-	)?.rows ?? [];
+	const activeCompetitionIds = new Set(seasonCompetitions.map((item) => item.id));
+	const rows = isOverall
+		? tables.filter((table) => activeCompetitionIds.has(table.leagueSeasonId) && table.conferenceId === null).flatMap((table) => table.rows)
+		: tables.find((table) => table.leagueSeasonId === selected?.id && (table.conferenceId ?? "") === activeConferenceId)?.rows ?? [];
 	const ranked = [...rows]
 		.sort((a, b) => b.pts - a.pts || b.diff - a.diff || b.pf - a.pf)
 		.map((r, i) => ({ ...r, rank: i + 1 }));
@@ -68,7 +82,19 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 	const tableTitle = activeConferenceId
 		? `${selected?.conferences.find((item) => item.id === activeConferenceId)?.name ?? "Conference"} Conference Table`
 		: "Full Table";
-	const tableMeta = `${table.length} teams · ${selected?.leagueLabel ?? "League"}${activeConferenceId ? " Conference" : " Overall"}`;
+	const tableMeta = `${table.length} teams · ${isOverall ? competitionSettings.allLabel : selected?.leagueLabel ?? "League"}${activeConferenceId ? " Conference" : " Overall"}`;
+	const heroSeason = competitionSettings.seasonLabel
+		? (selected?.seasonLabel ?? "").replace(new RegExp(`\\s+${competitionSettings.seasonLabel}$`, "i"), "")
+		: selected?.seasonLabel ?? "";
+	const playoffSpots = settings.playoffSpots;
+	const gridTemplateColumns = `60px minmax(180px,1fr) ${settings.columns.map(() => "minmax(52px,64px)").join(" ")}`;
+	const statValue = (row: typeof ranked[number], code: string) => {
+		switch (code.toLowerCase()) {
+			case "p": return row.p; case "w": return row.w; case "d": return row.d; case "l": return row.l;
+			case "pf": return row.pf; case "pa": return row.pa; case "diff": return diffLabel(row.diff); case "pts": return row.pts;
+			default: return "—";
+		}
+	};
 	const selectSeason = (nextSeasonId: string) => {
 		const next = competitions.find((item) => item.seasonId === nextSeasonId);
 		if (next) setLeagueSeason(next.id);
@@ -83,10 +109,10 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 				<div className="absolute right-[12%] top-12 hidden h-20 w-20 rounded-full border-[12px] border-brand/10 max-[960px]:hidden" />
 				<div className="relative mx-auto max-w-[1280px] px-8 pb-[48px] pt-[62px] max-[960px]:px-6">
 					<div className="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
-							<span className="h-px w-[26px] bg-brand" />League Table · {selected?.seasonLabel ?? ""}
+							<span className="h-px w-[26px] bg-brand" />{standingsEyebrow(settings.eyebrow, heroSeason)}
 					</div>
 					<div className="flex flex-wrap items-end justify-between gap-6">
-						<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">Standings</h1>
+						<h1 className="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">{settings.title}</h1>
 						<p className="max-w-[420px] pb-2 text-[15px] leading-[1.65] text-muted">
 							Track playoff positioning, conference races and table points across Elevate Ballers competitions.
 						</p>
@@ -120,13 +146,14 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 								)}
 								<div className="flex flex-wrap items-center gap-2">
 									<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Competition</span>
+									{competitionSettings.allLabel && <button type="button" onClick={() => { setConference(""); setLeagueSeason(allCompetitions); }} className={pillClass(isOverall)}>{competitionSettings.allLabel}</button>}
 									{seasonCompetitions.map((item) => (
-										<button key={item.id} type="button" onClick={() => setLeagueSeason(item.id)} className={pillClass(selected.id === item.id)}>
+										<button key={item.id} type="button" onClick={() => setLeagueSeason(item.id)} className={pillClass(!isOverall && selected.id === item.id)}>
 											{item.leagueLabel}
 										</button>
 									))}
 								</div>
-								{showConferences && (
+								{settings.conferenceTabs && showConferences && (
 									<div className="flex flex-wrap items-center gap-2">
 										<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Conference</span>
 										<button type="button" onClick={() => setConference("")} className={pillClass(activeConferenceId === "")}>Overall</button>
@@ -142,7 +169,7 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 					)}
 
 					{/* PODIUM */}
-					<section className="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
+					{settings.podium && <section className="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 						<div className="grid grid-cols-3 gap-5 max-[960px]:grid-cols-1">
 							{podium.map((p, i) => {
 								const first = i === 0;
@@ -187,13 +214,13 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 								);
 							})}
 						</div>
-					</section>
+					</section>}
 
-					{showConferenceRace && (
+					{settings.conferenceRace && showConferenceRace && (
 						<section className="mx-auto max-w-[1280px] px-8 pt-[34px] max-[960px]:px-6">
 							<div className="mb-4 flex items-end justify-between gap-4">
 								<div>
-									<div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-brand">Conference Race</div>
+									<div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-brand">{settings.raceHeading}</div>
 									<h2 className="font-display text-[28px] uppercase leading-none text-ink">Top Conference Seeds</h2>
 								</div>
 								<div className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">{selected?.leagueLabel}</div>
@@ -240,24 +267,23 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 								<h2 className="font-display text-[26px] uppercase text-ink">{tableTitle}</h2>
 								<div className="mt-1 font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">{tableMeta}</div>
 							</div>
-							<div className="flex items-center gap-2.5 rounded-lg border border-black/15 bg-white px-4 py-2.5">
+							{settings.search && <div className="flex items-center gap-2.5 rounded-lg border border-black/15 bg-white px-4 py-2.5">
 								<span className="font-mono text-[13px] text-muted2">⌕</span>
 								<input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search teams…" className="w-[180px] border-none bg-transparent font-body text-[14px] text-ink2 outline-none max-[600px]:w-[120px]" />
-							</div>
+							</div>}
 						</div>
 
 						{table.length > 0 ? (
 							<>
 								<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 									<div className="min-w-[820px]">
-										<div className={`grid ${GRID} items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2`}>
+										<div className="grid items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2" style={{ gridTemplateColumns }}>
 											<span>Rank</span><span>Team</span>
-											<span className="text-center">P</span><span className="text-center">W</span><span className="text-center">D</span><span className="text-center">L</span>
-											<span className="text-center">PF</span><span className="text-center">PA</span><span className="text-center">Diff</span><span className="text-right">Pts</span>
+											{settings.columns.map((column, index) => <span key={`${column.code}-${index}`} title={column.name} className="text-center">{column.code}</span>)}
 										</div>
 										{table.map((t) => (
 											<div key={t.teamId}>
-												<a href={t.href} className={`grid ${GRID} items-center gap-2 border-b border-black/[0.06] px-5 py-3 no-underline hover:bg-paper2`} style={t.rank <= playoffSpots ? { background: "rgb(var(--site-brand-rgb) / 0.04)" } : undefined}>
+												<a href={t.href} className="grid items-center gap-2 border-b border-black/[0.06] px-5 py-3 no-underline hover:bg-paper2" style={{ gridTemplateColumns, ...(t.rank <= playoffSpots ? { background: "rgb(var(--site-brand-rgb) / 0.04)" } : {}) }}>
 													<span className="font-display text-[16px]" style={{ color: t.rank <= 3 ? "var(--brand)" : "var(--night2,#1a1712)" }}>{t.rank}</span>
 													<TeamName
 														team={{ name: t.name, nickname: t.nickname, logo: t.logo, initials: t.initials }}
@@ -265,19 +291,12 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 														withCrest
 														className="font-body text-[14px] font-bold text-ink2"
 													/>
-													<span className="text-center font-mono text-[13px] text-muted">{t.p}</span>
-													<span className="text-center font-mono text-[13px] text-ink2">{t.w}</span>
-													<span className="text-center font-mono text-[13px] text-muted">{t.d}</span>
-													<span className="text-center font-mono text-[13px] text-muted">{t.l}</span>
-													<span className="text-center font-mono text-[13px] text-muted">{t.pf}</span>
-													<span className="text-center font-mono text-[13px] text-muted">{t.pa}</span>
-													<span className="text-center font-mono text-[13px] font-bold" style={{ color: diffColor(t.diff) }}>{diffLabel(t.diff)}</span>
-													<span className="text-right font-display text-[20px] text-ink">{t.pts}</span>
+													{settings.columns.map((column, index) => <span key={`${column.code}-${index}`} className="text-center font-mono text-[13px] font-bold" style={column.code.toLowerCase() === "diff" ? { color: diffColor(t.diff) } : undefined}>{statValue(t, column.code)}</span>)}
 												</a>
-												{!q && t.rank === playoffSpots && ranked.length > playoffSpots && (
+												{settings.playoffLine && !q && t.rank === playoffSpots && ranked.length > playoffSpots && (
 													<div className="flex items-center gap-3 bg-brand/[0.04] px-5 py-1.5">
 														<span className="h-px flex-1 bg-brand/25" />
-														<span className="font-mono text-[9px] uppercase tracking-[0.12em] text-brand">Playoff cutoff · Top {playoffSpots}</span>
+														<span className="font-mono text-[9px] uppercase tracking-[0.12em] text-brand">{standingsCutLabel(settings.cutLabel, playoffSpots)}</span>
 														<span className="h-px flex-1 bg-brand/25" />
 													</div>
 												)}
@@ -285,10 +304,11 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 										))}
 									</div>
 								</div>
-								<div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] text-muted2">
+								{(settings.legend || settings.tiebreak) && <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] text-muted2">
 									<span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-brand/20" />Playoff position</span>
-									<span>P Played · W Won · D Drawn · L Lost · PF Points For · PA Points Against · Diff Differential · Pts Table Points</span>
-								</div>
+									{settings.legend && <span>{settings.columns.map((column) => `${column.code} ${column.name}`).join(" · ")}</span>}
+									{settings.tiebreak && <span>{settings.tiebreak}</span>}
+								</div>}
 							</>
 						) : (
 							<div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-16 text-center">

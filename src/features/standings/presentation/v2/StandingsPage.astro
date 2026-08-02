@@ -6,12 +6,18 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import StandingsBoard from "./sections/StandingsBoard.tsx";
 import { getStandingsData } from "@/features/standings/domain/usecases/get-standings-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { applyCompetitionSettings, resolvePublicCompetitionSettings, resolvePublicStandingsSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer] = await Promise.all([getStandingsData(), getFooterData()]);
+const [data, footer, leagueRecords, standingsRecords] = await Promise.all([
+	getStandingsData(), getFooterData(), siteSettingsService.list("leagues"), siteSettingsService.list("standings"),
+]);
+const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
+const standingsSettings = resolvePublicStandingsSettings(standingsRecords);
+const competitions = applyCompetitionSettings(data.competitions, competitionSettings);
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="standings" />
-	<StandingsBoard competitions={data.competitions} tables={data.tables} defaultLeagueSeasonId={data.defaultLeagueSeasonId} playoffSpots={data.playoffSpots} client:load />
+	<StandingsBoard competitions={competitions} tables={data.tables} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={standingsSettings} client:load />
 	<Footer footer={footer} />
 </div>

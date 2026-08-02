@@ -12,6 +12,8 @@ export interface FixtureMatch {
 	href: string;
 	/** Full league name — shown on the card badge and used by the filter. */
 	league: string;
+	/** Configured short competition tag shown on match cards (for example EBL). */
+	leagueCode?: string;
 	/** Season key (e.g. "2026 Season" or "2026") — the season selector filters on this. */
 	season: string;
 	seasonId: string | null;

@@ -3,15 +3,20 @@ import { StandingsFilter } from './StandingsFilter';
 import { StandingsTable } from './StandingsTable';
 import type { TeamStanding } from '../../data/standingsData';
 import styles from './StandingsPage.module.css';
+import type { PublicCompetitionSettings } from '@/features/settings/application/competitionSettings';
+import type { PublicStandingsSettings } from '@/features/settings/application/standingsSettings';
 
 interface StandingsPageProps {
   initialStandings: TeamStanding[];
+  settings: PublicStandingsSettings;
+  competitionSettings: PublicCompetitionSettings;
 }
 
-export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings }) => {
+export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings, settings, competitionSettings }) => {
   const [standings, setStandings] = useState<TeamStanding[]>(initialStandings);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   // Fetch all standings on initial mount (client-side) to ensure fresh data
   useEffect(() => {
@@ -59,7 +64,8 @@ export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings }
 
   return (
     <div className={styles.standingsPage}>
-      <StandingsFilter onFilterChange={handleFilterChange} />
+      <StandingsFilter onFilterChange={handleFilterChange} settings={competitionSettings} />
+      {settings.search && <input aria-label="Search teams" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search teams…" style={{ width: '100%', margin: '0 0 24px', padding: '12px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,.16)', background: '#211c33', color: '#fff' }} />}
       
       {error && (
         <div className={styles.errorMessage}>
@@ -72,12 +78,12 @@ export const StandingsPage: React.FC<StandingsPageProps> = ({ initialStandings }
           <div className={styles.spinner}></div>
           <p>Loading standings...</p>
         </div>
-      ) : standings.length === 0 ? (
+      ) : standings.filter((row) => row.team.toLowerCase().includes(query.trim().toLowerCase())).length === 0 ? (
         <div className={styles.emptyState}>
           <p>No standings data available for the selected filters.</p>
         </div>
       ) : (
-        <StandingsTable standings={standings} />
+        <StandingsTable standings={standings.filter((row) => row.team.toLowerCase().includes(query.trim().toLowerCase()))} settings={settings} />
       )}
     </div>
   );

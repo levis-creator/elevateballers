@@ -1,9 +1,19 @@
 import React from 'react';
 import type { TeamStanding } from '../../data/standingsData';
 import styles from './StandingsTable.module.css';
+import { standingsCutLabel, type PublicStandingsSettings } from '@/features/settings/application/standingsSettings';
 
 interface StandingsTableProps {
   standings: TeamStanding[];
+  settings: PublicStandingsSettings;
+}
+
+function statValue(standing: TeamStanding, code: string) {
+  switch (code.toLowerCase()) {
+    case 'p': return standing.played; case 'w': return standing.won; case 'd': return standing.drawn; case 'l': return standing.lost;
+    case 'pf': return standing.goalsFor; case 'pa': return standing.goalsAgainst; case 'diff': return `${standing.goalDifference > 0 ? '+' : ''}${standing.goalDifference}`; case 'pts': return standing.points;
+    default: return '—';
+  }
 }
 
 function teamInitials(name: string) {
@@ -93,7 +103,7 @@ function SummaryCards({ standings }: { standings: TeamStanding[] }) {
   );
 }
 
-export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => {
+export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, settings }) => {
   const openStanding = (standing: TeamStanding) => {
     if (!standing.url || typeof window === 'undefined') return;
     window.location.href = standing.url;
@@ -109,7 +119,7 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => 
 
   return (
     <div className={styles.standingsBoard}>
-      <SummaryCards standings={standings} />
+      {settings.podium && <SummaryCards standings={standings} />}
 
       <div className={styles.desktopTableWrap}>
         <table className={styles.table}>
@@ -117,20 +127,13 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => 
             <tr>
               <th>Rank</th>
               <th>Team</th>
-              <th>P</th>
-              <th>W</th>
-              <th>D</th>
-              <th>L</th>
-              <th>PF</th>
-              <th>PA</th>
-              <th>Diff</th>
-              <th>Pts</th>
+              {settings.columns.map((column, index) => <th key={`${column.code}-${index}`} title={column.name}>{column.code}</th>)}
             </tr>
           </thead>
           <tbody>
             {standings.map((standing) => (
+              <React.Fragment key={standing.teamId || standing.team}>
               <tr
-                key={standing.teamId || standing.team}
                 className={standing.url ? styles.clickableRow : undefined}
                 onClick={standing.url ? () => openStanding(standing) : undefined}
                 onKeyDown={standing.url ? (event) => handleRowKeyDown(event, standing) : undefined}
@@ -145,24 +148,19 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings }) => 
                 <td>
                   <TeamIdentity standing={standing} />
                 </td>
-                <td>{standing.played}</td>
-                <td>{standing.won}</td>
-                <td>{standing.drawn}</td>
-                <td>{standing.lost}</td>
-                <td>{standing.goalsFor}</td>
-                <td>{standing.goalsAgainst}</td>
-                <td className={statTone(standing.goalDifference)}>
-                  {standing.goalDifference > 0 ? '+' : ''}
-                  {standing.goalDifference}
-                </td>
-                <td>
-                  <strong className={styles.pointsValue}>{standing.points}</strong>
-                </td>
+                {settings.columns.map((column, index) => <td key={`${column.code}-${index}`} className={column.code.toLowerCase() === 'diff' ? statTone(standing.goalDifference) : undefined}>{column.code.toLowerCase() === 'pts' ? <strong className={styles.pointsValue}>{statValue(standing, column.code)}</strong> : statValue(standing, column.code)}</td>)}
               </tr>
+              {settings.playoffLine && standing.rank === settings.playoffSpots && standings.length > settings.playoffSpots && <tr><td colSpan={settings.columns.length + 2} style={{ textAlign: 'center', color: 'var(--brand)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em' }}>{standingsCutLabel(settings.cutLabel, settings.playoffSpots)}</td></tr>}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
       </div>
+
+      {(settings.legend || settings.tiebreak) && <div style={{ color: '#a8a2b8', fontSize: 12, marginTop: 14 }}>
+        {settings.legend && <span>{settings.columns.map((column) => `${column.code} ${column.name}`).join(' · ')}</span>}
+        {settings.tiebreak && <span style={{ display: 'block', marginTop: 6 }}>{settings.tiebreak}</span>}
+      </div>}
 
       <div className={styles.mobileList}>
         {standings.map((standing) => (
