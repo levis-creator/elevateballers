@@ -9,6 +9,7 @@ import { getSiteSettingByKey } from "@/features/cms/lib/queries";
 import { getDisplayImageUrl } from "@/lib/asset-url";
 import { CONTACT_CONTENT_KEY, parseContactContent } from "@/features/contact/lib/contact-content";
 import type { ContactData, ContactChannel, ContactInfo } from "@/features/contact/domain/entities/contact-v2";
+import { resolvePublicContactSettings, siteSettingsService } from '@/features/settings';
 
 /** First phone number as a `tel:` link, normalised to +254 for Kenyan numbers. */
 function telHref(phone: string): string {
@@ -22,11 +23,13 @@ const mapsHref = (address: string) => `https://www.google.com/maps/search/?api=1
 
 export async function fetchContactData(): Promise<ContactData | null> {
 	try {
-		const [footer, contentSetting] = await Promise.all([
+		const [footer, contentSetting, contactRecords] = await Promise.all([
 			getFooterData(),
 			getSiteSettingByKey(CONTACT_CONTENT_KEY).catch(() => null),
+			siteSettingsService.list('contact').catch(() => []),
 		]);
 		const content = parseContactContent(contentSetting?.value);
+		const contactSettings = resolvePublicContactSettings(contactRecords);
 		const c = footer.contact;
 		const firstPhone = c.phone.split(/[·,]/)[0].trim() || c.phone;
 
@@ -48,10 +51,16 @@ export async function fetchContactData(): Promise<ContactData | null> {
 			form: { heading: content.formHeading, intro: content.formIntro },
 			mapImage: getDisplayImageUrl(content.mapImage),
 			channels,
-			topics: content.topics,
+			topics: contactSettings.departments.map((department) => department.name),
 			info,
-			departments: content.departments.map((d) => ({ ...d, href: `mailto:${d.email}` })),
+			departments: contactSettings.departments.map((department) => ({
+				name: department.name,
+				desc: department.handles,
+				email: department.email,
+				href: `mailto:${department.email}`,
+			})),
 			socials: footer.socials,
+			responseTarget: contactSettings.responseTarget,
 		};
 	} catch {
 		return null;

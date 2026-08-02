@@ -475,33 +475,64 @@ export const SECTIONS: Section[] = [
   siteWide(
     'contact',
     'Contact & Social',
-    'The single source for public contact details and social accounts.',
+    'The single source for address, phones, email and social accounts — printed in the footer and on the Contacts page.',
     [
       {
         label: 'Contact',
         fields: [
-          f('contact_email', 'Public email', '', { defaultValue: 'ballers@elevateballers.com' }),
-          f('contact_phone', 'Phone', '', { defaultValue: '0703913923' }),
-          f('contact_address', 'Address', '', {
+          f('contact_email', 'Public email', 'Receives contact-form messages and prints in the footer.', { defaultValue: 'ballers@elevateballers.com' }),
+          f('contact_phone', 'Phone numbers', 'Separate with “ · ”.', { defaultValue: '0703 913 923 · 0729 259 496' }),
+          f('contact_address', 'Address', 'Line breaks are kept. Also the venue on the Contacts map card.', {
             type: 'area',
             defaultValue: 'Pepo Lane, off Dagoretti Road, Nairobi, Kenya',
           }),
-          f('contact_hours', 'Opening hours', '', {
+          f('contact_hours', 'Opening hours', 'Printed in the footer and as the Hours row of the Visit Us card.', {
             defaultValue: 'Saturdays & Sundays · 8:00 AM – 6:00 PM',
           }),
         ],
       },
       {
-        label: 'Social accounts',
+        label: 'Social',
         fields: [
-          f('social_facebook', 'Facebook URL', '', {
-            defaultValue: 'https://www.facebook.com/Elevateballers',
+          f('social_facebook', 'Facebook', 'Page URL. Shown as the FB button.', {
+            defaultValue: 'facebook.com/elevateballers',
           }),
-          f('social_instagram', 'Instagram URL', '', {
-            defaultValue: 'https://www.instagram.com/elevateballers/',
+          f('social_instagram', 'Instagram', 'Handle or full URL. Shown as IG.', {
+            defaultValue: '@elevateballers',
           }),
-          f('social_twitter', 'X / Twitter URL'),
-          f('social_youtube', 'YouTube URL'),
+          f('social_youtube', 'YouTube', 'Channel URL — also the source for embedded highlights.', {
+            defaultValue: 'youtube.com/@elevateballers',
+          }),
+          f('social_twitter', 'X', 'Handle or full URL.', { defaultValue: '@elevateballers' }),
+          f('social_order', 'Button order', 'Comma-separated. Only accounts filled in above are rendered.', {
+            defaultValue: 'FB, IG, YT, X',
+          }),
+        ],
+      },
+      {
+        label: 'Desks & routing',
+        fields: [
+          f('contact_departmentList', 'Desks', 'Printed in the Contacts page Departments grid and used to route form topics. Multiples of three fill the grid evenly.', {
+            type: 'list',
+            addLabel: 'Add desk',
+            maxItems: 12,
+            columns: [
+              { key: 'name', label: 'Desk', placeholder: 'Competition', width: '0.8fr' },
+              { key: 'email', label: 'Email', placeholder: 'desk@elevateballers.com', width: '1.2fr' },
+              { key: 'handles', label: 'Handles', placeholder: 'Fixtures, results, standings', width: '1.2fr' },
+            ],
+            defaultValue: '[{"name":"Competition","email":"competition@elevateballers.com","handles":"Fixtures, results, standings"},{"name":"Registration","email":"register@elevateballers.com","handles":"Team entries and transfers"},{"name":"Officiating","email":"referees@elevateballers.com","handles":"Referees and match reports"},{"name":"Media","email":"media@elevateballers.com","handles":"Press access and interviews"},{"name":"Partnerships","email":"partners@elevateballers.com","handles":"Sponsorship and events"},{"name":"Support","email":"ballers@elevateballers.com","handles":"Anything else"}]',
+          }),
+          f('contact_inbox', 'Default inbox', 'Where a message goes when its topic has no desk of its own.', {
+            defaultValue: 'ballers@elevateballers.com',
+          }),
+          f('contact_notify', 'Notify the desk', 'Emails the desk as well as filing the message in Contact Messages.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('contact_responseTarget', 'Response promise', 'Printed on the Contacts page and in the auto-reply.', {
+            defaultValue: 'within 48 hours',
+          }),
         ],
       },
     ],
@@ -513,16 +544,54 @@ export const SECTIONS: Section[] = [
     'Cookie categories and the visitor controls shown on first visit.',
     [
       {
-        label: 'Cookie panel',
+        label: 'Consent bar',
         fields: [
-          f('consent_essentialDesc', 'Essential row', '', {
-            type: 'area',
-            defaultValue:
-              'Keep the site running — navigation, security and remembering your choices.',
-          }),
-          f('consent_reopen', 'Cookie settings button', '', {
+          f('consent_enabled', 'Show consent bar', 'Required while any analytics provider is set.', {
             type: 'toggle',
             defaultValue: 'true',
+          }),
+          f('consent_eyebrow', 'Eyebrow', 'Red mono label above the heading.', {
+            defaultValue: 'We use cookies',
+          }),
+          f('consent_heading', 'Heading', 'Set in Anton at 30px.', {
+            defaultValue: 'Game day, your way',
+          }),
+          f('consent_message', 'Message', 'Two sentences. The policy link is appended to the end.', {
+            type: 'area',
+            defaultValue: 'We use cookies to keep scores live, remember your favourite teams, and see which stories fans read most. Accept all to get the full experience.',
+          }),
+          f('consent_accept', 'Accept button', 'Red primary.', { defaultValue: 'Accept all' }),
+          f('consent_reject', 'Reject button', 'Dark secondary. Keeps essential cookies only.', { defaultValue: 'Reject all' }),
+          f('consent_manage', 'Manage button', 'Opens the preferences panel.', { defaultValue: 'Customise' }),
+          f('consent_policyLabel', 'Policy link label', '', { defaultValue: 'Cookie Policy' }),
+          f('consent_policy', 'Policy link', 'Path to the policy page.', { defaultValue: '/cookie-policy' }),
+        ],
+      },
+      {
+        label: 'Preferences panel',
+        fields: [
+          f('consent_prefsEyebrow', 'Panel eyebrow', '', { defaultValue: 'Cookie preferences' }),
+          f('consent_prefsHeading', 'Panel heading', '', { defaultValue: 'Set your line-up' }),
+          f('consent_essentialDesc', 'Essential row', 'Always listed first with its switch locked on.', {
+            type: 'area',
+            defaultValue: 'Keep the site running — page navigation, security, and remembering you got this far. These can’t be switched off.',
+          }),
+          f('consent_categories', 'Optional categories', 'Listed under Essential, each with its own switch.', {
+            type: 'list',
+            addLabel: 'Add category',
+            columns: [
+              { key: 'name', label: 'Category', placeholder: 'Match Stats', width: '0.7fr' },
+              { key: 'desc', label: 'What it does', placeholder: 'Anonymous stats on what fans view', width: '1.3fr' },
+            ],
+            defaultValue: '[{"name":"Match Stats","desc":"Anonymous stats on which fixtures, players and stories fans view most, so we can improve the coverage."},{"name":"Your Line-up","desc":"Remember your favourite teams and preferences so standings and fixtures land the way you like them."},{"name":"Court-side Offers","desc":"Let us and select partners show you relevant tickets, merch and league promotions on and off the site."}]',
+          }),
+          f('consent_saveLabel', 'Save button', 'Red primary in the panel.', { defaultValue: 'Save my choices' }),
+          f('consent_reopen', 'Cookie settings button', 'Lets a visitor reopen the panel after deciding.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('consent_remember', 'Remember for (days)', 'How long before a visitor is asked again.', {
+            defaultValue: '180',
           }),
         ],
       },

@@ -8,7 +8,7 @@ import TurnstileWidget from "@/components/TurnstileWidget";
  * the message subject; optional team + phone are folded into the message body,
  * since the API stores name / email / subject / message.
  */
-export default function ContactFormV2({ topics }: { topics: string[] }) {
+export default function ContactFormV2({ topics, responseTarget }: { topics: string[]; responseTarget: string }) {
 	const [name, setName] = useState("");
 	const [team, setTeam] = useState("");
 	const [email, setEmail] = useState("");
@@ -64,7 +64,7 @@ export default function ContactFormV2({ topics }: { topics: string[] }) {
 				return;
 			}
 			setStatus("success");
-			setFeedback("Message sent — the right team will get back to you, usually within 48 hours.");
+			setFeedback(`Message sent — the right team will get back to you ${responseTarget}.`);
 			setName("");
 			setTeam("");
 			setEmail("");

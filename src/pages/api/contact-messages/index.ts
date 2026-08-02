@@ -7,6 +7,11 @@ import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { json, handleApiError } from '../../../lib/apiError';
 import { publishToJob } from '../../../lib/qstash';
+import {
+  contactRecipients,
+  resolvePublicContactSettings,
+  siteSettingsService,
+} from '../../../features/settings';
 
 export const prerender = false;
 
@@ -89,6 +94,10 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const userAgent = request.headers.get('user-agent') ?? undefined;
+    const contactSettings = resolvePublicContactSettings(
+      await siteSettingsService.list('contact').catch(() => []),
+    );
+    const recipients = contactRecipients(contactSettings, subject);
 
     const created = await prisma.contactMessage.create({
       data: { name, email, subject, message, ipAddress: ip, userAgent },
@@ -96,24 +105,24 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Send emails via QStash (with inline fallback)
     const sendNotification = () =>
-      sendContactNotification({ name, email, subject, message }).catch((err) =>
+      sendContactNotification({ name, email, subject, message, recipients }).catch((err) =>
         console.error('[contact] notification email failed:', err)
       );
     const sendAutoReply = () =>
-      sendContactAutoReply({ name, email, subject }).catch((err) =>
+      sendContactAutoReply({ name, email, subject, responseTarget: contactSettings.responseTarget }).catch((err) =>
         console.error('[contact] auto-reply email failed:', err)
       );
 
     // Try QStash for reliable delivery with retries; fall back to fire-and-forget
     const notificationQueued = await publishToJob('/api/jobs/send-email', {
       jobType: 'contact_notification',
-      data: { name, email, subject, message },
+      data: { name, email, subject, message, recipients },
     });
     if (!notificationQueued) sendNotification();
 
     const autoReplyQueued = await publishToJob('/api/jobs/send-email', {
       jobType: 'contact_auto_reply',
-      data: { name, email, subject },
+      data: { name, email, subject, responseTarget: contactSettings.responseTarget },
     });
     if (!autoReplyQueued) sendAutoReply();
 

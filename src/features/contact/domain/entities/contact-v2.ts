@@ -43,4 +43,5 @@ export interface ContactData {
 	info: ContactInfo[];
 	departments: ContactDepartment[];
 	socials: ContactSocial[];
+	responseTarget: string;
 }

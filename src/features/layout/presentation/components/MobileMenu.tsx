@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLayoutStore } from '../../stores/useLayoutStore';
+import { resolvePublicContactSettings } from '@/features/settings/application/contactSettings';
 
 /**
  * MobileMenu component
@@ -7,6 +8,14 @@ import { useLayoutStore } from '../../stores/useLayoutStore';
  */
 export default function MobileMenu() {
   const { isMobileMenuOpen, toggleMobileMenu, closeMobileMenu } = useLayoutStore();
+  const [socialLinks, setSocialLinks] = useState(() => resolvePublicContactSettings([]).socials);
+
+  useEffect(() => {
+    fetch('/api/settings/public?category=contact')
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((records) => setSocialLinks(resolvePublicContactSettings(records).socials))
+      .catch(() => undefined);
+  }, []);
 
   // Close menu when clicking outside (optional enhancement)
   useEffect(() => {
@@ -66,21 +75,13 @@ export default function MobileMenu() {
                   <div className="stm-top-search"></div>
                   <div className="stm-top-socials">
                     <ul className="top-bar-socials stm-list-duty">
-                      <li>
-                        <a href="https://www.facebook.com/Elevateballers" target="_blank" rel="noopener noreferrer">
-                          <i className="fa fa-facebook"></i>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="https://www.instagram.com/elevateballers/" target="_blank" rel="noopener noreferrer">
-                          <i className="fa fa-instagram"></i>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="https://www.youtube.com/@elevateballers9389/featured" target="_blank" rel="noopener noreferrer">
-                          <i className="fa fa-youtube-play"></i>
-                        </a>
-                      </li>
+                      {socialLinks.map((social) => (
+                        <li key={social.label}>
+                          <a href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label}>
+                            <i className={`fa ${social.label === 'FB' ? 'fa-facebook' : social.label === 'IG' ? 'fa-instagram' : social.label === 'YT' ? 'fa-youtube-play' : 'fa-twitter'}`}></i>
+                          </a>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </div>

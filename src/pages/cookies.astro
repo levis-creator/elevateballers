@@ -5,8 +5,16 @@ import LayoutV2 from "@/layouts/v2/Layout.astro";
 import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { resolvePublicConsentSettings, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
 
-const footer = await getFooterData();
+const [footer, consentRecords, seoRecords] = await Promise.all([
+	getFooterData(),
+	siteSettingsService.list('consent').catch(() => []),
+	siteSettingsService.list('seo').catch(() => []),
+]);
+const consent = resolvePublicConsentSettings(consentRecords);
+const seo = resolvePublicSeoSettings(seoRecords);
+const analyticsName = seo.analytics === 'None' ? 'analytics tools' : seo.analytics;
 ---
 
 <LayoutV2
@@ -23,27 +31,27 @@ const footer = await getFooterData();
 				Cookie Policy
 			</h1>
 			<p class="mt-5 max-w-[680px] text-[17px] leading-[1.7] text-muted">
-				We keep cookies limited. Essential cookies support security, admin sessions, and requested site functions. Analytics cookies are optional and only load after consent.
+				We keep cookies limited. Essential cookies support security, sessions and requested site functions. Optional categories only operate with your consent.
 			</p>
 
 			<section class="cookie-policy-section">
 				<h2>Essential Cookies</h2>
 				<p>
-					These are required for requested services such as signing into the admin area, keeping sessions secure, submitting protected forms, and remembering your cookie choice. They are not used for advertising.
+					{consent.essentialDesc}
 				</p>
 			</section>
 
-			<section class="cookie-policy-section">
-				<h2>Analytics Cookies</h2>
-				<p>
-					If accepted, Google Analytics helps us understand aggregate traffic, popular pages, and site performance. Analytics does not load until you choose “Accept analytics” in the cookie banner.
-				</p>
-			</section>
+			{consent.categories.map((category, index) => (
+				<section class="cookie-policy-section">
+					<h2>{category.name}</h2>
+					<p>{category.desc}{index === 0 && seo.analytics !== 'None' ? ` This category controls ${analyticsName}, which does not load until you allow it.` : ''}</p>
+				</section>
+			))}
 
 			<section class="cookie-policy-section">
 				<h2>Your Choice</h2>
 				<p>
-					You can reject analytics and continue using the site. Use the “Cookie settings” button shown after you make a choice to change your preference.
+					You can reject optional categories and continue using the site. Your choice is remembered for {consent.remember} days. Use the “Cookie settings” button to change it at any time.
 				</p>
 			</section>
 		</main>

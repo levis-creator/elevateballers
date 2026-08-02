@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLayoutStore } from '../../stores/useLayoutStore';
+import { resolvePublicContactSettings } from '@/features/settings/application/contactSettings';
 
 /**
  * Header component - Main header with logo, navigation menu, and search
@@ -43,10 +44,18 @@ export default function Header({
   const { isMobileMenuOpen, toggleMobileMenu, closeMobileMenu } = useLayoutStore();
   const [pathname, setPathname] = useState(currentPath);
   const [resolvedBackgroundImage, setResolvedBackgroundImage] = useState(backgroundImage);
+  const [socialLinks, setSocialLinks] = useState(() => resolvePublicContactSettings([]).socials);
 
   // Update pathname on client side
   useEffect(() => {
     setPathname(window.location.pathname);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/settings/public?category=contact')
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((records) => setSocialLinks(resolvePublicContactSettings(records).socials))
+      .catch(() => undefined);
   }, []);
 
   // Load dynamic header background image (if set) with local fallback
@@ -221,33 +230,13 @@ export default function Header({
                     <div className="stm-top-search"></div>
                     <div className="stm-top-socials">
                       <ul className="top-bar-socials stm-list-duty">
-                        <li>
-                          <a
-                            href="https://www.facebook.com/Elevateballers"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <i className="fa fa-facebook"></i>
-                          </a>
-                        </li>
-                        <li>
-                          <a
-                            href="https://www.instagram.com/elevateballers/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <i className="fa fa-instagram"></i>
-                          </a>
-                        </li>
-                        <li>
-                          <a
-                            href="https://www.youtube.com/@elevateballers9389/featured"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <i className="fa fa-youtube-play"></i>
-                          </a>
-                        </li>
+                        {socialLinks.map((social) => (
+                          <li key={social.label}>
+                            <a href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label}>
+                              <i className={`fa ${social.label === 'FB' ? 'fa-facebook' : social.label === 'IG' ? 'fa-instagram' : social.label === 'YT' ? 'fa-youtube-play' : 'fa-twitter'}`}></i>
+                            </a>
+                          </li>
+                        ))}
                       </ul>
                     </div>
                   </div>

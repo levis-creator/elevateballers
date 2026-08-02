@@ -37,6 +37,7 @@ export async function sendContactNotification(data: {
   email: string;
   subject: string;
   message: string;
+  recipients?: string[];
 }): Promise<void> {
   const html = emailWrapper(`
     <h2 style="margin:0 0 4px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">New Contact Message</h2>
@@ -56,13 +57,13 @@ export async function sendContactNotification(data: {
   `);
 
   await sendTransactionalEmail({
-    to: ADMIN_TO,
+    to: data.recipients?.length ? data.recipients : ADMIN_TO,
     replyTo: data.email,
     subject: `New Contact Message: ${data.subject}`,
     html,
     audit: { template: 'contact_notification' },
   });
-  console.log(`[email] Contact notification sent to ${ADMIN_TO}`);
+  console.log(`[email] Contact notification sent to ${(data.recipients?.length ? data.recipients : [ADMIN_TO]).join(', ')}`);
 }
 
 export async function sendContactReplyEmail(data: {
@@ -104,12 +105,13 @@ export async function sendContactAutoReply(data: {
   name: string;
   email: string;
   subject: string;
+  responseTarget?: string;
 }): Promise<void> {
   const html = emailWrapper(`
     <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Message Received!</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
-      Thank you for reaching out! We have received your message regarding <strong>${data.subject}</strong> and will get back to you as soon as possible.
+      Thank you for reaching out! We have received your message regarding <strong>${data.subject}</strong> and will get back to you ${data.responseTarget || 'as soon as possible'}.
     </p>
     <p style="margin:0;font-size:15px;color:${C.text};line-height:1.7;">
       Best regards,<br /><strong>ElevateBallers Team</strong>

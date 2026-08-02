@@ -4,7 +4,7 @@ import "../styles/design-system.css";
 import "../styles/landing-enhancements.css";
 import SEO from "../components/SEO.astro";
 import CookieConsent from "../components/CookieConsent.astro";
-import { matchesSeoPath, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
+import { matchesSeoPath, resolvePublicConsentSettings, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
 
 interface Props {
 	title?: string;
@@ -33,6 +33,7 @@ interface Props {
 
 const { title, description, image, imageWidth, imageHeight, imageType, canonicalURL, type, robots, keywords, publishedTime, modifiedTime, prevURL, nextURL, preloadImage } = Astro.props;
 const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+const consentSettings = resolvePublicConsentSettings(await siteSettingsService.list('consent').catch(() => []));
 const suffixBrand = seoSettings.titleSuffix.replace(/^[\s|—–-]+/, '').trim().toLowerCase();
 const resolvedTitle = title
 	? (seoSettings.titleSuffix && !title.toLowerCase().includes(suffixBrand) ? `${title}${seoSettings.titleSuffix}` : title)
@@ -881,8 +882,8 @@ const googleFonts = [
 		class="home wp-singular page-template-default page page-id-84 wp-theme-elevate basketball_two header_1 theme-elevate woocommerce-js stm-shop-sidebar wpb-js-composer js-comp-ver-6.13.0 vc_responsive elementor-default elementor-kit-4719 elementor-page elementor-page-84"
 	>
 		<slot />
-		{seoSettings.analytics !== 'None' && (
-			<CookieConsent provider={seoSettings.analytics} analyticsId={seoSettings.analyticsId} />
+		{(consentSettings.enabled || seoSettings.analytics !== 'None') && (
+			<CookieConsent provider={seoSettings.analytics} analyticsId={seoSettings.analyticsId} settings={consentSettings} />
 		)}
 
 		<script is:inline>

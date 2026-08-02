@@ -3,24 +3,9 @@
 import { prisma } from "../../../lib/prisma";
 import SubscribeForm from './SubscribeForm';
 import { optimizeImageUrl } from "../../../lib/image-cdn";
+import { resolvePublicContactSettings } from '@/features/settings';
 
-const DEFAULT_CONTACT = {
-  address: 'Pepo Lane, off Dagoretti Road',
-  phone: '0703913923',
-  fax: '0729259496',
-  email: 'ballers@elevateballers.com',
-  hours: 'Sat-Sun 8am - 6pm',
-};
-
-const DEFAULT_SOCIAL = {
-  facebook: 'https://www.facebook.com/Elevateballers',
-  instagram: 'https://www.instagram.com/elevateballers/',
-  twitter: 'https://twitter.com/elevateballers/',
-  youtube: 'https://www.youtube.com/@elevateballers9389/featured',
-};
-
-let contact = { ...DEFAULT_CONTACT };
-let social = { ...DEFAULT_SOCIAL };
+let managedContact = resolvePublicContactSettings([]);
 
 try {
   const settings = await prisma.siteSetting.findMany({
@@ -29,42 +14,19 @@ try {
         in: [
           'contact_address',
           'contact_phone',
-          'contact_fax',
           'contact_email',
           'contact_hours',
           'social_facebook',
           'social_instagram',
           'social_twitter',
           'social_youtube',
+          'social_order',
         ],
       },
     },
   });
 
-  const settingsMap = settings.reduce((acc, curr) => {
-    acc[curr.key] = curr.value;
-    return acc;
-  }, {} as Record<string, string>);
-
-  const getValue = (key: string, fallback: string) =>
-    Object.prototype.hasOwnProperty.call(settingsMap, key)
-      ? settingsMap[key]
-      : fallback;
-
-  contact = {
-    address: getValue('contact_address', DEFAULT_CONTACT.address),
-    phone: getValue('contact_phone', DEFAULT_CONTACT.phone),
-    fax: getValue('contact_fax', DEFAULT_CONTACT.fax),
-    email: getValue('contact_email', DEFAULT_CONTACT.email),
-    hours: getValue('contact_hours', DEFAULT_CONTACT.hours),
-  };
-
-  social = {
-    facebook: getValue('social_facebook', DEFAULT_SOCIAL.facebook),
-    instagram: getValue('social_instagram', DEFAULT_SOCIAL.instagram),
-    twitter: getValue('social_twitter', DEFAULT_SOCIAL.twitter),
-    youtube: getValue('social_youtube', DEFAULT_SOCIAL.youtube),
-  };
+  managedContact = resolvePublicContactSettings(settings as any);
 } catch (error) {
   console.error("Error fetching footer settings:", error);
 }
@@ -92,33 +54,29 @@ try {
                     <tr>
                       <td class="widget_contacts_address" colspan="2">
                         <div class="icon"><i class="fa fa-map-marker"></i></div>
-                        <div class="text">{contact.address}</div>
+                        <div class="text">{managedContact.address}</div>
                       </td>
                     </tr>
                     <tr>
-                      <td class="widget_contacts_phone">
+                      <td class="widget_contacts_phone" colspan="2">
                         <div class="icon"><i class="fa fa-phone"></i></div>
-                        <div class="text">{contact.phone}</div>
-                      </td>
-                      <td class="widget_contacts_fax">
-                        <div class="icon"><i class="fa fa-fax"></i></div>
-                        <div class="text">{contact.fax}</div>
+                        <div class="text">{managedContact.phones}</div>
                       </td>
                     </tr>
                     <tr>
                       <td class="widget_contacts_mail">
                         <div class="icon"><i class="fa fa-envelope"></i></div>
                         <div class="text">
-                          {contact.email && (
-                            <a href={`mailto:${contact.email}`}>
-                              {contact.email}
+                          {managedContact.email && (
+                            <a href={`mailto:${managedContact.email}`}>
+                              {managedContact.email}
                             </a>
                           )}
                         </div>
                       </td>
                       <td class="widget_contacts_schedule">
                         <div class="icon"><i class="fa fa-clock-o"></i></div>
-                        <div class="text">{contact.hours}</div>
+                        <div class="text">{managedContact.hours}</div>
                       </td>
                     </tr>
                   </tbody>
@@ -168,50 +126,13 @@ try {
               <div class="footer-socials-unit">
                 <div class="h6 footer-socials-title">Follow Us:</div>
                 <ul class="footer-bottom-socials stm-list-duty">
-                  {social.facebook && (
-                    <li class="stm-social-facebook">
-                      <a
-                        href={social.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <i class="fa fa-facebook"></i>
+                  {managedContact.socials.map((item) => (
+                    <li class={`stm-social-${item.label.toLowerCase()}`}>
+                      <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={item.label}>
+                        <i class={`fa ${item.label === 'FB' ? 'fa-facebook' : item.label === 'IG' ? 'fa-instagram' : item.label === 'YT' ? 'fa-youtube-play' : 'fa-twitter'}`}></i>
                       </a>
                     </li>
-                  )}
-                  {social.twitter && (
-                    <li class="stm-social-twitter">
-                      <a
-                        href={social.twitter}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <i class="fa fa-twitter"></i>
-                      </a>
-                    </li>
-                  )}
-                  {social.instagram && (
-                    <li class="stm-social-instagram">
-                      <a
-                        href={social.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <i class="fa fa-instagram"></i>
-                      </a>
-                    </li>
-                  )}
-                  {social.youtube && (
-                    <li class="stm-social-youtube-play">
-                      <a
-                        href={social.youtube}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <i class="fa fa-youtube-play"></i>
-                      </a>
-                    </li>
-                  )}
+                  ))}
                 </ul>
               </div>
             </div>
