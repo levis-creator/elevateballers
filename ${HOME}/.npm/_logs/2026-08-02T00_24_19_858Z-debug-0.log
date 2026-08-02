@@ -5,10 +5,10 @@
 4 silly config load:file:c:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm ls @fontsource/ibm-plex-mono
-8 verbose argv "ls" "--json" "--depth" "0" "--" "@fontsource/ibm-plex-mono"
-9 verbose logfile logs-max:10 dir:c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-01T23_31_13_117Z-
-10 verbose logfile c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-01T23_31_13_117Z-debug-0.log
+7 verbose title npm ls @astrojs/react
+8 verbose argv "ls" "--json" "--depth" "0" "--" "@astrojs/react"
+9 verbose logfile logs-max:10 dir:c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-02T00_24_19_858Z-
+10 verbose logfile c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-02T00_24_19_858Z-debug-0.log
 11 silly logfile start cleaning logs, removing 2 files
 12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
 13 silly logfile done cleaning log files

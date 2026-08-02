@@ -10,6 +10,7 @@ import { FOOTER_CONTENT_KEY, parseFooterContent } from '@/features/layout/lib/fo
 import { getSponsors } from '@/features/cms/lib/editorial-queries';
 import {
   resolvePublicBrandSettings,
+  resolvePublicContactSettings,
   resolvePublicFooterSettings,
   resolvePublicHeaderSettings,
 } from '@/features/settings';
@@ -20,14 +21,10 @@ export async function getFooterData(): Promise<FooterData> {
       getAllSiteSettings(),
       getSponsors(true).catch(() => []),
     ]);
-		const map = new Map<string, string>(settings.map((setting) => [setting.key, setting.value]));
-    const val = (key: string, fallback: string) => {
-      const v = map.get(key);
-      return v != null && String(v).trim() !== '' ? String(v) : fallback;
-    };
-    const d = DEFAULT_FOOTER;
+    const map = new Map<string, string>(settings.map((setting) => [setting.key, setting.value]));
     const headerSettings = resolvePublicHeaderSettings(settings);
     const brandSettings = resolvePublicBrandSettings(settings);
+    const contactSettings = resolvePublicContactSettings(settings);
     const footerSettings = resolvePublicFooterSettings(
       settings,
       headerSettings.logo,
@@ -35,22 +32,15 @@ export async function getFooterData(): Promise<FooterData> {
       brandSettings.tagline
     );
 
-    const socials = [
-      { label: 'FB', url: val('social_facebook', d.socials[0].url) },
-      { label: 'IG', url: val('social_instagram', d.socials[1].url) },
-      { label: 'YT', url: val('social_youtube', d.socials[2].url) },
-      { label: 'X', url: val('social_twitter', d.socials[3].url) },
-    ].filter((s) => s.url);
-
     return {
       contact: {
-        address: val('contact_address', d.contact.address),
-        hours: val('contact_hours', d.contact.hours),
-        phone: val('contact_phone', d.contact.phone),
-        fax: val('contact_fax', d.contact.fax),
-        email: val('contact_email', d.contact.email),
+        address: contactSettings.address,
+        hours: contactSettings.hours,
+        phone: contactSettings.phones,
+        fax: '',
+        email: contactSettings.email,
       },
-      socials,
+      socials: contactSettings.socials,
       content: parseFooterContent(map.get(FOOTER_CONTENT_KEY)),
       settings: footerSettings,
 			sponsors: sponsorRecords.map((sponsor) => ({

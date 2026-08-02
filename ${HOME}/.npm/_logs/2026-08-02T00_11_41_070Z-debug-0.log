@@ -13,3 +13,9 @@
 12 notice run elevateballers@0.0.1 dev
 13 notice run prisma generate && astro dev
 14 silly logfile done cleaning log files
+15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
+16 verbose os Windows_NT 10.0.26200
+17 verbose node v24.18.0
+18 verbose npm  v12.0.1
+19 verbose exit -1
+20 verbose code -1

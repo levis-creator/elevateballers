@@ -24,6 +24,7 @@ const FALLBACK: ContactData = {
 	],
 	departments: CONTACT_DEFAULTS.departments.map((d) => ({ ...d, href: `mailto:${d.email}` })),
 	socials: [],
+	responseTarget: 'within 48 hours',
 };
 
 export async function getContactData(): Promise<ContactData> {

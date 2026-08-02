@@ -32,6 +32,7 @@ import CookieConsent from "@/components/CookieConsent.astro";
 import {
 	buildThemeColorPalette,
 	resolvePublicBrandSettings,
+	resolvePublicConsentSettings,
 	resolvePublicSeoSettings,
 	matchesSeoPath,
 	applyTitlePattern,
@@ -83,6 +84,9 @@ const brandSettings = resolvePublicBrandSettings(
 );
 const seoSettings = resolvePublicSeoSettings(
 	await siteSettingsService.list("seo").catch(() => [])
+);
+const consentSettings = resolvePublicConsentSettings(
+	await siteSettingsService.list("consent").catch(() => [])
 );
 const palette = buildThemeColorPalette(brandSettings);
 
@@ -203,8 +207,8 @@ const themeStyle = [
 		<!-- Boot splash: shown once per session on first paint, then removed on load. -->
 		<LoadingSplash />
 		<slot />
-		{seoSettings.analytics !== 'None' && (
-			<CookieConsent provider={seoSettings.analytics} analyticsId={seoSettings.analyticsId} />
+		{(consentSettings.enabled || seoSettings.analytics !== 'None') && (
+			<CookieConsent provider={seoSettings.analytics} analyticsId={seoSettings.analyticsId} settings={consentSettings} />
 		)}
 	</body>
 </html>

@@ -4,6 +4,8 @@ import { PrismaSiteSettingsRepository } from './data/prismaSiteSettingsRepositor
 
 export * from './application/siteSettingsService';
 export * from './application/seoSettings';
+export * from './application/contactSettings';
+export * from './application/consentSettings';
 export * from './application/headerSettings';
 export * from './application/footerSettings';
 export * from './application/brandSettings';

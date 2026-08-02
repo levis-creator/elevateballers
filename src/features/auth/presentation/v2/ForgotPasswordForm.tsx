@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Mail, KeyRound, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { useForgotPassword } from "./hooks/useForgotPassword";
 import LoginField from "./components/LoginField";
+import { resolvePublicContactSettings } from "@/features/settings/application/contactSettings";
 
 /**
  * Forgot-password form (right column). Pure presentation — email state and the
@@ -9,6 +11,14 @@ import LoginField from "./components/LoginField";
  */
 export default function ForgotPasswordForm() {
 	const f = useForgotPassword();
+	const [supportEmail, setSupportEmail] = useState(() => resolvePublicContactSettings([]).email);
+
+	useEffect(() => {
+		fetch("/api/settings/public?category=contact")
+			.then((response) => response.ok ? response.json() : Promise.reject())
+			.then((settings) => setSupportEmail(resolvePublicContactSettings(settings).email))
+			.catch(() => undefined);
+	}, []);
 
 	return (
 		<div className="relative w-full max-w-[400px]">
@@ -60,7 +70,7 @@ export default function ForgotPasswordForm() {
 			<div className="mt-6 rounded-lg border border-white/[0.08] bg-[#16130f] px-4 py-3.5">
 				<p className="font-body text-[12.5px] leading-[1.5] text-muted2">
 					<span className="font-bold text-creamdim">Can&rsquo;t access this email?</span> Contact the league office at{" "}
-					<a href="mailto:ballers@elevateballers.com" className="text-brandsoft no-underline hover:text-brand">ballers@elevateballers.com</a> and we&rsquo;ll verify you manually.
+					<a href={`mailto:${supportEmail}`} className="text-brandsoft no-underline hover:text-brand">{supportEmail}</a> and we&rsquo;ll verify you manually.
 				</p>
 			</div>
 

@@ -31,7 +31,7 @@ import FeatureGate from "@/components/FeatureGate.astro";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import PageLoader from "@/components/PageLoader";
 import { getAllSiteSettings } from "@/features/cms/lib/queries";
-import { resolvePublicSeoSettings } from '@/features/settings';
+import { resolvePublicContactSettings, resolvePublicSeoSettings } from '@/features/settings';
 import { getFeaturedNewsArticles } from "@/features/cms/lib/queries/news";
 import { optimizeImageUrl } from "@/lib/image-cdn";
 
@@ -49,10 +49,15 @@ let seoTitle = DEFAULT_SEO_TITLE;
 let seoDescription = DEFAULT_SEO_DESCRIPTION;
 let seoImage = DEFAULT_SEO_IMAGE;
 let seoKeywords = DEFAULT_SEO_KEYWORDS;
+let contactSettings = resolvePublicContactSettings([]);
 
 try {
-  const seoSettings = await getAllSiteSettings("seo");
+  const [seoSettings, contactRecords] = await Promise.all([
+    getAllSiteSettings("seo"),
+    getAllSiteSettings("contact"),
+  ]);
   const resolvedSeo = resolvePublicSeoSettings(seoSettings);
+  contactSettings = resolvePublicContactSettings(contactRecords);
   seoTitle = resolvedSeo.metaTitle;
   seoDescription = resolvedSeo.metaDescription;
   seoImage = resolvedSeo.ogImage;
@@ -145,11 +150,11 @@ try {
             "Premier basketball league providing high-quality competition, player development, and community engagement.",
           address: {
             "@type": "PostalAddress",
-            streetAddress: "Pepo Lane, off Dagoretti Road",
-            addressLocality: "Nairobi",
+            streetAddress: contactSettings.address,
             addressCountry: "KE",
           },
-          email: "ballers@elevateballers.com",
+          email: contactSettings.email,
+          telephone: contactSettings.phones,
           logo: { "@id": `${Astro.url.origin}/#logo` },
           image: { "@id": `${Astro.url.origin}/#logo` },
         },

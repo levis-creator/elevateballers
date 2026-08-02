@@ -7,6 +7,7 @@
  * fake events/articles.
  */
 import type { HomeData } from "@/features/home/domain/entities/home-v2";
+import type { FooterContact } from "@/features/layout/domain/entities/footer";
 
 const PAGE_NAME = "Elevate Ballers - Kenya's Premier Basketball League & Championships";
 const SITE_DESCRIPTION =
@@ -16,7 +17,12 @@ const ORG_DESCRIPTION =
 
 const abs = (origin: string, url: string) => (url.startsWith("http") ? url : `${origin}${url}`);
 
-export function buildHomeJsonLd(origin: string, home: HomeData, sameAs: string[] = []) {
+export function buildHomeJsonLd(
+	origin: string,
+	home: HomeData,
+	sameAs: string[] = [],
+	contact?: FooterContact,
+) {
 	const orgRef = { "@id": `${origin}/#organization` };
 	const graph: Record<string, unknown>[] = [
 		{
@@ -66,14 +72,13 @@ export function buildHomeJsonLd(origin: string, home: HomeData, sameAs: string[]
 			...(sameAs.length ? { sameAs } : {}),
 			address: {
 				"@type": "PostalAddress",
-				streetAddress: "Pepo Lane, off Dagoretti Road",
-				addressLocality: "Nairobi",
+				streetAddress: contact?.address || "Pepo Lane, off Dagoretti Road, Nairobi, Kenya",
 				addressCountry: "KE",
 			},
 			contactPoint: {
 				"@type": "ContactPoint",
-				telephone: "+254703913923",
-				email: "ballers@elevateballers.com",
+				telephone: contact?.phone || "0703 913 923 · 0729 259 496",
+				email: contact?.email || "ballers@elevateballers.com",
 				contactType: "customer support",
 			},
 		},

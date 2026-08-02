@@ -9,7 +9,7 @@ interface FormData {
   message: string;
 }
 
-export default function ContactForm() {
+export default function ContactForm({ topics = [], responseTarget = 'as soon as possible' }: { topics?: string[]; responseTarget?: string }) {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -21,7 +21,7 @@ export default function ContactForm() {
   const [success, setSuccess] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -89,7 +89,7 @@ export default function ContactForm() {
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            <p style={{ margin: 0, fontWeight: '500' }}>Message sent! We will get back to you soon.</p>
+            <p style={{ margin: 0, fontWeight: '500' }}>Message sent! We will get back to you {responseTarget}.</p>
           </div>
         </div>
       )}
@@ -131,15 +131,14 @@ export default function ContactForm() {
           />
         </div>
         <div style={{ marginBottom: '20px' }}>
-          <input
-            type="text"
-            name="subject"
-            value={formData.subject}
-            onChange={handleChange}
-            placeholder="Subject"
-            required
-            style={inputStyle}
-          />
+          {topics.length ? (
+            <select name="subject" value={formData.subject} onChange={handleChange} required style={inputStyle}>
+              <option value="" disabled>Select a desk</option>
+              {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+            </select>
+          ) : (
+            <input type="text" name="subject" value={formData.subject} onChange={handleChange} placeholder="Subject" required style={inputStyle} />
+          )}
         </div>
         <div style={{ marginBottom: '20px' }}>
           <textarea

@@ -5,8 +5,21 @@ import type {
   UpdateSiteSettingInput,
 } from '../domain/siteSetting';
 
-const PUBLIC_CATEGORIES = new Set(['appearance']);
-const PUBLIC_KEYS = new Set(['header_banner_image_url']);
+const PUBLIC_CATEGORIES = new Set(['appearance', 'contact']);
+const PUBLIC_KEYS = new Set([
+  'header_banner_image_url',
+  'contact_email',
+  'contact_phone',
+  'contact_address',
+  'contact_hours',
+  'contact_departmentList',
+  'contact_responseTarget',
+  'social_facebook',
+  'social_instagram',
+  'social_youtube',
+  'social_twitter',
+  'social_order',
+]);
 
 export class SiteSettingsService {
   constructor(private readonly repository: SiteSettingsRepository) {}

@@ -20,6 +20,7 @@ import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
 import { getAllSiteSettings } from "../features/cms/lib/queries";
+import { resolvePublicContactSettings } from "../features/settings";
 
 const DEFAULT_CONTENT = `Elevate Ballers is a premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement through competitive basketball. Founded with a vision to elevate the game and the community, we have been serving basketball enthusiasts of all ages and skill levels.
 
@@ -33,9 +34,14 @@ At Elevate Ballers, we are committed to creating an inclusive environment where 
 
 let aboutTitle = "ABOUT";
 let aboutContent = DEFAULT_CONTENT;
+let contactSettings = resolvePublicContactSettings([]);
 
 try {
-  const settings = await getAllSiteSettings("about");
+  const [settings, contactRecords] = await Promise.all([
+    getAllSiteSettings("about"),
+    getAllSiteSettings("contact"),
+  ]);
+  contactSettings = resolvePublicContactSettings(contactRecords);
   const titleSetting = settings.find((s: any) => s.key === "about_page_title");
   const contentSetting = settings.find((s: any) => s.key === "about_page_content");
   if (titleSetting?.value) aboutTitle = titleSetting.value;
@@ -94,10 +100,11 @@ const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => 
             "Premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement.",
           address: {
             "@type": "PostalAddress",
-            streetAddress: "Pepo Lane, off Dagoretti Road",
+            streetAddress: contactSettings.address,
             addressCountry: "KE",
           },
-          email: "ballers@elevateballers.com",
+          email: contactSettings.email,
+          telephone: contactSettings.phones,
         },
       ],
     })}
