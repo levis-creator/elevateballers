@@ -46,6 +46,18 @@ const description =
 const canonical = `${Astro.url.origin}/matches/${view.slug || view.id}/`;
 ---
 
-<LayoutV2 title={title} description={description} canonicalURL={canonical} type="website">
+<LayoutV2
+	title={title}
+	titlePattern="match"
+	titleTokens={{
+		home: view.home.name,
+		away: view.away.name,
+		score: view.home.score != null ? `${view.home.score}-${view.away.score}` : '',
+		date: view.dateText,
+	}}
+	description={description}
+	canonicalURL={canonical}
+	type="website"
+>
 	<MatchDetailPage view={view} />
 </LayoutV2>

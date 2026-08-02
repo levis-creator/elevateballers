@@ -1,4 +1,6 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
+import { applyTitlePattern, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
 // Legacy (v1) match-detail page on its own route. `/matches/<slug|id>` rewrites
 // here when PUBLIC_UI_VERSION !== 'v2'. Guard so it isn't served directly under v2.
 import { usePublicV2 } from "@/lib/ui-version";
@@ -115,9 +117,17 @@ if (hasFinalScore) {
   } in the ${matchLeague}. Lineups, schedule and live updates.`;
 }
 
+const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+pageTitle = applyTitlePattern(seoSettings.patternMatch, {
+  home: team1Name,
+  away: team2Name,
+  score: team1Score != null && team2Score != null ? `${team1Score}-${team2Score}` : '',
+  date: matchDate,
+});
+
 // Per-match OG image — generated server-side at /api/matches/[id]/og.png so
 // social shares get a real 1200×630 scoreboard instead of the site icon.
-const ogImage = match
+const ogImage = seoSettings.autoCards && match
   ? `${Astro.url.origin}/api/matches/${match.id}/og.png`
   : undefined;
 
@@ -150,10 +160,8 @@ const eventStatusUrl = "https://schema.org/EventScheduled";
     ? new Date(match.updatedAt).toISOString()
     : undefined}
 >
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

@@ -6,6 +6,7 @@
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import HomePageV2 from "@/features/home/presentation/v2/HomePage.astro";
 import { getAllSiteSettings } from "@/features/cms/lib/queries";
+import { resolvePublicSeoSettings } from '@/features/settings';
 
 // SEO defaults mirror the v1 page so metadata is unchanged. Admin → Settings → SEO overrides.
 const DEFAULT_SEO_TITLE =
@@ -23,10 +24,11 @@ let seoKeywords = DEFAULT_SEO_KEYWORDS;
 
 try {
   const seoSettings = await getAllSiteSettings("seo");
+  const resolvedSeo = resolvePublicSeoSettings(seoSettings);
+  seoTitle = resolvedSeo.metaTitle;
+  seoDescription = resolvedSeo.metaDescription;
+  seoImage = resolvedSeo.ogImage;
   for (const s of seoSettings) {
-    if (s.key === "seo_homepage_title" && s.value) seoTitle = s.value;
-    if (s.key === "seo_homepage_description" && s.value) seoDescription = s.value;
-    if (s.key === "seo_homepage_image" && s.value) seoImage = s.value;
     if (s.key === "seo_homepage_keywords" && s.value) seoKeywords = s.value;
   }
 } catch (err) {

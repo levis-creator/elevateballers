@@ -16,6 +16,7 @@ import {
 import type { Section, SettingRecord, Field } from '../settingsSections';
 import SettingsField from './SettingsField';
 import SettingsHeaderPreview from './SettingsHeaderPreview';
+import SettingsSeoPreview from './SettingsSeoPreview';
 
 type Props = {
   section: Section;
@@ -133,6 +134,13 @@ export default function SettingsSection({
               navItems={valueForKey('header_navItems')}
               sticky={valueForKey('header_sticky') !== 'false'}
               ctaLabel={valueForKey('header_ctaLabel')}
+            />
+          )}
+          {section.id === 'seo' && (
+            <SettingsSeoPreview
+              canonical={valueForKey('seo_canonical')}
+              title={valueForKey('seo_metaTitle')}
+              description={valueForKey('seo_metaDescription')}
             />
           )}
         </>

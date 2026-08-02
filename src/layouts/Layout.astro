@@ -4,6 +4,7 @@ import "../styles/design-system.css";
 import "../styles/landing-enhancements.css";
 import SEO from "../components/SEO.astro";
 import CookieConsent from "../components/CookieConsent.astro";
+import { matchesSeoPath, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
 
 interface Props {
 	title?: string;
@@ -31,6 +32,17 @@ interface Props {
 }
 
 const { title, description, image, imageWidth, imageHeight, imageType, canonicalURL, type, robots, keywords, publishedTime, modifiedTime, prevURL, nextURL, preloadImage } = Astro.props;
+const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+const suffixBrand = seoSettings.titleSuffix.replace(/^[\s|—–-]+/, '').trim().toLowerCase();
+const resolvedTitle = title
+	? (seoSettings.titleSuffix && !title.toLowerCase().includes(suffixBrand) ? `${title}${seoSettings.titleSuffix}` : title)
+	: seoSettings.metaTitle;
+const isExcludedPath = seoSettings.noindexPaths.some(({ path }) => matchesSeoPath(Astro.url.pathname, path || ''));
+const resolvedRobots = !seoSettings.indexing || isExcludedPath ? 'noindex, nofollow' : robots;
+const matchSlug = /^\/matches\/([^/]+)\/?$/.exec(Astro.url.pathname)?.[1];
+const resolvedImage = image || (seoSettings.autoCards && matchSlug
+	? `/api/matches/${encodeURIComponent(matchSlug)}/og.png`
+	: seoSettings.ogImage);
 
 const externalStylesheets = [
 	"/css/select2.min.css",
@@ -83,20 +95,24 @@ const googleFonts = [
 		<meta name="format-detection" content="telephone=no" />
 		<link rel="profile" href="http://gmpg.org/xfn/11" />
 		<SEO
-			title={title}
-			description={description}
-			image={image}
+			title={resolvedTitle}
+			description={description || seoSettings.metaDescription}
+			image={resolvedImage}
 			imageWidth={imageWidth}
 			imageHeight={imageHeight}
 			imageType={imageType}
 			canonicalURL={canonicalURL}
 			type={type}
-			robots={robots}
+			robots={resolvedRobots}
 			keywords={keywords}
 			publishedTime={publishedTime}
 			modifiedTime={modifiedTime}
 			prevURL={prevURL}
 			nextURL={nextURL}
+			canonicalBase={seoSettings.canonicalBase}
+			twitterHandle={seoSettings.twitterHandle}
+			schemaEnabled={seoSettings.schema}
+			verificationCodes={seoSettings.verification}
 		/>
 
 		{preloadImage && (
@@ -865,7 +881,9 @@ const googleFonts = [
 		class="home wp-singular page-template-default page page-id-84 wp-theme-elevate basketball_two header_1 theme-elevate woocommerce-js stm-shop-sidebar wpb-js-composer js-comp-ver-6.13.0 vc_responsive elementor-default elementor-kit-4719 elementor-page elementor-page-84"
 	>
 		<slot />
-		<CookieConsent />
+		{seoSettings.analytics !== 'None' && (
+			<CookieConsent provider={seoSettings.analytics} analyticsId={seoSettings.analyticsId} />
+		)}
 
 		<script is:inline>
 			(function () {

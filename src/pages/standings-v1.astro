@@ -1,4 +1,5 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 export const prerender = false;
 
 // Legacy standings page on its own route. `/standings` rewrites here when
@@ -42,10 +43,8 @@ try {
   canonicalURL={`${Astro.url.origin}/standings/`}
   type="website"
 >
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

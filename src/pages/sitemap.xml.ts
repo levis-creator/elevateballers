@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getNewsArticles, getTeams, getPlayers, getMatches, getPublicStaff } from '../features/cms/lib/queries';
 import { prisma } from '../lib/prisma';
+import { matchesSeoPath, resolvePublicSeoSettings, siteSettingsService } from '../features/settings';
 
 export const prerender = false;
 
@@ -9,9 +10,14 @@ export const GET: APIRoute = async ({ site }) => {
         return new Response('Site URL not configured', { status: 500 });
     }
 
-    const baseUrl = site.toString().replace(/\/$/, '');
-
     try {
+        const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+        if (!seoSettings.sitemap) {
+            return new Response('Sitemap disabled', { status: 404 });
+        }
+        const baseUrl = seoSettings.canonicalBase || site.toString().replace(/\/$/, '');
+        const isIncluded = (path: string) =>
+            !seoSettings.noindexPaths.some(({ path: pattern }) => matchesSeoPath(path || '/', pattern || ''));
         // Fetch dynamic data
         const [articles, teams, players, matches, staff] = await Promise.all([
             getNewsArticles(),
@@ -37,7 +43,7 @@ export const GET: APIRoute = async ({ site }) => {
             { path: '/rules',            priority: '0.5', freq: 'monthly' },
             { path: '/league-registration', priority: '0.5', freq: 'monthly' },
             { path: '/staff',            priority: '0.4', freq: 'monthly' },
-        ];
+        ].filter(({ path }) => isIncluded(path || '/'));
 
         // This sitemap is dynamic because:
         // 1. It runs on the server (prerender = false)
@@ -79,6 +85,7 @@ export const GET: APIRoute = async ({ site }) => {
                 )
                 .join('')}
   ${articles
+                .filter((article: any) => isIncluded(`/news/${article.slug}/`))
                 .map(
                     (article: any) => `
   <url>
@@ -90,6 +97,7 @@ export const GET: APIRoute = async ({ site }) => {
                 )
                 .join('')}
   ${teams
+                .filter((team: any) => isIncluded(`/teams/${team.slug}/`))
                 .map(
                     (team: any) => `
   <url>
@@ -101,6 +109,7 @@ export const GET: APIRoute = async ({ site }) => {
                 )
                 .join('')}
   ${players
+                .filter((player: any) => isIncluded(`/players/${player.slug || player.id}/`))
                 .map(
                     (player: any) => `
   <url>
@@ -112,6 +121,7 @@ export const GET: APIRoute = async ({ site }) => {
                 )
                 .join('')}
   ${staff
+                .filter((member: any) => isIncluded(`/staff/${member.slug}/`))
                 .map(
                     (member: any) => `
   <url>
@@ -123,9 +133,11 @@ export const GET: APIRoute = async ({ site }) => {
                 )
                 .join('')}
   ${matches
+                .filter((match: any) => isIncluded(`/matches/${match.slug || match.id}/`))
                 .map((match: any) => {
                     const matchPath = match.slug || match.id;
-                    const imagesUrl = matchesWithImages.has(match.id)
+                    const imagesPath = `/matches/${matchPath}/images/`;
+                    const imagesUrl = matchesWithImages.has(match.id) && isIncluded(imagesPath)
                         ? `
   <url>
     <loc>${baseUrl}/matches/${matchPath}/images/</loc>

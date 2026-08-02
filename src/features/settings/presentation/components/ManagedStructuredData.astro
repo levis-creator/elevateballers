@@ -1,0 +1,16 @@
+---
+import { resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
+
+interface Props {
+  content: string;
+}
+
+const { content } = Astro.props;
+const seoSettings = resolvePublicSeoSettings(
+  await siteSettingsService.list('seo').catch(() => []),
+);
+---
+
+{seoSettings.schema && (
+  <script type="application/ld+json" is:inline set:html={content} />
+)}
