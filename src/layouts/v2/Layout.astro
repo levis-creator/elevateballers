@@ -32,6 +32,9 @@ import CookieConsent from "@/components/CookieConsent.astro";
 import {
 	buildThemeColorPalette,
 	resolvePublicBrandSettings,
+	resolvePublicSeoSettings,
+	matchesSeoPath,
+	applyTitlePattern,
 	siteSettingsService,
 } from "@/features/settings";
 
@@ -51,6 +54,8 @@ interface Props {
 	prevURL?: string;
 	nextURL?: string;
 	preloadImage?: string;
+	titlePattern?: 'team' | 'player' | 'match' | 'article';
+	titleTokens?: Record<string, string | number | null | undefined>;
 }
 
 const {
@@ -69,16 +74,45 @@ const {
 	prevURL,
 	nextURL,
 	preloadImage,
+	titlePattern,
+	titleTokens = {},
 } = Astro.props;
 
 const brandSettings = resolvePublicBrandSettings(
 	await siteSettingsService.list("brand").catch(() => [])
 );
+const seoSettings = resolvePublicSeoSettings(
+	await siteSettingsService.list("seo").catch(() => [])
+);
 const palette = buildThemeColorPalette(brandSettings);
 
-const resolvedTitle = title
-	? title.replaceAll("Elevate Ballers", brandSettings.siteName)
-	: brandSettings.siteName;
+const pattern = titlePattern === 'team'
+	? seoSettings.patternTeam
+	: titlePattern === 'player'
+		? seoSettings.patternPlayer
+		: titlePattern === 'match'
+			? seoSettings.patternMatch
+			: titlePattern === 'article'
+				? seoSettings.patternArticle
+				: '';
+const patternedTitle = pattern ? applyTitlePattern(pattern, titleTokens) : title;
+const baseTitle = patternedTitle
+	? patternedTitle.replaceAll("Elevate Ballers", brandSettings.siteName)
+	: seoSettings.metaTitle.replaceAll("Elevate Ballers", brandSettings.siteName);
+const suffixBrand = seoSettings.titleSuffix.replace(/^[\s|—–-]+/, '').trim().toLowerCase();
+const resolvedTitle = patternedTitle && seoSettings.titleSuffix && !baseTitle.toLowerCase().includes(suffixBrand)
+	? `${baseTitle}${seoSettings.titleSuffix}`
+	: baseTitle;
+const isExcludedPath = seoSettings.noindexPaths.some(({ path }) =>
+	matchesSeoPath(Astro.url.pathname, path || '')
+);
+const resolvedRobots = !seoSettings.indexing || isExcludedPath
+	? 'noindex, nofollow'
+	: robots;
+const matchSlug = /^\/matches\/([^/]+)\/?$/.exec(Astro.url.pathname)?.[1];
+const resolvedImage = image || (seoSettings.autoCards && matchSlug
+	? `/api/matches/${encodeURIComponent(matchSlug)}/og.png`
+	: seoSettings.ogImage);
 const themeStyle = [
 	`--site-brand-rgb:${palette.brand}`,
 	`--site-brand-light-rgb:${palette.brandLight}`,
@@ -131,20 +165,24 @@ const themeStyle = [
 		<meta name="format-detection" content="telephone=no" />
 		<SEO
 			title={resolvedTitle}
-			description={description || brandSettings.tagline}
+			description={description || seoSettings.metaDescription}
 			siteName={brandSettings.siteName}
-			image={image}
+			image={resolvedImage}
 			imageWidth={imageWidth}
 			imageHeight={imageHeight}
 			imageType={imageType}
 			canonicalURL={canonicalURL}
 			type={type}
-			robots={robots}
+			robots={resolvedRobots}
 			keywords={keywords}
 			publishedTime={publishedTime}
 			modifiedTime={modifiedTime}
 			prevURL={prevURL}
 			nextURL={nextURL}
+			canonicalBase={seoSettings.canonicalBase}
+			twitterHandle={seoSettings.twitterHandle}
+			schemaEnabled={seoSettings.schema}
+			verificationCodes={seoSettings.verification}
 		/>
 
 		{preloadImage && (
@@ -165,6 +203,8 @@ const themeStyle = [
 		<!-- Boot splash: shown once per session on first paint, then removed on load. -->
 		<LoadingSplash />
 		<slot />
-		<CookieConsent />
+		{seoSettings.analytics !== 'None' && (
+			<CookieConsent provider={seoSettings.analytics} analyticsId={seoSettings.analyticsId} />
+		)}
 	</body>
 </html>

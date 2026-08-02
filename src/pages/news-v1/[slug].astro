@@ -1,4 +1,6 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
+import { applyTitlePattern, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
 // Legacy (v1) news-article page on its own route. `/news/<slug>` rewrites here
 // when PUBLIC_UI_VERSION !== 'v2'. Guard so it isn't served directly under v2.
 import { usePublicV2 } from "@/lib/ui-version";
@@ -83,7 +85,12 @@ const getCategoryColor = (cat: string): string => {
 const categoryColor = getCategoryColor(category);
 
 // SEO Meta Tags
-const pageTitle = `${article.title} - Elevate`;
+const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+const pageTitle = applyTitlePattern(seoSettings.patternArticle, {
+  title: article.title,
+  category,
+  date: publishedDate,
+});
 const pageDescription = article.excerpt || article.title;
 const pageUrl = `${Astro.url.origin}/news/${slug}/`;
 const pageImageSource =
@@ -108,10 +115,8 @@ const modifiedTime = modifiedDate;
   modifiedTime={modifiedTime ?? undefined}
 >
 
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

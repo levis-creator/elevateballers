@@ -1,4 +1,5 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 // Legacy (v1) fixtures page. Reached via Astro.rewrite from
 // /upcoming-fixtures when PUBLIC_UI_VERSION is not "v2". Do not link here
 // directly — the canonical URL stays /upcoming-fixtures.
@@ -80,10 +81,8 @@ try {
   canonicalURL={`${Astro.url.origin}/upcoming-fixtures/`}
   type="website"
 >
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

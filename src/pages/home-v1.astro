@@ -1,4 +1,5 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 export const prerender = false;
 
 // v1 (legacy) home page, on its OWN route so it shares no module graph with the
@@ -30,6 +31,7 @@ import FeatureGate from "@/components/FeatureGate.astro";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import PageLoader from "@/components/PageLoader";
 import { getAllSiteSettings } from "@/features/cms/lib/queries";
+import { resolvePublicSeoSettings } from '@/features/settings';
 import { getFeaturedNewsArticles } from "@/features/cms/lib/queries/news";
 import { optimizeImageUrl } from "@/lib/image-cdn";
 
@@ -50,10 +52,11 @@ let seoKeywords = DEFAULT_SEO_KEYWORDS;
 
 try {
   const seoSettings = await getAllSiteSettings("seo");
+  const resolvedSeo = resolvePublicSeoSettings(seoSettings);
+  seoTitle = resolvedSeo.metaTitle;
+  seoDescription = resolvedSeo.metaDescription;
+  seoImage = resolvedSeo.ogImage;
   for (const s of seoSettings) {
-    if (s.key === "seo_homepage_title" && s.value) seoTitle = s.value;
-    if (s.key === "seo_homepage_description" && s.value) seoDescription = s.value;
-    if (s.key === "seo_homepage_image" && s.value) seoImage = s.value;
     if (s.key === "seo_homepage_keywords" && s.value) seoKeywords = s.value;
   }
 } catch (err) {
@@ -85,10 +88,8 @@ try {
   canonicalURL={`${Astro.url.origin}/`}
   type="website"
 >
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

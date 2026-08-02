@@ -1,4 +1,5 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 export const prerender = false;
 
 Astro.response.headers.set("Cache-Control", "public, s-maxage=120, stale-while-revalidate=300");
@@ -30,6 +31,8 @@ const articleImage = view.seo.socialImage || view.heroImage
 
 <LayoutV2
 	title={seoTitle}
+	titlePattern="article"
+	titleTokens={{ title: seoTitle }}
 	description={seoDescription}
 	image={view.seo.socialImage || view.heroImage || undefined}
 	canonicalURL={canonicalUrl}
@@ -37,10 +40,8 @@ const articleImage = view.seo.socialImage || view.heroImage
 	publishedTime={view.publishedTime}
 	modifiedTime={view.modifiedTime}
 >
-	<script
-		type="application/ld+json"
-		is:inline
-		set:html={JSON.stringify({
+	<ManagedStructuredData
+		content={JSON.stringify({
 			"@context": "https://schema.org",
 			"@graph": [
 				{

@@ -1,4 +1,6 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
+import { applyTitlePattern, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
 export const prerender = false;
 
 // Legacy single-team page on its own route. `/teams/<slug>` rewrites here when
@@ -122,7 +124,12 @@ const formatStaffRole = (role: string): string => {
 };
 
 // SEO Meta Tags
-const pageTitle = `${team.name} - Teams - Elevate Ballers`;
+const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+const pageTitle = applyTitlePattern(seoSettings.patternTeam, {
+  team: team.name,
+  league: '',
+  season: '',
+});
 const pageDescription =
   team.description || `View ${team.name} team information, players, and staff`;
 const pageUrl = `${Astro.url.origin}/teams/${slug}/`;
@@ -142,10 +149,8 @@ const pageImage = pageImageSource.startsWith("http")
   type="website"
 >
 
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

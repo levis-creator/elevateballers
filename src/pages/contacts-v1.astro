@@ -1,4 +1,5 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 // Legacy (v1) Contacts page. `/contacts` rewrites here when PUBLIC_UI_VERSION !==
 // 'v2'. Guard so it isn't served directly under v2.
 import { usePublicV2 } from "@/lib/ui-version";
@@ -79,10 +80,8 @@ try {
   canonicalURL={`${Astro.url.origin}/contacts/`}
   type="website"
 >
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

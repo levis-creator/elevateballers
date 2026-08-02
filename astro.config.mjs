@@ -8,8 +8,6 @@ import vercel from '@astrojs/vercel';
 import { fileURLToPath } from 'url';
 import { resolve } from 'path';
 
-import sitemap from '@astrojs/sitemap';
-
 // Determine adapter based on environment variable
 // Set DEPLOY_TARGET=vercel for Vercel, or DEPLOY_TARGET=cpanel (or unset) for cPanel
 const deployTarget = process.env.DEPLOY_TARGET || 'cpanel';
@@ -17,7 +15,9 @@ const deployTarget = process.env.DEPLOY_TARGET || 'cpanel';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://elevateballers.com',
-  integrations: [react(), tailwind(), alpinejs(), sitemap()],
+  // Sitemap generation is runtime-managed by src/pages/sitemap.xml.ts so the
+  // Site Settings → SEO switch and excluded paths are always respected.
+  integrations: [react(), tailwind(), alpinejs()],
   output: 'server',
   // Enable link prefetching so `data-astro-prefetch` hints actually fetch.
   // Default strategy is hover; the admin uses <ClientRouter /> for SPA-style nav.

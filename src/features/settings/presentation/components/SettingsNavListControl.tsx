@@ -1,7 +1,7 @@
 import { Plus, X } from 'lucide-react';
 import type { Field } from '../settingsSections';
 
-type NavItem = { label: string; path: string };
+type ListItem = Record<string, string>;
 
 type Props = {
   field: Field;
@@ -10,26 +10,30 @@ type Props = {
   onChange: (key: string, value: string) => void;
 };
 
-function parseItems(value: string): NavItem[] {
+function parseItems(value: string, keys: string[]): ListItem[] {
   try {
     const parsed = JSON.parse(value);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((item) => ({
-      label: String(item?.label ?? ''),
-      path: String(item?.path ?? ''),
-    }));
+    return parsed.map((item) =>
+      Object.fromEntries(keys.map((key) => [key, String(item?.[key] ?? '')]))
+    );
   } catch {
     return [];
   }
 }
 
 export default function SettingsNavListControl({ field, value, canManage, onChange }: Props) {
-  const items = parseItems(value);
+  const columns = field.columns ?? [
+    { key: 'label', label: 'Label', placeholder: 'Teams', width: '1fr' },
+    { key: 'path', label: 'Path', placeholder: '/teams', width: '1fr' },
+  ];
+  const items = parseItems(value, columns.map((column) => column.key));
   const maxItems = field.maxItems ?? 8;
   const atLimit = items.length >= maxItems;
-  const write = (next: NavItem[]) => onChange(field.key, JSON.stringify(next));
+  const write = (next: ListItem[]) => onChange(field.key, JSON.stringify(next));
+  const gridTemplateColumns = `${columns.map((column) => column.width ?? '1fr').join(' ')} 106px`;
 
-  const update = (index: number, key: keyof NavItem, nextValue: string) =>
+  const update = (index: number, key: string, nextValue: string) =>
     write(
       items.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: nextValue } : item))
     );
@@ -44,31 +48,26 @@ export default function SettingsNavListControl({ field, value, canManage, onChan
 
   return (
     <div className="eb-settings-list-control">
-      <div className="eb-settings-list-labels">
-        <span>Label</span>
-        <span>Path</span>
+      <div className="eb-settings-list-labels" style={{ gridTemplateColumns }}>
+        {columns.map((column) => <span key={column.key}>{column.label}</span>)}
         <span>Order</span>
       </div>
       {items.map((item, index) => (
-        <div className="eb-settings-list-row" key={index}>
-          <input
-            className="eb-in"
-            value={item.label}
-            placeholder="Teams"
-            disabled={!canManage}
-            onChange={(event) => update(index, 'label', event.target.value)}
-          />
-          <input
-            className="eb-in"
-            value={item.path}
-            placeholder="/teams"
-            disabled={!canManage}
-            onChange={(event) => update(index, 'path', event.target.value)}
-          />
+        <div className="eb-settings-list-row" style={{ gridTemplateColumns }} key={index}>
+          {columns.map((column) => (
+            <input
+              className="eb-in"
+              key={column.key}
+              value={item[column.key] ?? ''}
+              placeholder={column.placeholder}
+              disabled={!canManage}
+              onChange={(event) => update(index, column.key, event.target.value)}
+            />
+          ))}
           <div className="eb-settings-list-actions">
             <button
               type="button"
-              aria-label={`Move ${item.label || 'item'} up`}
+              aria-label={`Move ${item.label || item.path || 'item'} up`}
               disabled={!canManage || index === 0}
               onClick={() => move(index, -1)}
             >
@@ -76,7 +75,7 @@ export default function SettingsNavListControl({ field, value, canManage, onChan
             </button>
             <button
               type="button"
-              aria-label={`Move ${item.label || 'item'} down`}
+              aria-label={`Move ${item.label || item.path || 'item'} down`}
               disabled={!canManage || index === items.length - 1}
               onClick={() => move(index, 1)}
             >
@@ -85,7 +84,7 @@ export default function SettingsNavListControl({ field, value, canManage, onChan
             <button
               type="button"
               className="danger"
-              aria-label={`Remove ${item.label || 'item'}`}
+              aria-label={`Remove ${item.label || item.path || 'item'}`}
               disabled={!canManage}
               onClick={() => write(items.filter((_, itemIndex) => itemIndex !== index))}
             >
@@ -99,7 +98,7 @@ export default function SettingsNavListControl({ field, value, canManage, onChan
           type="button"
           disabled={!canManage || atLimit}
           title={atLimit ? `Remove an item before adding another (maximum ${maxItems})` : undefined}
-          onClick={() => write([...items, { label: '', path: '' }])}
+          onClick={() => write([...items, Object.fromEntries(columns.map((column) => [column.key, '']))])}
         >
           <Plus size={13} /> {field.addLabel || 'Add item'}
         </button>

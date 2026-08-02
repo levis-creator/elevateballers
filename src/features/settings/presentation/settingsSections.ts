@@ -20,6 +20,8 @@ export type Field = {
   addLabel?: string;
   maxItems?: number;
   colorPreview?: boolean;
+  counter?: number;
+  columns?: Array<{ key: string; label: string; placeholder?: string; width?: string }>;
 };
 
 export type Group = { label: string; fields: Field[] };
@@ -359,27 +361,112 @@ export const SECTIONS: Section[] = [
   siteWide(
     'seo',
     'SEO & Sharing',
-    'Search titles, descriptions, social previews and index rules.',
+    'Defaults for pages that do not set their own title, description or share image.',
     [
       {
-        label: 'Search appearance',
+        label: 'Metadata',
         fields: [
-          f('seo_metaTitle', 'Home meta title', '', {
+          f('seo_metaTitle', 'Home meta title', 'The homepage title and the fallback for pages with none.', {
             defaultValue: 'Elevate Ballers — Kenya Basketball League',
+            counter: 60,
           }),
-          f('seo_metaDescription', 'Meta description', '', { type: 'area' }),
-          f('seo_ogImage', 'Social sharing image', '', {
-            type: 'text',
-            placeholder: '/media/general/og.jpg',
+          f('seo_metaDescription', 'Meta description', 'Used when a page has none of its own.', {
+            type: 'area',
+            counter: 160,
+            defaultValue:
+              'Fixtures, live scores, standings and player stats for the Elevate Ballers men’s and women’s leagues.',
+          }),
+          f('seo_canonical', 'Canonical base URL', 'No trailing slash. Must match the public domain.', {
+            defaultValue: 'https://elevateballers.com',
+          }),
+          f('seo_suffix', 'Title suffix', 'Appended to page-specific titles.', {
+            defaultValue: ' | Elevate Ballers',
           }),
         ],
       },
       {
-        label: 'Indexing',
+        label: 'Title patterns',
         fields: [
-          f('seo_noindexPaths', 'Excluded paths', 'One path per line. Wildcards are supported.', {
-            type: 'json',
-            defaultValue: '[{"path":"/admin/*","why":"Staff only"}]',
+          f('seo_patternTeam', 'Team page', 'Tokens: {team} {league} {season}.', {
+            defaultValue: '{team} — Roster, Schedule & Stats',
+          }),
+          f('seo_patternPlayer', 'Player page', 'Tokens: {player} {team} {position} {season}.', {
+            defaultValue: '{player} — {team} | Stats & Game Log',
+          }),
+          f('seo_patternMatch', 'Match page', 'Tokens: {home} {away} {score} {date}.', {
+            defaultValue: '{home} vs {away} — {date} Box Score',
+          }),
+          f('seo_patternArticle', 'Article page', 'Tokens: {title} {category} {date}.', {
+            defaultValue: '{title}',
+          }),
+        ],
+      },
+      {
+        label: 'Sharing',
+        fields: [
+          f('seo_ogImage', 'Default share image', '1200 × 630. Used when a page has no image of its own.', {
+            type: 'image',
+            placeholder: 'Share image',
+            meta: 'Recommended · 1200 × 630',
+            defaultValue: '/media/general/og-default-2026.jpg',
+          }),
+          f('seo_autoCards', 'Auto match cards', 'Generates a share image with the scoreline and crests for match pages.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('seo_twitterHandle', 'X handle for cards', 'Attributed on shared links.', {
+            defaultValue: '@elevateballers',
+          }),
+        ],
+      },
+      {
+        label: 'Indexing & crawling',
+        fields: [
+          f('seo_indexing', 'Allow search indexing', 'Off writes a site-wide noindex — staging only.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('seo_sitemap', 'Generate sitemap.xml', 'Controls the dynamic public sitemap endpoint.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('seo_noindexPaths', 'Excluded paths', 'Kept out of the sitemap and marked noindex. * matches anything after it.', {
+            type: 'list',
+            addLabel: 'Add path',
+            maxItems: 20,
+            columns: [
+              { key: 'path', label: 'Path', placeholder: '/admin/*', width: '1fr' },
+              { key: 'why', label: 'Note', placeholder: 'Staff only', width: '1fr' },
+            ],
+            defaultValue:
+              '[{"path":"/admin/*","why":"Staff only"},{"path":"/register/thanks","why":"Post-submit page"},{"path":"/search","why":"Duplicate of listings"}]',
+          }),
+          f('seo_schema', 'Sports structured data', 'SportsEvent, SportsTeam and Person markup for rich results.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+        ],
+      },
+      {
+        label: 'Analytics',
+        fields: [
+          f('seo_analytics', 'Provider', 'Only loads after cookie consent is granted.', {
+            type: 'select',
+            options: ['None', 'Google Analytics 4', 'Plausible'],
+            defaultValue: 'Plausible',
+          }),
+          f('seo_analyticsId', 'Site or measurement ID', '', {
+            defaultValue: 'elevateballers.com',
+          }),
+          f('seo_verification', 'Verification codes', 'Rendered as ownership verification meta tags.', {
+            type: 'list',
+            addLabel: 'Add code',
+            maxItems: 10,
+            columns: [
+              { key: 'provider', label: 'Provider', placeholder: 'Google', width: '0.6fr' },
+              { key: 'token', label: 'Token', placeholder: 'Verification token', width: '1.4fr' },
+            ],
+            defaultValue: '[]',
           }),
         ],
       },

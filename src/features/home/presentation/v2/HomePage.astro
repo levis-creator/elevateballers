@@ -19,6 +19,7 @@ import { getHomeData } from "@/features/home/domain/usecases/get-home-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { buildHomeJsonLd } from "./lib/structured-data";
 import { resolvePublicBrandSettings, siteSettingsService } from "@/features/settings";
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 
 const [home, footer, brandRecords] = await Promise.all([
 	getHomeData(),
@@ -33,7 +34,7 @@ const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.u
 const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url));
 ---
 
-<script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
+<ManagedStructuredData content={JSON.stringify(jsonLd)} />
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header registrationOpen={home.registrationOpen} active="home" />

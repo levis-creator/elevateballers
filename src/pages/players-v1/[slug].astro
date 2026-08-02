@@ -1,4 +1,6 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
+import { applyTitlePattern, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
 // Legacy (v1) player-detail page on its own route. `/players/<slug>` rewrites
 // here when PUBLIC_UI_VERSION !== 'v2'. Guard so it isn't served directly under v2.
 import { usePublicV2 } from "@/lib/ui-version";
@@ -194,7 +196,13 @@ const getPlayerTeamId = (match: any): string | null => {
 };
 
 // SEO Meta Tags
-const pageTitle = `${playerName} - Players - Elevate Ballers`;
+const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
+const pageTitle = applyTitlePattern(seoSettings.patternPlayer, {
+  player: playerName,
+  team: player.team?.name || '',
+  position: player.position || '',
+  season: '',
+});
 const pageDescription =
   player.bio || `View ${playerName}'s profile, statistics, and information`;
 const canonicalSlug = player.slug || slug;
@@ -215,7 +223,7 @@ const pageImage = pageImageSource.startsWith("http")
   type="profile"
 >
   
-  <script type="application/ld+json" is:inline set:html={JSON.stringify({
+  <ManagedStructuredData content={JSON.stringify({
     "@context": "https://schema.org",
     "@graph": [
       {

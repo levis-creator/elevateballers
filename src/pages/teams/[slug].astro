@@ -25,6 +25,8 @@ const seoDescription = `${detail.name} — roster, results, upcoming fixtures an
 
 <LayoutV2
 	title={seoTitle}
+	titlePattern="team"
+	titleTokens={{ team: detail.name }}
 	description={seoDescription}
 	canonicalURL={`${Astro.url.origin}/teams/${detail.slug}/`}
 	type="website"

@@ -5,7 +5,16 @@
 // stored in localStorage (`eb_cookie_consent` = "accepted" | "rejected") and GA
 // is loaded ONLY after consent. Self-contained styles so it works on both the v1
 // and v2 layouts.
-const measurementId = "G-VVZ9P3XBLP";
+interface Props {
+	provider?: 'Google Analytics 4' | 'Plausible';
+	analyticsId?: string;
+}
+
+const {
+	provider = 'Google Analytics 4',
+	analyticsId = 'G-VVZ9P3XBLP',
+} = Astro.props;
+const analyticsLabel = provider === 'Plausible' ? 'Plausible Analytics' : 'Google Analytics';
 ---
 
 <div class="cc" data-cc hidden>
@@ -19,7 +28,7 @@ const measurementId = "G-VVZ9P3XBLP";
 					<div class="cc-eyebrow"><span class="cc-cookie">🍪</span>We use cookies</div>
 					<h2 class="cc-title">Game day, your way</h2>
 					<p class="cc-text">
-						We use essential cookies to keep the site running and secure, plus Google Analytics to see which fixtures and stories fans read most.
+						We use essential cookies to keep the site running and secure, plus {analyticsLabel} to see which fixtures and stories fans read most.
 						Accept all for the full court-side experience, or choose what suits you.
 						<a href="/cookies/" class="cc-link">Cookie Policy</a>
 					</p>
@@ -67,7 +76,7 @@ const measurementId = "G-VVZ9P3XBLP";
 						<div class="cc-cat-titlerow">
 							<h3 class="cc-cat-title">Match Stats</h3>
 						</div>
-						<p class="cc-cat-desc">Anonymous Google Analytics on which fixtures, players and stories fans view most, so we can improve our coverage. Loads only if you allow it.</p>
+						<p class="cc-cat-desc">Privacy-conscious analytics on which fixtures, players and stories fans view most, so we can improve our coverage. Loads only if you allow it.</p>
 					</div>
 					<button type="button" class="cc-toggle" data-cc-analytics aria-pressed="false" aria-label="Toggle Match Stats analytics"><span class="cc-knob"></span></button>
 				</div>
@@ -87,7 +96,7 @@ const measurementId = "G-VVZ9P3XBLP";
 <!-- reopen pill (after a decision) -->
 <button type="button" class="cc-reopen" data-cc-reopen hidden><span class="cc-reopen-dot"></span>Cookie settings</button>
 
-<script is:inline define:vars={{ measurementId }}>
+<script is:inline define:vars={{ provider, analyticsId }}>
 	(function () {
 		var STORAGE_KEY = "eb_cookie_consent";
 		var root = document.querySelector("[data-cc]");
@@ -117,18 +126,24 @@ const measurementId = "G-VVZ9P3XBLP";
 		}
 		function clearAnalyticsCookies() {
 			eraseCookie("_ga"); eraseCookie("_gid"); eraseCookie("_gat");
-			eraseCookie("_ga_" + measurementId.replace("G-", ""));
+			if (provider === "Google Analytics 4") eraseCookie("_ga_" + analyticsId.replace("G-", ""));
 		}
 		function loadAnalytics() {
 			if (window.__ebAnalyticsLoaded) return;
 			window.__ebAnalyticsLoaded = true;
-			window.dataLayer = window.dataLayer || [];
-			window.gtag = function () { window.dataLayer.push(arguments); };
-			window.gtag("js", new Date());
-			window.gtag("config", measurementId);
 			var s = document.createElement("script");
 			s.async = true;
-			s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(measurementId);
+			if (provider === "Plausible") {
+				s.defer = true;
+				s.setAttribute("data-domain", analyticsId);
+				s.src = "https://plausible.io/js/script.js";
+			} else {
+				window.dataLayer = window.dataLayer || [];
+				window.gtag = function () { window.dataLayer.push(arguments); };
+				window.gtag("js", new Date());
+				window.gtag("config", analyticsId);
+				s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(analyticsId);
+			}
 			document.head.appendChild(s);
 		}
 

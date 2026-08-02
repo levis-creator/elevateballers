@@ -115,6 +115,14 @@ export default function SettingsField({
             disabled={!canManage}
           />
         )}
+        {field.counter && field.type !== 'image' && field.type !== 'list' && (
+          <div className="eb-settings-character-count">
+            <span>{value.length > field.counter ? 'Over recommended length' : 'Recommended length'}</span>
+            <span className={value.length > field.counter ? 'is-over' : ''}>
+              {value.length} / {field.counter}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

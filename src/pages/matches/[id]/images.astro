@@ -1,4 +1,5 @@
 ---
+import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 import Layout from "../../../layouts/Layout.astro";
 import TopBar from "../../../features/layout/components/TopBar.astro";
 import Header from "../../../features/layout/components/Header";
@@ -63,10 +64,8 @@ const pageUrl = `${Astro.url.origin}/matches/${matchPathId}/images/`;
   canonicalURL={pageUrl}
   type="website"
 >
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify({
+  <ManagedStructuredData
+    content={JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {

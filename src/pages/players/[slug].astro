@@ -27,6 +27,6 @@ const seoTitle = `${name} - Players - Elevate Ballers`;
 const seoDescription = `${name} — ${view.hero.team}${view.hero.league ? ` (${view.hero.league})` : ""}. Season averages, per-game splits, game log, shooting and season highs.`;
 ---
 
-<LayoutV2 title={seoTitle} description={seoDescription} canonicalURL={`${Astro.url.origin}/players/${view.slug || slug}/`} type="website">
+<LayoutV2 title={seoTitle} titlePattern="player" titleTokens={{ player: name, team: view.hero.team }} description={seoDescription} canonicalURL={`${Astro.url.origin}/players/${view.slug || slug}/`} type="website">
 	<PlayerDetailPage view={view} />
 </LayoutV2>
