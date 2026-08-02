@@ -9,6 +9,7 @@ export interface PublicCompetitionOption {
 	seasonLabel: string;
 	leagueId: string;
 	leagueLabel: string;
+	leagueCode?: string;
 	structure: "SINGLE_TABLE" | "CONFERENCES";
 	startDate: string;
 	conferences: PublicConferenceOption[];

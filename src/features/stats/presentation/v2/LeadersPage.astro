@@ -7,12 +7,26 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import LeadersBoard from "./sections/LeadersBoard.tsx";
 import { getLeadersData } from "@/features/stats/domain/usecases/get-leaders-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { configuredLeagueName, resolvePublicCompetitionSettings, siteSettingsService } from "@/features/settings";
+import { ALL_LEAGUES } from "@/features/stats/domain/entities/leaders-v2";
 
-const [data, footer] = await Promise.all([getLeadersData(), getFooterData()]);
+const [rawData, footer, leagueRecords] = await Promise.all([getLeadersData(), getFooterData(), siteSettingsService.list("leagues")]);
+const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
+const sourceLeagues = rawData.leagues.filter((league) => league !== ALL_LEAGUES);
+const leagueNames = new Map(sourceLeagues.map((league, index) => [league, configuredLeagueName(league, competitionSettings, index)?.name ?? league]));
+const sourceSeasons = rawData.seasons.slice(0, competitionSettings.archive ? competitionSettings.archiveYears : 1);
+const seasonNames = new Map(sourceSeasons.map((season) => [season, competitionSettings.seasonLabel ? `${season.replace(/\s+Season$/i, '').trim()} ${competitionSettings.seasonLabel}` : season.replace(/\s+Season$/i, '').trim()]));
+const data = {
+	...rawData,
+	rows: rawData.rows.filter((row) => seasonNames.has(row.season)).map((row) => ({ ...row, league: leagueNames.get(row.league) ?? row.league, season: seasonNames.get(row.season) ?? row.season })),
+	leagues: [...(competitionSettings.allLabel ? [competitionSettings.allLabel] : []), ...leagueNames.values()],
+	seasons: [...seasonNames.values()],
+	defaultSeason: seasonNames.get(rawData.defaultSeason) ?? [...seasonNames.values()][0] ?? rawData.defaultSeason,
+};
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="stats" />
-	<LeadersBoard data={data} client:load />
+	<LeadersBoard data={data} competitionSettings={competitionSettings} client:load />
 	<Footer footer={footer} />
 </div>

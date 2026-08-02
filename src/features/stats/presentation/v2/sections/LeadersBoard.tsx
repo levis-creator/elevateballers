@@ -1,9 +1,11 @@
 import { useLeadersStore } from "@/features/stats/presentation/stores/v2/useLeadersStore";
 import { STAT_METAS, ALL_LEAGUES } from "@/features/stats/domain/entities/leaders-v2";
 import type { LeadersData, LeaderRow, StatKey } from "@/features/stats/domain/entities/leaders-v2";
+import type { PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 
 interface Props {
 	data: LeadersData;
+	competitionSettings: PublicCompetitionSettings;
 }
 
 const CREST_LIGHT = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
@@ -34,14 +36,27 @@ function Select({ value, options, onChange, suffix }: { value: string; options: 
 
 /** Stat-Leaders board — hero controls + category tabs + podium + full leaderboard.
  *  React island; the selected stat/league/season live in a Zustand store. */
-export default function LeadersBoard({ data }: Props) {
+export default function LeadersBoard({ data, competitionSettings }: Props) {
 	const { stat, league, season, setStat, setLeague, setSeason } = useLeadersStore();
 	const activeSeason = season || data.defaultSeason;
+	const fallbackLeague = competitionSettings.allLabel || data.leagues[0] || ALL_LEAGUES;
+	const configuredLeague = competitionSettings.defaultLeague === "Remember last choice"
+		? fallbackLeague
+		: data.leagues.find((item) => item.includes(`(${competitionSettings.defaultLeague})`)) ?? fallbackLeague;
+	const activeLeague = data.leagues.includes(league) ? league : configuredLeague;
+	useEffect(() => {
+		if (competitionSettings.defaultLeague !== "Remember last choice") return;
+		const remembered = window.localStorage.getItem("eb-public-league-name");
+		if (remembered && data.leagues.includes(remembered)) setLeague(remembered);
+	}, []);
+	useEffect(() => {
+		if (competitionSettings.defaultLeague === "Remember last choice" && data.leagues.includes(league)) window.localStorage.setItem("eb-public-league-name", league);
+	}, [league, competitionSettings.defaultLeague]);
 	const meta = STAT_METAS.find((m) => m.key === stat) ?? STAT_METAS[0];
 
 	const pool = data.rows
 		.filter((r) => r.season === activeSeason)
-		.filter((r) => league === ALL_LEAGUES || r.league === league)
+		.filter((r) => activeLeague === competitionSettings.allLabel || r.league === activeLeague)
 		.filter((r) => r.gp >= data.minGames)
 		.map((r) => ({ row: r, val: r.vals[stat] }))
 		.sort((a, b) => b.val - a.val);
@@ -65,7 +80,7 @@ export default function LeadersBoard({ data }: Props) {
 						<h1 className="font-display text-[clamp(52px,7.5vw,110px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">League Leaders</h1>
 					</div>
 					<div className="flex items-center gap-3">
-						<Select value={league} options={data.leagues} onChange={setLeague} />
+						<Select value={activeLeague} options={data.leagues} onChange={setLeague} />
 						<Select value={activeSeason} options={data.seasons} onChange={setSeason} />
 					</div>
 				</div>
@@ -213,3 +228,4 @@ function LeaderRowItem({ row, val, rank }: { row: LeaderRow; val: string; rank: 
 		</Tag>
 	);
 }
+import { useEffect } from "react";

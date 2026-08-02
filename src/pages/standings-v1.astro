@@ -19,6 +19,11 @@ import { StandingsPage } from "../features/standings/components/StandingsPage";
 import { getStandings } from "../features/standings/lib/getStandings";
 import { prisma } from "../lib/prisma";
 import PageLoader from "../components/PageLoader";
+import { resolvePublicCompetitionSettings, resolvePublicStandingsSettings, siteSettingsService } from "@/features/settings";
+
+const [leagueRecords, standingsRecords] = await Promise.all([siteSettingsService.list("leagues"), siteSettingsService.list("standings")]);
+const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
+const standingsSettings = resolvePublicStandingsSettings(standingsRecords);
 
 let standings = [];
 try {
@@ -38,7 +43,7 @@ try {
 ---
 
 <Layout
-  title="League Standings - Elevate Basketball"
+  title={`${standingsSettings.title} - Elevate Basketball`}
   description="Stay up to date with the latest Elevate Basketball league standings. Track team performance, wins, losses, and rankings across all our divisions."
   canonicalURL={`${Astro.url.origin}/standings/`}
   type="website"
@@ -82,9 +87,9 @@ try {
               <div class="vc_column-inner">
                 <div class="wpb_wrapper">
                   <Spacing id="stm-spacing-standings-header" lg="80" md="70" sm="60" xs="50" />
-                  <h1 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">STANDINGS</h1>
+                  <h1 class="heading-font" style="text-align: center; margin-bottom: 50px; color: #dd3333;">{standingsSettings.title}</h1>
                   <div class="sp-template sp-template-league-table">
-                    <StandingsPage initialStandings={standings} client:load />
+                    <StandingsPage initialStandings={standings} settings={standingsSettings} competitionSettings={competitionSettings} client:load />
                   </div>
                 </div>
               </div>

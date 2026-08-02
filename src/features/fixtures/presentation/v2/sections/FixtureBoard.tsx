@@ -3,6 +3,7 @@ import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { FixtureMatch } from "@/features/fixtures/domain/entities/fixtures-v2";
 import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
+import { configuredDefaultCompetitionId, type PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 
 interface Props {
 	matches: FixtureMatch[];
@@ -10,6 +11,7 @@ interface Props {
 	defaultSeason: string;
 	competitions: PublicCompetitionOption[];
 	defaultLeagueSeasonId: string;
+	competitionSettings: PublicCompetitionSettings;
 }
 
 const CREST_BG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
@@ -45,11 +47,20 @@ export function Crest({ logo, abbr, alt }: { logo: string | null; abbr: string; 
 /** Fixtures — season selector + Upcoming/Results toggle + league filter +
  *  date-grouped match list. React island; all three filters live in a Zustand
  *  store. Matches arrive with dates/times already formatted server-side. */
-export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId }: Props) {
+export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId, competitionSettings }: Props) {
 	const { leagueSeasonId, seasonId, conferenceId, view, setLeagueSeason, setSeason, setConference, setView } = useFixturesStore();
 	const selectedLeague = competitions.find((item) => item.id === leagueSeasonId);
-	const defaultCompetition = competitions.find((item) => item.id === defaultLeagueSeasonId) ?? competitions[0];
-	const isOverall = !selectedLeague;
+	const configuredDefaultId = configuredDefaultCompetitionId(competitions, competitionSettings, defaultLeagueSeasonId);
+	const defaultCompetition = competitions.find((item) => item.id === configuredDefaultId) ?? competitions[0];
+	const isOverall = Boolean(competitionSettings.allLabel) && !selectedLeague;
+	useEffect(() => {
+		if (competitionSettings.defaultLeague !== "Remember last choice") return;
+		const remembered = window.localStorage.getItem("eb-public-league-season");
+		if (remembered && competitions.some((item) => item.id === remembered)) setLeagueSeason(remembered);
+	}, []);
+	useEffect(() => {
+		if (competitionSettings.defaultLeague === "Remember last choice" && leagueSeasonId) window.localStorage.setItem("eb-public-league-season", leagueSeasonId);
+	}, [leagueSeasonId, competitionSettings.defaultLeague]);
 	const seasonIds = [...new Set(competitions.map((item) => item.seasonId))];
 	const activeSeasonId = seasonId || selectedLeague?.seasonId || defaultCompetition?.seasonId;
 	const seasonCompetitions = competitions.filter((item) => item.seasonId === activeSeasonId);
@@ -139,9 +150,9 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 					{selected && (
 						<div className="flex flex-wrap items-center gap-2">
 							<span className="mr-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Competition</span>
-							<button type="button" onClick={() => setLeagueSeason("")} className={pillClass(isOverall)}>
-								Overall
-							</button>
+							{competitionSettings.allLabel && <button type="button" onClick={() => setLeagueSeason("")} className={pillClass(isOverall)}>
+								{competitionSettings.allLabel}
+							</button>}
 							{seasonCompetitions.map((item) => (
 								<button key={item.id} type="button" onClick={() => { setSeason(item.seasonId); setLeagueSeason(item.id); }} className={pillClass(!isOverall && selectedLeague?.id === item.id)}>
 									{item.leagueLabel}
@@ -192,7 +203,7 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 											>
 												<div className="mb-3 flex items-center justify-between gap-3">
 													<span className="rounded px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ background: "rgb(var(--site-ink-rgb)/0.06)", color: "var(--muted,#6f665c)" }}>
-														{m.league}
+												{m.leagueCode || m.league}
 													</span>
 													<span className="font-mono text-[11px]" style={{ color: statusColor }}>
 														{statusText}
@@ -249,3 +260,4 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 		</>
 	);
 }
+import { useEffect } from "react";

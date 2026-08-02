@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './StandingsFilter.module.css';
+import { configuredLeagueName, type PublicCompetitionSettings } from '@/features/settings/application/competitionSettings';
 
 interface League {
   id: string;
@@ -16,9 +17,10 @@ interface Season {
 
 interface StandingsFilterProps {
   onFilterChange: (leagueId?: string, seasonId?: string) => void;
+  settings: PublicCompetitionSettings;
 }
 
-export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange }) => {
+export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange, settings }) => {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedLeague, setSelectedLeague] = useState<string>('');
@@ -58,6 +60,18 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
     fetchLeagues();
   }, []);
 
+  useEffect(() => {
+    if (!leagues.length || selectedLeague) return;
+    const remembered = settings.defaultLeague === 'Remember last choice' ? window.localStorage.getItem('eb-public-legacy-league') : null;
+    const configured = settings.defaultLeague === 'Remember last choice'
+      ? leagues.find((league) => league.id === remembered)
+      : leagues.find((league, index) => configuredLeagueName(league.name, settings, index)?.code === settings.defaultLeague);
+    if (configured) {
+      setSelectedLeague(configured.id);
+      onFilterChange(configured.id, undefined);
+    }
+  }, [leagues, selectedLeague, settings, onFilterChange]);
+
   // Fetch seasons when league changes
   useEffect(() => {
     if (!selectedLeague) {
@@ -84,6 +98,7 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
   const handleLeagueChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const leagueId = e.target.value;
     setSelectedLeague(leagueId);
+    if (settings.defaultLeague === 'Remember last choice' && leagueId) window.localStorage.setItem('eb-public-legacy-league', leagueId);
     setSelectedSeason('');
     onFilterChange(leagueId || undefined, undefined);
   };
@@ -115,10 +130,10 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
             onChange={handleLeagueChange}
             className={styles.filterSelect}
           >
-            <option value="">All Leagues</option>
-            {leagues.map((league) => (
+            {settings.allLabel && <option value="">{settings.allLabel}</option>}
+            {leagues.map((league, index) => (
               <option key={league.id} value={league.id}>
-                {league.name}
+                {configuredLeagueName(league.name, settings, index)?.name ?? league.name}
               </option>
             ))}
           </select>
@@ -139,9 +154,9 @@ export const StandingsFilter: React.FC<StandingsFilterProps> = ({ onFilterChange
               className={styles.filterSelect}
             >
               <option value="">All Seasons</option>
-              {seasons.map((season) => (
+            {seasons.slice(0, settings.archive ? settings.archiveYears : 1).map((season) => (
                 <option key={season.id} value={season.id}>
-                  {season.name}
+                  {settings.seasonLabel ? `${season.name.replace(/\s+Season$/i, '')} ${settings.seasonLabel}` : season.name.replace(/\s+Season$/i, '')}
                 </option>
               ))}
             </select>

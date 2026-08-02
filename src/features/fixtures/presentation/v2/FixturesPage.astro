@@ -7,12 +7,20 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import FixtureBoard from "./sections/FixtureBoard.tsx";
 import { getFixturesData } from "@/features/fixtures/domain/usecases/get-fixtures-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { applyCompetitionSettings, resolvePublicCompetitionSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer] = await Promise.all([getFixturesData(), getFooterData()]);
+const [data, footer, leagueRecords] = await Promise.all([getFixturesData(), getFooterData(), siteSettingsService.list("leagues")]);
+const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
+const competitions = applyCompetitionSettings(data.competitions, competitionSettings);
+const matches = data.matches.map((match) => ({
+	...match,
+	league: competitions.find((item) => item.id === match.leagueSeasonId)?.leagueLabel ?? match.league,
+	leagueCode: competitions.find((item) => item.id === match.leagueSeasonId)?.leagueCode,
+}));
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="fixtures" />
-	<FixtureBoard matches={data.matches} seasons={data.seasons} defaultSeason={data.defaultSeason} competitions={data.competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} client:load />
+	<FixtureBoard matches={matches} seasons={[...new Set(competitions.map((item) => item.seasonLabel))]} defaultSeason={competitions[0]?.seasonLabel ?? data.defaultSeason} competitions={competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} client:load />
 	<Footer footer={footer} />
 </div>

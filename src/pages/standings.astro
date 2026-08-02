@@ -12,10 +12,12 @@ if (!usePublicV2) return Astro.rewrite("/standings-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import StandingsPage from "@/features/standings/presentation/v2/StandingsPage.astro";
+import { resolvePublicStandingsSettings, siteSettingsService } from "@/features/settings";
+const pageSettings = resolvePublicStandingsSettings(await siteSettingsService.list("standings"));
 ---
 
 <LayoutV2
-	title="Standings - Elevate Ballers | League Table"
+	title={`${pageSettings.title} - Elevate Ballers | League Table`}
 	description="Live Elevate Ballers league standings — points, wins, losses, differentials and playoff positions, filterable by season."
 	canonicalURL={`${Astro.url.origin}/standings/`}
 	type="website"
