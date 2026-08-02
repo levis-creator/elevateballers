@@ -11,11 +11,13 @@ if (!usePublicV2) return Astro.rewrite("/rules-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import RulesPage from "@/features/rules/presentation/v2/RulesPage.astro";
+import { resolvePublicRulesPageSettings, siteSettingsService } from "@/features/settings";
+const rulesSettings = resolvePublicRulesPageSettings(await siteSettingsService.list('rules').catch(() => []));
 ---
 
 <LayoutV2
-	title="League Rules & Regulations - Elevate Ballers"
-	description="The official Elevate Ballers League rules and regulations — registration, teams and equipment, game procedures, conduct, officials, protests, and classification. Based on FIBA 2024."
+	title={`${rulesSettings.title} - Elevate Ballers`}
+	description={rulesSettings.intro}
 	canonicalURL={`${Astro.url.origin}/rules/`}
 	type="website"
 >

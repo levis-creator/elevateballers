@@ -131,12 +131,17 @@ export function resolvePublicContactSettings(settings: SiteSetting[]): PublicCon
 
 export function contactRecipients(settings: PublicContactSettings, subject: string): string[] {
   const normalized = subject.trim().toLowerCase();
-  const desk = settings.departments.find((department) =>
-    department.name.toLowerCase() === normalized ||
-    department.handles.split(',').some((topic) => topic.trim().toLowerCase() === normalized)
+  const aliases: Record<string, string[]> = {
+    general: ['support'], transfers: ['registration'],
+    'fixtures & results': ['competition'], 'media & partnerships': ['media', 'partnerships'],
+  };
+  const candidates = new Set([normalized, ...(aliases[normalized] ?? [])]);
+  const desks = settings.departments.filter((department) =>
+    candidates.has(department.name.toLowerCase()) ||
+    department.handles.split(',').some((topic) => candidates.has(topic.trim().toLowerCase()))
   );
   return [...new Set([
     settings.inbox,
-    ...(settings.notify && desk?.email ? [desk.email] : []),
+    ...(settings.notify ? desks.map((desk) => desk.email) : []),
   ].filter(Boolean))];
 }

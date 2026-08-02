@@ -9,6 +9,7 @@ import { json, handleApiError } from '../../../lib/apiError';
 import { publishToJob } from '../../../lib/qstash';
 import {
   contactRecipients,
+  resolvePublicContactPageSettings,
   resolvePublicContactSettings,
   siteSettingsService,
 } from '../../../features/settings';
@@ -94,10 +95,13 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const userAgent = request.headers.get('user-agent') ?? undefined;
-    const contactSettings = resolvePublicContactSettings(
-      await siteSettingsService.list('contact').catch(() => []),
-    );
-    const recipients = contactRecipients(contactSettings, subject);
+    const [contactRecords, contactPageRecords] = await Promise.all([
+      siteSettingsService.list('contact').catch(() => []),
+      siteSettingsService.list('contactPage').catch(() => []),
+    ]);
+    const contactSettings = resolvePublicContactSettings(contactRecords);
+    const contactPageSettings = resolvePublicContactPageSettings(contactPageRecords);
+    const recipients = contactRecipients(contactSettings, String(data.desk || subject));
 
     const created = await prisma.contactMessage.create({
       data: { name, email, subject, message, ipAddress: ip, userAgent },
@@ -108,8 +112,9 @@ export const POST: APIRoute = async ({ request }) => {
       sendContactNotification({ name, email, subject, message, recipients }).catch((err) =>
         console.error('[contact] notification email failed:', err)
       );
+    const autoReplyMessage = contactPageSettings.autoReply.replaceAll('{response}', contactSettings.responseTarget);
     const sendAutoReply = () =>
-      sendContactAutoReply({ name, email, subject, responseTarget: contactSettings.responseTarget }).catch((err) =>
+      sendContactAutoReply({ name, email, subject, responseTarget: contactSettings.responseTarget, message: autoReplyMessage }).catch((err) =>
         console.error('[contact] auto-reply email failed:', err)
       );
 
@@ -120,11 +125,13 @@ export const POST: APIRoute = async ({ request }) => {
     });
     if (!notificationQueued) sendNotification();
 
-    const autoReplyQueued = await publishToJob('/api/jobs/send-email', {
-      jobType: 'contact_auto_reply',
-      data: { name, email, subject, responseTarget: contactSettings.responseTarget },
-    });
-    if (!autoReplyQueued) sendAutoReply();
+    if (autoReplyMessage) {
+      const autoReplyQueued = await publishToJob('/api/jobs/send-email', {
+        jobType: 'contact_auto_reply',
+        data: { name, email, subject, responseTarget: contactSettings.responseTarget, message: autoReplyMessage },
+      });
+      if (!autoReplyQueued) sendAutoReply();
+    }
 
     await prisma.registrationNotification.create({
       data: {

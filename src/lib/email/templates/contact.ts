@@ -106,12 +106,13 @@ export async function sendContactAutoReply(data: {
   email: string;
   subject: string;
   responseTarget?: string;
+  message?: string;
 }): Promise<void> {
   const html = emailWrapper(`
     <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Message Received!</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
-      Thank you for reaching out! We have received your message regarding <strong>${data.subject}</strong> and will get back to you ${data.responseTarget || 'as soon as possible'}.
+      ${data.message || `Thank you for reaching out! We have received your message regarding <strong>${data.subject}</strong> and will get back to you ${data.responseTarget || 'as soon as possible'}.`}
     </p>
     <p style="margin:0;font-size:15px;color:${C.text};line-height:1.7;">
       Best regards,<br /><strong>ElevateBallers Team</strong>
