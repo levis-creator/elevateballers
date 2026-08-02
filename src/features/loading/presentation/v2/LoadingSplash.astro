@@ -4,14 +4,17 @@
 // animation; a tiny inline script handles the once-per-session guard + removal.
 // Render this at the top of <body> in the v2 Layout. Requires loading.css
 // (imported by the Layout) for the eb-* keyframes.
-import { STATUS_LINES } from "@/features/loading/domain/entities/loading";
+import type { PublicSystemSettings } from '@/features/settings/application/systemSettings';
+import { DEFAULT_PUBLIC_SYSTEM_SETTINGS } from '@/features/settings/application/systemSettings';
+interface Props { settings?: PublicSystemSettings }
+const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
 ---
 
 <!-- No-JS: the splash can never be removed by script, so hide it outright and
      let the server-rendered content show. -->
 <noscript><style>#eb-splash{display:none !important;}</style></noscript>
 
-<div id="eb-splash" class="eb-splash fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-paper px-8 py-16 font-body text-ink2" role="status" aria-live="polite" aria-label="Loading">
+<div id="eb-splash" style="display:none" class="eb-splash fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-paper px-8 py-16 font-body text-ink2" role="status" aria-live="polite" aria-label={settings.loadingLabel}>
 	<div class="pointer-events-none absolute inset-0" style="background:radial-gradient(90% 60% at 50% 30%,rgb(var(--site-brand-rgb) / 0.10),transparent 60%);"></div>
 	<div class="pointer-events-none absolute left-1/2 top-[8%] h-[360px] w-[360px] -translate-x-1/2 rounded-full border border-brand/[0.12]"></div>
 
@@ -36,7 +39,7 @@ import { STATUS_LINES } from "@/features/loading/domain/entities/loading";
 
 		<!-- label + dots -->
 		<div class="mt-8 flex items-center gap-1.5">
-			<span class="font-display text-[18px] uppercase tracking-[0.06em] text-ink">Loading</span>
+			<span class="font-display text-[18px] uppercase tracking-[0.06em] text-ink">{settings.loadingLabel}</span>
 			<span class="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-brand" style="animation:eb-dots 1.2s infinite 0s;"></span>
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-brand" style="animation:eb-dots 1.2s infinite 0.2s;"></span>
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-brand" style="animation:eb-dots 1.2s infinite 0.4s;"></span>
@@ -49,10 +52,10 @@ import { STATUS_LINES } from "@/features/loading/domain/entities/loading";
 
 		<!-- cycling status line (pure-CSS cycle through STATUS_LINES) -->
 		<div class="relative mt-5 h-4 w-full text-center">
-			{STATUS_LINES.map((line, i) => (
+			{settings.loadingLines.map((line, i) => (
 				<span
 					class="eb-status-line absolute inset-x-0 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2"
-					style={`animation-delay:${i * 1.2}s;opacity:0;`}
+					style={`animation-delay:${i * 1.2}s;animation-duration:${Math.max(1, settings.loadingLines.length) * 1.2}s;opacity:0;`}
 				>
 					{line}
 				</span>
@@ -61,7 +64,7 @@ import { STATUS_LINES } from "@/features/loading/domain/entities/loading";
 	</div>
 </div>
 
-<script is:inline>
+<script is:inline define:vars={{ splashThreshold: settings.splashThreshold }}>
 	(function () {
 		var el = document.getElementById("eb-splash");
 		if (!el) return;
@@ -74,16 +77,23 @@ import { STATUS_LINES } from "@/features/loading/domain/entities/loading";
 			sessionStorage.setItem("eb-splashed", "1");
 		} catch (e) {}
 		var done = false;
+		var shown = false;
+		var showTimer = setTimeout(function () {
+			shown = true;
+			el.style.display = "";
+		}, splashThreshold);
 		var hide = function () {
 			if (done) return;
 			done = true;
+			clearTimeout(showTimer);
+			if (!shown) { el.parentNode && el.parentNode.removeChild(el); return; }
 			el.classList.add("eb-splash--hide");
 			setTimeout(function () {
 				el.parentNode && el.parentNode.removeChild(el);
 			}, 450);
 		};
-		if (document.readyState === "complete") setTimeout(hide, 400);
-		else window.addEventListener("load", function () { setTimeout(hide, 300); });
+		if (document.readyState === "complete") hide();
+		else window.addEventListener("load", hide);
 		// Safety net: never let the splash hang.
 		setTimeout(hide, 4000);
 	})();

@@ -5,10 +5,11 @@ import type { LeaderData } from "@/features/home/domain/entities/home-v2";
 interface Props {
 	leaderData: LeaderData;
 	tabs: string[];
+	heading?: string;
 }
 
 /** League Leaders — React island; active tab lives in a Zustand store. */
-export default function LeagueLeaders({ leaderData, tabs }: Props) {
+export default function LeagueLeaders({ leaderData, tabs, heading = "League Leaders" }: Props) {
 	const tab = useLeaderTabStore((s) => s.tab);
 	const setTab = useLeaderTabStore((s) => s.setTab);
 	const rows = leaderData[tab] ?? leaderData[tabs[0]] ?? [];
@@ -17,7 +18,7 @@ export default function LeagueLeaders({ leaderData, tabs }: Props) {
 	return (
 		<div>
 			<div className="mb-[22px] flex items-baseline justify-between">
-				<h2 className="font-display text-[32px] uppercase text-ink">League Leaders</h2>
+				<h2 className="font-display text-[32px] uppercase text-ink">{heading}</h2>
 				<a href="/stats/leaders" className="font-mono text-[12px] text-brand no-underline">All stats →</a>
 			</div>
 			<div className="mb-5 flex gap-2">

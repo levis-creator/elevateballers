@@ -11,12 +11,14 @@ Astro.response.status = 404;
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import NotFound from "@/features/layout/presentation/v2/NotFound.astro";
+import { resolvePublicSystemSettings, siteSettingsService } from '@/features/settings';
+const systemSettings = resolvePublicSystemSettings(await siteSettingsService.list('system').catch(() => []));
 ---
 
 <LayoutV2
-	title="Page Not Found - Elevate Ballers"
+	title={`${systemSettings.notFoundTitle} - Elevate Ballers`}
 	description="That shot missed — the page you're looking for isn't on the court. Head back home or explore standings, teams, fixtures and results."
 	robots="noindex, follow"
 >
-	<NotFound />
+	<NotFound settings={systemSettings} />
 </LayoutV2>

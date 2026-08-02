@@ -5,6 +5,7 @@ interface Props {
 	counts: CountTargets;
 	animate?: boolean;
 	respectReducedMotion?: boolean;
+	heading?: string;
 }
 
 const CARDS = [
@@ -39,10 +40,10 @@ function Counter({ end, animate, respectReducedMotion }: { end: number; animate:
 }
 
 /** By The Numbers — React island (count-up animation). */
-export default function ByTheNumbers({ counts, animate = true, respectReducedMotion = true }: Props) {
+export default function ByTheNumbers({ counts, animate = true, respectReducedMotion = true, heading = "By The Numbers" }: Props) {
 	return (
 		<div>
-			<h2 className="mb-[22px] font-display text-[32px] uppercase text-ink">By The Numbers</h2>
+			<h2 className="mb-[22px] font-display text-[32px] uppercase text-ink">{heading}</h2>
 			<div className="grid grid-cols-2 gap-4">
 				{CARDS.map((c) => (
 					<div key={c.key} className="rounded-xl border border-black/10 bg-white p-[26px] shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">

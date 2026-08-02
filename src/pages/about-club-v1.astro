@@ -20,7 +20,7 @@ import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
 import { getAllSiteSettings } from "../features/cms/lib/queries";
-import { resolvePublicContactSettings } from "../features/settings";
+import { resolvePublicAboutSettings, resolvePublicContactSettings } from "../features/settings";
 
 const DEFAULT_CONTENT = `Elevate Ballers is a premier basketball league dedicated to promoting excellence, sportsmanship, and community engagement through competitive basketball. Founded with a vision to elevate the game and the community, we have been serving basketball enthusiasts of all ages and skill levels.
 
@@ -35,6 +35,7 @@ At Elevate Ballers, we are committed to creating an inclusive environment where 
 let aboutTitle = "ABOUT";
 let aboutContent = DEFAULT_CONTENT;
 let contactSettings = resolvePublicContactSettings([]);
+let publicAbout = resolvePublicAboutSettings([]);
 
 try {
   const [settings, contactRecords] = await Promise.all([
@@ -42,10 +43,13 @@ try {
     getAllSiteSettings("contact"),
   ]);
   contactSettings = resolvePublicContactSettings(contactRecords);
+  publicAbout = resolvePublicAboutSettings(settings);
   const titleSetting = settings.find((s: any) => s.key === "about_page_title");
   const contentSetting = settings.find((s: any) => s.key === "about_page_content");
   if (titleSetting?.value) aboutTitle = titleSetting.value;
   if (contentSetting?.value) aboutContent = contentSetting.value;
+  if (!titleSetting?.value) aboutTitle = publicAbout.title.replace(/\n/g, ' ');
+  if (!contentSetting?.value) aboutContent = publicAbout.storyBody;
 } catch (e) {
   // fall back to defaults
 }

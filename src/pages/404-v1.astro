@@ -10,13 +10,8 @@ import Header from "../features/layout/components/Header";
 import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
-
-const quickLinks = [
-  { href: "/", label: "Go to Home" },
-  { href: "/standings/", label: "View Standings" },
-  { href: "/teams/", label: "Browse Teams" },
-  { href: "/contacts/", label: "Contact Us" },
-];
+import { resolvePublicSystemSettings, siteSettingsService } from '@/features/settings';
+const systemSettings = resolvePublicSystemSettings(await siteSettingsService.list('system').catch(() => []));
 ---
 
 <Layout
@@ -64,22 +59,21 @@ const quickLinks = [
                       class="heading-font"
                       style="margin-bottom: 12px; color: #dd3333;"
                     >
-                      404 - Page Not Found
+                      {systemSettings.notFoundTitle}
                     </h1>
                     <p
                       class="normal_font"
                       style="font-size: 18px; line-height: 1.8; color: #363f48; margin-bottom: 22px;"
                     >
-                      The page you requested does not exist or may have been moved.
-                      Check the address, or use the links below to get back in the game.
+                      {systemSettings.notFoundBody}
                     </p>
 
                     <div class="row" style="margin-top: 10px;">
-                      {quickLinks.map((link) => (
+                      {systemSettings.notFoundLinks.map((link) => (
                         <div class="col-sm-6" style="margin-bottom: 14px;">
                           <a
                             class="btn btn-secondary btn-lg"
-                            href={link.href}
+                            href={link.path}
                             title={link.label}
                             style="min-width: 220px;"
                           >

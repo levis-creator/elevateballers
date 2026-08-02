@@ -6,8 +6,18 @@ import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import { getAboutData } from "@/features/about/domain/usecases/get-about-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { resolvePublicAboutSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer] = await Promise.all([getAboutData(), getFooterData()]);
+const [data, footer, records] = await Promise.all([getAboutData(), getFooterData(), siteSettingsService.list("about").catch(() => [])]);
+const settings = resolvePublicAboutSettings(records);
+const heroLines = settings.title.split(/\r?\n/);
+const liveStatValue = (label: string) => data.stats.find((stat) => stat.label.toLowerCase() === label.toLowerCase())?.value ?? '';
+const stats = settings.stats.map((stat) => ({ ...stat, value: stat.value || liveStatValue(stat.label), accent: stat.accent.toLowerCase() === 'yes' }));
+const leagues = settings.leagueCards.map((card, index) => {
+	const live = data.leagues.find((league) => league.abbr.toLowerCase() === card.abbr.toLowerCase());
+	return { ...card, teams: card.teams || live?.teams || '', players: card.players || live?.players || '', dark: index === 0 };
+});
+const storyParagraphs = settings.storyBody.split(/\n\s*\n/).map((paragraph) => paragraph.trim()).filter(Boolean);
 
 const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 10px,var(--panel, #f0ece5) 10px,var(--panel, #f0ece5) 20px)";
 const STRIPE_LG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel, #f0ece5) 12px,var(--panel, #f0ece5) 24px)";
@@ -29,50 +39,50 @@ const palette = (dark: boolean) =>
 		<div class="absolute right-[-20px] top-10 h-[320px] w-[320px] rounded-full border border-brand/10"></div>
 		<div class="relative mx-auto max-w-[1280px] px-8 py-[84px] max-[960px]:px-6 max-[960px]:py-14">
 			<div class="mb-[22px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brandsoft">
-				<span class="h-px w-[26px] bg-brandsoft"></span>{data.hero.eyebrow}
+				<span class="h-px w-[26px] bg-brandsoft"></span>{settings.eyebrow}
 			</div>
-			<h1 class="max-w-[880px] font-display text-[clamp(48px,7vw,104px)] uppercase leading-[0.88] tracking-[0.01em]">{data.hero.titleLead} <span class="text-brand">{data.hero.titleAccent}</span></h1>
-			<p class="mt-7 max-w-[560px] text-[17px] leading-[1.7] text-creamdim">{data.hero.blurb}</p>
+			<h1 class="max-w-[880px] font-display text-[clamp(48px,7vw,104px)] uppercase leading-[0.88] tracking-[0.01em]">{heroLines.map((line, lineIndex) => <Fragment>{line.split(/(\s+)/).map((part) => part.trim().toLowerCase() === settings.accentWord.toLowerCase() ? <span class="text-brand">{part}</span> : part)}{lineIndex < heroLines.length - 1 && <br />}</Fragment>)}</h1>
+			<p class="mt-7 max-w-[560px] text-[17px] leading-[1.7] text-creamdim">{settings.intro}</p>
 		</div>
 	</section>
 
 	<!-- STAT STRIP -->
-	<section class="border-b border-black/[0.08] bg-panel">
+	{settings.statStrip && <section class="border-b border-black/[0.08] bg-panel">
 		<div class="mx-auto grid max-w-[1280px] grid-cols-4 gap-6 px-8 py-9 max-[600px]:grid-cols-2 max-[960px]:px-6">
-			{data.stats.map((s) => (
+			{stats.map((s) => (
 				<div>
 					<div class="font-display text-[44px] leading-none" style={`color:${s.accent ? "var(--brand)" : "var(--ink, #141009)"};`}>{s.value}</div>
 					<div class="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">{s.label}</div>
 				</div>
 			))}
 		</div>
-	</section>
+	</section>}
 
 	<!-- STORY -->
-	<section class="mx-auto grid max-w-[1280px] grid-cols-[0.9fr_1.1fr] gap-16 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:py-12">
+	{settings.storyBlock && <section class="mx-auto grid max-w-[1280px] grid-cols-[0.9fr_1.1fr] gap-16 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:py-12">
 		<div>
-			<div class="mb-4 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.story.eyebrow}</div>
-			<h2 class="font-display text-[clamp(32px,4vw,52px)] uppercase leading-[0.95] text-ink">{data.story.heading}</h2>
-			{data.story.image ? (
-				<img src={data.story.image} alt={data.story.heading} loading="lazy" class="mt-6 aspect-[4/3] w-full rounded-2xl border border-black/10 object-cover max-[600px]:aspect-[16/10]" />
+			<div class="mb-4 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.storyEyebrow}</div>
+			<h2 class="whitespace-pre-line font-display text-[clamp(32px,4vw,52px)] uppercase leading-[0.95] text-ink">{settings.storyHeading}</h2>
+			{settings.storyImage ? (
+				<img src={settings.storyImage} alt={settings.storyHeading} loading="lazy" class="mt-6 aspect-[4/3] w-full rounded-2xl border border-black/10 object-cover max-[600px]:aspect-[16/10]" />
 			) : (
 				<div class="mt-6 aspect-[4/3] rounded-2xl border border-black/10 max-[600px]:aspect-[16/10]" style={`background:${STRIPE_LG};`}></div>
 			)}
 		</div>
 		<div class="flex flex-col gap-5 text-[16px] leading-[1.8] text-muted max-[960px]:justify-center">
-			{data.story.paragraphs.map((p) => <p>{p}</p>)}
+			{storyParagraphs.map((p) => <p>{p}</p>)}
 		</div>
-	</section>
+	</section>}
 
 	<!-- THE LEAGUES -->
-	<section class="border-y border-black/[0.08] bg-white">
+	{settings.leaguesBlock && <section class="border-y border-black/[0.08] bg-white">
 		<div class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 			<div class="mb-10 text-center">
-				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.leaguesIntro.eyebrow}</div>
-				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.leaguesIntro.heading}</h2>
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.leaguesEyebrow}</div>
+				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{settings.leaguesHeading}</h2>
 			</div>
 			<div class="grid grid-cols-2 gap-6 max-[600px]:grid-cols-1">
-				{data.leagues.map((l) => {
+				{leagues.map((l) => {
 					const p = palette(l.dark);
 					return (
 						<div class="overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]" style={p.card}>
@@ -90,16 +100,16 @@ const palette = (dark: boolean) =>
 				})}
 			</div>
 		</div>
-	</section>
+	</section>}
 
 	<!-- VALUES -->
-	<section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
+	{settings.valuesBlock && <section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 		<div class="mb-10">
-			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.valuesIntro.eyebrow}</div>
-			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.valuesIntro.heading}</h2>
+			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.valuesEyebrow}</div>
+			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{settings.valuesHeading}</h2>
 		</div>
 		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-1 max-[960px]:grid-cols-2">
-			{data.values.map((v) => (
+			{settings.values.map((v) => (
 				<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 					<div class="mb-4 font-display text-[30px] leading-none text-brand">{v.num}</div>
 					<h3 class="font-display text-[19px] uppercase text-ink2">{v.title}</h3>
@@ -107,17 +117,27 @@ const palette = (dark: boolean) =>
 				</div>
 			))}
 		</div>
-	</section>
+	</section>}
+
+	{settings.impactBlock && <section class="border-y border-black/[0.08] bg-white">
+		<div class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
+			<div class="max-w-[700px]"><div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.impactEyebrow}</div><h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{settings.impactHeading}</h2><p class="mt-4 text-[16px] leading-[1.7] text-muted">{settings.impactBody}</p></div>
+			<div class="mt-10 grid grid-cols-4 gap-5 max-[600px]:grid-cols-2">{settings.impactStats.map((stat) => <div><div class="font-display text-[38px] leading-none" style={`color:${stat.accent.toLowerCase() === 'yes' ? 'var(--brand)' : 'var(--ink)'};`}>{stat.value}</div><div class="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">{stat.label}</div></div>)}</div>
+			<div class="mt-10 grid grid-cols-3 gap-5 max-[700px]:grid-cols-1">{settings.impactItems.map((item, index) => <article class="rounded-2xl border border-black/10 bg-paper p-6"><div class="mb-4 font-display text-[26px] text-brand">{String(index + 1).padStart(2, '0')}</div><h3 class="font-display text-[20px] uppercase text-ink">{item.title}</h3><p class="mt-3 text-[14px] leading-[1.65] text-muted">{item.body}</p></article>)}</div>
+		</div>
+	</section>}
+
+	{settings.partnerBlock && <section class="bg-paper px-6 py-12"><div class="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-8 rounded-2xl bg-night px-9 py-10 text-cream"><div class="max-w-[680px]"><div class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-brandsoft">{settings.partnerEyebrow}</div><h2 class="font-display text-[clamp(28px,4vw,44px)] uppercase">{settings.partnerHeading}</h2><p class="mt-3 text-[15px] leading-[1.7] text-creamdim">{settings.partnerBody}</p></div><a href="/contacts?desk=Partnerships" class="rounded bg-brand px-7 py-4 font-display text-[14px] uppercase tracking-[0.06em] text-brandfg no-underline">{settings.partnerCta}</a></div></section>}
 
 	<!-- TIMELINE -->
-	<section class="border-y border-black/[0.08] bg-panel">
+	{settings.timeline && <section class="border-y border-black/[0.08] bg-panel">
 		<div class="mx-auto max-w-[1000px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 			<div class="mb-10">
-				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.timelineIntro.eyebrow}</div>
-				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.timelineIntro.heading}</h2>
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.timelineEyebrow}</div>
+				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{settings.timelineHeading}</h2>
 			</div>
 			<div class="flex flex-col">
-				{data.timeline.map((t) => (
+				{settings.milestones.map((t) => (
 					<div class="grid grid-cols-[110px_1fr] gap-6 max-[600px]:grid-cols-[70px_1fr]">
 						<div class="text-right"><span class="font-display text-[26px] text-brand">{t.year}</span></div>
 						<div class="relative border-l-2 border-black/[0.1] pb-9 pl-7 last:pb-0">
@@ -129,13 +149,14 @@ const palette = (dark: boolean) =>
 				))}
 			</div>
 		</div>
-	</section>
+	</section>}
 
 	<!-- LEADERSHIP -->
-	<section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
+	{settings.staffGrid && <section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-12">
 		<div class="mb-10">
-			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.peopleIntro.eyebrow}</div>
-			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{data.peopleIntro.heading}</h2>
+			<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.staffEyebrow}</div>
+			<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase text-ink">{settings.staffHeading}</h2>
+			<p class="mt-4 max-w-[650px] text-[15px] leading-[1.7] text-muted">{settings.staffBody}</p>
 		</div>
 		<div class="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-2">
 			{data.people.map((person) => (
@@ -152,15 +173,16 @@ const palette = (dark: boolean) =>
 				</div>
 			))}
 		</div>
-	</section>
+		<a href="/staff" class="mt-8 inline-block rounded border border-black/20 px-6 py-3.5 text-[13px] font-bold uppercase tracking-[0.04em] text-ink2 no-underline hover:border-brand hover:text-brand">{settings.staffCta}</a>
+	</section>}
 
 	<!-- VENUE -->
-	<section class="border-t border-black/[0.08] bg-white">
+	{settings.venueBlock && <section class="border-t border-black/[0.08] bg-white">
 		<div class="mx-auto grid max-w-[1280px] grid-cols-[1.1fr_0.9fr] gap-14 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:py-12">
 			<div>
-				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{data.venue.eyebrow}</div>
-				<h2 class="font-display text-[clamp(30px,3.5vw,46px)] uppercase leading-[0.95] text-ink">{data.venue.heading}</h2>
-				<p class="mt-6 max-w-[440px] text-[16px] leading-[1.7] text-muted">{data.venue.body}</p>
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.venueEyebrow}</div>
+				<h2 class="whitespace-pre-line font-display text-[clamp(30px,3.5vw,46px)] uppercase leading-[0.95] text-ink">{settings.venueHeading}</h2>
+				<p class="mt-6 max-w-[440px] text-[16px] leading-[1.7] text-muted">{settings.venueBody}</p>
 				<div class="mt-8 flex flex-col gap-4">
 					{data.contacts.map((c) => (
 						<div class="flex items-start gap-3">
@@ -170,29 +192,28 @@ const palette = (dark: boolean) =>
 					))}
 				</div>
 			</div>
-			{data.venue.image ? (
-				<img src={data.venue.image} alt={data.venue.heading} loading="lazy" class="min-h-[280px] w-full rounded-2xl border border-black/10 object-cover" />
+			{settings.venueImage ? (
+				<img src={settings.venueImage} alt={settings.venueHeading} loading="lazy" class="min-h-[280px] w-full rounded-2xl border border-black/10 object-cover" />
 			) : (
 				<div class="rounded-2xl border border-black/10" style={`background:${STRIPE_LG};min-height:280px;`}></div>
 			)}
 		</div>
-	</section>
+	</section>}
 
 	<!-- CTA -->
-	<section class="relative overflow-hidden bg-brand text-brandfg">
+	{settings.ctaBlock && <section class="relative overflow-hidden bg-brand text-brandfg">
 		<div class="absolute -bottom-[140px] right-[-100px] h-[420px] w-[420px] rounded-full border-2 border-white/[0.18]"></div>
 		<div class="absolute -bottom-10 right-10 h-[220px] w-[220px] rounded-full border-2 border-white/[0.18]"></div>
 		<div class="relative mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-10 px-8 py-[70px] max-[960px]:px-6">
 			<div>
-				<h2 class="mb-3.5 font-display text-[clamp(34px,5vw,60px)] uppercase leading-[0.9]">{data.cta.heading}</h2>
-				<p class="max-w-[440px] text-[17px] font-semibold">{data.cta.body}</p>
+				<h2 class="mb-3.5 font-display text-[clamp(34px,5vw,60px)] uppercase leading-[0.9]">{settings.ctaHeading}</h2>
+				<p class="max-w-[440px] text-[17px] font-semibold">{settings.ctaBody}</p>
 			</div>
 			<div class="flex flex-wrap gap-3">
-				<a href="/league-registration" class="rounded-md bg-night px-8 py-5 font-display text-[15px] uppercase tracking-[0.06em] text-white no-underline hover:bg-black">Register →</a>
-				<a href="/teams" class="rounded-md border-2 border-white/70 px-8 py-5 font-display text-[15px] uppercase tracking-[0.06em] text-white no-underline hover:border-white">Browse Teams</a>
+				{settings.ctaButtons.map((button, index) => <a href={button.path} class:list={["rounded-md px-8 py-5 font-display text-[15px] uppercase tracking-[0.06em] text-white no-underline", index === 0 ? "bg-night hover:bg-black" : "border-2 border-white/70 hover:border-white"]}>{button.label}</a>)}
 			</div>
 		</div>
-	</section>
+	</section>}
 
 	<Footer footer={footer} />
 </div>

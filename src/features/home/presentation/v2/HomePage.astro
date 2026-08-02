@@ -18,16 +18,25 @@ import RegisterCta from "./sections/RegisterCta.astro";
 import { getHomeData } from "@/features/home/domain/usecases/get-home-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { buildHomeJsonLd } from "./lib/structured-data";
-import { resolvePublicBrandSettings, siteSettingsService } from "@/features/settings";
+import { resolvePublicBrandSettings, resolvePublicHomeSettings, siteSettingsService } from "@/features/settings";
 import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 
-const [home, footer, brandRecords] = await Promise.all([
+const [home, footer, brandRecords, homeRecords] = await Promise.all([
 	getHomeData(),
 	getFooterData(),
 	siteSettingsService.list("brand").catch(() => []),
+	siteSettingsService.list("home").catch(() => []),
 ]);
 const brandSettings = resolvePublicBrandSettings(brandRecords);
-const heroCtaLabel = home.registrationOpen ? "Register Your Team" : "Join the Waitlist";
+const homeSettings = resolvePublicHomeSettings(homeRecords);
+const heroCtaLabel = home.registrationOpen ? homeSettings.ctaLabel : homeSettings.ctaClosedLabel;
+const resultTicker = home.results.map((result) => `${result.home} ${result.hs}–${result.as} ${result.away}`);
+const tickerItems = homeSettings.tickerSource === "Latest headlines"
+	? home.ticker
+	: homeSettings.tickerSource === "Latest results"
+		? resultTicker
+		: [...home.ticker, ...resultTicker];
+const leaderData = Object.fromEntries(Object.entries(home.leaderData).map(([key, rows]) => [key, rows.slice(0, homeSettings.leadersRows)]));
 // Use the canonical site URL (matches SEO.astro's WebSite @id and keeps schema
 // URLs on the canonical domain regardless of the request host).
 const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
@@ -38,21 +47,23 @@ const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url),
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header registrationOpen={home.registrationOpen} active="home" />
-	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} counts={home.counts} showArt={brandSettings.heroArt} />
-	<NewsTicker items={home.ticker} />
-	<FixturesResults upcoming={home.upcoming} results={home.results} />
-	<PlayerOfTheWeek potw={home.potw} />
-	<LatestNews news={home.news} categories={home.newsCategories} client:visible />
-	<StatsSection
-		leaderData={home.leaderData}
+	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} counts={home.counts} settings={homeSettings} showArt={brandSettings.heroArt} animateCounters={homeSettings.countUp && brandSettings.counters} />
+	{homeSettings.ticker && tickerItems.length > 0 && <NewsTicker items={tickerItems} label={homeSettings.tickerLabel} speed={homeSettings.tickerSpeed} />}
+	{homeSettings.fixturesBlock && <FixturesResults upcoming={home.upcoming.slice(0, homeSettings.fixturesCount)} results={home.results.slice(0, homeSettings.fixturesCount)} fixturesHeading={homeSettings.fixturesHeading} resultsHeading={homeSettings.resultsHeading} emptyMessage={homeSettings.emptyFixtures} />}
+	{homeSettings.potw && <PlayerOfTheWeek potw={home.potw} />}
+	{homeSettings.newsBlock && <LatestNews news={home.news.slice(0, homeSettings.newsCount)} categories={home.newsCategories} eyebrow={homeSettings.newsEyebrow} heading={homeSettings.newsHeading} showFilters={homeSettings.newsFilters} client:visible />}
+	{homeSettings.leadersBlock && <StatsSection
+		leaderData={leaderData}
 		leaderTabs={home.leaderTabs}
 		counts={home.counts}
-		animateCounters={brandSettings.counters}
+		leadersHeading={homeSettings.leadersHeading}
+		numbersHeading={homeSettings.numbersHeading}
+		animateCounters={homeSettings.countUp && brandSettings.counters}
 		respectReducedMotion={brandSettings.reducedMotion}
-	/>
-	{home.media.length > 0 && <FeaturedMedia media={home.media} tabs={home.mediaTabs} client:visible />}
-	<About />
-	<RegisterCta registrationOpen={home.registrationOpen} />
+	/>}
+	{homeSettings.mediaBlock && home.media.length > 0 && <FeaturedMedia media={home.media.slice(0, homeSettings.mediaCount)} tabs={home.mediaTabs} eyebrow={homeSettings.mediaEyebrow} heading={homeSettings.mediaHeading} client:visible />}
+	{homeSettings.aboutBlock && <About eyebrow={homeSettings.aboutEyebrow} heading={homeSettings.aboutHeading} body={homeSettings.aboutBody} />}
+	{homeSettings.ctaBlock && <RegisterCta registrationOpen={home.registrationOpen} openEyebrow={homeSettings.ctaOpenEyebrow} openHeading={homeSettings.ctaOpenHeading} openBody={homeSettings.ctaOpenBody} closedEyebrow={homeSettings.ctaClosedEyebrow} closedHeading={homeSettings.ctaClosedHeading} closedBody={homeSettings.ctaClosedBody} closedLabel={homeSettings.ctaClosedLabel} openLabel={homeSettings.ctaLabel} href={homeSettings.ctaHref} />}
 	<Footer footer={footer} />
 </div>
 

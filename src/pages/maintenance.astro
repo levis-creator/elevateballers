@@ -1,0 +1,29 @@
+---
+export const prerender = false;
+
+import LayoutV2 from '@/layouts/v2/Layout.astro';
+import { resolvePublicSystemSettings, siteSettingsService } from '@/features/settings';
+
+const settings = resolvePublicSystemSettings(await siteSettingsService.list('system').catch(() => []));
+Astro.response.status = 503;
+Astro.response.headers.set('Retry-After', '900');
+---
+
+<LayoutV2
+	title="Maintenance - Elevate Ballers"
+	description={settings.maintenanceMsg}
+	robots="noindex, nofollow"
+	allowDuringMaintenance
+>
+	<main class="relative flex min-h-screen items-center justify-center overflow-hidden bg-night px-6 py-16 font-body text-cream">
+		<div class="absolute inset-0" style="background:radial-gradient(80% 70% at 50% 20%,rgb(var(--site-brand-rgb) / 0.22),transparent 62%);"></div>
+		<div class="pointer-events-none absolute h-[420px] w-[420px] rounded-full border border-brand/20"></div>
+		<section class="relative z-10 mx-auto max-w-[680px] text-center">
+			<img src="/images/Elevate_Icon.png" alt="Elevate Ballers" class="mx-auto mb-9 h-20 w-20 object-contain" />
+			<p class="mb-5 inline-flex items-center gap-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brandsoft"><span class="h-px w-7 bg-brand"></span>Timeout<span class="h-px w-7 bg-brand"></span></p>
+			<h1 class="font-display text-[clamp(64px,12vw,130px)] uppercase leading-[0.82] text-cream">Court <span class="text-brand">Closed</span></h1>
+			<p class="mx-auto mt-8 max-w-[540px] text-[18px] leading-[1.7] text-creamdim">{settings.maintenanceMsg}</p>
+			<p class="mt-8 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">HTTP 503 · Please check back shortly</p>
+		</section>
+	</main>
+</LayoutV2>

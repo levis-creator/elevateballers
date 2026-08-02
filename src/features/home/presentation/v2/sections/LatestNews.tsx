@@ -5,12 +5,15 @@ import type { NewsItem } from "@/features/home/domain/entities/home-v2";
 interface Props {
 	news: NewsItem[];
 	categories: string[];
+	eyebrow?: string;
+	heading?: string;
+	showFilters?: boolean;
 }
 
 const PLACEHOLDER = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 10px,var(--panel,#f0ece5) 10px,var(--panel,#f0ece5) 20px)";
 
 /** Latest News — React island; category filter state lives in a Zustand store. */
-export default function LatestNews({ news, categories }: Props) {
+export default function LatestNews({ news, categories, eyebrow = "From around the league", heading = "Latest News", showFilters = true }: Props) {
 	const category = useNewsFilterStore((s) => s.category);
 	const setCategory = useNewsFilterStore((s) => s.setCategory);
 	const filtered = category === "All" ? news : news.filter((n) => n.cat === category);
@@ -19,16 +22,16 @@ export default function LatestNews({ news, categories }: Props) {
 		<section className="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-[52px]">
 			<div className="mb-7 flex flex-wrap items-end justify-between gap-6">
 				<div>
-					<div className="mb-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">From around the league</div>
-					<h2 className="font-display text-[38px] uppercase text-ink">Latest News</h2>
+					<div className="mb-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{eyebrow}</div>
+					<h2 className="font-display text-[38px] uppercase text-ink">{heading}</h2>
 				</div>
-				<div className="flex flex-wrap gap-2">
+				{showFilters && <div className="flex flex-wrap gap-2">
 					{categories.map((c) => (
 						<button key={c} type="button" onClick={() => setCategory(c)} className={pillClass(category === c)}>
 							{c}
 						</button>
 					))}
-				</div>
+				</div>}
 			</div>
 			<div className="grid grid-cols-3 gap-5 max-[960px]:grid-cols-2 max-[600px]:grid-cols-1">
 				{filtered.map((n) => (

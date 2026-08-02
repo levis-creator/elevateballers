@@ -2,6 +2,8 @@
 export const prerender = false;
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
+import { resolvePublicSystemSettings, siteSettingsService } from '@/features/settings';
+const systemSettings = resolvePublicSystemSettings(await siteSettingsService.list('system').catch(() => []));
 
 const requestedDestination = Astro.url.searchParams.get("to") || "/";
 
@@ -26,21 +28,15 @@ const destinationLabel =
 		? "elevateballers.com"
 		: `elevateballers.com${destinationHref}`;
 
-const quickLinks = [
-	{ href: "/", label: "Home" },
-	{ href: "/teams/", label: "Teams" },
-	{ href: "/standings/", label: "Standings" },
-	{ href: "/upcoming-fixtures/", label: "Fixtures" },
-	{ href: "/news/", label: "News" },
-];
+const [redirectBefore, redirectAfter = ''] = systemSettings.redirectBody.split('{countdown}');
 ---
 
 <LayoutV2
-	title="Redirecting - Elevate Ballers"
+	title={`${systemSettings.redirectTitle} - Elevate Ballers`}
 	description="This Elevate Ballers page has moved. Continue to the new destination."
 	robots="noindex, follow"
 >
-	<main class="redirect-page" data-destination={destinationHref}>
+	<main class="redirect-page" data-destination={destinationHref} data-seconds={systemSettings.redirectSeconds} style={`--redirect-seconds:${systemSettings.redirectSeconds}s`}>
 		<div class="redirect-glow" aria-hidden="true"></div>
 		<div class="redirect-orbit redirect-orbit-lg" aria-hidden="true"></div>
 		<div class="redirect-orbit redirect-orbit-sm" aria-hidden="true"></div>
@@ -71,13 +67,12 @@ const quickLinks = [
 
 			<p class="redirect-kicker">
 				<span></span>
-				Page moved
+				{systemSettings.redirectEyebrow}
 				<span></span>
 			</p>
-			<h1 id="redirect-title">Redirecting</h1>
+			<h1 id="redirect-title">{systemSettings.redirectTitle}</h1>
 			<p class="redirect-copy">
-				This page has a new home. We're taking you there now. You'll arrive in
-				<strong id="redirect-countdown">5 seconds</strong>.
+				{redirectBefore}<strong id="redirect-countdown">{systemSettings.redirectSeconds === 1 ? '1 second' : `${systemSettings.redirectSeconds} seconds`}</strong>{redirectAfter}
 			</p>
 
 			<div class="redirect-destination">
@@ -87,19 +82,19 @@ const quickLinks = [
 
 			<div class="redirect-actions">
 				<a href={destinationHref} class="redirect-button redirect-button-primary">
-					Go There Now ->
+					{systemSettings.redirectCta}
 				</a>
 				<a href="/" class="redirect-button redirect-button-secondary">
 					Back to Home
 				</a>
 			</div>
 
-			<p class="redirect-note">Not redirected automatically? Use the button above.</p>
+			<p class="redirect-note">{systemSettings.redirectFallback}</p>
 		</section>
 
 		<nav class="redirect-links" aria-label="Quick links">
 			<div>
-				{quickLinks.map((link) => <a href={link.href}>{link.label}</a>)}
+				{systemSettings.redirectLinks.map((link) => <a href={link.path}>{link.label}</a>)}
 			</div>
 		</nav>
 	</main>
@@ -111,7 +106,8 @@ const quickLinks = [
 			if (!page || !countdown) return;
 
 			var destination = page.getAttribute("data-destination") || "/";
-			var remaining = 5;
+			var remaining = Number(page.getAttribute("data-seconds") || "5");
+			if (remaining <= 0) { window.location.replace(destination); return; }
 			var timer = window.setInterval(function () {
 				remaining -= 1;
 				countdown.textContent = remaining === 1 ? "1 second" : remaining + " seconds";
@@ -129,7 +125,7 @@ const quickLinks = [
 <style>
 	:global(html),
 	:global(body) {
-		background: #0c0b0a;
+		background: rgb(var(--site-night-rgb, 12 11 10));
 	}
 
 	.redirect-page {
@@ -138,9 +134,9 @@ const quickLinks = [
 		min-height: 100vh;
 		overflow: hidden;
 		flex-direction: column;
-		background: #0c0b0a;
-		color: #f3efe9;
-		font-family: Archivo, system-ui, sans-serif;
+		background: rgb(var(--site-night-rgb, 12 11 10));
+		color: rgb(var(--site-cream-rgb, 243 239 233));
+		font-family: var(--site-font-body, Archivo), system-ui, sans-serif;
 	}
 
 	.redirect-glow {
@@ -201,7 +197,7 @@ const quickLinks = [
 	}
 
 	.brand-wordmark strong {
-		color: #e4002b;
+		color: rgb(var(--site-brand-rgb, 228 0 43));
 		font-weight: inherit;
 	}
 
@@ -210,7 +206,7 @@ const quickLinks = [
 		position: relative;
 		display: block;
 		border-radius: 999px;
-		background: #e4002b;
+		background: rgb(var(--site-brand-rgb, 228 0 43));
 		overflow: hidden;
 	}
 
@@ -306,11 +302,11 @@ const quickLinks = [
 	}
 
 	.redirect-ring-progress {
-		stroke: #e4002b;
+		stroke: rgb(var(--site-brand-rgb, 228 0 43));
 		stroke-linecap: round;
 		stroke-dasharray: 326.7;
 		stroke-dashoffset: 326.7;
-		animation: redirect-dash 5s linear forwards;
+		animation: redirect-dash var(--redirect-seconds, 5s) linear forwards;
 	}
 
 	.redirect-ball {
@@ -334,7 +330,7 @@ const quickLinks = [
 	.redirect-kicker span {
 		width: 24px;
 		height: 1px;
-		background: #e4002b;
+		background: rgb(var(--site-brand-rgb, 228 0 43));
 	}
 
 	.redirect-content h1 {
@@ -344,7 +340,7 @@ const quickLinks = [
 		font-weight: 400;
 		line-height: 0.85;
 		text-transform: uppercase;
-		color: #f3efe9;
+		color: rgb(var(--site-cream-rgb, 243 239 233));
 	}
 
 	.redirect-copy {
@@ -356,7 +352,7 @@ const quickLinks = [
 	}
 
 	.redirect-copy strong {
-		color: #f3efe9;
+		color: rgb(var(--site-cream-rgb, 243 239 233));
 		font-weight: 800;
 	}
 
@@ -400,7 +396,7 @@ const quickLinks = [
 
 	.redirect-destination a:hover,
 	.redirect-links a:hover {
-		color: #e4002b;
+		color: rgb(var(--site-brand-rgb, 228 0 43));
 	}
 
 	.redirect-actions {
@@ -430,7 +426,7 @@ const quickLinks = [
 	}
 
 	.redirect-button-primary {
-		background: #e4002b;
+		background: rgb(var(--site-brand-rgb, 228 0 43));
 		color: #fff;
 	}
 
@@ -440,12 +436,12 @@ const quickLinks = [
 
 	.redirect-button-secondary {
 		border: 1px solid rgba(255, 255, 255, 0.2);
-		color: #f3efe9;
+		color: rgb(var(--site-cream-rgb, 243 239 233));
 	}
 
 	.redirect-button-secondary:hover {
-		border-color: #e4002b;
-		color: #e4002b;
+		border-color: rgb(var(--site-brand-rgb, 228 0 43));
+		color: rgb(var(--site-brand-rgb, 228 0 43));
 	}
 
 	.redirect-note {

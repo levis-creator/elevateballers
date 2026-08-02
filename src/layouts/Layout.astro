@@ -4,7 +4,7 @@ import "../styles/design-system.css";
 import "../styles/landing-enhancements.css";
 import SEO from "../components/SEO.astro";
 import CookieConsent from "../components/CookieConsent.astro";
-import { matchesSeoPath, resolvePublicConsentSettings, resolvePublicSeoSettings, siteSettingsService } from '@/features/settings';
+import { matchesSeoPath, resolvePublicConsentSettings, resolvePublicSeoSettings, resolvePublicSystemSettings, siteSettingsService } from '@/features/settings';
 
 interface Props {
 	title?: string;
@@ -29,11 +29,16 @@ interface Props {
 	 * /_vercel/image) so the preloaded request matches what's later rendered.
 	 */
 	preloadImage?: string;
+	allowDuringMaintenance?: boolean;
 }
 
-const { title, description, image, imageWidth, imageHeight, imageType, canonicalURL, type, robots, keywords, publishedTime, modifiedTime, prevURL, nextURL, preloadImage } = Astro.props;
+const { title, description, image, imageWidth, imageHeight, imageType, canonicalURL, type, robots, keywords, publishedTime, modifiedTime, prevURL, nextURL, preloadImage, allowDuringMaintenance = false } = Astro.props;
 const seoSettings = resolvePublicSeoSettings(await siteSettingsService.list('seo').catch(() => []));
 const consentSettings = resolvePublicConsentSettings(await siteSettingsService.list('consent').catch(() => []));
+const systemSettings = resolvePublicSystemSettings(await siteSettingsService.list('system').catch(() => []));
+if (systemSettings.maintenance && !allowDuringMaintenance) {
+	return Astro.redirect('/maintenance', 302);
+}
 const suffixBrand = seoSettings.titleSuffix.replace(/^[\s|—–-]+/, '').trim().toLowerCase();
 const resolvedTitle = title
 	? (seoSettings.titleSuffix && !title.toLowerCase().includes(suffixBrand) ? `${title}${seoSettings.titleSuffix}` : title)

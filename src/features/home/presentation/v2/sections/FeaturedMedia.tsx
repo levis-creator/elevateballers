@@ -5,13 +5,15 @@ import type { MediaItem } from "@/features/home/domain/entities/home-v2";
 interface Props {
 	media: MediaItem[];
 	tabs: string[];
+	eyebrow?: string;
+	heading?: string;
 }
 
 const STRIPES = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 10px,var(--panel,#f0ece5) 10px,var(--panel,#f0ece5) 20px)";
 const AUDIO_BG = "linear-gradient(135deg,rgb(var(--site-paper-border-rgb,236 231 223)),var(--paper2,#f4f0ea))";
 
 /** Featured Media — React island; active type tab lives in a Zustand store. */
-export default function FeaturedMedia({ media, tabs }: Props) {
+export default function FeaturedMedia({ media, tabs, eyebrow = "Visual highlights from across the league", heading = "Featured Media" }: Props) {
 	const tab = useMediaTabStore((s) => s.tab);
 	const setTab = useMediaTabStore((s) => s.setTab);
 	const items = tab === "All" ? media : media.filter((m) => m.type === tab);
@@ -25,8 +27,8 @@ export default function FeaturedMedia({ media, tabs }: Props) {
 		<section className="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6 max-[960px]:py-[52px]">
 			<div className="mb-7 flex flex-wrap items-end justify-between gap-6">
 				<div>
-					<div className="mb-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Visual highlights from across the league</div>
-					<h2 className="font-display text-[38px] uppercase text-ink">Featured Media</h2>
+					<div className="mb-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{eyebrow}</div>
+					<h2 className="font-display text-[38px] uppercase text-ink">{heading}</h2>
 				</div>
 				<div className="flex gap-2">
 					{tabs.map((t) => (

@@ -1,31 +1,45 @@
 import { useEffect, useState } from 'react';
+import { DEFAULT_PUBLIC_SYSTEM_SETTINGS, resolvePublicSystemSettings } from '@/features/settings/application/systemSettings';
 
 export default function PageLoader() {
-  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [settings, setSettings] = useState(DEFAULT_PUBLIC_SYSTEM_SETTINGS);
+  const [lineIndex, setLineIndex] = useState(0);
 
   useEffect(() => {
-    // Hide loader once page is fully loaded
-    const handleLoad = () => {
-      setLoading(false);
+    let active = true;
+    let showTimer: ReturnType<typeof setTimeout> | undefined;
+    const hide = () => active && setVisible(false);
+    window.addEventListener('load', hide);
+
+    void fetch('/api/settings/public?category=system')
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((records) => resolvePublicSystemSettings(records))
+      .catch(() => DEFAULT_PUBLIC_SYSTEM_SETTINGS)
+      .then((resolved) => {
+        if (!active) return;
+        setSettings(resolved);
+        if (document.readyState !== 'complete') {
+          showTimer = setTimeout(() => active && setVisible(true), resolved.splashThreshold);
+        }
+      });
+
+    const safety = setTimeout(hide, 4000);
+    return () => {
+      active = false;
+      window.removeEventListener('load', hide);
+      if (showTimer) clearTimeout(showTimer);
+      clearTimeout(safety);
     };
-
-    if (document.readyState === 'complete') {
-      setLoading(false);
-    } else {
-      window.addEventListener('load', handleLoad);
-      // Fallback: hide after a maximum time
-      const timeout = setTimeout(() => {
-        setLoading(false);
-      }, 3000);
-
-      return () => {
-        window.removeEventListener('load', handleLoad);
-        clearTimeout(timeout);
-      };
-    }
   }, []);
 
-  if (!loading) return null;
+  useEffect(() => {
+    if (!visible || settings.loadingLines.length < 2) return;
+    const interval = setInterval(() => setLineIndex((current) => (current + 1) % settings.loadingLines.length), 1200);
+    return () => clearInterval(interval);
+  }, [visible, settings.loadingLines]);
+
+  if (!visible) return null;
 
   return (
     <div
@@ -50,7 +64,7 @@ export default function PageLoader() {
             width: '50px',
             height: '50px',
             border: '4px solid #f3f3f3',
-            borderTop: '4px solid #dd3333',
+            borderTop: '4px solid rgb(var(--site-brand-rgb, 221 51 51))',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 1rem',
@@ -64,8 +78,9 @@ export default function PageLoader() {
             margin: 0,
           }}
         >
-          Loading...
+          {settings.loadingLabel}...
         </p>
+        <small style={{ display: 'block', marginTop: '8px', color: '#6f665c' }}>{settings.loadingLines[lineIndex] || ''}</small>
       </div>
       <style>
         {`

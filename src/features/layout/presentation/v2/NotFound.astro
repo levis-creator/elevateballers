@@ -1,17 +1,14 @@
 ---
-// v2 404 — self-contained dark page (minimal nav + "Airball" hero with a
-// bouncing-ball animation + quick links + slim footer). No data, no islands.
-interface QuickLink {
-	label: string;
-	sub: string;
-	href: string;
-}
-const quickLinks: QuickLink[] = [
-	{ label: "Teams", sub: "All clubs", href: "/teams" },
-	{ label: "Standings", sub: "League table", href: "/standings" },
-	{ label: "Fixtures", sub: "Schedule", href: "/upcoming-fixtures" },
-	{ label: "Results", sub: "Scores", href: "/matches" },
-];
+import type { PublicSystemSettings } from '@/features/settings/application/systemSettings';
+import { DEFAULT_PUBLIC_SYSTEM_SETTINGS } from '@/features/settings/application/systemSettings';
+
+interface Props { settings?: PublicSystemSettings }
+const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
+const accentIndex = settings.notFoundTitle.toLowerCase().indexOf(settings.notFoundAccent.toLowerCase());
+const titleBefore = accentIndex >= 0 ? settings.notFoundTitle.slice(0, accentIndex) : settings.notFoundTitle;
+const titleAccent = accentIndex >= 0 ? settings.notFoundTitle.slice(accentIndex, accentIndex + settings.notFoundAccent.length) : '';
+const titleAfter = accentIndex >= 0 ? settings.notFoundTitle.slice(accentIndex + settings.notFoundAccent.length) : '';
+const [primaryLink, ...quickLinks] = settings.notFoundLinks;
 const year = new Date().getFullYear();
 ---
 
@@ -47,26 +44,23 @@ const year = new Date().getFullYear();
 			</div>
 
 			<div class="mb-5 inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brandsoft">
-				<span class="h-px w-[26px] bg-brandsoft"></span>Error 404<span class="h-px w-[26px] bg-brandsoft"></span>
+				<span class="h-px w-[26px] bg-brandsoft"></span>{settings.notFoundEyebrow}<span class="h-px w-[26px] bg-brandsoft"></span>
 			</div>
-			<h1 class="mb-5 font-display text-[clamp(64px,12vw,150px)] uppercase leading-[0.82] tracking-[0.01em] text-cream">Air<span class="text-brand">ball</span></h1>
+			<h1 class="mb-5 font-display text-[clamp(64px,12vw,150px)] uppercase leading-[0.82] tracking-[0.01em] text-cream">{titleBefore}<span class="text-brand">{titleAccent}</span>{titleAfter}</h1>
 			<p class="mx-auto mb-9 max-w-[440px] text-[16px] leading-[1.6] text-creamdim">
-				That shot missed everything — the page you're looking for isn't on the court. It may have been moved, renamed, or never existed.
+				{settings.notFoundBody}
 			</p>
 
-			<div class="mb-12 flex flex-wrap items-center justify-center gap-3">
-				<a href="/" class="rounded bg-brand px-7 py-4 text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg no-underline hover:bg-brandlt">Back to Home</a>
-				<a href="/standings" class="rounded border border-white/20 px-7 py-4 text-[13px] font-bold uppercase tracking-[0.05em] text-cream no-underline hover:border-brand hover:text-brand">View Standings</a>
-			</div>
+			{primaryLink && <div class="mb-12 flex justify-center"><a href={primaryLink.path} class="rounded bg-brand px-7 py-4 text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg no-underline hover:bg-brandlt">{primaryLink.label}</a></div>}
 
 			<!-- Quick links -->
 			<div class="border-t border-white/[0.08] pt-8">
 				<div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Try one of these instead</div>
-				<div class="mx-auto grid max-w-[560px] grid-cols-4 gap-3 max-[600px]:grid-cols-2">
+				<div class="mx-auto grid max-w-[560px] grid-cols-3 gap-3 max-[600px]:grid-cols-1">
 					{quickLinks.map((q) => (
-						<a href={q.href} class="flex flex-col items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 py-4 no-underline hover:border-brand/50 hover:bg-white/[0.06]">
+						<a href={q.path} class="flex flex-col items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 py-4 no-underline hover:border-brand/50 hover:bg-white/[0.06]">
 							<span class="font-display text-[15px] uppercase text-cream">{q.label}</span>
-							<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">{q.sub}</span>
+							<span class="font-mono text-[10px] tracking-[0.08em] text-muted2">{q.path}</span>
 						</a>
 					))}
 				</div>
