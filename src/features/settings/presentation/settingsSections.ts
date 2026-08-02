@@ -1068,7 +1068,7 @@ export const SECTIONS: Section[] = [
         f('team_staffHeading', 'Coaching staff heading', 'Section under the squad.', { defaultValue: 'Coaching Staff' }),
       ] },
     ],
-    '/teams/:slug'
+    '/teams'
   ),
   people('players', 'Players List', 'The public player directory.', [
     { label: 'Hero', fields: [

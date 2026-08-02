@@ -12,6 +12,7 @@ import { getZonedDateParts, formatMatchTime } from "@/features/matches/domain/us
 import { calculateTeamStatistics } from "@/features/team/lib/teamStats";
 import { getTeamCoachingStaff } from "@/features/staff/data/datasources/team-coaching-staff-v2";
 import { getDisplayImageUrl } from "@/lib/asset-url";
+import { getStandings } from '@/features/standings/lib/getStandings';
 import type {
 	TeamDetail,
 	ResultMatch,
@@ -49,8 +50,11 @@ const leagueOf = (m: any) => m.league?.name || m.leagueName || "";
 export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> {
 	const team = await getTeamBySlug(slug);
 	if (!team) return null;
+	const leagueRow = await prisma.seasonTeam
+		.findFirst({ where: { teamId: team.id }, orderBy: { createdAt: "desc" }, select: { leagueSeasonId: true, league: { select: { name: true } } } })
+		.catch(() => null);
 
-	const [statsMap, coachingRows, staffRows, completed, upcomingMs, leagueRow] = await Promise.all([
+	const [statsMap, coachingRows, staffRows, completed, upcomingMs, standings] = await Promise.all([
 		getTeamPlayerStats(team.id).catch(() => ({} as Record<string, Record<string, number>>)),
 		// New split-out coaching staff (empty until the migration copies coaches).
 		getTeamCoachingStaff(team.id).catch(() => []),
@@ -58,12 +62,11 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 		getStaffByTeam(team.id, true).catch(() => [] as any[]),
 		getFilteredMatches({ teamId: team.id, status: "COMPLETED" }, "date-desc").catch(() => [] as any[]),
 		getFilteredMatches({ teamId: team.id, status: "UPCOMING" }, "date-asc", 5).catch(() => [] as any[]),
-		prisma.seasonTeam
-			.findFirst({ where: { teamId: team.id }, orderBy: { createdAt: "desc" }, select: { league: { select: { name: true } } } })
-			.catch(() => null),
+		leagueRow?.leagueSeasonId ? getStandings({ leagueSeasonId: leagueRow.leagueSeasonId }).catch(() => []) : Promise.resolve([]),
 	]);
 
 	const league = leagueRow?.league?.name || "Unaffiliated";
+	const tablePosition = standings.find((entry) => entry.teamId === team.id)?.rank ?? null;
 
 	// --- recent results (each from this team's perspective) ---
 	const teamIdOf = (m: any) => (m.team1?.id ?? m.team1Id) === team.id;
@@ -130,6 +133,7 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 		{ value: String(teamStats.totalMatches), label: "Games", color: "#f6f2ec" },
 		{ value: String(teamStats.wins), label: "Wins", color: "#3fbf6f" },
 		{ value: String(teamStats.losses), label: "Losses", color: "#ff5a72" },
+		{ value: tablePosition ? `#${tablePosition}` : "—", label: "Table Position", color: "#f6f2ec" },
 		{ value: `${Math.round(teamStats.winPercentage)}%`, label: "Win Rate", color: "#f6f2ec" },
 		{ value: teamStats.averagePointsScored.toFixed(1), label: "PPG", color: "#e4002b" },
 	];
