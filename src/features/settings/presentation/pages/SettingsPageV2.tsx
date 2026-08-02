@@ -21,6 +21,7 @@ function SettingsPageV2Content() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
+  const [teamPreviewHref, setTeamPreviewHref] = useState('/teams');
 
   const active = SECTIONS.find((section) => section.id === activeId) ?? SECTIONS[0];
   const savedLabel = notice ? notice.replace(/^Saved\s*/i, '') : '2 days ago';
@@ -48,7 +49,16 @@ function SettingsPageV2Content() {
 
   useEffect(() => {
     void loadSettings();
+    void fetch('/api/settings/team-preview', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : { href: '/teams' })
+      .then((result: { href?: string }) => {
+        if (result.href?.startsWith('/teams/')) setTeamPreviewHref(result.href);
+      })
+      .catch(() => undefined);
   }, []);
+
+  const activeHref = active.id === 'team' ? teamPreviewHref : active.href;
+  const activeSection = activeHref === active.href ? active : { ...active, href: activeHref };
 
   function updateValue(key: string, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -178,7 +188,7 @@ function SettingsPageV2Content() {
         </div>
         <div className="eb-settings-heading-actions">
           <span className="eb-settings-saved">Saved {savedLabel} · Levis N.</span>
-          <a className="eb-quiet-button" href={active.href} target="_blank" rel="noreferrer">
+          <a className="eb-quiet-button" href={activeHref} target="_blank" rel="noreferrer">
             Preview Site <ExternalLink size={13} />
           </a>
         </div>
@@ -193,7 +203,7 @@ function SettingsPageV2Content() {
           onSelect={setActiveId}
         />
         <SettingsSection
-          section={active}
+          section={activeSection}
           settings={settings}
           draft={draft}
           canManage={canManage}
