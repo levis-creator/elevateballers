@@ -8,6 +8,7 @@ import { publishToJob } from '../../../lib/qstash';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 import { findSubmission, submitPlayerRegistration } from '../../../features/registration/data/datasources/public-submission';
 import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
+import { registrationWindow, resolvePublicRegistrationSettings, siteSettingsService } from '../../../features/settings';
 
 export const prerender = false;
 
@@ -15,6 +16,14 @@ const getClientIp = (request: Request): string => request.headers.get('x-forward
 
 function responseFromStored(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+}
+
+async function loadRegistrationSettings() {
+  try {
+    return resolvePublicRegistrationSettings(await siteSettingsService.list('registration'));
+  } catch {
+    return resolvePublicRegistrationSettings([]);
+  }
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -27,6 +36,9 @@ export const POST: APIRoute = async ({ request }) => {
     if (!idempotencyKey) return new Response(JSON.stringify({ error: 'A valid idempotency key is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     const existingSubmission = await findSubmission(idempotencyKey);
     if (existingSubmission?.response) return responseFromStored(existingSubmission.response);
+    const registrationSettings = await loadRegistrationSettings();
+    if (!registrationSettings.playerMode) return new Response(JSON.stringify({ error: 'Individual player registration is currently disabled.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!registrationWindow(registrationSettings).open) return new Response(JSON.stringify({ error: registrationSettings.closedBody }), { status: 403, headers: { 'Content-Type': 'application/json' } });
 
     const jerseyNumber = rawData.jerseyNumber === undefined || rawData.jerseyNumber === null || rawData.jerseyNumber === '' ? undefined : Number(rawData.jerseyNumber);
     const data = { ...rawData, firstName: normalizeText(rawData.firstName), lastName: normalizeText(rawData.lastName), email: normalizeEmail(rawData.email), phone: normalizePhone(rawData.phone), position: normalizeText(rawData.position), jerseyNumber, height: normalizeOptionalText(rawData.height), weight: normalizeOptionalText(rawData.weight), teamName: normalizeOptionalText(rawData.teamName), leagueId: normalizeId(rawData.leagueId), seasonId: normalizeId(rawData.seasonId), leagueSeasonId: normalizeId(rawData.leagueSeasonId), additionalInfo: normalizeOptionalText(rawData.additionalInfo) };
@@ -43,7 +55,7 @@ export const POST: APIRoute = async ({ request }) => {
     const duplicateName = await prisma.player.findFirst({ where: { firstName: data.firstName, lastName: data.lastName, ...(teamId ? { teamId } : {}) }, select: { id: true } });
     if (duplicateEmail || duplicateName) return genericRegistrationResponse();
 
-    const result = await submitPlayerRegistration({ idempotencyKey, firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, position: data.position, jerseyNumber: data.jerseyNumber, height: data.height, weight: data.weight, teamName: data.teamName, teamId, additionalInfo: data.additionalInfo });
+    const result = await submitPlayerRegistration({ idempotencyKey, firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, position: data.position, jerseyNumber: data.jerseyNumber, height: data.height, weight: data.weight, teamName: data.teamName, teamId, additionalInfo: data.additionalInfo, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee });
     await logAudit(request, 'PLAYER_REGISTRATION_SUBMITTED', { playerId: result.playerId, name: `${data.firstName} ${data.lastName}`.trim() });
     for (const jobId of result.jobIds) {
       if (!await publishToJob('/api/jobs/send-email', { registrationJobId: jobId })) void processRegistrationEmailJob(jobId).catch((error) => console.error('[registration] player email job failed:', error));

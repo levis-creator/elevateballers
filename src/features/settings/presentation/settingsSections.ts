@@ -1007,22 +1007,36 @@ export const SECTIONS: Section[] = [
   competition(
     'registration',
     'Registration',
-    'Registration window copy and closed-state behavior.',
+    'The public team and player registration page.',
     [
-      {
-        label: 'Registration',
-        fields: [
-          f('registration_openLabel', 'Open label'),
-          f('registration_closedLabel', 'Closed label'),
-          f('registration_closedBody', 'Closed message', '', { type: 'area' }),
-          f('registration_showClosed', 'Show closed state', '', {
-            type: 'toggle',
-            defaultValue: 'false',
-          }),
-        ],
-      },
+      { label: 'Hero', fields: [
+        f('registration_eyebrow', 'Eyebrow', '', { defaultValue: 'Season 2026 · Sign-up open' }),
+        f('registration_title', 'Headline', 'A line break controls the second line.', { type: 'area', defaultValue: '2026 League\nRegistration' }),
+        f('registration_intro', 'Intro', '', { type: 'area', defaultValue: 'Register your team or sign up as a player for the 2026 Elevate Ballers League season. Lock your spot on the Nairobi courts.' }),
+        f('registration_heroFacts', 'Hero facts', 'Three figures under the intro. “Team slots” is the capacity for the season.', { type: 'list', addLabel: 'Add fact', maxItems: 6, columns: [{ key: 'big', label: 'Value', placeholder: 'Feb 28', width: '.5fr' }, { key: 'small', label: 'Label', placeholder: 'Registration closes', width: '1.5fr' }], defaultValue: '[{"big":"Feb 28","small":"Registration closes"},{"big":"Mar 14","small":"Season tip-off"},{"big":"24","small":"Team slots"}]' }),
+        f('registration_deadlines', 'Deadline chips', 'Dates shown under the intro.', { type: 'list', addLabel: 'Add date', maxItems: 8, columns: [{ key: 'date', label: 'Date', placeholder: 'Mar 14', width: '.5fr' }, { key: 'label', label: 'Milestone', placeholder: 'Season tip-off', width: '1.5fr' }], defaultValue: '[{"date":"Jan 20","label":"Registration opens"},{"date":"Feb 28","label":"Entry deadline"},{"date":"Mar 07","label":"Fixtures released"},{"date":"Mar 14","label":"Season tip-off"}]' }),
+      ] },
+      { label: 'Window', fields: [
+        f('registration_open', 'Registration open', 'Master switch for the public form.', { type: 'toggle', defaultValue: 'true' }),
+        f('registration_opens', 'Opens on', 'ISO date. Drives the “Registration opens” chip and the open/closed switch.', { defaultValue: '2026-01-20' }),
+        f('registration_closes', 'Closes on', 'ISO date. Must match the entry deadline shown in the hero facts and chips.', { defaultValue: '2026-02-28' }),
+        f('registration_slots', 'Team slots', 'Season capacity, printed as the third hero fact.', { defaultValue: '24' }),
+        f('registration_fee', 'Entry fee (KES)', 'Charged at the Confirm step. The form does not print an amount today.', { defaultValue: '25000' }),
+        f('registration_approval', 'Require admin approval', 'New registrations start as pending.', { type: 'toggle', defaultValue: 'true' }),
+        f('registration_playerMode', 'Allow individual players', 'Adds the player sign-up alongside team entry.', { type: 'toggle', defaultValue: 'true' }),
+      ] },
+      { label: 'How it works', fields: [
+        f('registration_stepsHeading', 'Panel heading', '', { defaultValue: 'How it works' }),
+        f('registration_steps', 'Steps', 'Numbered automatically in the dark panel.', { type: 'list', addLabel: 'Add step', maxItems: 8, columns: [{ key: 'title', label: 'Step', placeholder: 'Submit', width: '.6fr' }, { key: 'desc', label: 'Description', placeholder: 'What happens', width: '1.8fr' }], defaultValue: '[{"title":"Submit","desc":"Complete the team or player form with accurate contact details."},{"title":"Review","desc":"We verify eligibility and roster within 3 working days."},{"title":"Confirm","desc":"Pay the season fee and receive your fixtures and slot."}]' }),
+      ] },
+      { label: 'After submitting', fields: [
+        f('registration_successTitle', 'Success heading', '', { defaultValue: "You're in the queue" }),
+        f('registration_successBody', 'Success message', 'Use {mode} for “team” or “player”.', { type: 'area', defaultValue: 'Thanks — your {mode} registration has been received. Our team reviews entries within 3 working days and will email you the outcome.' }),
+        f('registration_closedTitle', 'Closed heading', '', { defaultValue: 'Registration is closed' }),
+        f('registration_closedBody', 'Closed message', '', { type: 'area', defaultValue: 'The 2026 window has closed. Join the waitlist and we’ll reach out the moment a spot or the 2027 window opens.' }),
+      ] },
     ],
-    '/register'
+    '/league-registration'
   ),
   people(
     'team',
