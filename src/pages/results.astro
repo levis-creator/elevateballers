@@ -1,0 +1,5 @@
+---
+// Keep the short results URL working while the canonical public route remains
+// `/matches/` for existing links and match detail breadcrumbs.
+return Astro.redirect('/matches/', 308);
+---

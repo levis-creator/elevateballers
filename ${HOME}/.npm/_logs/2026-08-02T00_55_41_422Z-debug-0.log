@@ -5,13 +5,13 @@
 4 silly config load:file:c:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm view @astrojs/react description dist-tags.latest homepage version time
-8 verbose argv "view" "--json" "--" "@astrojs/react" "description" "dist-tags.latest" "homepage" "version" "time"
-9 verbose logfile logs-max:10 dir:c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-02T00_24_19_532Z-
-10 verbose logfile c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-02T00_24_19_532Z-debug-0.log
+7 verbose title npm view @fontsource/ibm-plex-mono description dist-tags.latest homepage version time
+8 verbose argv "view" "--json" "--" "@fontsource/ibm-plex-mono" "description" "dist-tags.latest" "homepage" "version" "time"
+9 verbose logfile logs-max:10 dir:c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-02T00_55_41_422Z-
+10 verbose logfile c:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-02T00_55_41_422Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
-13 http fetch GET 200 https://registry.npmjs.org/@astrojs%2freact 2020ms (cache miss)
+13 http fetch GET 200 https://registry.npmjs.org/@fontsource%2fibm-plex-mono 106ms (cache stale)
 14 verbose cwd c:\Users\Levi\Documents\GitHub\elevateballers
 15 verbose os Windows_NT 10.0.26200
 16 verbose node v24.18.0

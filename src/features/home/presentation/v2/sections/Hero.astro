@@ -6,24 +6,38 @@
 // v2 Layout). Stat rail is wired to the real "By The Numbers" counts.
 import type { NextMatch, CountTargets } from "@/features/home/domain/entities/home-v2";
 import TeamName from "@/features/teams/presentation/components/TeamName";
+import type { PublicHomeSettings } from "@/features/settings";
 
 interface Props {
 	heroCtaLabel: string;
 	nextMatch: NextMatch | null;
 	counts: CountTargets;
 	showArt?: boolean;
+	settings: PublicHomeSettings;
+	animateCounters?: boolean;
 }
-const { heroCtaLabel, nextMatch, counts, showArt = true } = Astro.props;
+const { heroCtaLabel, nextMatch, counts, showArt = true, settings, animateCounters = true } = Astro.props;
+const headingLines = settings.heading.split(/\r?\n/);
+const statValue = (source: string) => {
+	const normalized = source.toLowerCase();
+	if (normalized.includes("player")) return counts.players;
+	if (normalized.includes("match")) return counts.matches;
+	if (normalized.includes("award")) return counts.awards;
+	return counts.teams;
+};
 ---
 
 <section class="relative overflow-hidden bg-night text-cream">
+	{settings.heroMedia === "Drone video" && settings.heroVideo && <video class="absolute inset-0 h-full w-full object-cover" src={settings.heroVideo} autoplay muted loop playsinline aria-hidden="true"></video>}
+	{settings.heroMedia === "Still image" && settings.heroVideo && <div class="absolute inset-0 bg-cover bg-center" style={`background-image:url(${settings.heroVideo});`}></div>}
+	<div class="absolute inset-0 bg-night" style={`opacity:${settings.heroDim / 100};`}></div>
 	<div class="absolute inset-0" style="background:radial-gradient(100% 90% at 88% -20%,rgb(var(--site-brand-rgb) / 0.28),transparent 55%);"></div>
 	<div class:list={["eb-hero-art absolute -top-40 right-[-180px] h-[640px] w-[640px] rounded-full border border-white/[0.06]", !showArt && "hidden"]}></div>
 	<div class:list={["eb-hero-art absolute -top-10 right-[-60px] h-[420px] w-[420px] rounded-full border border-brand/[0.18]", !showArt && "hidden"]}></div>
 	<div class="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/60 to-transparent"></div>
 
 	<!-- oversized ghost word -->
-	<div class:list={["eb-hero-art pointer-events-none absolute -bottom-[38px] left-[-14px] select-none font-display text-[190px] uppercase leading-none tracking-[0.02em] max-[960px]:hidden", !showArt && "hidden"]} style="-webkit-text-stroke:1px rgba(255,255,255,0.05);color:transparent;">Nairobi</div>
+	{settings.ghostWord && <div class:list={["eb-hero-art pointer-events-none absolute -bottom-[38px] left-[-14px] select-none font-display text-[190px] uppercase leading-none tracking-[0.02em] max-[960px]:hidden", !showArt && "hidden"]} style="-webkit-text-stroke:1px rgba(255,255,255,0.05);color:transparent;">{settings.ghostWord}</div>}
 
 	<!-- COOL GRAPHICS LAYER -->
 	<!-- soft red glow behind the ball -->
@@ -80,37 +94,27 @@ const { heroCtaLabel, nextMatch, counts, showArt = true } = Astro.props;
 	<div class="relative mx-auto grid max-w-[1280px] grid-cols-[1.2fr_0.8fr] items-stretch gap-16 px-8 pb-[70px] pt-[84px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:pb-14 max-[960px]:pt-14">
 		<!-- LEFT -->
 		<div class="flex flex-col justify-center">
-			<div class="mb-7 inline-flex w-fit items-center gap-3 rounded-full border border-white/[0.12] bg-white/[0.03] py-[7px] pl-3 pr-[14px] font-mono text-[11px] uppercase tracking-[0.14em] text-creamdim">
+			{settings.pill && <div class="mb-7 inline-flex w-fit items-center gap-3 rounded-full border border-white/[0.12] bg-white/[0.03] py-[7px] pl-3 pr-[14px] font-mono text-[11px] uppercase tracking-[0.14em] text-creamdim">
 				<span class="relative flex h-[7px] w-[7px]"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75"></span><span class="relative inline-flex h-[7px] w-[7px] rounded-full bg-brand"></span></span>
-				Season 2026 · Live now
-			</div>
+				{settings.pill}
+			</div>}
 			<h1 class="mb-7 font-display text-[clamp(64px,8.2vw,128px)] uppercase leading-[0.82] tracking-[0.005em] text-[var(--cream,#f6f2ec)]">
-				Elevate<br />your <span class="text-brand">game</span>
+				{headingLines.map((line, lineIndex) => <Fragment>{line.split(/(\s+)/).map((part) => part.trim().toLowerCase() === settings.accentWord.toLowerCase() ? <span class="text-brand">{part}</span> : part)}{lineIndex < headingLines.length - 1 && <br />}</Fragment>)}
 			</h1>
 			<p class="mb-9 max-w-[480px] text-[17px] leading-[1.65] text-creamdim">
-				Live matches, standings, and rising stars from the courts of Nairobi. Follow every game, every team, every player — all season long.
+				{settings.body}
 			</p>
 			<div class="mb-11 flex flex-wrap items-center gap-4 max-[600px]:flex-col max-[600px]:items-stretch">
-				<a href="/league-registration" class="rounded bg-brand px-8 py-[17px] text-center text-[14px] font-extrabold uppercase tracking-[0.05em] text-brandfg no-underline hover:bg-brandlt">{heroCtaLabel}</a>
-				<a href="/standings" class="rounded border border-white/20 px-8 py-[17px] text-center text-[14px] font-bold uppercase tracking-[0.05em] text-cream no-underline hover:border-brand hover:text-brand">View Standings</a>
+				{settings.ctaLabel && <a href={settings.ctaHref} class="rounded bg-brand px-8 py-[17px] text-center text-[14px] font-extrabold uppercase tracking-[0.05em] text-brandfg no-underline hover:bg-brandlt">{heroCtaLabel || settings.ctaLabel}</a>}
+				{settings.ctaLabel2 && <a href={settings.ctaHref2} class="rounded border border-white/20 px-8 py-[17px] text-center text-[14px] font-bold uppercase tracking-[0.05em] text-cream no-underline hover:border-brand hover:text-brand">{settings.ctaLabel2}</a>}
 			</div>
 			<!-- stat rail (real counts) -->
-			<div class="flex flex-wrap items-center gap-x-11 gap-y-5 border-t border-white/[0.08] pt-7">
-				<div>
-					<div class="font-display text-[38px] leading-none text-cream">{counts.teams}</div>
-					<div class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Teams</div>
-				</div>
-				<div class="h-9 w-px bg-white/[0.1] max-[600px]:hidden"></div>
-				<div>
-					<div class="font-display text-[38px] leading-none text-cream">{counts.players}</div>
-					<div class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Players</div>
-				</div>
-				<div class="h-9 w-px bg-white/[0.1] max-[600px]:hidden"></div>
-				<div>
-					<div class="font-display text-[38px] leading-none text-brand">{counts.matches}</div>
-					<div class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Matches Played</div>
-				</div>
-			</div>
+			{settings.statRail && <div class="flex flex-wrap items-center gap-x-11 gap-y-5 border-t border-white/[0.08] pt-7">
+				{settings.statRailItems.map((item, index) => <Fragment>
+					{index > 0 && <div class="h-9 w-px bg-white/[0.1] max-[600px]:hidden"></div>}
+					<div><div class:list={["font-display text-[38px] leading-none", index === settings.statRailItems.length - 1 ? "text-brand" : "text-cream"]} data-home-count={animateCounters ? statValue(item.source) : undefined}>{statValue(item.source)}</div><div class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">{item.label}</div></div>
+				</Fragment>)}
+			</div>}
 		</div>
 
 		<!-- RIGHT: NEXT MATCH SCOREBOARD -->
@@ -177,3 +181,11 @@ const { heroCtaLabel, nextMatch, counts, showArt = true } = Astro.props;
 		</div>
 	</div>
 </section>
+
+{animateCounters && <script>
+	document.querySelectorAll<HTMLElement>('[data-home-count]').forEach((node) => {
+		const end = Number(node.dataset.homeCount ?? 0); const started = performance.now(); node.textContent = '0';
+		const tick = (now: number) => { const p = Math.min(1, (now - started) / 1000); node.textContent = String(Math.round(end * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(tick); };
+		requestAnimationFrame(tick);
+	});
+</script>}

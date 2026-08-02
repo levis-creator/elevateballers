@@ -31,7 +31,7 @@ import FeatureGate from "@/components/FeatureGate.astro";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import PageLoader from "@/components/PageLoader";
 import { getAllSiteSettings } from "@/features/cms/lib/queries";
-import { resolvePublicContactSettings, resolvePublicSeoSettings } from '@/features/settings';
+import { resolvePublicContactSettings, resolvePublicHomeSettings, resolvePublicSeoSettings } from '@/features/settings';
 import { getFeaturedNewsArticles } from "@/features/cms/lib/queries/news";
 import { optimizeImageUrl } from "@/lib/image-cdn";
 
@@ -50,14 +50,17 @@ let seoDescription = DEFAULT_SEO_DESCRIPTION;
 let seoImage = DEFAULT_SEO_IMAGE;
 let seoKeywords = DEFAULT_SEO_KEYWORDS;
 let contactSettings = resolvePublicContactSettings([]);
+let homeSettings = resolvePublicHomeSettings([]);
 
 try {
-  const [seoSettings, contactRecords] = await Promise.all([
+  const [seoSettings, contactRecords, homeRecords] = await Promise.all([
     getAllSiteSettings("seo"),
     getAllSiteSettings("contact"),
+    getAllSiteSettings("home"),
   ]);
   const resolvedSeo = resolvePublicSeoSettings(seoSettings);
   contactSettings = resolvePublicContactSettings(contactRecords);
+  homeSettings = resolvePublicHomeSettings(homeRecords);
   seoTitle = resolvedSeo.metaTitle;
   seoDescription = resolvedSeo.metaDescription;
   seoImage = resolvedSeo.ogImage;
@@ -184,11 +187,11 @@ try {
       </FeatureGate>
 
       <!-- News Ticker Section -->
-      <FeatureGate feature="home.newsTicker">
+      {homeSettings.ticker && <FeatureGate feature="home.newsTicker">
         <section class="news-ticker-section" aria-label="Latest news ticker">
           <NewsTicker client:load />
         </section>
-      </FeatureGate>
+      </FeatureGate>}
 
       <!-- Marquee Matchup Section -->
       <FeatureGate feature="home.marqueeMatchup">
@@ -201,7 +204,7 @@ try {
       </FeatureGate>
 
       <!-- Next Match Carousel Section -->
-      <FeatureGate feature="home.nextMatchCarousel">
+      {homeSettings.fixturesBlock && <FeatureGate feature="home.nextMatchCarousel">
         <section
           class="next-match-section section"
           aria-label="Upcoming matches"
@@ -217,10 +220,10 @@ try {
             </div>
           </div>
         </section>
-      </FeatureGate>
+      </FeatureGate>}
 
       <!-- Latest News Section -->
-      <FeatureGate feature="home.latestNews">
+      {homeSettings.newsBlock && <FeatureGate feature="home.latestNews">
         <section
           class="latest-news-section section"
           id="main-content"
@@ -230,20 +233,20 @@ try {
             <LatestNews client:visible />
           </div>
         </section>
-      </FeatureGate>
+      </FeatureGate>}
 
       <!-- Player of the Week Section -->
-      <section
+      {homeSettings.potw && <section
         class="player-week-section section"
         aria-label="Player of the week"
       >
         <div class="container">
           <PlayerOfTheWeek />
         </div>
-      </section>
+      </section>}
 
       <!-- Stats Leaders Section -->
-      <FeatureGate feature="home.statsLeaders">
+      {homeSettings.leadersBlock && <FeatureGate feature="home.statsLeaders">
         <section
           class="stats-leaders-section section"
           aria-label="Statistics and leaders"
@@ -253,10 +256,10 @@ try {
             <StatsLeadersSection client:visible />
           </div>
         </section>
-      </FeatureGate>
+      </FeatureGate>}
 
       <!-- Statistics Section -->
-      <FeatureGate feature="home.statsSection">
+      {homeSettings.leadersBlock && <FeatureGate feature="home.statsSection">
         <section
           class="statistics-section section"
           aria-label="League statistics"
@@ -265,10 +268,10 @@ try {
             <StatsSection client:visible />
           </div>
         </section>
-      </FeatureGate>
+      </FeatureGate>}
 
       <!-- Media Gallery Section -->
-      <FeatureGate feature="home.mediaGallery">
+      {homeSettings.mediaBlock && <FeatureGate feature="home.mediaGallery">
         <section
           class="media-gallery-section section"
           aria-label="Media gallery"
@@ -277,40 +280,37 @@ try {
             <MediaGallery client:visible />
           </div>
         </section>
-      </FeatureGate>
+      </FeatureGate>}
 
       <!-- Sponsors Section (renders only if there are active sponsors) -->
       <Sponsors client:visible />
 
       <!-- Homepage Intro (editable in admin -> Settings -> Homepage Intro) -->
-      <HomepageIntro />
+      {homeSettings.aboutBlock && <HomepageIntro />}
 
       <!-- Registration CTA Section -->
-      <FeatureGate feature="home.registrationCta">
+      {homeSettings.ctaBlock && <FeatureGate feature="home.registrationCta">
         <section
           class="registration-cta-section section"
           aria-label="Join the league"
         >
           <div class="container">
             <div class="registration-cta-content">
-              <h2 class="registration-title">
-                Register to Join the League
-              </h2>
+              <h2 class="registration-title">{homeSettings.ctaOpenHeading}</h2>
               <p class="registration-description">
-                Be part of Elevate Ballers, Kenya's premier basketball league.
-                Join us today and elevate your game!
+                {homeSettings.ctaOpenBody}
               </p>
               <a
                 class="btn btn-secondary btn-lg"
-                href="/league-registration/"
+                href={homeSettings.ctaHref}
                 title="Open the league registration form"
               >
-                Open Registration Form
+                {homeSettings.ctaLabel}
               </a>
             </div>
           </div>
         </section>
-      </FeatureGate>
+      </FeatureGate>}
     </main>
 
     {isFeatureEnabled("layout.footer") && <Footer />}

@@ -597,60 +597,212 @@ export const SECTIONS: Section[] = [
       },
     ]
   ),
-  siteWide('system', 'System Pages', 'Operational defaults that affect the public experience.', [
+  siteWide('system', 'System Pages', 'Error, redirect and loading states, plus the site-wide maintenance switch.', [
     {
-      label: 'Defaults',
+      label: '404',
       fields: [
-        f('system_timezone', 'Timezone', '', {
-          type: 'select',
-          options: ['Africa/Nairobi', 'UTC', 'Europe/London'],
-          defaultValue: 'Africa/Nairobi',
+        f('system_notFoundEyebrow', 'Eyebrow', 'Rule-flanked mono label above the headline.', { defaultValue: 'Error 404' }),
+        f('system_notFoundTitle', 'Headline', 'Set in Anton at up to 150px.', { defaultValue: 'Airball', counter: 14 }),
+        f('system_notFoundAccent', 'Accent letters', 'The part of the headline set in the brand colour.', { defaultValue: 'ball' }),
+        f('system_notFoundBody', 'Body', 'Offer a way back.', {
+          type: 'area',
+          defaultValue: 'That shot missed everything — the page you’re looking for isn’t on the court. It may have been moved, renamed, or never existed.',
         }),
-        f(
-          'system_maintenance',
-          'Maintenance mode',
-          'Keep the public site read-only while maintenance is underway.',
-          { type: 'toggle', defaultValue: 'false' }
-        ),
+        f('system_notFoundLinks', 'Suggested links', 'The first row is the primary button; the rest are secondary links.', {
+          type: 'list', addLabel: 'Add link', maxItems: 8,
+          columns: [
+            { key: 'label', label: 'Label', placeholder: 'Back to Home', width: '1fr' },
+            { key: 'path', label: 'Path', placeholder: '/', width: '1fr' },
+          ],
+          defaultValue: '[{"label":"Back to Home","path":"/"},{"label":"View Fixtures","path":"/fixtures"},{"label":"Standings","path":"/standings"}]',
+        }),
+      ],
+    },
+    {
+      label: '302 redirect',
+      fields: [
+        f('system_redirectEyebrow', 'Eyebrow', 'Rule-flanked mono label.', { defaultValue: 'Page moved' }),
+        f('system_redirectTitle', 'Headline', 'Set in Anton at up to 110px.', { defaultValue: 'Redirecting', counter: 16 }),
+        f('system_redirectBody', 'Body', 'Use {countdown} for the live seconds remaining.', { type: 'area', defaultValue: 'This page has a new home. We’re taking you there now — you’ll arrive in {countdown}.' }),
+        f('system_redirectSeconds', 'Countdown (seconds)', 'Also drives the ring animation. 0 redirects immediately.', { defaultValue: '5' }),
+        f('system_redirectCta', 'Primary button', 'Jumps straight to the destination.', { defaultValue: 'Go There Now →' }),
+        f('system_redirectFallback', 'Fallback note', 'Small print under the buttons.', { defaultValue: 'Not redirected automatically? Use the button above.' }),
+        f('system_redirectLinks', 'Quick links', 'Links along the foot of the redirect page.', {
+          type: 'list', addLabel: 'Add link', maxItems: 8,
+          columns: [
+            { key: 'label', label: 'Label', placeholder: 'Fixtures', width: '1fr' },
+            { key: 'path', label: 'Path', placeholder: '/fixtures', width: '1fr' },
+          ],
+          defaultValue: '[{"label":"Home","path":"/"},{"label":"Teams","path":"/teams"},{"label":"Standings","path":"/standings"},{"label":"Fixtures","path":"/fixtures"},{"label":"News","path":"/news"}]',
+        }),
+      ],
+    },
+    {
+      label: 'Loading',
+      fields: [
+        f('system_loadingLabel', 'Splash label', 'Beside the animated dots on the full-screen boot splash.', { defaultValue: 'Loading' }),
+        f('system_loadingLines', 'Status lines', 'Cycled under the splash label while the app boots.', {
+          type: 'list', addLabel: 'Add line', maxItems: 8,
+          columns: [{ key: 'line', label: 'Line', placeholder: 'Loading standings', width: '1fr' }],
+          defaultValue: '[{"line":"Tipping off…"},{"line":"Loading standings"},{"line":"Fetching fixtures"},{"line":"Warming up the court"}]',
+        }),
+        f('system_splashThreshold', 'Splash after (ms)', 'Below this, pages load without flashing the splash.', { defaultValue: '400' }),
+        f('system_skeletons', 'Skeleton placeholders', 'Region-level shimmer for lists, tables and detail heroes.', { type: 'toggle', defaultValue: 'true' }),
+      ],
+    },
+    {
+      label: 'Maintenance',
+      fields: [
+        f('system_maintenance', 'Maintenance mode', 'Public site shows the notice below. Admin stays reachable.', { type: 'toggle', defaultValue: 'false' }),
+        f('system_maintenanceMsg', 'Maintenance message', '', { type: 'area', defaultValue: 'We’re updating results from last night’s games. Back shortly.' }),
       ],
     },
   ]),
   pages(
     'home',
     'Homepage',
-    'Every block on the homepage, in the order it appears.',
+    'The blocks under the masthead and the order visitors meet them in.',
     [
       {
-        label: 'Intro block',
+        label: 'Hero',
         fields: [
-          f('home_eyebrow', 'Eyebrow', '', { defaultValue: 'Kenya basketball' }),
-          f('home_heading', 'Heading', '', {
-            type: 'area',
-            defaultValue: 'Your home for the game we live for',
-          }),
-          f('home_body', 'Intro paragraph', '', { type: 'area' }),
+          f('home_pill', 'Live pill', 'Mono label with the pulsing red dot. Blank hides the pill.', { defaultValue: 'Season 2026 · Live now' }),
+          f('home_heading', 'Headline', 'Set in Anton at up to 128px. A line break controls where the second line starts.', { type: 'area', defaultValue: 'Elevate\nyour game', counter: 34 }),
+          f('home_accentWord', 'Accent word', 'This word in the headline is set in the brand colour.', { defaultValue: 'game' }),
+          f('home_body', 'Intro paragraph', 'Two sentences maximum.', { type: 'area', defaultValue: 'Nairobi’s own basketball league — born on the city’s courts, built for its players. Live matches, standings, and rising stars from Kenya’s capital, all season long.' }),
+          f('home_ctaLabel', 'Primary button', 'Blank hides the button.', { defaultValue: 'Register Team' }),
+          f('home_ctaHref', 'Primary link', '', { defaultValue: '/register' }),
+          f('home_ctaLabel2', 'Secondary button', '', { defaultValue: 'View Standings' }),
+          f('home_ctaHref2', 'Secondary link', '', { defaultValue: '/standings' }),
         ],
       },
       {
-        label: 'Homepage blocks',
+        label: 'Hero background',
         fields: [
-          f('home_statRailItems', 'Counters', 'One JSON object per line.', { type: 'json' }),
-          f('home_fixturesBlock', 'Fixtures block', '', { type: 'toggle', defaultValue: 'true' }),
+          f('home_heroMedia', 'Background', 'Video autoplays muted and looped; the court pattern is the no-media fallback.', { type: 'select', options: ['Drone video', 'Court pattern', 'Still image'], defaultValue: 'Drone video' }),
+          f('home_heroVideo', 'Video URL', 'MP4 in the Media Library. Used as the image URL for Still image.', { defaultValue: '/media/general/nairobi-courts-loop.mp4' }),
+          f('home_heroDim', 'Dim percent', 'Darkening over the media. Below 60 usually fails contrast.', { defaultValue: '78' }),
+          f('home_ghostWord', 'Ghost word', 'Oversized outlined word behind the hero. Blank hides it.', { defaultValue: 'Nairobi' }),
+        ],
+      },
+      {
+        label: 'Stat rail',
+        fields: [
+          f('home_statRail', 'Show stat rail', 'Counters under the hero copy.', { type: 'toggle', defaultValue: 'true' }),
+          f('home_statRailItems', 'Counters', 'Counts are read live from the current League Season.', { type: 'list', addLabel: 'Add counter', maxItems: 8, columns: [
+            { key: 'label', label: 'Label', placeholder: 'Teams', width: '1fr' }, { key: 'source', label: 'Counts', placeholder: 'Registered teams', width: '1.2fr' },
+          ], defaultValue: '[{"label":"Teams","source":"Registered teams"},{"label":"Players","source":"Registered players"},{"label":"Matches Played","source":"Matches marked final"}]' }),
+          f('home_countUp', 'Count up on load', 'Numbers animate from zero the first time they scroll into view.', { type: 'toggle', defaultValue: 'true' }),
+        ],
+      },
+      {
+        label: 'News ticker',
+        fields: [
+          f('home_ticker', 'Show ticker', 'The scrolling strip under the hero.', { type: 'toggle', defaultValue: 'true' }),
+          f('home_tickerLabel', 'Ticker label', 'Dark chip at the head of the strip.', { defaultValue: 'Elevate News' }),
+          f('home_tickerSource', 'Items', 'What scrolls past.', { type: 'select', options: ['Latest headlines', 'Latest results', 'Headlines and results'], defaultValue: 'Headlines and results' }),
+          f('home_tickerSpeed', 'Loop seconds', 'One full pass. Higher is slower.', { defaultValue: '40' }),
+        ],
+      },
+      {
+        label: 'Fixtures & results',
+        fields: [
+          f('home_fixturesBlock', 'Show block', 'Two columns: upcoming matches and recent results.', { type: 'toggle', defaultValue: 'true' }),
+          f('home_fixturesHeading', 'Left heading', '', { defaultValue: 'Upcoming Matches' }),
+          f('home_resultsHeading', 'Right heading', '', { defaultValue: 'Recent Results' }),
+          f('home_fixturesCount', 'Rows per column', 'Same count for both sides.', { defaultValue: '4' }),
+          f('home_emptyFixtures', 'No fixtures message', 'Shown between seasons.', { defaultValue: 'No matches scheduled — the next round drops soon.' }),
+        ],
+      },
+      { label: 'Player of the Week', fields: [f('home_potw', 'Show spotlight', 'Its copy and stats are edited in Editorial › Player of the Week.', { type: 'toggle', defaultValue: 'true' })] },
+      {
+        label: 'Latest news', fields: [
+          f('home_newsBlock', 'Show block', '', { type: 'toggle', defaultValue: 'true' }), f('home_newsEyebrow', 'Eyebrow', '', { defaultValue: 'From around the league' }),
+          f('home_newsHeading', 'Heading', '', { defaultValue: 'Latest News' }), f('home_newsCount', 'Cards shown', 'Before the load-more step.', { defaultValue: '6' }),
+          f('home_newsFilters', 'Category chips', 'Filter row beside the heading.', { type: 'toggle', defaultValue: 'true' }),
+        ],
+      },
+      {
+        label: 'Leaders & numbers', fields: [
+          f('home_leadersBlock', 'Show block', 'League Leaders beside By The Numbers.', { type: 'toggle', defaultValue: 'true' }),
+          f('home_leadersHeading', 'Leaders heading', '', { defaultValue: 'League Leaders' }), f('home_numbersHeading', 'Numbers heading', '', { defaultValue: 'By The Numbers' }),
+          f('home_leadersRows', 'Players per board', '', { defaultValue: '5' }),
+        ],
+      },
+      {
+        label: 'Featured media', fields: [
+          f('home_mediaBlock', 'Show block', 'Hidden automatically when the library has nothing tagged featured.', { type: 'toggle', defaultValue: 'true' }),
+          f('home_mediaEyebrow', 'Eyebrow', '', { defaultValue: 'Visual highlights from across the league' }), f('home_mediaHeading', 'Heading', '', { defaultValue: 'Featured Media' }),
+          f('home_mediaCount', 'Items shown', '', { defaultValue: '6' }),
+        ],
+      },
+      {
+        label: 'About block', fields: [
+          f('home_aboutBlock', 'Show block', 'Centred white section above the register call-to-action.', { type: 'toggle', defaultValue: 'true' }),
+          f('home_aboutEyebrow', 'Eyebrow', '', { defaultValue: 'Welcome to Elevate Ballers' }), f('home_aboutHeading', 'Heading', 'A line break splits it over two lines.', { type: 'area', defaultValue: 'Your home for the game\nwe live for' }),
+          f('home_aboutBody', 'Paragraph', '', { type: 'area', defaultValue: 'The official home of Kenya’s premier basketball league. Follow every game, every team, and every player. Standings update after every match, and the Player of the Week highlights one standout performance.' }),
+        ],
+      },
+      {
+        label: 'Register call-to-action', fields: [
+          f('home_ctaBlock', 'Show block', 'The full-width brand band at the foot of the page.', { type: 'toggle', defaultValue: 'true' }),
+          f('home_ctaOpenEyebrow', 'Open · eyebrow', 'Shown while registration is open.', { defaultValue: 'Registration Open' }), f('home_ctaOpenHeading', 'Open · heading', '', { type: 'area', defaultValue: 'Register to\njoin the league' }),
+          f('home_ctaOpenBody', 'Open · paragraph', '', { type: 'area', defaultValue: 'Be part of Elevate Ballers. Tryouts run throughout the year for late entries — sign up your team or yourself today.' }),
+          f('home_ctaClosedEyebrow', 'Closed · eyebrow', 'Swaps in automatically once the registration window shuts.', { defaultValue: 'Registration Closed' }), f('home_ctaClosedHeading', 'Closed · heading', '', { type: 'area', defaultValue: '2026 entries\nare closed' }),
+          f('home_ctaClosedBody', 'Closed · paragraph', '', { type: 'area', defaultValue: 'The season is underway. Tryouts still run year-round for late entries — join the waitlist and we’ll reach out the moment a spot or the 2027 window opens.' }),
+          f('home_ctaClosedLabel', 'Closed · button', '', { defaultValue: 'Join the Waitlist →' }),
         ],
       },
     ],
     '/'
   ),
   pages('about', 'About', 'Every block on the About page, in the order it appears.', [
-    {
-      label: 'Page copy',
-      fields: [
-        f('about_eyebrow', 'Eyebrow'),
-        f('about_heading', 'Heading', '', { type: 'area' }),
-        f('about_body', 'Paragraph', '', { type: 'area' }),
-        f('about_values', 'Values', 'One JSON object per line.', { type: 'json' }),
-      ],
-    },
+    { label: 'Hero', fields: [
+      f('about_eyebrow', 'Eyebrow', 'Rule-flanked mono label.', { defaultValue: 'About the Club' }), f('about_title', 'Headline', 'A line break controls the second line.', { type: 'area', defaultValue: 'Built for the\nlove of the game' }),
+      f('about_accentWord', 'Accent word', 'This word is set in the brand colour.', { defaultValue: 'game' }), f('about_intro', 'Intro paragraph', '', { type: 'area', defaultValue: 'Elevate Ballers is Kenya’s home for competitive basketball — a community league in Nairobi where clubs, players, and fans come together every week to compete, grow, and celebrate the game.' }),
+    ] },
+    { label: 'Stat strip', fields: [
+      f('about_statStrip', 'Show strip', 'Four figures across the band under the hero.', { type: 'toggle', defaultValue: 'true' }),
+      f('about_stats', 'Figures', 'Leave a value blank to read a matching live count.', { type: 'list', addLabel: 'Add figure', maxItems: 8, columns: [{ key: 'value', label: 'Value', placeholder: '24', width: '.5fr' }, { key: 'label', label: 'Label', placeholder: 'Teams', width: '1fr' }, { key: 'accent', label: 'Red?', placeholder: 'yes / no', width: '.4fr' }], defaultValue: '[{"value":"24","label":"Teams","accent":"yes"},{"value":"370+","label":"Players","accent":"no"},{"value":"2","label":"Leagues","accent":"no"},{"value":"2024","label":"Founded","accent":"yes"}]' }),
+    ] },
+    { label: 'Our story', fields: [
+      f('about_storyBlock', 'Show block', '', { type: 'toggle', defaultValue: 'true' }), f('about_storyEyebrow', 'Eyebrow', '', { defaultValue: 'Our Story' }), f('about_storyHeading', 'Heading', '', { type: 'area', defaultValue: 'From a weekend\nrun to a league' }),
+      f('about_storyImage', 'Story image', '4:3. A striped placeholder shows until one is uploaded.', { type: 'image' }), f('about_storyBody', 'Body', 'Blank lines separate paragraphs.', { type: 'area', defaultValue: "What started as a handful of friends looking for organised, competitive hoops has grown into one of Nairobi's most active basketball communities. Elevate Ballers was founded to give players a real stage — proper fixtures, standings that matter, and the structure to turn casual runs into a genuine season.\n\nToday the league runs two competitions side by side — the Elevate Basketball League (EBL) and the Elevate Women's Basketball League (EWBL) — bringing together school teams, academies, corporate sides, and community teams from across the city.\n\nEvery week, standings update after each game, a Player of the Week is crowned, and the next generation of Kenyan talent gets the reps, the competition, and the spotlight they deserve." }),
+    ] },
+    { label: 'The leagues', fields: [
+      f('about_leaguesBlock', 'Show block', 'Two cards, one per permanent league.', { type: 'toggle', defaultValue: 'true' }), f('about_leaguesEyebrow', 'Eyebrow', '', { defaultValue: 'Two Leagues, One Community' }), f('about_leaguesHeading', 'Heading', '', { defaultValue: 'Where everyone plays' }),
+      f('about_leagueCards', 'Cards', 'The first card renders dark, the second light.', { type: 'list', addLabel: 'Add card', maxItems: 8, columns: [{ key: 'abbr', label: 'Tag', placeholder: 'EBL', width: '.45fr' }, { key: 'title', label: 'Title', placeholder: "Men's League", width: '.8fr' }, { key: 'body', label: 'Blurb', placeholder: 'What the league is', width: '1.8fr' }, { key: 'teams', label: 'Teams', placeholder: '16', width: '.35fr' }, { key: 'players', label: 'Players', placeholder: '240+', width: '.4fr' }], defaultValue: '[{"abbr":"EBL","title":"Men\'s League","body":"The Elevate Basketball League brings together the city\'s top men\'s teams, academies, and community sides in weekly competitive play.","teams":"16","players":"240+"},{"abbr":"EWBL","title":"Women\'s League","body":"The Elevate Women\'s Basketball League gives women\'s teams a dedicated, competitive stage — from school programs to established teams.","teams":"8","players":"130+"}]' }),
+    ] },
+    { label: 'Values', fields: [
+      f('about_valuesBlock', 'Show block', 'Four numbered cards.', { type: 'toggle', defaultValue: 'true' }), f('about_valuesEyebrow', 'Eyebrow', '', { defaultValue: 'What We Stand For' }), f('about_valuesHeading', 'Heading', '', { defaultValue: 'Our values' }),
+      f('about_values', 'Values', 'Four fill the row.', { type: 'list', addLabel: 'Add value', maxItems: 8, columns: [{ key: 'num', label: 'No.', placeholder: '01', width: '.3fr' }, { key: 'title', label: 'Value', placeholder: 'Community', width: '.7fr' }, { key: 'body', label: 'Description', placeholder: 'What it means in practice', width: '1.8fr' }], defaultValue: '[{"num":"01","title":"Community","body":"It starts with belonging — a welcoming home in Nairobi for players, families, and fans of every level."},{"num":"02","title":"Development","body":"From that community we build players — competition, coaching, and reps that turn raw potential into real growth."},{"num":"03","title":"Excellence","body":"Real fixtures, real standings, real stakes — a relentless commitment to raising the standard of Kenyan basketball."},{"num":"04","title":"Integrity","body":"Clear rules, consistent officiating, and respect on and off the court — earned every single game."}]' }),
+    ] },
+    { label: 'Community impact', fields: [
+      f('about_impactBlock', 'Show block', '', { type: 'toggle', defaultValue: 'true' }), f('about_impactEyebrow', 'Eyebrow', '', { defaultValue: 'More Than a League' }), f('about_impactHeading', 'Heading', '', { defaultValue: 'Community impact' }),
+      f('about_impactBody', 'Paragraph', '', { type: 'area', defaultValue: 'Basketball is the reason we gather, but the impact runs deeper. Elevate Ballers exists to open doors — giving young players across Nairobi a safe, structured, and inspiring place to grow, on and off the court.' }),
+      f('about_impactStats', 'Impact figures', 'Four numbers above the programme cards.', { type: 'list', addLabel: 'Add figure', maxItems: 8, columns: [{ key: 'value', label: 'Value', placeholder: '1,200+', width: '.5fr' }, { key: 'label', label: 'Label', placeholder: 'Youth reached', width: '1fr' }, { key: 'accent', label: 'Red?', placeholder: 'yes / no', width: '.4fr' }], defaultValue: '[{"value":"1,200+","label":"Youth reached","accent":"yes"},{"value":"18","label":"Partner schools","accent":"no"},{"value":"100%","label":"Free to attend","accent":"no"},{"value":"3","label":"Courts refurbished","accent":"yes"}]' }),
+      f('about_impactItems', 'Programmes', 'Three cards fill the row.', { type: 'list', addLabel: 'Add programme', maxItems: 8, columns: [{ key: 'title', label: 'Programme', placeholder: 'Youth Clinics', width: '.8fr' }, { key: 'body', label: 'Description', placeholder: 'What it does', width: '1.8fr' }], defaultValue: '[{"title":"Youth Clinics","body":"Free weekend skills clinics run by our coaches and players, bringing structured training to neighbourhoods that rarely get it."},{"title":"Girls in the Game","body":"The EWBL and our schools program create a dedicated pathway for young women to compete, lead, and be seen on a real stage."},{"title":"Courts for the City","body":"We partner with local groups to refurbish public courts — leaving every community we play in with a better place to hoop."}]' }),
+    ] },
+    { label: 'Partnerships', fields: [
+      f('about_partnerBlock', 'Show block', 'Dark card inviting sponsors.', { type: 'toggle', defaultValue: 'true' }), f('about_partnerEyebrow', 'Eyebrow', '', { defaultValue: 'Partner With Us' }), f('about_partnerHeading', 'Heading', '', { defaultValue: 'Grow the game together' }),
+      f('about_partnerBody', 'Paragraph', '', { type: 'area', defaultValue: 'Brands, schools, and community organisations power what we do. If you want to reach Nairobi’s basketball community and invest in the game, let’s talk.' }), f('about_partnerCta', 'Button', 'Points at the Partnerships desk in Contact & Social.', { defaultValue: 'Become a Partner →' }),
+    ] },
+    { label: 'Timeline', fields: [
+      f('about_timeline', 'Show timeline', 'Vertical list of milestones.', { type: 'toggle', defaultValue: 'true' }), f('about_timelineEyebrow', 'Eyebrow', '', { defaultValue: 'The Journey' }), f('about_timelineHeading', 'Heading', '', { defaultValue: 'How we got here' }),
+      f('about_milestones', 'Milestones', 'Oldest first.', { type: 'list', addLabel: 'Add milestone', maxItems: 12, columns: [{ key: 'year', label: 'Year', placeholder: '2024', width: '.35fr' }, { key: 'title', label: 'Title', placeholder: 'The First Tip-Off', width: '.9fr' }, { key: 'body', label: 'Description', placeholder: 'What happened', width: '1.8fr' }], defaultValue: '[{"year":"2024","title":"The First Tip-Off","body":"Elevate Ballers launches with a handful of clubs and a shared love of the game."},{"year":"2025","title":"The Women\'s League Arrives","body":"The EWBL is founded, opening a dedicated stage for women’s basketball."},{"year":"2025","title":"Standings Go Live","body":"Weekly standings, Player of the Week, and league stats become part of every matchday."},{"year":"2026","title":"A Growing Community","body":"Two leagues, 24 clubs, and 370+ players competing across Nairobi."}]' }),
+    ] },
+    { label: 'Leadership', fields: [
+      f('about_staffGrid', 'Show leadership', 'Reads from League Staff, ordered by role.', { type: 'toggle', defaultValue: 'true' }), f('about_staffEyebrow', 'Eyebrow', '', { defaultValue: 'The People' }), f('about_staffHeading', 'Heading', '', { defaultValue: 'Leadership' }),
+      f('about_staffBody', 'Paragraph', '', { type: 'area', defaultValue: 'Meet the directors, operations leads, officials, and volunteers who run Elevate Ballers every match day — from tip-off to final buzzer.' }), f('about_staffCta', 'Button', 'Links to the Staff page.', { defaultValue: 'Meet the Team →' }),
+    ] },
+    { label: 'Venue', fields: [
+      f('about_venueBlock', 'Show block', 'Address and hours print from Contact & Social.', { type: 'toggle', defaultValue: 'true' }), f('about_venueEyebrow', 'Eyebrow', '', { defaultValue: 'Home Court' }), f('about_venueHeading', 'Heading', '', { type: 'area', defaultValue: 'Come support\nlocal talent' }),
+      f('about_venueBody', 'Paragraph', '', { type: 'area', defaultValue: 'Come support local talent and be part of the community. Our home base sits off Dagoretti Road in Nairobi, with fixtures across the city each weekend.' }), f('about_venueImage', 'Venue image', '4:3 or wider. A striped placeholder shows until one is uploaded.', { type: 'image' }),
+    ] },
+    { label: 'Closing call-to-action', fields: [
+      f('about_ctaBlock', 'Show block', 'Brand band at the foot of the page.', { type: 'toggle', defaultValue: 'true' }), f('about_ctaHeading', 'Heading', '', { defaultValue: 'Be part of it' }), f('about_ctaBody', 'Paragraph', '', { type: 'area', defaultValue: 'Register a team, join as a player, or just come support. There’s a place for everyone at Elevate Ballers.' }),
+      f('about_ctaButtons', 'Buttons', 'The first is solid dark; the rest are outlined.', { type: 'list', addLabel: 'Add button', maxItems: 8, columns: [{ key: 'label', label: 'Label', placeholder: 'Register →', width: '1fr' }, { key: 'path', label: 'Link', placeholder: '/register', width: '1fr' }], defaultValue: '[{"label":"Register →","path":"/#register"},{"label":"Browse Teams","path":"/teams"}]' }),
+    ] },
   ]),
   pages('rules', 'Rules', 'Competition rules shown publicly and linked from registration.', [
     {

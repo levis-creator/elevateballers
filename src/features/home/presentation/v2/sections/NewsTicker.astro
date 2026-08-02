@@ -3,14 +3,16 @@
 // loop is seamless).
 interface Props {
 	items: string[];
+	label?: string;
+	speed?: number;
 }
-const { items } = Astro.props;
+const { items, label = "Elevate News", speed = 40 } = Astro.props;
 ---
 
 <div class="flex items-center overflow-hidden whitespace-nowrap bg-brand text-brandfg">
-	<span class="flex-shrink-0 bg-night px-5 py-3 font-display text-[14px] uppercase tracking-[0.1em] text-white">Elevate News</span>
+	<span class="flex-shrink-0 bg-night px-5 py-3 font-display text-[14px] uppercase tracking-[0.1em] text-white">{label}</span>
 	<div class="flex-1 overflow-hidden">
-		<div class="inline-flex animate-marquee font-mono text-[13px] font-bold">
+		<div class="inline-flex animate-marquee font-mono text-[13px] font-bold" style={`animation-duration:${speed}s;`}>
 			<div class="inline-flex">
 				{items.map((t) => (
 					<span class="inline-flex items-center gap-7 px-7 py-3">{t}<span class="inline-block h-1.5 w-1.5 rounded-full bg-white"></span></span>

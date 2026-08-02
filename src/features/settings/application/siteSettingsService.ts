@@ -5,7 +5,7 @@ import type {
   UpdateSiteSettingInput,
 } from '../domain/siteSetting';
 
-const PUBLIC_CATEGORIES = new Set(['appearance', 'contact']);
+const PUBLIC_CATEGORIES = new Set(['appearance', 'contact', 'system']);
 const PUBLIC_KEYS = new Set([
   'header_banner_image_url',
   'contact_email',
@@ -19,6 +19,10 @@ const PUBLIC_KEYS = new Set([
   'social_youtube',
   'social_twitter',
   'social_order',
+  'system_loadingLabel',
+  'system_loadingLines',
+  'system_splashThreshold',
+  'system_skeletons',
 ]);
 
 export class SiteSettingsService {

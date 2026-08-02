@@ -26,6 +26,8 @@
 	border-radius: 8px;
 }
 
+html[data-system-skeletons="false"] .eb-skel { display: none !important; }
+
 /* Boot splash overlay: fades out (then the inline script removes it). */
 .eb-splash { transition: opacity 0.4s ease; }
 .eb-splash--hide { opacity: 0; pointer-events: none; }

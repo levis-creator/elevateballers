@@ -33,6 +33,7 @@ import {
 	buildThemeColorPalette,
 	resolvePublicBrandSettings,
 	resolvePublicConsentSettings,
+	resolvePublicSystemSettings,
 	resolvePublicSeoSettings,
 	matchesSeoPath,
 	applyTitlePattern,
@@ -57,6 +58,7 @@ interface Props {
 	preloadImage?: string;
 	titlePattern?: 'team' | 'player' | 'match' | 'article';
 	titleTokens?: Record<string, string | number | null | undefined>;
+	allowDuringMaintenance?: boolean;
 }
 
 const {
@@ -77,6 +79,7 @@ const {
 	preloadImage,
 	titlePattern,
 	titleTokens = {},
+	allowDuringMaintenance = false,
 } = Astro.props;
 
 const brandSettings = resolvePublicBrandSettings(
@@ -88,6 +91,12 @@ const seoSettings = resolvePublicSeoSettings(
 const consentSettings = resolvePublicConsentSettings(
 	await siteSettingsService.list("consent").catch(() => [])
 );
+const systemSettings = resolvePublicSystemSettings(
+	await siteSettingsService.list("system").catch(() => [])
+);
+if (systemSettings.maintenance && !allowDuringMaintenance) {
+	return Astro.redirect('/maintenance', 302);
+}
 const palette = buildThemeColorPalette(brandSettings);
 
 const pattern = titlePattern === 'team'
@@ -164,6 +173,7 @@ const themeStyle = [
 	data-hero-art={String(brandSettings.heroArt)}
 	data-animated-counters={String(brandSettings.counters)}
 	data-respect-reduced-motion={String(brandSettings.reducedMotion)}
+	data-system-skeletons={String(systemSettings.skeletons)}
 >
 	<head>
 		<meta name="format-detection" content="telephone=no" />
@@ -205,7 +215,7 @@ const themeStyle = [
 	     override them through the same derived theme palette. -->
 	<body class="min-h-screen bg-paper text-ink antialiased">
 		<!-- Boot splash: shown once per session on first paint, then removed on load. -->
-		<LoadingSplash />
+		<LoadingSplash settings={systemSettings} />
 		<slot />
 		{(consentSettings.enabled || seoSettings.analytics !== 'None') && (
 			<CookieConsent provider={seoSettings.analytics} analyticsId={seoSettings.analyticsId} settings={consentSettings} />

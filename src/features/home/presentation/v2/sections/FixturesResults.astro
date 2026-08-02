@@ -6,17 +6,21 @@ import TeamName from "@/features/teams/presentation/components/TeamName";
 interface Props {
 	upcoming: Match[];
 	results: Result[];
+	fixturesHeading?: string;
+	resultsHeading?: string;
+	emptyMessage?: string;
 }
-const { upcoming, results } = Astro.props;
+const { upcoming, results, fixturesHeading = "Upcoming Matches", resultsHeading = "Recent Results", emptyMessage = "No matches scheduled — the next round drops soon." } = Astro.props;
 ---
 
 <section id="fixtures" class="mx-auto grid max-w-[1280px] grid-cols-2 gap-10 px-8 py-[72px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6 max-[960px]:py-[52px]">
 	<div>
 		<div class="mb-6 flex items-baseline justify-between">
-			<h2 class="font-display text-[30px] uppercase tracking-[0.01em] text-ink">Upcoming Matches</h2>
+			<h2 class="font-display text-[30px] uppercase tracking-[0.01em] text-ink">{fixturesHeading}</h2>
 			<a href="/upcoming-fixtures" class="font-mono text-[12px] tracking-[0.06em] text-brand no-underline">All fixtures →</a>
 		</div>
 		<div class="flex flex-col gap-3">
+			{upcoming.length === 0 && <div class="rounded-[10px] border border-dashed border-black/15 bg-white px-6 py-12 text-center text-[14px] text-muted">{emptyMessage}</div>}
 			{upcoming.map((m) => {
 				const Tag = m.href ? "a" : "div";
 				return (
@@ -42,10 +46,11 @@ const { upcoming, results } = Astro.props;
 	</div>
 	<div id="standings">
 		<div class="mb-6 flex items-baseline justify-between">
-			<h2 class="font-display text-[30px] uppercase tracking-[0.01em] text-ink">Recent Results</h2>
+			<h2 class="font-display text-[30px] uppercase tracking-[0.01em] text-ink">{resultsHeading}</h2>
 			<a href="/standings" class="font-mono text-[12px] tracking-[0.06em] text-brand no-underline">All results →</a>
 		</div>
 		<div class="flex flex-col gap-3">
+			{results.length === 0 && <div class="rounded-[10px] border border-dashed border-black/15 bg-white px-6 py-12 text-center text-[14px] text-muted">{emptyMessage}</div>}
 			{results.map((r) => {
 				const Tag = r.href ? "a" : "div";
 				return (

@@ -1,6 +1,7 @@
 ---
 import { getAllSiteSettings } from "../../cms/lib/queries";
 import { sanitizeHtml } from "../../../lib/sanitize";
+import { resolvePublicHomeSettings } from "../../settings";
 
 // Homepage-specific orientation prose. Distinct from /about-club/ on purpose:
 // the About page tells the league's story (mission, history); this section
@@ -27,16 +28,10 @@ let subheading = DEFAULT_SUBHEADING;
 let body = DEFAULT_BODY;
 
 try {
-  const settings = await getAllSiteSettings("homepage");
-  console.log(
-    `[HomepageIntro] fetched ${settings.length} setting row(s) for category "homepage":`,
-    settings.map((s: any) => ({ key: s.key, valueLen: s.value?.length ?? 0 })),
-  );
-  for (const s of settings) {
-    if (s.key === "homepage_intro_heading" && s.value) heading = s.value;
-    if (s.key === "homepage_intro_subheading" && s.value) subheading = s.value;
-    if (s.key === "homepage_intro_body" && s.value) body = s.value;
-  }
+  const resolved = resolvePublicHomeSettings(await getAllSiteSettings("home"));
+  heading = resolved.aboutHeading;
+  subheading = resolved.aboutEyebrow;
+  body = `<p>${resolved.aboutBody}</p>`;
 } catch (err) {
   console.error("[HomepageIntro] failed to load settings, using defaults:", err);
 }
