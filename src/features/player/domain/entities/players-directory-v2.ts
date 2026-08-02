@@ -33,4 +33,6 @@ export interface PlayersDirectoryData {
 	teams: string[];
 	/** Registered player count (before filtering). */
 	total: number;
+	/** Current public season label used by the configurable hero token. */
+	season: string;
 }

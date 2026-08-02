@@ -1041,23 +1041,54 @@ export const SECTIONS: Section[] = [
   people(
     'team',
     'Team Page',
-    'Team directory headings and empty states.',
+    'A club page: dark hero, about block, matches, squad and coaching staff.',
     [
-      {
-        label: 'Directory',
-        fields: [
-          f('team_title', 'Page title'),
-          f('team_empty', 'Empty message', '', { type: 'area' }),
-        ],
-      },
+      { label: 'Hero', fields: [
+        f('team_leagueLine', 'League line', 'Competition name above the club name.', { type: 'toggle', defaultValue: 'true' }),
+        f('team_coachLine', 'Head coach line', 'Printed under the club name.', { type: 'toggle', defaultValue: 'true' }),
+        f('team_crest', 'Club crest', 'Falls back to initials when a club has none.', { type: 'toggle', defaultValue: 'true' }),
+        f('team_heroStats', 'Record strip', 'Wins, losses and table position in the hero.', { type: 'toggle', defaultValue: 'true' }),
+      ] },
+      { label: 'About the team', fields: [
+        f('team_aboutBlock', 'Show block', 'Club blurb with an image beside it.', { type: 'toggle', defaultValue: 'true' }),
+        f('team_aboutEyebrow', 'Eyebrow', '', { defaultValue: 'About the Team' }),
+        f('team_aboutFallback', 'Fallback blurb', 'Used when a club has written nothing. Use {team} for the club name.', { type: 'area', defaultValue: '{team} compete in the Elevate Ballers League. Squad, results and stats for the current season are below.' }),
+      ] },
+      { label: 'Matches', fields: [
+        f('team_recentHeading', 'Recent heading', '', { defaultValue: 'Recent Matches' }),
+        f('team_upcomingHeading', 'Upcoming heading', '', { defaultValue: 'Upcoming Matches' }),
+        f('team_matchRows', 'Matches per column', '', { defaultValue: '5' }),
+        f('team_seasonPicker', 'Season picker', 'Lets visitors read past League Seasons for this club.', { type: 'toggle', defaultValue: 'true' }),
+      ] },
+      { label: 'Squad', fields: [
+        f('team_squadHeading', 'Heading', '', { defaultValue: 'Squad' }),
+        f('team_squadLayout', 'Layout', '', { type: 'select', options: ['Card grid', 'Table'], defaultValue: 'Card grid' }),
+        f('team_positionFilter', 'Position filter', 'Pills above the squad.', { type: 'toggle', defaultValue: 'true' }),
+        f('team_squadStat', 'Card stat', 'Figure shown on each player card.', { type: 'select', options: ['Points per game', 'Jersey number', 'Position', 'None'], defaultValue: 'Points per game' }),
+        f('team_staffHeading', 'Coaching staff heading', 'Section under the squad.', { defaultValue: 'Coaching Staff' }),
+      ] },
     ],
-    '/teams'
+    '/teams/:slug'
   ),
-  people('players', 'Players List', 'Player directory headings and filters.', [
-    {
-      label: 'Directory',
-      fields: [f('players_title', 'Page title'), f('players_intro', 'Intro', '', { type: 'area' })],
-    },
+  people('players', 'Players List', 'The public player directory.', [
+    { label: 'Hero', fields: [
+      f('players_eyebrow', 'Eyebrow', 'Use {season} for the selected season.', { defaultValue: 'The Players · Season {season}' }),
+      f('players_title', 'Page title', '', { defaultValue: 'Players' }),
+      f('players_totalLine', 'Total count', 'Player tally beside the title.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Listing', fields: [
+      f('players_searchPlaceholder', 'Search placeholder', '', { defaultValue: 'Search players…' }),
+      f('players_perPage', 'Players per page', '', { defaultValue: '24' }),
+      f('players_sort', 'Default sort', '', { type: 'select', options: ['Name', 'Points per game', 'Team', 'Jersey number'], defaultValue: 'Points per game' }),
+      f('players_positionFilter', 'Position filter', '', { type: 'toggle', defaultValue: 'true' }),
+      f('players_teamFilter', 'Team filter', '', { type: 'toggle', defaultValue: 'true' }),
+      f('players_headshots', 'Show headshots', 'Falls back to initials.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Empty state', fields: [
+      f('players_emptyTitle', 'Heading', '', { defaultValue: 'No players found' }),
+      f('players_emptyBody', 'Message · search', 'Use {q} for what the visitor typed.', { type: 'area', defaultValue: 'Nothing matches “{q}”. Try another name or team.' }),
+      f('players_emptyBodyFiltered', 'Message · filtered', 'Shown when filters, not a search, return nothing.', { type: 'area', defaultValue: 'No players match these filters. Try clearing them.' }),
+    ] },
   ]),
   people('player', 'Player Page', 'Player profile labels and supporting copy.', [
     {

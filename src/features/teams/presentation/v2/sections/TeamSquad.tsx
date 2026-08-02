@@ -1,40 +1,56 @@
 import { useTeamViewStore } from "@/features/teams/presentation/stores/v2/useTeamViewStore";
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import type { SquadPlayer } from "@/features/teams/domain/entities/team-detail";
+import { useState } from 'react';
+import type { PublicTeamPageSettings } from '@/features/settings';
 
 interface Props {
 	players: SquadPlayer[];
 	playerCount: number;
+	settings: PublicTeamPageSettings;
 }
 
 const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
 
 /** Squad — Roster/Stats tabs. React island; active tab lives in the Zustand store. */
-export default function TeamSquad({ players, playerCount }: Props) {
+export default function TeamSquad({ players, playerCount, settings }: Props) {
 	const { tab, setTab } = useTeamViewStore();
+	const [position, setPosition] = useState('All');
+	const positions = ['All', ...Array.from(new Set(players.map((player) => player.pos).filter((value) => value && value !== '—')))];
+	const visiblePlayers = position === 'All' ? players : players.filter((player) => player.pos === position);
+	const cardStat = (player: SquadPlayer) => settings.squadStat === 'Jersey number' ? `#${player.jersey}` : settings.squadStat === 'Position' ? player.pos : settings.squadStat === 'Points per game' ? `${player.ppg} PPG` : '';
 
 	return (
 		<section className="border-y border-black/[0.08] bg-panel">
 			<div className="mx-auto max-w-[1280px] px-8 py-[56px] max-[960px]:px-6 max-[960px]:py-10">
 				<div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-					<h2 className="font-display text-[26px] uppercase text-ink">Squad</h2>
+					<h2 className="font-display text-[26px] uppercase text-ink">{settings.squadHeading}</h2>
 					<div className="flex items-center gap-3">
-						<div className="flex gap-2">
+						{settings.squadLayout === 'Table' && <div className="flex gap-2">
 							<button type="button" onClick={() => setTab("roster")} className={pillClass(tab === "roster")}>
 								Roster
 							</button>
 							<button type="button" onClick={() => setTab("stats")} className={pillClass(tab === "stats")}>
 								Stats
 							</button>
-						</div>
+						</div>}
 						<span className="font-mono text-[12px] text-muted2">{playerCount} players</span>
 					</div>
 				</div>
+				{settings.positionFilter && positions.length > 1 && <div className="mb-6 flex flex-wrap gap-2">{positions.map((item) => <button key={item} type="button" onClick={() => setPosition(item)} className={pillClass(position === item)}>{item}</button>)}</div>}
 
-				{players.length === 0 ? (
+				{visiblePlayers.length === 0 ? (
 					<div className="rounded-xl border border-dashed border-black/[0.16] bg-white px-6 py-12 text-center">
 						<div className="font-display text-[20px] uppercase text-ink">No players yet</div>
 						<p className="mt-1.5 font-body text-[13px] text-muted">This team's roster hasn't been published.</p>
+					</div>
+				) : settings.squadLayout === 'Card grid' ? (
+					<div className="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
+						{visiblePlayers.map((p) => <a key={p.id} href={p.href} className="overflow-hidden rounded-2xl border border-black/10 bg-white p-4 text-center no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
+							{p.image ? <img src={p.image} alt={p.name} loading="lazy" className="mx-auto h-24 w-24 rounded-full border border-black/10 object-cover" /> : <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full font-display text-[28px] text-muted2" style={{ background: STRIPE }}>{p.initials}</span>}
+							<span className="mt-4 block font-body text-[15px] font-extrabold text-ink2">{p.name}</span>
+							{cardStat(p) && <span className="mt-1 block font-mono text-[11px] uppercase text-brand">{cardStat(p)}</span>}
+						</a>)}
 					</div>
 				) : tab === "roster" ? (
 					<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
@@ -45,7 +61,7 @@ export default function TeamSquad({ players, playerCount }: Props) {
 							<span className="max-[600px]:hidden">Height</span>
 							<span>Wt</span>
 						</div>
-						{players.map((p) => (
+						{visiblePlayers.map((p) => (
 							<a key={p.id} href={p.href} className="grid grid-cols-[48px_1fr_150px_90px_90px] items-center gap-4 border-b border-black/[0.06] px-5 py-3.5 no-underline hover:bg-paper2 max-[600px]:grid-cols-[40px_1fr_60px]">
 								<span className="font-display text-[18px] text-brand">{p.jersey}</span>
 								<span className="flex items-center gap-3">
@@ -85,7 +101,7 @@ export default function TeamSquad({ players, playerCount }: Props) {
 								<span className="text-right">FT%</span>
 								<span className="text-right">3P%</span>
 							</div>
-							{players.map((p) => (
+							{visiblePlayers.map((p) => (
 								<div key={p.id} className="grid grid-cols-[48px_1.6fr_repeat(6,1fr)] items-center gap-3 border-b border-black/[0.06] px-5 py-3.5 hover:bg-paper2">
 									<span className="font-display text-[16px] text-brand">{p.jersey}</span>
 									<span className="flex items-center gap-3">

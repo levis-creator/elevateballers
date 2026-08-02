@@ -7,21 +7,25 @@ import TeamHero from "./sections/TeamHero.astro";
 import TeamMatches from "./sections/TeamMatches.tsx";
 import TeamSquad from "./sections/TeamSquad.tsx";
 import TeamStaff from "./sections/TeamStaff.astro";
+import TeamAbout from './sections/TeamAbout.astro';
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import type { TeamDetail } from "@/features/teams/domain/entities/team-detail";
+import { resolvePublicTeamPageSettings, siteSettingsService } from '@/features/settings';
 
 interface Props {
 	detail: TeamDetail;
 }
 const { detail } = Astro.props;
 const footer = await getFooterData();
+const settings = resolvePublicTeamPageSettings(await siteSettingsService.list('team').catch(() => []));
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="teams" />
-	<TeamHero detail={detail} />
-	<TeamMatches recent={detail.recent} upcoming={detail.upcoming} seasons={detail.seasons} client:visible />
-	<TeamSquad players={detail.players} playerCount={detail.playerCount} client:idle />
-	<TeamStaff staff={detail.staff} />
+	<TeamHero detail={detail} settings={settings} />
+	<TeamAbout detail={detail} settings={settings} />
+	<TeamMatches recent={detail.recent} upcoming={detail.upcoming} seasons={detail.seasons} settings={settings} client:visible />
+	<TeamSquad players={detail.players} playerCount={detail.playerCount} settings={settings} client:idle />
+	<TeamStaff staff={detail.staff} heading={settings.staffHeading} />
 	<Footer footer={footer} />
 </div>

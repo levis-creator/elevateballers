@@ -2,10 +2,12 @@
 // Dark scoreboard hero for a single team.
 import type { TeamDetail } from "@/features/teams/domain/entities/team-detail";
 import TeamName from "@/features/teams/presentation/components/TeamName";
+import type { PublicTeamPageSettings } from '@/features/settings';
 interface Props {
 	detail: TeamDetail;
+	settings: PublicTeamPageSettings;
 }
-const { detail } = Astro.props;
+const { detail, settings } = Astro.props;
 const CREST_BG = "background:repeating-linear-gradient(45deg,#1a1714,#1a1714 10px,#151210 10px,#151210 20px);";
 const formStyle = (r: string) =>
 	r === "win"
@@ -22,20 +24,20 @@ const formStyle = (r: string) =>
 			<a href="/teams" class="text-muted2 no-underline hover:text-brand">Teams</a><span>/</span><span class="text-creamdim">{detail.name}</span>
 		</div>
 		<div class="flex items-center gap-7 max-[600px]:flex-col max-[600px]:items-start max-[600px]:gap-5">
-			{detail.logo ? (
+			{settings.crest && (detail.logo ? (
 				<img src={detail.logo} alt={`${detail.name} logo`} class="h-[120px] w-[120px] flex-shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] object-contain p-2" />
 			) : (
 				<div class="flex h-[120px] w-[120px] flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 font-display text-[40px] text-brand" style={CREST_BG}>{detail.initials}</div>
-			)}
+			))}
 			<div>
-				<div class="mb-3 flex flex-wrap items-center gap-2.5">
+				{settings.leagueLine && <div class="mb-3 flex flex-wrap items-center gap-2.5">
 					<span class="rounded bg-brand/[0.14] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-brandsoft">{detail.leagueAbbr}</span>
 					<span class="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">{detail.league}</span>
-				</div>
+				</div>}
 				<h1 class="mb-3 font-display text-[clamp(40px,6vw,80px)] uppercase leading-[0.88] text-[var(--cream,#f6f2ec)]">
 					<TeamName team={{ name: detail.name, nickname: detail.nickname, logo: detail.logo, initials: detail.initials }} variant="full" />
 				</h1>
-				<div class="flex items-center gap-2 font-mono text-[13px] text-creamdim"><span class="text-muted2">Head Coach</span> · {detail.headCoach}</div>
+				{settings.coachLine && <div class="flex items-center gap-2 font-mono text-[13px] text-creamdim"><span class="text-muted2">Head Coach</span> · {detail.headCoach}</div>}
 			</div>
 			{detail.form.length > 0 && (
 				<div class="ml-auto flex items-center gap-2.5 max-[960px]:ml-0">
@@ -46,7 +48,7 @@ const formStyle = (r: string) =>
 			)}
 		</div>
 
-		<div class="mt-9">
+		{settings.heroStats && <div class="mt-9">
 			<div class="mb-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-brandsoft">
 				{detail.currentSeason ? `${detail.currentSeason} Record` : "All-Time Record"}
 			</div>
@@ -58,6 +60,6 @@ const formStyle = (r: string) =>
 					</div>
 				))}
 			</div>
-		</div>
+		</div>}
 	</div>
 </section>

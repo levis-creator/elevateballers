@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { PosCode } from "@/features/player/domain/entities/players-directory-v2";
 
-export type PlayerSort = "ppg" | "rpg" | "apg" | "name";
+export type PlayerSort = "ppg" | "rpg" | "apg" | "name" | "team" | "jersey";
 /** "All" = every position; otherwise a `PosCode`. */
 export type PosFilter = "All" | PosCode;
 
