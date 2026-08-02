@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PUBLIC_TURNSTILE_SITE_KEY } from "astro:env/client";
 import TurnstileWidget from "@/components/TurnstileWidget";
+import type { ContactTopic } from "@/features/settings";
 
 /**
  * v2 contact form — React island. Posts to the existing, Turnstile-protected
@@ -8,12 +9,14 @@ import TurnstileWidget from "@/components/TurnstileWidget";
  * the message subject; optional team + phone are folded into the message body,
  * since the API stores name / email / subject / message.
  */
-export default function ContactFormV2({ topics, responseTarget }: { topics: string[]; responseTarget: string }) {
+type Props = { topics: ContactTopic[]; responseTarget: string; teamField: boolean; requirePhone: boolean; submitLabel: string; successMsg: string };
+
+export default function ContactFormV2({ topics, responseTarget, teamField, requirePhone, submitLabel, successMsg }: Props) {
 	const [name, setName] = useState("");
 	const [team, setTeam] = useState("");
 	const [email, setEmail] = useState("");
 	const [phone, setPhone] = useState("");
-	const [topic, setTopic] = useState(topics[0] ?? "General enquiry");
+	const [topic, setTopic] = useState(topics[0]?.topic ?? "General enquiry");
 	const [message, setMessage] = useState("");
 	const [token, setToken] = useState<string | null>(null);
 	const [hp, setHp] = useState(""); // honeypot
@@ -28,7 +31,7 @@ export default function ContactFormV2({ topics, responseTarget }: { topics: stri
 		e.preventDefault();
 		if (hp) {
 			setStatus("success");
-			setFeedback("Thanks — your message has been sent.");
+			setFeedback(successMsg.replaceAll('{response}', responseTarget));
 			return;
 		}
 		if (!token) {
@@ -53,6 +56,7 @@ export default function ContactFormV2({ topics, responseTarget }: { topics: stri
 					name: name.trim(),
 					email: email.trim(),
 					subject: topic,
+					desk: topics.find((item) => item.topic === topic)?.desk ?? '',
 					message: body,
 					"cf-turnstile-token": token,
 				}),
@@ -64,7 +68,7 @@ export default function ContactFormV2({ topics, responseTarget }: { topics: stri
 				return;
 			}
 			setStatus("success");
-			setFeedback(`Message sent — the right team will get back to you ${responseTarget}.`);
+			setFeedback(successMsg.replaceAll('{response}', responseTarget));
 			setName("");
 			setTeam("");
 			setEmail("");
@@ -89,11 +93,11 @@ export default function ContactFormV2({ topics, responseTarget }: { topics: stri
 
 	return (
 		<form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-5">
-			<div className="grid grid-cols-2 gap-4 max-[600px]:grid-cols-1">
-				<label className="flex flex-col gap-2">
+			<div className={`grid gap-4 max-[600px]:grid-cols-1 ${teamField ? 'grid-cols-2' : 'grid-cols-1'}`}>
+				{teamField && <label className="flex flex-col gap-2">
 					<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">Full name</span>
 					<input type="text" required value={name} onChange={(e) => setName(e.target.value)} disabled={busy} placeholder="Your name" className={field} />
-				</label>
+				</label>}
 				<label className="flex flex-col gap-2">
 					<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">Team (optional)</span>
 					<input type="text" value={team} onChange={(e) => setTeam(e.target.value)} disabled={busy} placeholder="Your club" className={field} />
@@ -105,8 +109,8 @@ export default function ContactFormV2({ topics, responseTarget }: { topics: stri
 					<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={busy} placeholder="you@email.com" className={field} />
 				</label>
 				<label className="flex flex-col gap-2">
-					<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">Phone (optional)</span>
-					<input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={busy} placeholder="07XX XXX XXX" className={field} />
+					<span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted2">Phone{requirePhone ? '' : ' (optional)'}</span>
+					<input type="tel" required={requirePhone} value={phone} onChange={(e) => setPhone(e.target.value)} disabled={busy} placeholder="07XX XXX XXX" className={field} />
 				</label>
 			</div>
 			<label className="flex flex-col gap-2">
@@ -114,8 +118,8 @@ export default function ContactFormV2({ topics, responseTarget }: { topics: stri
 				<div className="relative">
 					<select value={topic} onChange={(e) => setTopic(e.target.value)} disabled={busy} className={`w-full appearance-none ${field}`}>
 						{topics.map((t) => (
-							<option key={t} value={t}>
-								{t}
+							<option key={t.topic} value={t.topic}>
+								{t.topic}
 							</option>
 						))}
 					</select>
@@ -145,7 +149,7 @@ export default function ContactFormV2({ topics, responseTarget }: { topics: stri
 				disabled={busy}
 				className="self-start rounded-lg bg-brand px-8 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg hover:bg-brandlt disabled:cursor-not-allowed disabled:opacity-60"
 			>
-				{status === "loading" ? "Sending…" : "Send Message"}
+				{status === "loading" ? "Sending…" : submitLabel}
 			</button>
 		</form>
 	);

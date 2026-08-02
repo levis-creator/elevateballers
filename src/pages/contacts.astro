@@ -11,11 +11,13 @@ if (!usePublicV2) return Astro.rewrite("/contacts-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import ContactPage from "@/features/contact/presentation/v2/ContactPage.astro";
+import { resolvePublicContactPageSettings, siteSettingsService } from "@/features/settings";
+const contactPageSettings = resolvePublicContactPageSettings(await siteSettingsService.list('contactPage').catch(() => []));
 ---
 
 <LayoutV2
-	title="Contacts - Elevate Ballers | Get in Touch"
-	description="Reach Elevate Ballers — call, email, or visit us in Nairobi. Contact the right desk for registration, transfers, fixtures, officiating and media, or send us a message."
+	title={`${contactPageSettings.title} - Elevate Ballers`}
+	description={contactPageSettings.intro}
 	canonicalURL={`${Astro.url.origin}/contacts/`}
 	type="website"
 >

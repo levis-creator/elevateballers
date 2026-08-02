@@ -9,6 +9,8 @@ export * from './application/consentSettings';
 export * from './application/systemSettings';
 export * from './application/homeSettings';
 export * from './application/aboutSettings';
+export * from './application/rulesPageSettings';
+export * from './application/contactPageSettings';
 export * from './application/headerSettings';
 export * from './application/footerSettings';
 export * from './application/brandSettings';

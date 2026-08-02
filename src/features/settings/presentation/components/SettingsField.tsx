@@ -1,5 +1,6 @@
 import type { Field } from '../settingsSections';
 import SettingsImageControl from './SettingsImageControl';
+import SettingsFileControl from './SettingsFileControl';
 import SettingsNavListControl from './SettingsNavListControl';
 
 type Props = {
@@ -36,7 +37,9 @@ export default function SettingsField({
         )}
       </div>
       <div className="eb-settings-field-control">
-        {field.type === 'image' ? (
+        {field.type === 'file' ? (
+          <SettingsFileControl field={field} value={value} canManage={canManage} onChange={onChange} />
+        ) : field.type === 'image' ? (
           <SettingsImageControl
             field={field}
             value={value}

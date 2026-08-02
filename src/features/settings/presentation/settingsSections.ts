@@ -1,3 +1,5 @@
+import { RULES_DEFAULTS } from '@/features/rules/lib/rules-content';
+
 export type SettingRecord = {
   id: string;
   key: string;
@@ -11,7 +13,7 @@ export type SettingRecord = {
 export type Field = {
   key: string;
   label: string;
-  type?: 'text' | 'area' | 'toggle' | 'select' | 'json' | 'image' | 'list';
+  type?: 'text' | 'area' | 'toggle' | 'select' | 'json' | 'image' | 'file' | 'list';
   help?: string;
   placeholder?: string;
   options?: string[];
@@ -804,18 +806,36 @@ export const SECTIONS: Section[] = [
       f('about_ctaButtons', 'Buttons', 'The first is solid dark; the rest are outlined.', { type: 'list', addLabel: 'Add button', maxItems: 8, columns: [{ key: 'label', label: 'Label', placeholder: 'Register →', width: '1fr' }, { key: 'path', label: 'Link', placeholder: '/register', width: '1fr' }], defaultValue: '[{"label":"Register →","path":"/#register"},{"label":"Browse Teams","path":"/teams"}]' }),
     ] },
   ]),
-  pages('rules', 'Rules', 'Competition rules shown publicly and linked from registration.', [
-    {
-      label: 'Rules page',
-      fields: [
-        f('rules_title', 'Page title'),
-        f('rules_body', 'Summary', '', { type: 'area' }),
-        f('rules_pdf', 'PDF download', '', {
-          type: 'text',
-          placeholder: '/media/documents/rules-2026.pdf',
-        }),
-      ],
-    },
+  pages('rules', 'Rules', 'Every block on the Rules page, in the order it appears — including the full rule text.', [
+    { label: 'Hero', fields: [
+      f('rules_eyebrow', 'Eyebrow', 'Rule-flanked mono label above the title.', { defaultValue: 'Official Rules & Regulations · 2026' }),
+      f('rules_title', 'Page title', 'Set in Anton at up to 120px. One word works best.', { defaultValue: 'Rules', counter: 14 }),
+      f('rules_intro', 'Intro', 'State the effective date and the rule set it derives from.', { type: 'area', defaultValue: 'The official rules and regulations governing Elevate Ballers play. Valid as of 1 January 2026, based on FIBA Official Basketball Rules 2024 with league-specific amendments.' }),
+    ] },
+    { label: 'Rulebook download', fields: [
+      f('rules_pdf', 'Rulebook file', 'Upload the signed PDF. Replacing it updates every public rulebook link.', { type: 'file', placeholder: 'PDF up to 25 MB', defaultValue: '/documents/elevate-ballers-league-rules-2026.pdf' }),
+      f('rules_pdfLabel', 'Button label', 'The solid brand button beside the title.', { defaultValue: '↓ Download Full Rulebook' }),
+    ] },
+    { label: 'Quick reference', fields: [
+      f('rules_quickRef', 'Show cards', 'The strip of headline numbers above the first section.', { type: 'toggle', defaultValue: 'true' }),
+      f('rules_quickRefCards', 'Cards', 'Four fill the row; two per row on mobile.', { type: 'list', addLabel: 'Add card', maxItems: 8, columns: [{ key: 'value', label: 'Value', placeholder: '4×10', width: '.7fr' }, { key: 'label', label: 'Label', placeholder: 'Minute quarters', width: '1fr' }], defaultValue: JSON.stringify(RULES_DEFAULTS.quickRef) }),
+    ] },
+    { label: 'Sections', fields: [
+      f('rules_sections', 'Rule sections', 'Order controls page order and generated numbering. Changing an anchor breaks existing deep links.', { type: 'list', addLabel: 'Add section', maxItems: 16, columns: [{ key: 'title', label: 'Title', placeholder: 'Game Procedures', width: '1fr' }, { key: 'id', label: 'Anchor', placeholder: 'game', width: '.6fr' }], defaultValue: JSON.stringify(RULES_DEFAULTS.sections.map(({ title, id }) => ({ title, id }))) }),
+      f('rules_clauseTags', 'Show clause numbers', 'The mono tag printed beside each clause title.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Rule text', fields: [
+      f('rules_clauses', 'Clauses', 'Full published rule text. Set Section to an anchor from Rule sections.', { type: 'list', addLabel: 'Add clause', maxItems: 80, columns: [{ key: 'section', label: 'Section', placeholder: 'game', width: '.55fr' }, { key: 'tag', label: 'Tag', placeholder: '5.1', width: '.35fr' }, { key: 'title', label: 'Title', placeholder: 'Playing Time', width: '.8fr' }, { key: 'body', label: 'Rule text', placeholder: 'Full published clause', width: '2fr' }], defaultValue: JSON.stringify(RULES_DEFAULTS.sections.flatMap((section) => section.rules.map((rule) => ({ section: section.id, ...rule })))) }),
+    ] },
+    { label: 'Contents sidebar', fields: [
+      f('rules_contents', 'Show sidebar', 'Sticky section list on the left. Hidden below 960px.', { type: 'toggle', defaultValue: 'true' }),
+      f('rules_contentsHeading', 'Heading', '', { defaultValue: 'On this page' }),
+      f('rules_helpCard', 'Questions card', 'The card under the section list.', { type: 'toggle', defaultValue: 'true' }),
+      f('rules_helpHeading', 'Card heading', '', { defaultValue: 'Questions?' }),
+      f('rules_helpBody', 'Card body', 'One line.', { defaultValue: 'Reach the competitions desk for clarifications.' }),
+      f('rules_helpLinkLabel', 'Card link', '', { defaultValue: 'Contact us →' }),
+      f('rules_helpLinkPath', 'Card link target', '', { defaultValue: '/contacts' }),
+    ] },
   ]),
   pages(
     'contactPage',
@@ -823,13 +843,39 @@ export const SECTIONS: Section[] = [
     'Copy and blocks on the public Contacts page.',
     [
       {
-        label: 'Page copy',
+        label: 'Hero',
         fields: [
-          f('contactPage_title', 'Page title', '', { defaultValue: 'Contacts' }),
-          f('contactPage_intro', 'Intro', '', { type: 'area' }),
-          f('contactPage_featuredImage', 'Featured image', '', { type: 'text' }),
+          f('contactPage_eyebrow', 'Eyebrow', 'Brand mono label above the title.', { defaultValue: 'Get in Touch' }),
+          f('contactPage_title', 'Page title', 'Set in Anton at up to 120px.', { defaultValue: 'Contacts', counter: 18 }),
+          f('contactPage_intro', 'Intro', 'Two sentences maximum.', { type: 'area', defaultValue: 'Questions about fixtures, registration, transfers, or officiating? Reach the right desk below, or send us a message and we’ll get back to you.' }),
         ],
       },
+      { label: 'Quick contact cards', fields: [
+        f('contactPage_quickCards', 'Show cards', 'The row of tap-to-act cards under the hero.', { type: 'toggle', defaultValue: 'true' }),
+        f('contactPage_quickCardList', 'Cards', 'Value accepts {phone}, {email}, and {address}.', { type: 'list', addLabel: 'Add card', maxItems: 8, columns: [{ key: 'icon', label: 'Icon', placeholder: '✆', width: '.35fr' }, { key: 'label', label: 'Label', placeholder: 'Call us', width: '.8fr' }, { key: 'value', label: 'Value', placeholder: '{phone}', width: '1fr' }, { key: 'action', label: 'Action', placeholder: 'Call now', width: '.7fr' }, { key: 'href', label: 'Link', placeholder: 'tel:+254703913923', width: '1fr' }], defaultValue: '[{"icon":"✆","label":"Call us","value":"{phone}","action":"Call now","href":"tel:+254703913923"},{"icon":"✉","label":"Email","value":"{email}","action":"Send email","href":"mailto:ballers@elevateballers.com"},{"icon":"⌂","label":"Visit","value":"{address}","action":"Get directions","href":""}]' }),
+      ] },
+      { label: 'Message form', fields: [
+        f('contactPage_form', 'Show form', 'Submissions land in Contact Messages.', { type: 'toggle', defaultValue: 'true' }),
+        f('contactPage_formTitle', 'Form heading', '', { defaultValue: 'Send a message' }),
+        f('contactPage_formBlurb', 'Form blurb', 'Use {response} for the promise set in Contact & Social.', { defaultValue: 'Fill in the form and the right team will get back to you, usually {response}.' }),
+        f('contactPage_topics', 'Topic options', 'Each topic routes to a desk from Contact & Social.', { type: 'list', addLabel: 'Add topic', maxItems: 16, columns: [{ key: 'topic', label: 'Topic', placeholder: 'Registration', width: '1fr' }, { key: 'desk', label: 'Routes to desk', placeholder: 'Registration', width: '1fr' }], defaultValue: '[{"topic":"General enquiry","desk":"General"},{"topic":"Team registration","desk":"Registration"},{"topic":"Player transfer","desk":"Transfers"},{"topic":"Fixtures & scheduling","desk":"Fixtures & Results"},{"topic":"Officiating & protests","desk":"Officiating"},{"topic":"Media & partnerships","desk":"Media & Partnerships"}]' }),
+        f('contactPage_teamField', 'Team field', 'Optional Team input beside the sender’s name.', { type: 'toggle', defaultValue: 'true' }),
+        f('contactPage_requirePhone', 'Require phone', 'Off leaves the phone field optional.', { type: 'toggle', defaultValue: 'false' }),
+        f('contactPage_submitLabel', 'Submit label', '', { defaultValue: 'Send Message' }),
+        f('contactPage_successMsg', 'Success message', 'Replaces the form after a send. Use {response}.', { defaultValue: 'Message received. We’ll be in touch {response}.' }),
+        f('contactPage_autoReply', 'Auto-reply', 'Emailed to the sender. Blank sends nothing. Use {response}.', { type: 'area', defaultValue: 'Thanks — we’ve got your message and will come back to you {response}.' }),
+      ] },
+      { label: 'Sidebar', fields: [
+        f('contactPage_visitCard', 'Visit Us card', 'Address, hours, phone and email from Contact & Social.', { type: 'toggle', defaultValue: 'true' }),
+        f('contactPage_visitHeading', 'Visit card heading', '', { defaultValue: 'Visit Us' }),
+        f('contactPage_socialCard', 'Follow the League card', 'Dark card with social buttons.', { type: 'toggle', defaultValue: 'true' }),
+        f('contactPage_map', 'Venue map', 'A striped placeholder shows until a map image is configured.', { type: 'toggle', defaultValue: 'true' }),
+      ] },
+      { label: 'Departments', fields: [
+        f('contactPage_departments', 'Show departments', 'Three-column grid of desks at the foot of the page.', { type: 'toggle', defaultValue: 'true' }),
+        f('contactPage_departmentsEyebrow', 'Eyebrow', '', { defaultValue: 'Reach the Right Desk' }),
+        f('contactPage_departmentsHeading', 'Heading', 'The desks are edited once in Contact & Social.', { defaultValue: 'Departments' }),
+      ] },
     ],
     '/contacts'
   ),

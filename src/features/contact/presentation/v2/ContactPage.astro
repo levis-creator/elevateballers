@@ -9,8 +9,18 @@ import ContactFormV2 from "./ContactFormV2.tsx";
 import { getContactData } from "@/features/contact/domain/usecases/get-contact-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { socialIcon } from "@/features/layout/lib/social-icons";
+import { replaceContactTokens, resolvePublicContactPageSettings, resolvePublicContactSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer] = await Promise.all([getContactData(), getFooterData()]);
+const [data, footer, pageRecords, contactRecords] = await Promise.all([getContactData(), getFooterData(), siteSettingsService.list('contactPage').catch(() => []), siteSettingsService.list('contact').catch(() => [])]);
+const settings = resolvePublicContactPageSettings(pageRecords);
+const contact = resolvePublicContactSettings(contactRecords);
+const quickCards = settings.quickCardList.map((card) => {
+	const value = replaceContactTokens(card.value, contact);
+	let href = replaceContactTokens(card.href, contact);
+	if (!href && card.value.includes('{address}')) href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contact.address)}`;
+	return { ...card, value, href };
+});
+const formBlurb = replaceContactTokens(settings.formBlurb, contact);
 
 // lucide icon inner markup, keyed by channel.icon.
 const ICONS: Record<string, string> = {
@@ -30,43 +40,42 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 		<div class="absolute -top-20 right-[-140px] h-[520px] w-[520px] rounded-full border border-brand/[0.14]"></div>
 		<div class="relative mx-auto max-w-[1280px] px-8 pb-[44px] pt-[56px] max-[960px]:px-6">
 			<div class="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
-				<span class="h-px w-[26px] bg-brand"></span>{data.hero.eyebrow}
+				<span class="h-px w-[26px] bg-brand"></span>{settings.eyebrow}
 			</div>
-			<h1 class="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">{data.hero.title}</h1>
-			<p class="mt-5 max-w-[520px] text-[16px] leading-[1.7] text-muted">{data.hero.blurb}</p>
+			<h1 class="font-display text-[clamp(56px,8vw,120px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">{settings.title}</h1>
+			<p class="mt-5 max-w-[520px] text-[16px] leading-[1.7] text-muted">{settings.intro}</p>
 		</div>
 	</section>
 
 	<!-- QUICK CONTACT CARDS -->
-	<section class="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
+	{settings.quickCards && <section class="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 		<div class="grid grid-cols-3 gap-5 max-[600px]:grid-cols-1">
-			{data.channels.map((c) => (
+			{quickCards.map((c) => (
 				<a href={c.href} class="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-6 no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
 					<span class="flex h-11 w-11 items-center justify-center rounded-full bg-brand/10 text-brand">
-						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={iconFor(c.icon)} />
+						{ICONS[c.icon] ? <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={iconFor(c.icon)} /> : <span class="text-[20px] leading-none">{c.icon}</span>}
 					</span>
 					<div class="font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{c.label}</div>
 					<div class="font-body text-[16px] font-bold text-ink2">{c.value}</div>
-					<div class="mt-auto font-mono text-[11px] text-brand">{c.action} →</div>
+					<div class="mt-auto font-mono text-[11px] text-brand">{c.action}</div>
 				</a>
 			))}
 		</div>
-	</section>
+	</section>}
 
 	<!-- FORM + INFO -->
-	<section class="mx-auto grid max-w-[1280px] grid-cols-[1.15fr_0.85fr] gap-14 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6">
+	<section class:list={["mx-auto grid max-w-[1280px] gap-14 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6", settings.form ? "grid-cols-[1.15fr_0.85fr]" : "grid-cols-1"]}>
 		<!-- FORM -->
-		<div class="rounded-2xl border border-black/10 bg-white p-8 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] max-[600px]:p-5">
-			<h2 class="font-display text-[26px] uppercase text-ink">{data.form.heading}</h2>
-			<p class="mt-2 text-[14px] leading-[1.6] text-muted">{data.form.intro}</p>
-			<p class="mt-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-brand">Response target · {data.responseTarget}</p>
-			<ContactFormV2 topics={data.topics} responseTarget={data.responseTarget} client:load />
-		</div>
+		{settings.form && <div class="rounded-2xl border border-black/10 bg-white p-8 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] max-[600px]:p-5">
+			<h2 class="font-display text-[26px] uppercase text-ink">{settings.formTitle}</h2>
+			<p class="mt-2 text-[14px] leading-[1.6] text-muted">{formBlurb}</p>
+			<ContactFormV2 topics={settings.topics} responseTarget={contact.responseTarget} teamField={settings.teamField} requirePhone={settings.requirePhone} submitLabel={settings.submitLabel} successMsg={settings.successMsg} client:load />
+		</div>}
 
 		<!-- INFO -->
 		<div class="flex flex-col gap-5">
-			<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
-				<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Visit Us</div>
+			{settings.visitCard && <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
+				<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">{settings.visitHeading}</div>
 				<div class="flex flex-col gap-4">
 					{data.info.map((i) => (
 						<div class="flex items-start gap-3">
@@ -75,15 +84,15 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 						</div>
 					))}
 				</div>
-			</div>
+			</div>}
 
-			{data.mapImage ? (
+			{settings.map && (data.mapImage ? (
 				<img src={data.mapImage} alt="Elevate Ballers venue" loading="lazy" class="min-h-[200px] w-full rounded-2xl border border-black/10 object-cover" />
 			) : (
 				<div class="rounded-2xl border border-black/10" style="background:repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 12px,var(--panel, #f0ece5) 12px,var(--panel, #f0ece5) 24px);min-height:200px;"></div>
-			)}
+			))}
 
-			{data.socials.length > 0 && (
+			{settings.socialCard && data.socials.length > 0 && (
 				<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 					<div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Follow the League</div>
 					<div class="flex gap-2.5">
@@ -106,11 +115,11 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 	</section>
 
 	<!-- DEPARTMENTS -->
-	<section class="border-t border-black/[0.08] bg-white">
+	{settings.departments && <section class="border-t border-black/[0.08] bg-white">
 		<div class="mx-auto max-w-[1280px] px-8 py-[56px] max-[960px]:px-6">
 			<div class="mb-8">
-				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">Reach the Right Desk</div>
-				<h2 class="font-display text-[clamp(28px,3.2vw,40px)] uppercase text-ink">Departments</h2>
+				<div class="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{settings.departmentsEyebrow}</div>
+				<h2 class="font-display text-[clamp(28px,3.2vw,40px)] uppercase text-ink">{settings.departmentsHeading}</h2>
 			</div>
 			<div class="grid grid-cols-3 gap-5 max-[600px]:grid-cols-1 max-[960px]:grid-cols-2">
 				{data.departments.map((dept) => (
@@ -122,7 +131,7 @@ const iconFor = (key: string) => ICONS[key] ?? ICONS.mail;
 				))}
 			</div>
 		</div>
-	</section>
+	</section>}
 
 	<Footer footer={footer} />
 </div>

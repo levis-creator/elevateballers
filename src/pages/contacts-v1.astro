@@ -21,7 +21,7 @@ import Spacing from "../shared/components/ui/Spacing.astro";
 import PageLoader from "../components/PageLoader";
 import ContactForm from "../features/contact/components/ContactForm";
 import { prisma } from "../lib/prisma";
-import { resolvePublicContactSettings } from '@/features/settings';
+import { resolvePublicContactPageSettings, resolvePublicContactSettings, siteSettingsService } from '@/features/settings';
 
 const DEFAULT_CONTACT = {
   address: 'Pepo Lane, off Dagoretti Road',
@@ -35,6 +35,7 @@ let contact = { ...DEFAULT_CONTACT };
 let responseTarget = 'within 48 hours';
 let contactTopics: string[] = [];
 let contactDescription = "Have questions or want to join the league? Contact Elevate Basketball.";
+let contactPage = resolvePublicContactPageSettings([]);
 
 try {
   const settings = await prisma.siteSetting.findMany({
@@ -52,6 +53,7 @@ try {
       },
     },
   });
+  contactPage = resolvePublicContactPageSettings(await siteSettingsService.list('contactPage').catch(() => []));
 
   const settingsMap = settings.reduce((acc, curr) => {
     acc[curr.key] = curr.value;
@@ -170,7 +172,7 @@ try {
                     class="heading-font"
                     style="text-align: center; margin-bottom: 50px; color: #dd3333;"
                   >
-                    CONTACTS
+                    {contactPage.title}
                   </h1>
 
                   <div class="vc_row wpb_row vc_inner vc_row-fluid">
@@ -278,9 +280,9 @@ try {
                               class="heading-font"
                               style="color: #dd3333; margin-bottom: 20px; font-size: 24px;"
                             >
-                              Send us a Message
+                              {contactPage.formTitle}
                             </h3>
-                            <p style="margin:-10px 0 18px;color:#777;font-size:13px;">Response target: {responseTarget}</p>
+                            <p style="margin:-10px 0 18px;color:#777;font-size:13px;">{contactPage.formBlurb.replaceAll('{response}', responseTarget)}</p>
                             <ContactForm topics={contactTopics} responseTarget={responseTarget} client:load />
                           </div>
                         </div>
