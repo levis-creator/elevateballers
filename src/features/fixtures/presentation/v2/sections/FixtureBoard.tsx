@@ -15,6 +15,7 @@ interface Props {
 	defaultLeagueSeasonId: string;
 	competitionSettings: PublicCompetitionSettings;
 	settings: PublicFixturesSettings;
+	liveBadge: string;
 }
 
 const CREST_BG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
@@ -50,7 +51,7 @@ export function Crest({ logo, abbr, alt }: { logo: string | null; abbr: string; 
 /** Fixtures — season selector + Upcoming/Results toggle + league filter +
  *  date-grouped match list. React island; all three filters live in a Zustand
  *  store. Matches arrive with dates/times already formatted server-side. */
-export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId, competitionSettings, settings }: Props) {
+export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId, competitionSettings, settings, liveBadge }: Props) {
 	const { leagueSeasonId, seasonId, conferenceId, view, setLeagueSeason, setSeason, setConference, setView } = useFixturesStore();
 	const storedLeague = settings.leagueFilter ? competitions.find((item) => item.id === leagueSeasonId) : undefined;
 	const configuredDefaultId = configuredDefaultCompetitionId(competitions, competitionSettings, defaultLeagueSeasonId);
@@ -222,7 +223,7 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 										const scored = m.score !== "";
 										const homeColor = scored ? (m.homeWin ? "var(--ink,#141009)" : "var(--muted2,#a49a8d)") : "var(--night2,#1a1712)";
 										const awayColor = scored ? (m.awayWin ? "var(--ink,#141009)" : "var(--muted2,#a49a8d)") : "var(--night2,#1a1712)";
-										const statusText = m.status === "done" ? "Final" : m.status === "live" ? "Live" : "Upcoming";
+										const statusText = m.status === "done" ? "Final" : m.status === "live" ? liveBadge : "Upcoming";
 										const statusColor = m.status === "done" ? "var(--muted2,#8a817a)" : "var(--brand)";
 										return (
 										<div

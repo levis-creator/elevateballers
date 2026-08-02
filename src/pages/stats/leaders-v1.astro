@@ -9,74 +9,45 @@ import Layout from "../../layouts/Layout.astro";
 import TopBar from "../../features/layout/components/TopBar.astro";
 import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
-import { prisma } from "../../lib/prisma";
 import { isFeatureEnabled } from "../../lib/feature-flags";
-import { resolveAssetUrl } from "../../lib/asset-url";
+import { getLeadersData } from "@/features/stats/domain/usecases/get-leaders-data";
+import type { StatKey } from "@/features/stats/domain/entities/leaders-v2";
+import { leadersToken, resolvePublicLeadersSettings, siteSettingsService } from "@/features/settings";
 
 export const prerender = false;
 
-// Statistics categories to display
-const categories = [
-    { id: "points", label: "Points", unit: "PPG" },
-    { id: "rebounds", label: "Rebounds", unit: "RPG" },
-    { id: "assists", label: "Assists", unit: "APG" },
-    { id: "steals", label: "Steals", unit: "SPG" },
-    { id: "blocks", label: "Blocks", unit: "BPG" },
-    { id: "fgPercentage", label: "Field Goal %", unit: "%" },
-    { id: "threePtPercentage", label: "3-Point %", unit: "%" },
-    { id: "ftPercentage", label: "Free Throw %", unit: "%" },
-];
+const [data, settingRecords] = await Promise.all([getLeadersData(), siteSettingsService.list('leaders').catch(() => [])]);
+const settings = resolvePublicLeadersSettings(settingRecords);
+const statKeyFor = (name: string): StatKey | null => {
+    const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (normalized.startsWith('point')) return 'Points';
+    if (normalized.startsWith('rebound')) return 'Rebounds';
+    if (normalized.startsWith('assist')) return 'Assists';
+    if (normalized.startsWith('steal')) return 'Steals';
+    if (normalized.startsWith('block')) return 'Blocks';
+    if (normalized.includes('3') || normalized.includes('three')) return '3-Pointers';
+    return null;
+};
+const categories = settings.categories.map((category) => ({ ...category, key: statKeyFor(category.name) })).filter((category): category is typeof category & { key: StatKey } => Boolean(category.key));
+const activeSeason = data.defaultSeason;
+const allLeaders = categories.map((category) => ({
+    label: category.name,
+    unit: category.unit,
+    leaders: data.rows
+        .filter((row) => row.season === activeSeason && row.gp >= settings.minGames)
+        .map((row) => ({
+            id: row.playerId,
+            slug: row.href.split('/').filter(Boolean).pop(),
+            imageSrc: '/images/default-player.png',
+            displayStat: settings.perGame ? row.vals[category.key].toFixed(1) : Math.round(row.vals[category.key] * row.gp),
+            fullName: row.name,
+            team: { name: row.team },
+        }))
+        .sort((a, b) => Number(b.displayStat) - Number(a.displayStat))
+        .slice(0, settings.boardRows),
+}));
 
-// Fetch leaders for all categories
-const allLeaders = await Promise.all(
-    categories.map(async (cat) => {
-        const players = await prisma.player.findMany({
-            where: { approved: true },
-            include: { team: true },
-            take: 20, // Pool to sort
-        });
-
-        // Sort and take top 5
-        const leaders = players
-            .map((p) => {
-                const stats = (p.stats as any) || {};
-                // If data is missing, we provide some default/mock values for demonstration as in the API
-                let val = stats[cat.id];
-
-                if (val === undefined) {
-                    if (cat.id === "points")
-                        val = Math.floor(Math.random() * 20 + 10);
-                    else if (
-                        ["rebounds", "assists", "steals", "blocks"].includes(
-                            cat.id,
-                        )
-                    )
-                        val = Math.floor(Math.random() * 8 + 2);
-                    else if (cat.id.includes("Percentage"))
-                        val = Math.floor(Math.random() * 40 + 40);
-                    else val = 0;
-                }
-
-                return {
-                    ...p,
-                    imageSrc: resolveAssetUrl(p.image) || "/images/default-player.png",
-                    displayStat: val,
-                    fullName:
-                        `${p.firstName} ${p.lastName}`.trim() ||
-                        "Unknown Player",
-                };
-            })
-            .sort((a, b) => b.displayStat - a.displayStat)
-            .slice(0, 5);
-
-        return {
-            ...cat,
-            leaders,
-        };
-    }),
-);
-
-const pageTitle = "Stat Leaders - Elevate Ballers";
+const pageTitle = `${settings.title} - Elevate Ballers`;
 const pageDescription =
     "Explore top performers across points, rebounds, assists, and more in Elevate Ballers.";
 const pageUrl = `${Astro.url.origin}/stats/leaders/`;
@@ -129,8 +100,9 @@ const pageUrl = `${Astro.url.origin}/stats/leaders/`;
         <main id="main" class="stats-leaders-page">
             <section class="page-title-section">
                 <div class="container">
+                    <p class="page-eyebrow">{leadersToken(settings.eyebrow, activeSeason)}</p>
                     <h1 class="page-main-title">
-                        Statistical <span class="text-primary">Leaders</span>
+                        {settings.title}
                     </h1>
                     <p class="page-subtitle">
                         The top performers across the league this season.
@@ -140,6 +112,9 @@ const pageUrl = `${Astro.url.origin}/stats/leaders/`;
 
             <section class="leaders-grid-section">
                 <div class="container">
+                    {settings.podium && allLeaders[0]?.leaders.length > 0 && <div class="leaders-podium">
+                        {allLeaders[0].leaders.slice(0, 3).map((player, index) => <a href={`/players/${player.slug || player.id}`} class="podium-card"><strong>#{index + 1}</strong><span>{player.fullName}</span><b>{player.displayStat} {allLeaders[0].unit}</b></a>)}
+                    </div>}
                     <div class="stats-grid">
                         {
                             allLeaders.map((section) => (
@@ -194,6 +169,7 @@ const pageUrl = `${Astro.url.origin}/stats/leaders/`;
                             ))
                         }
                     </div>
+                    <p class="qualification-note">{leadersToken(settings.qualNote, settings.minGames)}</p>
                 </div>
             </section>
         </main>
@@ -207,6 +183,12 @@ const pageUrl = `${Astro.url.origin}/stats/leaders/`;
         background-color: #f9fafb;
         padding-bottom: 80px;
     }
+
+    .page-eyebrow, .qualification-note { text-align:center; text-transform:uppercase; letter-spacing:.12em; color:#6b7280; }
+    .leaders-podium { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-bottom:32px; }
+    .podium-card { display:flex; flex-direction:column; gap:8px; padding:24px; border-radius:14px; background:#111827; color:#fff; text-decoration:none; }
+    .podium-card strong, .podium-card b { color:var(--brand,#dd3333); }
+    @media (max-width: 720px) { .leaders-podium { grid-template-columns:1fr; } }
 
     .page-title-section {
         padding: 60px 0 40px;

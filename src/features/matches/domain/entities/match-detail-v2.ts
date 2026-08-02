@@ -138,6 +138,8 @@ export interface MatchView {
 	dateText: string;
 	time: string;
 	venue: string | null;
+	/** Public highlight video attached through Media tags (`match:<id-or-slug>`). */
+	highlightUrl: string | null;
 	/** e.g. "LIVE · Q4 02:26", or null when not live. */
 	liveTag: string | null;
 

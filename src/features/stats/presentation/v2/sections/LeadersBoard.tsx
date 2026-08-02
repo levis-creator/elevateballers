@@ -1,11 +1,14 @@
+import { useEffect } from "react";
 import { useLeadersStore } from "@/features/stats/presentation/stores/v2/useLeadersStore";
-import { STAT_METAS, ALL_LEAGUES } from "@/features/stats/domain/entities/leaders-v2";
+import { ALL_LEAGUES } from "@/features/stats/domain/entities/leaders-v2";
 import type { LeadersData, LeaderRow, StatKey } from "@/features/stats/domain/entities/leaders-v2";
 import type { PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
+import { leadersToken, type PublicLeadersSettings } from "@/features/settings/application/leadersSettings";
 
 interface Props {
 	data: LeadersData;
 	competitionSettings: PublicCompetitionSettings;
+	settings: PublicLeadersSettings;
 }
 
 const CREST_LIGHT = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
@@ -36,8 +39,25 @@ function Select({ value, options, onChange, suffix }: { value: string; options: 
 
 /** Stat-Leaders board — hero controls + category tabs + podium + full leaderboard.
  *  React island; the selected stat/league/season live in a Zustand store. */
-export default function LeadersBoard({ data, competitionSettings }: Props) {
+const statKeyFor = (name: string): StatKey | null => {
+	const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+	if (normalized.startsWith("point")) return "Points";
+	if (normalized.startsWith("rebound")) return "Rebounds";
+	if (normalized.startsWith("assist")) return "Assists";
+	if (normalized.startsWith("steal")) return "Steals";
+	if (normalized.startsWith("block")) return "Blocks";
+	if (normalized.includes("3") || normalized.includes("three")) return "3-Pointers";
+	return null;
+};
+
+export default function LeadersBoard({ data, competitionSettings, settings }: Props) {
 	const { stat, league, season, setStat, setLeague, setSeason } = useLeadersStore();
+	const categories = settings.categories
+		.map((category) => ({ ...category, key: statKeyFor(category.name) }))
+		.filter((category): category is typeof category & { key: StatKey } => Boolean(category.key))
+		.filter((category, index, all) => all.findIndex((item) => item.key === category.key) === index);
+	const activeCategory = categories.find((category) => category.key === stat) ?? categories[0];
+	const activeStat = activeCategory?.key ?? "Points";
 	const activeSeason = season || data.defaultSeason;
 	const fallbackLeague = competitionSettings.allLabel || data.leagues[0] || ALL_LEAGUES;
 	const configuredLeague = competitionSettings.defaultLeague === "Remember last choice"
@@ -52,18 +72,18 @@ export default function LeadersBoard({ data, competitionSettings }: Props) {
 	useEffect(() => {
 		if (competitionSettings.defaultLeague === "Remember last choice" && data.leagues.includes(league)) window.localStorage.setItem("eb-public-league-name", league);
 	}, [league, competitionSettings.defaultLeague]);
-	const meta = STAT_METAS.find((m) => m.key === stat) ?? STAT_METAS[0];
-
 	const pool = data.rows
 		.filter((r) => r.season === activeSeason)
 		.filter((r) => activeLeague === competitionSettings.allLabel || r.league === activeLeague)
-		.filter((r) => r.gp >= data.minGames)
-		.map((r) => ({ row: r, val: r.vals[stat] }))
+		.filter((r) => r.gp >= settings.minGames)
+		.map((r) => ({ row: r, val: settings.perGame ? r.vals[activeStat] : r.vals[activeStat] * r.gp }))
 		.sort((a, b) => b.val - a.val);
 
-	const podium = pool.slice(0, 3);
+	const leaderboard = pool.slice(0, settings.boardRows);
+	const podium = leaderboard.slice(0, 3);
 	const tags = ["Leader", "Runner-up", "Third"];
-	const fmt = (v: number) => v.toFixed(1);
+	const fmt = (v: number) => settings.perGame ? v.toFixed(1) : String(Math.round(v));
+	const valueMode = settings.perGame ? "per game" : "season total";
 
 	return (
 		<>
@@ -75,9 +95,9 @@ export default function LeadersBoard({ data, competitionSettings }: Props) {
 					<div>
 						<div className="mb-[18px] inline-flex items-center gap-[10px] font-mono text-[12px] uppercase tracking-[0.14em] text-brand">
 							<span className="h-px w-[26px] bg-brand" />
-							Statistical Leaders · {activeSeason}
+							{leadersToken(settings.eyebrow, activeSeason)}
 						</div>
-						<h1 className="font-display text-[clamp(52px,7.5vw,110px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">League Leaders</h1>
+						<h1 className="font-display text-[clamp(52px,7.5vw,110px)] uppercase leading-[0.86] tracking-[0.01em] text-ink">{settings.title}</h1>
 					</div>
 					<div className="flex items-center gap-3">
 						<Select value={activeLeague} options={data.leagues} onChange={setLeague} />
@@ -90,9 +110,9 @@ export default function LeadersBoard({ data, competitionSettings }: Props) {
 			<section className="border-b border-black/[0.08] bg-panel">
 				<div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-2 px-8 py-5 max-[960px]:px-6">
 					<span className="mr-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Category</span>
-					{STAT_METAS.map((m) => (
-						<button key={m.key} type="button" onClick={() => setStat(m.key)} className={pill(stat === m.key)}>
-							{m.label}
+					{categories.map((category) => (
+						<button key={category.key} type="button" onClick={() => setStat(category.key)} className={pill(activeStat === category.key)}>
+							{category.name}
 						</button>
 					))}
 				</div>
@@ -103,24 +123,24 @@ export default function LeadersBoard({ data, competitionSettings }: Props) {
 					<div className="mx-auto flex max-w-[440px] flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-16">
 						<div className="font-display text-[24px] uppercase text-ink">No qualified leaders</div>
 						<p className="text-[14px] leading-[1.5] text-muted">
-							No players have played the minimum {data.minGames} game{data.minGames === 1 ? "" : "s"} in this league and season yet — check back once more games are recorded.
+							No players have played the minimum {settings.minGames} game{settings.minGames === 1 ? "" : "s"} in this league and season yet — check back once more games are recorded.
 						</p>
 					</div>
 				</section>
 			) : (
 				<>
 					{/* PODIUM */}
-					<section className="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
+					{settings.podium && <section className="mx-auto max-w-[1280px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
 						<div className="mb-2 flex items-baseline gap-3">
-							<h2 className="font-display text-[26px] uppercase text-ink">{meta.label} Leaders</h2>
-							<span className="font-mono text-[11px] text-muted2">per game</span>
+							<h2 className="font-display text-[26px] uppercase text-ink">{activeCategory?.name ?? activeStat} Leaders</h2>
+							<span className="font-mono text-[11px] text-muted2">{valueMode}</span>
 						</div>
 						<div className="mt-5 grid grid-cols-3 gap-5 max-[760px]:grid-cols-1">
 							{podium.map(({ row, val }, i) => (
-								<PodiumCard key={row.playerId} row={row} val={fmt(val)} rank={i + 1} tag={tags[i]} unit={meta.unit} lead={i === 0} />
+								<PodiumCard key={row.playerId} row={row} val={fmt(val)} rank={i + 1} tag={tags[i]} unit={activeCategory?.unit ?? ""} mode={valueMode} lead={i === 0} />
 							))}
 						</div>
-					</section>
+					</section>}
 
 					{/* FULL LEADERBOARD */}
 					<section className="mx-auto max-w-[1280px] px-8 py-[48px] max-[960px]:px-6 max-[960px]:py-9">
@@ -132,15 +152,15 @@ export default function LeadersBoard({ data, competitionSettings }: Props) {
 									<span>Player</span>
 									<span>Team</span>
 									<span className="text-center">GP</span>
-									<span className="text-right">{meta.unit}</span>
+									<span className="text-right">{activeCategory?.unit ?? ""}</span>
 								</div>
-								{pool.map(({ row, val }, i) => (
+								{leaderboard.map(({ row, val }, i) => (
 									<LeaderRowItem key={row.playerId} row={row} val={fmt(val)} rank={i + 1} />
 								))}
 							</div>
 						</div>
 						<div className="mt-4 font-mono text-[11px] text-muted2">
-							GP Games Played · {meta.unit} {meta.label} per game · Minimum {data.minGames} game{data.minGames === 1 ? "" : "s"} to qualify
+							GP Games Played · {activeCategory?.unit} {activeCategory?.name} {valueMode} · {leadersToken(settings.qualNote, settings.minGames)}
 						</div>
 					</section>
 				</>
@@ -149,7 +169,7 @@ export default function LeadersBoard({ data, competitionSettings }: Props) {
 	);
 }
 
-function PodiumCard({ row, val, rank, tag, unit, lead }: { row: LeaderRow; val: string; rank: number; tag: string; unit: string; lead: boolean }) {
+function PodiumCard({ row, val, rank, tag, unit, mode, lead }: { row: LeaderRow; val: string; rank: number; tag: string; unit: string; mode: string; lead: boolean }) {
 	const Tag = row.href && row.href !== "#" ? "a" : "div";
 	return (
 		<Tag
@@ -190,7 +210,7 @@ function PodiumCard({ row, val, rank, tag, unit, lead }: { row: LeaderRow; val: 
 				<div>
 					<div className="font-display text-[44px] leading-none text-brand">{val}</div>
 					<div className="mt-1 font-mono text-[9px] uppercase tracking-[0.08em]" style={{ color: lead ? "var(--muted2,#8a817a)" : "var(--muted,#6f665c)" }}>
-						{unit} / game
+						{unit} · {mode}
 					</div>
 				</div>
 				<div className="text-right font-mono text-[11px]" style={{ color: lead ? "var(--muted2,#8a817a)" : "var(--muted,#6f665c)" }}>
@@ -228,4 +248,3 @@ function LeaderRowItem({ row, val, rank }: { row: LeaderRow; val: string; rank: 
 		</Tag>
 	);
 }
-import { useEffect } from "react";

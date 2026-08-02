@@ -14,9 +14,19 @@ if (!usePublicV2) return Astro.rewrite(`/matches-v1/${slugOrId}`);
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import MatchDetailPage from "@/features/matches/presentation/v2/MatchDetailPage.astro";
 import { getMatchView } from "@/features/matches/domain/usecases/get-match-view";
+import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from "@/features/settings";
+import { getCurrentUser } from "@/features/cms/lib/auth";
 
-const view = await getMatchView(slugOrId);
+const [view, matchSettingRecords, currentUser] = await Promise.all([
+	getMatchView(slugOrId),
+	siteSettingsService.list("match").catch(() => []),
+	getCurrentUser(Astro.request).catch(() => null),
+]);
 if (!view) return Astro.rewrite("/404");
+const matchSettings = resolvePublicMatchPageSettings(matchSettingRecords);
+const authenticated = Boolean(currentUser);
+const staff = Boolean((currentUser as any)?.userRoles?.length);
+const canViewBoxScore = canViewMatchBoxScore(matchSettings.boxScore, authenticated, staff);
 
 // Consolidate SEO on the canonical slug URL when reached via the legacy cuid.
 if (view.slug && slugOrId !== view.slug) return Astro.redirect(`/matches/${view.slug}/`, 301);
@@ -59,5 +69,5 @@ const canonical = `${Astro.url.origin}/matches/${view.slug || view.id}/`;
 	canonicalURL={canonical}
 	type="website"
 >
-	<MatchDetailPage view={view} />
+	<MatchDetailPage view={view} settings={matchSettings} canViewBoxScore={canViewBoxScore} />
 </LayoutV2>

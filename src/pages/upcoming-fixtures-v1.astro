@@ -21,11 +21,12 @@ import MatchesTabbedTable from "../features/matches/presentation/components/Matc
 import PageLoader from "../components/PageLoader";
 import ContentLoader from "../components/ContentLoader";
 import { getDisplayImageUrl } from "../lib/asset-url";
-import { resolvePublicFixturesSettings, resolvePublicResultsSettings, siteSettingsService } from "@/features/settings";
+import { resolvePublicFixturesSettings, resolvePublicMatchPageSettings, resolvePublicResultsSettings, siteSettingsService } from "@/features/settings";
 
-const [fixtureSettingRecords, resultSettingRecords] = await Promise.all([siteSettingsService.list("fixtures"), siteSettingsService.list("results")]);
+const [fixtureSettingRecords, resultSettingRecords, matchSettingRecords] = await Promise.all([siteSettingsService.list("fixtures"), siteSettingsService.list("results"), siteSettingsService.list("match")]);
 const fixturesSettings = resolvePublicFixturesSettings(fixtureSettingRecords);
 const resultsSettings = resolvePublicResultsSettings(resultSettingRecords);
+const matchSettings = resolvePublicMatchPageSettings(matchSettingRecords);
 
 // Fetch match center data from database
 let fixtures: any[] = [];
@@ -165,6 +166,7 @@ try {
                           initialTab="fixtures"
                           fixturesSettings={fixturesSettings}
                           resultsSettings={resultsSettings}
+                          matchSettings={matchSettings}
                           client:load
                         />
                       </div>

@@ -11,13 +11,16 @@ if (!usePublicV2) return Astro.rewrite("/stats/leaders-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import LeadersPage from "@/features/stats/presentation/v2/LeadersPage.astro";
+import { resolvePublicLeadersSettings, siteSettingsService } from "@/features/settings";
+
+const settings = resolvePublicLeadersSettings(await siteSettingsService.list("leaders").catch(() => []));
 ---
 
 <LayoutV2
-	title="Stat Leaders - Elevate Ballers | League Statistical Leaders"
+	title={`${settings.title} - Elevate Ballers`}
 	description="The top performers across Elevate Ballers — points, rebounds, assists, steals, blocks and three-pointers per game, by league and season."
 	canonicalURL={`${Astro.url.origin}/stats/leaders/`}
 	type="website"
 >
-	<LeadersPage />
+	<LeadersPage settings={settings} />
 </LayoutV2>
