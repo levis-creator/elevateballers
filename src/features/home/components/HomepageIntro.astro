@@ -3,7 +3,7 @@ import { getAllSiteSettings } from "../../cms/lib/queries";
 import { sanitizeHtml } from "../../../lib/sanitize";
 import { resolvePublicHomeSettings } from "../../settings";
 
-// Homepage-specific orientation prose. Distinct from /about-club/ on purpose:
+// Homepage-specific orientation prose. Distinct from /about/ on purpose:
 // the About page tells the league's story (mission, history); this section
 // tells visitors what they can DO on the site (find scores, follow players,
 // register, etc.). Different angle, different keywords, no duplicate content.
@@ -46,7 +46,7 @@ const safeBody = sanitizeHtml(body);
       <p class="homepage-intro-subheading">{subheading}</p>
       <div class="homepage-intro-body" set:html={safeBody} />
       <div class="homepage-intro-actions">
-        <a class="homepage-intro-link" href="/about-club/" title="Learn more about Elevate Ballers">
+        <a class="homepage-intro-link" href="/about/" title="Learn more about Elevate Ballers">
           Read the full story →
         </a>
       </div>

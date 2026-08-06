@@ -1,6 +1,6 @@
 ---
 import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
-// Legacy (v1) About page. `/about-club` rewrites here when PUBLIC_UI_VERSION !==
+// Legacy (v1) About page. `/about` rewrites here when PUBLIC_UI_VERSION !==
 // 'v2'. Guard so it isn't served directly under v2.
 import { usePublicV2 } from "@/lib/ui-version";
 if (usePublicV2) return Astro.rewrite("/404");
@@ -62,7 +62,7 @@ const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => 
 <Layout
   title="About Elevate - Our Mission, Vision & Basketball Community"
   description="Learn about Elevate Ballers, our mission to elevate the game of basketball, and the inclusive community we've built for players of all skill levels."
-  canonicalURL={`${Astro.url.origin}/about-club/`}
+  canonicalURL={`${Astro.url.origin}/about/`}
   type="website"
 >
   <ManagedStructuredData
@@ -71,19 +71,19 @@ const paragraphs = isHtml ? [] : aboutContent.split(/\n\n+/).map((p: string) => 
       "@graph": [
         {
           "@type": "AboutPage",
-          "@id": `${Astro.url.origin}/about-club/`,
-          url: `${Astro.url.origin}/about-club/`,
+          "@id": `${Astro.url.origin}/about/`,
+          url: `${Astro.url.origin}/about/`,
           name: "About Elevate - Our Mission, Vision & Basketball Community",
           isPartOf: { "@id": `${Astro.url.origin}/#website` },
           description:
             "Learn about Elevate Ballers, our mission to elevate the game of basketball, and the inclusive community we've built for players of all skill levels.",
           about: { "@id": `${Astro.url.origin}/#organization` },
-          breadcrumb: { "@id": `${Astro.url.origin}/about-club/#breadcrumb` },
+          breadcrumb: { "@id": `${Astro.url.origin}/about/#breadcrumb` },
           inLanguage: "en-US",
         },
         {
           "@type": "BreadcrumbList",
-          "@id": `${Astro.url.origin}/about-club/#breadcrumb`,
+          "@id": `${Astro.url.origin}/about/#breadcrumb`,
           itemListElement: [
             {
               "@type": "ListItem",

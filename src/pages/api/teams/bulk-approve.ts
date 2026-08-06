@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { approvePendingSeasonRegistrations } from '../../../features/registration/data/datasources/public-submission';
 
 export const prerender = false;
 
@@ -26,6 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     if (shouldApprove) {
+      await approvePendingSeasonRegistrations(ids);
       await prisma.staff.updateMany({
         where: {
           teams: {

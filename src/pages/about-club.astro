@@ -1,23 +1,4 @@
 ---
 export const prerender = false;
-
-// Edge cache — content is rarely updated.
-Astro.response.headers.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=1200");
-
-import { usePublicV2 } from "@/lib/ui-version";
-
-// v2-only route. Rewrite to the legacy page when the flag is off — URL stays /about-club.
-if (!usePublicV2) return Astro.rewrite("/about-club-v1");
-
-import LayoutV2 from "@/layouts/v2/Layout.astro";
-import AboutPage from "@/features/about/presentation/v2/AboutPage.astro";
+return Astro.redirect('/about/', 301);
 ---
-
-<LayoutV2
-	title="About the Club - Elevate Ballers | Kenya's Basketball League"
-	description="Elevate Ballers is Nairobi's home for competitive basketball — two leagues, dozens of clubs, weekly fixtures, live standings and a growing community."
-	canonicalURL={`${Astro.url.origin}/about-club/`}
-	type="website"
->
-	<AboutPage />
-</LayoutV2>

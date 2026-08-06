@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../../../lib/prisma';
 import type { CreateSeasonInput, UpdateSeasonInput, Season } from '../../../types';
+import { DEFAULT_PUBLIC_REGISTRATION_SETTINGS, resolvePublicRegistrationSettings } from '../../../../settings/application/registrationSettings';
 
 type ConferenceInput = { id?: string; name: string; teamIds?: string[] };
 type LeagueSeasonInput = NonNullable<CreateSeasonInput['leagueSeasons']>[number];
@@ -194,6 +195,19 @@ function toDbDate(value: Date | string | null | undefined): Date | null | undefi
   return new Date(value);
 }
 
+async function newEditionRegistrationDefaults(): Promise<{ opens: Date; closes: Date }> {
+  const records = await prisma.siteSetting.findMany({ where: { category: 'registration' } }).catch(() => []);
+  const settings = resolvePublicRegistrationSettings(records);
+  const opens = new Date(`${settings.opens}T00:00:00+03:00`);
+  const closes = new Date(`${settings.closes}T23:59:59+03:00`);
+  const fallbackOpens = new Date(`${DEFAULT_PUBLIC_REGISTRATION_SETTINGS.opens}T00:00:00+03:00`);
+  const fallbackCloses = new Date(`${DEFAULT_PUBLIC_REGISTRATION_SETTINGS.closes}T23:59:59+03:00`);
+  return {
+    opens: Number.isFinite(opens.getTime()) ? opens : fallbackOpens,
+    closes: Number.isFinite(closes.getTime()) ? closes : fallbackCloses,
+  };
+}
+
 export async function createSeason(data: CreateSeasonInput): Promise<Season> {
   const {
     leagueIds,
@@ -205,6 +219,12 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
     endDate,
     ...rest
   } = data;
+  const registrationDefaults = await newEditionRegistrationDefaults();
+  const seededLeagueSeasons = leagueSeasons?.map((row) => ({
+    ...row,
+    registrationOpensAt: row.registrationOpensAt || registrationDefaults.opens,
+    registrationClosesAt: row.registrationClosesAt || registrationDefaults.closes,
+  }));
 
   // Slug is now globally unique across all seasons.
   let uniqueSlug = providedSlug || slugify(name);
@@ -222,19 +242,19 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
       slug: uniqueSlug,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      registrationOpensAt: toDbDate(data.registrationOpensAt) ?? null,
-      registrationClosesAt: toDbDate(data.registrationClosesAt) ?? null,
+      registrationOpensAt: toDbDate(data.registrationOpensAt) ?? registrationDefaults.opens,
+      registrationClosesAt: toDbDate(data.registrationClosesAt) ?? registrationDefaults.closes,
       bracketType: data.bracketType || null,
       // Attach the season to its leagues via the join table (optional).
-      ...(!leagueSeasons && leagueIds && leagueIds.length
+      ...(!seededLeagueSeasons && leagueIds && leagueIds.length
         ? {
             leagueSeasons: {
               create: leagueIds.map((leagueId) => ({
                 leagueId,
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
-                registrationOpensAt: toDbDate(data.registrationOpensAt) ?? null,
-                registrationClosesAt: toDbDate(data.registrationClosesAt) ?? null,
+                registrationOpensAt: toDbDate(data.registrationOpensAt) ?? registrationDefaults.opens,
+                registrationClosesAt: toDbDate(data.registrationClosesAt) ?? registrationDefaults.closes,
                 bracketType: data.bracketType || null,
                 status: data.active === false ? 'COMPLETED' : 'ACTIVE',
                 competitionStructure:
@@ -246,13 +266,13 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
     },
   });
 
-  if (leagueSeasons) {
-    await prisma.$transaction((tx) => reconcileLeagueSeasons(tx, season.id, leagueSeasons));
+  if (seededLeagueSeasons) {
+    await prisma.$transaction((tx) => reconcileLeagueSeasons(tx, season.id, seededLeagueSeasons));
   }
 
   // Conferences (and any selected teams) after the season exists, so team rows
   // can be rostered against it. Reuses the same reconcile path as updateSeason.
-  if (!leagueSeasons && conferences && conferences.length) {
+  if (!seededLeagueSeasons && conferences && conferences.length) {
     await prisma.$transaction(async (tx) => {
       const scope = await singleLeagueSeason(tx, season.id, leagueIds);
       if (!scope) throw new Error('Conferences require exactly one league competition.');

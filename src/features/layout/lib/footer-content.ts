@@ -30,7 +30,7 @@ export const FOOTER_DEFAULTS: FooterContent = {
 		{ label: "Standings", href: "/standings" },
 		{ label: "Fixtures & Results", href: "/upcoming-fixtures" },
 		{ label: "Staff", href: "/staff" },
-		{ label: "About the Club", href: "/about-club" },
+		{ label: "About the Club", href: "/about" },
 		{ label: "Rules", href: "/rules" },
 		{ label: "Cookies", href: "/cookies" },
 	],

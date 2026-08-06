@@ -26,6 +26,14 @@ async function loadRegistrationSettings() {
   }
 }
 
+async function safeCount(model: { count?: (args: unknown) => Promise<number> } | undefined, args: unknown): Promise<number> {
+  try {
+    return model?.count ? await model.count(args) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     const ip = getClientIp(request);
@@ -48,17 +56,19 @@ export const POST: APIRoute = async ({ request }) => {
     const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId);
     if (!gate.open) return new Response(JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const windowStart = /^\d{4}-\d{2}-\d{2}$/.test(registrationSettings.opens) ? new Date(`${registrationSettings.opens}T00:00:00+03:00`) : new Date(0);
-    const [windowSubmissions, seasonTeams] = await Promise.all([
-      (prisma as any).publicRegistrationSubmission.count({ where: { kind: 'TEAM', createdAt: { gte: windowStart } } }).catch(() => 0),
-      data.leagueSeasonId ? (prisma as any).seasonTeam.count({ where: { leagueSeasonId: data.leagueSeasonId } }).catch(() => 0) : Promise.resolve(0),
+    const [windowSubmissions, seasonTeams, pendingApplications] = await Promise.all([
+      safeCount((prisma as any).publicRegistrationSubmission, { where: { kind: 'TEAM', createdAt: { gte: windowStart } } }),
+      data.leagueSeasonId ? safeCount((prisma as any).seasonTeam, { where: { leagueSeasonId: data.leagueSeasonId } }) : Promise.resolve(0),
+      data.leagueSeasonId ? safeCount((prisma as any).seasonRegistrationApplication, { where: { leagueSeasonId: data.leagueSeasonId, status: { in: ['PENDING', 'OWNERSHIP_VERIFICATION'] } } }) : Promise.resolve(0),
     ]);
-    if (Math.max(windowSubmissions, seasonTeams) >= registrationSettings.slots) return new Response(JSON.stringify({ error: 'All team registration slots for this season have been filled.' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+    const occupiedSlots = data.leagueSeasonId ? seasonTeams + pendingApplications : windowSubmissions;
+    if (occupiedSlots >= registrationSettings.slots) return new Response(JSON.stringify({ error: 'All team registration slots for this season have been filled.' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
     const existingTeam = await prisma.team.findUnique({ where: { name: data.name }, select: { id: true } });
     if (existingTeam) return genericRegistrationResponse();
     let leagueName: string | undefined;
     if (data.leagueId) leagueName = (await prisma.league.findUnique({ where: { id: data.leagueId }, select: { name: true } }))?.name;
 
-    const result = await submitTeamRegistration({ idempotencyKey, name: data.name, coachName: data.coachName, contactEmail: data.contactEmail, contactPhone: data.contactPhone, leagueId: data.leagueId, additionalInfo: data.additionalInfo, leagueName, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee });
+    const result = await submitTeamRegistration({ idempotencyKey, name: data.name, coachName: data.coachName, contactEmail: data.contactEmail, contactPhone: data.contactPhone, leagueId: data.leagueId, seasonId: data.seasonId, leagueSeasonId: data.leagueSeasonId, additionalInfo: data.additionalInfo, leagueName, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee });
     await logAudit(request, 'TEAM_REGISTRATION_SUBMITTED', { teamId: result.teamId, teamName: data.name, coachName: data.coachName });
     for (const jobId of result.jobIds) {
       if (!await publishToJob('/api/jobs/send-email', { registrationJobId: jobId })) void processRegistrationEmailJob(jobId).catch((error) => console.error('[registration] team email job failed:', error));

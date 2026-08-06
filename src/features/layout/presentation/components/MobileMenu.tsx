@@ -114,7 +114,7 @@ export default function MobileMenu() {
                 </a>
               </li>
               <li className="menu-item menu-item-type-post_type menu-item-object-page menu-item-2242">
-                <a href="/about-club/" title="" onClick={closeMobileMenu}>
+                <a href="/about/" title="" onClick={closeMobileMenu}>
                   <span>About</span>
                 </a>
               </li>

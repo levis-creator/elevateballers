@@ -4,6 +4,7 @@ import { prisma } from '../../../../lib/prisma';
 import { logAudit } from '../../../../features/cms/lib/audit';
 import { sendTeamApprovedEmail } from '../../../../lib/email';
 import { handleApiError } from '../../../../lib/apiError';
+import { approvePendingSeasonRegistrations } from '../../../../features/registration/data/datasources/public-submission';
 
 export const prerender = false;
 
@@ -30,6 +31,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
     });
 
     if (shouldApprove) {
+      await approvePendingSeasonRegistrations([id]);
       await prisma.staff.updateMany({
         where: {
           teams: {
