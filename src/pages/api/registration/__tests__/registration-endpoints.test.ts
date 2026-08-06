@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   submitTeamRegistration: vi.fn(),
   submitPlayerRegistration: vi.fn(),
   publishToJob: vi.fn(),
+  siteSettingFindMany: vi.fn(),
 }));
 
 vi.mock('../../../../lib/rateLimit', () => ({ checkRateLimit: mocks.checkRateLimit }));
@@ -30,11 +31,11 @@ vi.mock('../../../../lib/registrationGate', () => ({ checkRegistrationOpen: mock
 vi.mock('../../../../features/cms/lib/mutations', () => ({ createTeam: mocks.createTeam, createStaff: mocks.createStaff, assignStaffToTeam: mocks.assignStaffToTeam, createPlayer: mocks.createPlayer }));
 vi.mock('../../../../features/cms/lib/audit', () => ({ logAudit: mocks.logAudit }));
 vi.mock('../../../../lib/email', () => ({ sendTeamRegistrationAutoReply: mocks.sendTeamRegistrationAutoReply, sendPlayerRegistrationAutoReply: mocks.sendPlayerRegistrationAutoReply, sendAdminNotificationEmail: mocks.sendAdminNotificationEmail }));
-vi.mock('../../../../lib/apiError', () => ({ handleApiError: vi.fn((_error, _context, _request) => new Response(JSON.stringify({ error: 'unexpected' }), { status: 500 })) }));
+vi.mock('../../../../lib/apiError', () => ({ handleApiError: vi.fn(() => new Response(JSON.stringify({ error: 'unexpected' }), { status: 500 })) }));
 vi.mock('../../../../lib/qstash', () => ({ publishToJob: mocks.publishToJob }));
 vi.mock('../../../../features/registration/application/process-registration-email-job', () => ({ processRegistrationEmailJob: vi.fn() }));
 vi.mock('../../../../features/registration/data/datasources/public-submission', () => ({ findSubmission: mocks.findSubmission, submitTeamRegistration: mocks.submitTeamRegistration, submitPlayerRegistration: mocks.submitPlayerRegistration }));
-vi.mock('../../../../lib/prisma', () => ({ prisma: { team: { findUnique: mocks.teamFindUnique }, league: { findUnique: mocks.leagueFindUnique }, staff: { findFirst: mocks.staffFindFirst }, player: { findMany: mocks.playerFindMany, findFirst: mocks.playerFindFirst }, registrationNotification: { create: mocks.notificationCreate } } }));
+vi.mock('../../../../lib/prisma', () => ({ prisma: { siteSetting: { findMany: mocks.siteSettingFindMany }, team: { findUnique: mocks.teamFindUnique }, league: { findUnique: mocks.leagueFindUnique }, staff: { findFirst: mocks.staffFindFirst }, player: { findMany: mocks.playerFindMany, findFirst: mocks.playerFindFirst }, registrationNotification: { create: mocks.notificationCreate } } }));
 
 import { POST as postTeam } from '../team';
 import { POST as postPlayer } from '../player';
@@ -69,6 +70,12 @@ describe('public registration endpoints', () => {
     mocks.submitTeamRegistration.mockResolvedValue({ response: { success: true, message: 'Team registration submitted successfully', entityId: 'team-1' }, jobIds: ['job-team'], teamId: 'team-1' });
     mocks.submitPlayerRegistration.mockResolvedValue({ response: { success: true, message: 'Player registration submitted successfully', entityId: 'player-1' }, jobIds: ['job-player'], playerId: 'player-1' });
     mocks.publishToJob.mockResolvedValue(true);
+    mocks.siteSettingFindMany.mockResolvedValue([
+      { key: 'registration_open', value: 'true' },
+      { key: 'registration_opens', value: '2020-01-01' },
+      { key: 'registration_closes', value: '2099-12-31' },
+      { key: 'registration_playerMode', value: 'true' },
+    ]);
   });
 
   it('rejects honeypot submissions before security verification', async () => {

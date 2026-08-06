@@ -1,0 +1,21 @@
+---
+export const prerender = false;
+
+Astro.response.headers.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=1200");
+
+import { usePublicV2 } from "@/lib/ui-version";
+
+if (!usePublicV2) return Astro.rewrite("/about-club-v1");
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import AboutPage from "@/features/about/presentation/v2/AboutPage.astro";
+---
+
+<LayoutV2
+	title="About Elevate Ballers | Kenya's Basketball League"
+	description="Elevate Ballers is Nairobi's home for competitive basketball — two leagues, dozens of clubs, weekly fixtures, live standings and a growing community."
+	canonicalURL={`${Astro.url.origin}/about/`}
+	type="website"
+>
+	<AboutPage />
+</LayoutV2>

@@ -15,6 +15,8 @@ export type TeamSubmissionInput = {
   contactEmail: string;
   contactPhone: string;
   leagueId?: string;
+  seasonId?: string;
+  leagueSeasonId?: string;
   additionalInfo?: string;
   leagueName?: string;
   requireApproval: boolean;
@@ -45,6 +47,12 @@ export async function findSubmission(idempotencyKey: string): Promise<any | null
 export async function submitTeamRegistration(input: TeamSubmissionInput): Promise<{ response: Record<string, unknown>; jobIds: string[]; teamId: string }> {
   return prisma.$transaction(async (tx) => {
     const db = tx as any;
+    const edition = input.leagueSeasonId
+      ? await db.leagueSeason.findUnique({ where: { id: input.leagueSeasonId }, select: { id: true, leagueId: true, seasonId: true } })
+      : null;
+    if (input.leagueSeasonId && !edition) throw new Error('The selected League Season no longer exists.');
+    if (edition && input.leagueId && edition.leagueId !== input.leagueId) throw new Error('The selected league does not match the League Season.');
+    if (edition && input.seasonId && edition.seasonId !== input.seasonId) throw new Error('The selected season does not match the League Season.');
     const description = [input.leagueName && `League: ${input.leagueName}`, `Coach: ${input.coachName}`, input.additionalInfo && `Additional Info: ${input.additionalInfo}`].filter(Boolean).join('\n');
     const team = await createTeam({ name: input.name, description: description || undefined, approved: !input.requireApproval }, db);
     const parts = input.coachName.trim().split(/\s+/);
@@ -58,14 +66,68 @@ export async function submitTeamRegistration(input: TeamSubmissionInput): Promis
       for (const player of playersToLink) await db.registrationNotification.create({ data: { type: 'PLAYER_AUTO_LINKED', playerId: player.id, teamId: team.id, message: `Player ${player.firstName} ${player.lastName} was automatically linked to team ${team.name}`, metadata: { playerName: `${player.firstName} ${player.lastName}`, teamName: team.name } } });
     }
 
-    await db.registrationNotification.create({ data: { type: 'TEAM_REGISTERED', teamId: team.id, staffId: coachStaff.id, message: `New team registration: ${team.name} (Coach: ${input.coachName})`, metadata: { teamName: team.name, coachName: input.coachName, leagueName: input.leagueName ?? null, linkedPlayersCount: playersToLink.length, entryFee: input.entryFee, approvalRequired: input.requireApproval } } });
-    const response = { success: true, message: 'Team registration submitted successfully', entityId: team.id, status: input.requireApproval ? 'pending' : 'approved', entryFee: input.entryFee };
+    let applicationId: string | null = null;
+    let seasonTeamId: string | null = null;
+    if (edition) {
+      if (!input.requireApproval) {
+        const seasonTeam = await db.seasonTeam.upsert({
+          where: { leagueSeasonId_teamId: { leagueSeasonId: edition.id, teamId: team.id } },
+          update: {},
+          create: { leagueSeasonId: edition.id, leagueId: edition.leagueId, seasonId: edition.seasonId, teamId: team.id },
+        });
+        seasonTeamId = seasonTeam.id;
+      }
+      const application = await db.seasonRegistrationApplication.create({
+        data: {
+          leagueSeasonId: edition.id,
+          teamId: team.id,
+          requestedTeamName: team.name,
+          type: 'NEW_TEAM',
+          status: input.requireApproval ? 'PENDING' : 'APPROVED',
+          applicantName: input.coachName,
+          applicantEmail: input.contactEmail,
+          notes: input.additionalInfo,
+          seasonTeamId,
+          ...(input.requireApproval ? {} : { reviewedAt: new Date() }),
+        },
+      });
+      applicationId = application.id;
+    }
+
+    await db.registrationNotification.create({ data: { type: 'TEAM_REGISTERED', teamId: team.id, staffId: coachStaff.id, message: `New team registration: ${team.name} (Coach: ${input.coachName})`, metadata: { teamName: team.name, coachName: input.coachName, leagueName: input.leagueName ?? null, leagueSeasonId: input.leagueSeasonId ?? null, applicationId, seasonTeamId, linkedPlayersCount: playersToLink.length, entryFee: input.entryFee, approvalRequired: input.requireApproval } } });
+    const response = { success: true, message: 'Team registration submitted successfully', entityId: team.id, applicationId, seasonTeamId, status: input.requireApproval ? 'pending' : 'approved', entryFee: input.entryFee };
     const submission = await db.publicRegistrationSubmission.create({ data: { idempotencyKey: input.idempotencyKey, kind: 'TEAM', emailHash: emailHash(input.contactEmail), entityId: team.id, response, expiresAt: expiresAt() } });
     const jobs = await Promise.all([
       db.publicRegistrationEmailJob.create({ data: { submissionKey: submission.idempotencyKey, jobType: 'team_registration_auto_reply', payload: { jobType: 'team_registration_auto_reply', data: { coachName: input.coachName, email: input.contactEmail, teamName: team.name, leagueName: input.leagueName ?? null } } } }),
       db.publicRegistrationEmailJob.create({ data: { submissionKey: submission.idempotencyKey, jobType: 'team_registration_admin_notification', payload: { jobType: 'admin_notification', data: { type: 'team_registered', title: 'New Team Registration', message: `${team.name} was submitted by ${input.coachName}.`, actionUrl: `${process.env.SITE_URL || 'https://elevateballers.com'}/admin/teams/${team.id}`, actionText: 'Review Team' } } } }),
     ]);
     return { response, jobIds: jobs.map((job: any) => job.id), teamId: team.id };
+  });
+}
+
+/** Approving a public team also completes any pending edition applications and
+ * creates the append-only SeasonTeam membership for each selected edition. */
+export async function approvePendingSeasonRegistrations(teamIds: string[]): Promise<number> {
+  if (!teamIds.length) return 0;
+  return prisma.$transaction(async (tx) => {
+    const db = tx as any;
+    let approved = 0;
+    const applications = await db.seasonRegistrationApplication.findMany({
+      where: { teamId: { in: teamIds }, status: 'PENDING' },
+      select: { id: true, teamId: true, leagueSeasonId: true },
+    });
+    for (const application of applications) {
+      const edition = await db.leagueSeason.findUnique({ where: { id: application.leagueSeasonId }, select: { id: true, leagueId: true, seasonId: true } });
+      if (!edition || !application.teamId) continue;
+      const seasonTeam = await db.seasonTeam.upsert({
+        where: { leagueSeasonId_teamId: { leagueSeasonId: edition.id, teamId: application.teamId } },
+        update: {},
+        create: { leagueSeasonId: edition.id, leagueId: edition.leagueId, seasonId: edition.seasonId, teamId: application.teamId },
+      });
+      await db.seasonRegistrationApplication.update({ where: { id: application.id }, data: { status: 'APPROVED', seasonTeamId: seasonTeam.id, reviewedAt: new Date() } });
+      approved += 1;
+    }
+    return approved;
   });
 }
 

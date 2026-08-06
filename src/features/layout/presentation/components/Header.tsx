@@ -26,7 +26,7 @@ const menuItems: MenuItem[] = [
   { id: "menu-item-playoffs", href: "/playoffs/", label: "Playoffs" },
   { id: "menu-item-4656", href: "/upcoming-fixtures/", label: "Fixtures" },
   { id: "menu-item-results", href: "/matches/", label: "Results" },
-  { id: "menu-item-2242", href: "/about-club/", label: "About", title: "" },
+  { id: "menu-item-2242", href: "/about/", label: "About", title: "" },
   { id: "menu-item-rules", href: "/rules/", label: "Rules" },
   { id: "menu-item-4037", href: "/contacts/", label: "Contacts" },
   {

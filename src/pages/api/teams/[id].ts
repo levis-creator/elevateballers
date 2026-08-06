@@ -6,6 +6,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
 import type { UpdateTeamInput } from '../../../features/cms/types';
+import { approvePendingSeasonRegistrations } from '../../../features/registration/data/datasources/public-submission';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
@@ -106,6 +107,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    if (data.approved === true) await approvePendingSeasonRegistrations([team.id]);
 
     await logAudit(request, 'TEAM_UPDATED', {
       teamId: team.id,

@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ site }) => {
             { path: '/teams',            priority: '0.7', freq: 'weekly'  },
             { path: '/stats/leaders',    priority: '0.7', freq: 'weekly'  },
             { path: '/tournaments',      priority: '0.6', freq: 'weekly'  },
-            { path: '/about-club',       priority: '0.5', freq: 'monthly' },
+            { path: '/about',            priority: '0.5', freq: 'monthly' },
             { path: '/contacts',         priority: '0.5', freq: 'monthly' },
             { path: '/rules',            priority: '0.5', freq: 'monthly' },
             { path: '/league-registration', priority: '0.5', freq: 'monthly' },
