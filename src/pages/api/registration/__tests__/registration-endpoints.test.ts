@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   checkRateLimit: vi.fn(),
+  resetRateLimit: vi.fn(),
   verifyTurnstile: vi.fn(),
   checkRegistrationOpen: vi.fn(),
   createTeam: vi.fn(),
@@ -25,7 +26,7 @@ const mocks = vi.hoisted(() => ({
   siteSettingFindMany: vi.fn(),
 }));
 
-vi.mock('../../../../lib/rateLimit', () => ({ checkRateLimit: mocks.checkRateLimit }));
+vi.mock('../../../../lib/rateLimit', () => ({ checkRateLimit: mocks.checkRateLimit, resetRateLimit: mocks.resetRateLimit }));
 vi.mock('../../../../lib/turnstile', () => ({ verifyTurnstile: mocks.verifyTurnstile }));
 vi.mock('../../../../lib/registrationGate', () => ({ checkRegistrationOpen: mocks.checkRegistrationOpen }));
 vi.mock('../../../../features/cms/lib/mutations', () => ({ createTeam: mocks.createTeam, createStaff: mocks.createStaff, assignStaffToTeam: mocks.assignStaffToTeam, createPlayer: mocks.createPlayer }));
@@ -51,6 +52,7 @@ describe('public registration endpoints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.checkRateLimit.mockResolvedValue(true);
+    mocks.resetRateLimit.mockResolvedValue(undefined);
     mocks.verifyTurnstile.mockResolvedValue(true);
     mocks.checkRegistrationOpen.mockResolvedValue({ open: true });
     mocks.sendTeamRegistrationAutoReply.mockResolvedValue(undefined);
@@ -105,6 +107,13 @@ describe('public registration endpoints', () => {
     expect(response.status).toBe(201);
     expect(mocks.checkRegistrationOpen).toHaveBeenCalledWith(undefined, undefined, undefined, { siteMasterOpen: true });
     expect(mocks.submitTeamRegistration).toHaveBeenCalledWith(expect.objectContaining({ name: 'Mavs Basketball', contactEmail: 'jane@example.com', contactPhone: '+254700000000', idempotencyKey: 'test-idempotency-key' }));
+  });
+
+  it('releases consumed limits when team persistence fails', async () => {
+    mocks.submitTeamRegistration.mockRejectedValueOnce(new Error('database unavailable'));
+    const response = await postTeam({ request: request(teamPayload) } as any);
+    expect(response.status).toBe(500);
+    expect(mocks.resetRateLimit).toHaveBeenCalledTimes(2);
   });
 
   it('returns a generic response for duplicate players', async () => {

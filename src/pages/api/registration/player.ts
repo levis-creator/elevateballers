@@ -7,7 +7,7 @@ import { checkRegistrationOpen } from '../../../lib/registrationGate';
 import { publishToJob } from '../../../lib/qstash';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 import { findSubmission, submitPlayerRegistration } from '../../../features/registration/data/datasources/public-submission';
-import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
+import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, releasePublicRegistrationLimit, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
 import { registrationWindow, resolvePublicRegistrationSettings, siteSettingsService } from '../../../features/settings';
 
 export const prerender = false;
@@ -27,6 +27,7 @@ async function loadRegistrationSettings() {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  let consumedLimit: { ip: string; email: string } | null = null;
   try {
     const ip = getClientIp(request);
     const rawData = await request.json();
@@ -45,6 +46,7 @@ export const POST: APIRoute = async ({ request }) => {
     const validationError = validatePlayerRegistration(data);
     if (validationError) return new Response(JSON.stringify({ error: validationError }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     if (!await allowPublicRegistration('player', ip, data.email)) return genericRegistrationResponse(429);
+    consumedLimit = { ip, email: data.email };
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
     if (!await verifyTurnstile(turnstileToken, ip)) return new Response(JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId, { siteMasterOpen: true });
@@ -56,6 +58,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (duplicateEmail || duplicateName) return genericRegistrationResponse();
 
     const result = await submitPlayerRegistration({ idempotencyKey, firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, position: data.position, jerseyNumber: data.jerseyNumber, height: data.height, weight: data.weight, teamName: data.teamName, teamId, additionalInfo: data.additionalInfo, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee });
+    consumedLimit = null;
     await logAudit(request, 'PLAYER_REGISTRATION_SUBMITTED', { playerId: result.playerId, name: `${data.firstName} ${data.lastName}`.trim() });
     for (const jobId of result.jobIds) {
       if (!await publishToJob('/api/jobs/send-email', { registrationJobId: jobId })) void processRegistrationEmailJob(jobId).catch((error) => console.error('[registration] player email job failed:', error));
@@ -67,6 +70,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (key) { const existing = await findSubmission(key); if (existing?.response) return responseFromStored(existing.response); }
       return genericRegistrationResponse();
     }
+    if (consumedLimit) await releasePublicRegistrationLimit('player', consumedLimit.ip, consumedLimit.email);
     return handleApiError(error, 'submit player registration', request);
   }
 };

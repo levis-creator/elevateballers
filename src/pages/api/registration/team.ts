@@ -7,7 +7,7 @@ import { checkRegistrationOpen } from '../../../lib/registrationGate';
 import { publishToJob } from '../../../lib/qstash';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 import { findSubmission, submitTeamRegistration } from '../../../features/registration/data/datasources/public-submission';
-import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, validateTeamRegistration } from '../../../lib/publicRegistrationSecurity';
+import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, releasePublicRegistrationLimit, validateTeamRegistration } from '../../../lib/publicRegistrationSecurity';
 import { registrationWindow, resolvePublicRegistrationSettings, siteSettingsService } from '../../../features/settings';
 
 export const prerender = false;
@@ -35,6 +35,7 @@ async function safeCount(model: { count?: (args: unknown) => Promise<number> } |
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  let consumedLimit: { ip: string; email: string } | null = null;
   try {
     const ip = getClientIp(request);
     const rawData = await request.json();
@@ -51,6 +52,7 @@ export const POST: APIRoute = async ({ request }) => {
     const validationError = validateTeamRegistration(data);
     if (validationError) return new Response(JSON.stringify({ error: validationError }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     if (!await allowPublicRegistration('team', ip, data.contactEmail)) return genericRegistrationResponse(429);
+    consumedLimit = { ip, email: data.contactEmail };
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
     if (!await verifyTurnstile(turnstileToken, ip)) return new Response(JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId, { siteMasterOpen: true });
@@ -69,6 +71,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (data.leagueId) leagueName = (await prisma.league.findUnique({ where: { id: data.leagueId }, select: { name: true } }))?.name;
 
     const result = await submitTeamRegistration({ idempotencyKey, name: data.name, coachName: data.coachName, contactEmail: data.contactEmail, contactPhone: data.contactPhone, leagueId: data.leagueId, seasonId: data.seasonId, leagueSeasonId: data.leagueSeasonId, additionalInfo: data.additionalInfo, leagueName, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee });
+    consumedLimit = null;
     await logAudit(request, 'TEAM_REGISTRATION_SUBMITTED', { teamId: result.teamId, teamName: data.name, coachName: data.coachName });
     for (const jobId of result.jobIds) {
       if (!await publishToJob('/api/jobs/send-email', { registrationJobId: jobId })) void processRegistrationEmailJob(jobId).catch((error) => console.error('[registration] team email job failed:', error));
@@ -80,6 +83,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (key) { const existing = await findSubmission(key); if (existing?.response) return responseFromStored(existing.response); }
       return genericRegistrationResponse();
     }
+    if (consumedLimit) await releasePublicRegistrationLimit('team', consumedLimit.ip, consumedLimit.email);
     return handleApiError(error, 'submit team registration', request);
   }
 };
