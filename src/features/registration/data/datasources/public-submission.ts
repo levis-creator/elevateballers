@@ -4,6 +4,10 @@ import { createPlayer } from '../../../cms/lib/mutations';
 import { createStaff, createTeam, assignStaffToTeam } from '../../../cms/lib/mutations';
 
 const EXPIRY_DAYS = 30;
+// Prisma's interactive-transaction default is 5s. Public registration performs
+// several related writes (entity, staff/roster, audit notification, idempotency
+// record and email jobs), so normal serverless/database latency can exceed it.
+const PUBLIC_REGISTRATION_TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 30_000 } as const;
 
 function emailHash(email: string): string { return createHash('sha256').update(email).digest('hex'); }
 function expiresAt(): Date { const date = new Date(); date.setDate(date.getDate() + EXPIRY_DAYS); return date; }
@@ -102,7 +106,7 @@ export async function submitTeamRegistration(input: TeamSubmissionInput): Promis
       db.publicRegistrationEmailJob.create({ data: { submissionKey: submission.idempotencyKey, jobType: 'team_registration_admin_notification', payload: { jobType: 'admin_notification', data: { type: 'team_registered', title: 'New Team Registration', message: `${team.name} was submitted by ${input.coachName}.`, actionUrl: `${process.env.SITE_URL || 'https://elevateballers.com'}/admin/teams/${team.id}`, actionText: 'Review Team' } } } }),
     ]);
     return { response, jobIds: jobs.map((job: any) => job.id), teamId: team.id };
-  });
+  }, PUBLIC_REGISTRATION_TRANSACTION_OPTIONS);
 }
 
 /** Approving a public team also completes any pending edition applications and
@@ -128,7 +132,7 @@ export async function approvePendingSeasonRegistrations(teamIds: string[]): Prom
       approved += 1;
     }
     return approved;
-  });
+  }, PUBLIC_REGISTRATION_TRANSACTION_OPTIONS);
 }
 
 export async function submitPlayerRegistration(input: PlayerSubmissionInput): Promise<{ response: Record<string, unknown>; jobIds: string[]; playerId: string }> {
@@ -144,5 +148,5 @@ export async function submitPlayerRegistration(input: PlayerSubmissionInput): Pr
       db.publicRegistrationEmailJob.create({ data: { submissionKey: submission.idempotencyKey, jobType: 'player_registration_admin_notification', payload: { jobType: 'admin_notification', data: { type: 'player_registered', title: 'New Player Registration', message: `${input.firstName} ${input.lastName} submitted a player registration.`, actionUrl: `${process.env.SITE_URL || 'https://elevateballers.com'}/admin/players/${player.id}`, actionText: 'Review Player' } } } }),
     ]);
     return { response, jobIds: jobs.map((job: any) => job.id), playerId: player.id };
-  });
+  }, PUBLIC_REGISTRATION_TRANSACTION_OPTIONS);
 }
