@@ -68,6 +68,8 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
   const [teamsLoading, setTeamsLoading] = useState(true);
   const [teamTurnstileToken, setTeamTurnstileToken] = useState<string | null>(null);
   const [playerTurnstileToken, setPlayerTurnstileToken] = useState<string | null>(null);
+  const [teamTurnstileReset, setTeamTurnstileReset] = useState(0);
+  const [playerTurnstileReset, setPlayerTurnstileReset] = useState(0);
 
   useEffect(() => {
     if (!settings.playerMode && activeTab === 'player') setActiveTab('team');
@@ -239,6 +241,8 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
       console.error('Error submitting team registration:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit team registration');
     } finally {
+      setTeamTurnstileToken(null);
+      setTeamTurnstileReset((value) => value + 1);
       setSubmitting(false);
     }
   };
@@ -306,6 +310,8 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
       console.error('Error submitting player registration:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit player registration');
     } finally {
+      setPlayerTurnstileToken(null);
+      setPlayerTurnstileReset((value) => value + 1);
       setSubmitting(false);
     }
   };
@@ -576,6 +582,7 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
 
           <TurnstileWidget
             siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+            resetKey={teamTurnstileReset}
             onSuccess={setTeamTurnstileToken}
             onExpire={() => setTeamTurnstileToken(null)}
             onError={() => setTeamTurnstileToken(null)}
@@ -778,6 +785,7 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
 
           <TurnstileWidget
             siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+            resetKey={playerTurnstileReset}
             onSuccess={setPlayerTurnstileToken}
             onExpire={() => setPlayerTurnstileToken(null)}
             onError={() => setPlayerTurnstileToken(null)}

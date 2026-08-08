@@ -23,6 +23,8 @@ declare global {
 
 interface Props {
   siteKey: string;
+  /** Changing this value removes the consumed widget and renders a fresh challenge. */
+  resetKey?: string | number;
   onSuccess: (token: string) => void;
   onExpire?: () => void;
   onError?: () => void;
@@ -34,7 +36,7 @@ interface Props {
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
 
-export default function TurnstileWidget({ siteKey, onSuccess, onExpire, onError, theme, size, appearance }: Props) {
+export default function TurnstileWidget({ siteKey, resetKey, onSuccess, onExpire, onError, theme, size, appearance }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -85,7 +87,7 @@ export default function TurnstileWidget({ siteKey, onSuccess, onExpire, onError,
         }
       }
     };
-  }, [siteKey]);
+  }, [siteKey, resetKey]);
 
   return <div ref={containerRef} style={{ margin: '12px 0' }} />;
 }

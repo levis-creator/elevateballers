@@ -98,6 +98,8 @@ export default function RegistrationFormV2({ settings, registrationOpen }: { set
 	const [teamsLoading, setTeamsLoading] = useState(true);
 	const [teamTurnstileToken, setTeamTurnstileToken] = useState<string | null>(null);
 	const [playerTurnstileToken, setPlayerTurnstileToken] = useState<string | null>(null);
+	const [teamTurnstileReset, setTeamTurnstileReset] = useState(0);
+	const [playerTurnstileReset, setPlayerTurnstileReset] = useState(0);
 	const [seasons, setSeasons] = useState<Season[]>([]);
 	const [seasonsLoading, setSeasonsLoading] = useState(false);
 	const [agreed, setAgreed] = useState(false);
@@ -247,6 +249,8 @@ export default function RegistrationFormV2({ settings, registrationOpen }: { set
 			console.error("Error submitting team registration:", err);
 			setError(err instanceof Error ? err.message : "Failed to submit team registration");
 		} finally {
+			setTeamTurnstileToken(null);
+			setTeamTurnstileReset((value) => value + 1);
 			setSubmitting(false);
 		}
 	};
@@ -295,6 +299,8 @@ export default function RegistrationFormV2({ settings, registrationOpen }: { set
 			console.error("Error submitting player registration:", err);
 			setError(err instanceof Error ? err.message : "Failed to submit player registration");
 		} finally {
+			setPlayerTurnstileToken(null);
+			setPlayerTurnstileReset((value) => value + 1);
 			setSubmitting(false);
 		}
 	};
@@ -448,7 +454,7 @@ export default function RegistrationFormV2({ settings, registrationOpen }: { set
 								</div>
 							)}
 
-							<div className="col-span-full"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} onSuccess={setTeamTurnstileToken} onExpire={() => setTeamTurnstileToken(null)} onError={() => setTeamTurnstileToken(null)} /></div>
+							<div className="col-span-full"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} resetKey={teamTurnstileReset} onSuccess={setTeamTurnstileToken} onExpire={() => setTeamTurnstileToken(null)} onError={() => setTeamTurnstileToken(null)} /></div>
 							<Consent agreed={agreed} setAgreed={setAgreed} />
 							<button type="submit" disabled={!canSubmitTeam} className={submitCls}>
 								{submitting ? "Submitting…" : registrationBlocked ? "Registration Closed" : "Submit Registration"}
@@ -515,7 +521,7 @@ export default function RegistrationFormV2({ settings, registrationOpen }: { set
 								<textarea name="additionalInfo" value={playerFormData.additionalInfo} onChange={handlePlayerChange} placeholder="Any additional information about yourself" rows={4} className={`${inputCls} resize-y`} />
 							</label>
 
-							<div className="col-span-full"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} onSuccess={setPlayerTurnstileToken} onExpire={() => setPlayerTurnstileToken(null)} onError={() => setPlayerTurnstileToken(null)} /></div>
+							<div className="col-span-full"><TurnstileWidget siteKey={PUBLIC_TURNSTILE_SITE_KEY} resetKey={playerTurnstileReset} onSuccess={setPlayerTurnstileToken} onExpire={() => setPlayerTurnstileToken(null)} onError={() => setPlayerTurnstileToken(null)} /></div>
 							<Consent agreed={agreed} setAgreed={setAgreed} />
 							<button type="submit" disabled={!canSubmitPlayer} className={submitCls}>
 								{submitting ? "Submitting…" : "Submit Registration"}
