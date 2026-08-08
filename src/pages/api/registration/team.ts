@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (!await allowPublicRegistration('team', ip, data.contactEmail)) return genericRegistrationResponse(429);
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
     if (!await verifyTurnstile(turnstileToken, ip)) return new Response(JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId);
+    const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId, { siteMasterOpen: true });
     if (!gate.open) return new Response(JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const windowStart = /^\d{4}-\d{2}-\d{2}$/.test(registrationSettings.opens) ? new Date(`${registrationSettings.opens}T00:00:00+03:00`) : new Date(0);
     const [windowSubmissions, seasonTeams, pendingApplications] = await Promise.all([

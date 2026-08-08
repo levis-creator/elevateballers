@@ -17,6 +17,13 @@ export interface RegistrationGateResult {
   status?: RegistrationStatus;
 }
 
+export interface RegistrationGateOptions {
+  /** The Site Settings master switch has already been validated by the caller.
+   * Keep league/edition date windows, but do not let a legacy per-league switch
+   * contradict the public registration setting. */
+  siteMasterOpen?: boolean;
+}
+
 /**
  * Checks whether registration is currently open for the given league (and
  * optional season). A missing/blank leagueId leaves the gate open — callers
@@ -26,6 +33,7 @@ export async function checkRegistrationOpen(
   leagueId?: string | null,
   seasonId?: string | null,
   leagueSeasonId?: string | null,
+  options: RegistrationGateOptions = {},
 ): Promise<RegistrationGateResult> {
   if (!leagueId) return { open: true };
 
@@ -53,7 +61,10 @@ export async function checkRegistrationOpen(
       })
     : null;
 
-  const status = isRegistrationOpen(league, season);
+  const status = isRegistrationOpen(
+    options.siteMasterOpen ? { ...league, registrationOpen: true } : league,
+    season,
+  );
   if (status.open) return { open: true, status };
 
   return { open: false, status, message: registrationClosedMessage(status) };

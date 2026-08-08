@@ -177,7 +177,7 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
       }
     : selectedSeason;
   const registrationStatus = selectedLeague
-    ? isRegistrationOpen(selectedLeague, registrationSeason)
+    ? isRegistrationOpen({ ...selectedLeague, registrationOpen: true }, registrationSeason)
     : { open: true };
   const registrationBlocked = !registrationOpen || !registrationStatus.open;
 
