@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PUBLIC_TURNSTILE_SITE_KEY } from "astro:env/client";
 import TurnstileWidget from "@/components/TurnstileWidget";
-import type { ContactTopic } from "@/features/settings";
+import type { ContactTopic } from "@/features/settings/application/contactPageSettings";
 
 /**
  * v2 contact form — React island. Posts to the existing, Turnstile-protected

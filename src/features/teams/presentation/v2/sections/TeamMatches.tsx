@@ -1,7 +1,7 @@
 import { useTeamViewStore } from "@/features/teams/presentation/stores/v2/useTeamViewStore";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { ResultMatch, UpcomingMatch } from "@/features/teams/domain/entities/team-detail";
-import type { PublicTeamPageSettings } from '@/features/settings';
+import type { PublicTeamPageSettings } from '@/features/settings/application/teamPageSettings';
 
 interface Props {
 	recent: ResultMatch[];

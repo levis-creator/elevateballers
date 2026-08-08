@@ -1,29 +1,37 @@
-// Conditional Prisma client loader
-// - Vercel: Use ESM imports (prisma.vercel.ts) for proper bundling
-// - cPanel: Use CommonJS require (prisma.cpanel.ts) for compatibility
-//
-// Set DEPLOY_TARGET=vercel or VERCEL=1 for Vercel deployments.
-// Defaults to cPanel mode when neither is set.
+// Conditional server-only Prisma loader.
+// `import.meta.env.SSR` is replaced at build time by Vite. Keeping both
+// adapter imports inside this branch prevents Node and MariaDB modules from
+// entering hydrated browser islands when a shared module is imported there.
+import type { PrismaClient } from '@prisma/client';
 
-const isVercel = process.env.VERCEL === '1' || process.env.DEPLOY_TARGET === 'vercel';
+let prismaInstance: PrismaClient;
 
-if (!process.env.VERCEL && !process.env.DEPLOY_TARGET) {
-  console.warn(
-    '[prisma] DEPLOY_TARGET is not set. Defaulting to cPanel (CommonJS) mode. ' +
-    'Set DEPLOY_TARGET=vercel or VERCEL=1 for Vercel deployments.'
-  );
-}
+if (import.meta.env.SSR) {
+  const isVercel = process.env.VERCEL === '1' || process.env.DEPLOY_TARGET === 'vercel';
 
-let prismaInstance;
+  if (!process.env.VERCEL && !process.env.DEPLOY_TARGET) {
+    console.warn(
+      '[prisma] DEPLOY_TARGET is not set. Defaulting to cPanel (CommonJS) mode. ' +
+      'Set DEPLOY_TARGET=vercel or VERCEL=1 for Vercel deployments.'
+    );
+  }
 
-if (isVercel) {
-  // ESM-based client for Vercel (allows Vite to bundle it correctly)
-  const mod = await import('./prisma.vercel');
-  prismaInstance = mod.prisma;
+  if (isVercel) {
+    const mod = await import('./prisma.vercel');
+    prismaInstance = mod.prisma;
+  } else {
+    const mod = await import('./prisma.cpanel');
+    prismaInstance = mod.prisma;
+  }
 } else {
-  // CommonJS-based client for cPanel
-  const mod = await import('./prisma.cpanel');
-  prismaInstance = mod.prisma;
+  // Fail only if browser code actually tries to use the database. A proxy
+  // keeps accidental type/helper imports harmless while preserving a clear
+  // runtime error for an invalid client-side query.
+  prismaInstance = new Proxy({} as PrismaClient, {
+    get() {
+      throw new Error('Prisma is server-only and cannot be used in browser code.');
+    },
+  });
 }
 
 export const prisma = prismaInstance;

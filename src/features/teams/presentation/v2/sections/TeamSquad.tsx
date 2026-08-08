@@ -2,7 +2,7 @@ import { useTeamViewStore } from "@/features/teams/presentation/stores/v2/useTea
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import type { SquadPlayer } from "@/features/teams/domain/entities/team-detail";
 import { useState } from 'react';
-import type { PublicTeamPageSettings } from '@/features/settings';
+import type { PublicTeamPageSettings } from '@/features/settings/application/teamPageSettings';
 
 interface Props {
 	players: SquadPlayer[];
