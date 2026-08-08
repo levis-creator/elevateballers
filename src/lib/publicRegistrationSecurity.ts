@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { checkRateLimit } from './rateLimit';
+import { checkRateLimit, resetRateLimit } from './rateLimit';
 
 export const PUBLIC_REGISTRATION_LIMITS = {
   teamName: 120,
@@ -13,6 +13,7 @@ export const PUBLIC_REGISTRATION_LIMITS = {
 } as const;
 
 export type PublicRegistrationKind = 'team' | 'player';
+const PUBLIC_REGISTRATION_RATE_LIMIT_VERSION = 'v2';
 
 export function normalizeText(value: unknown): string {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
@@ -23,7 +24,7 @@ export function normalizeEmail(value: unknown): string {
 }
 
 export function normalizePhone(value: unknown): string {
-  return normalizeText(value).replace(/[\s()\-]/g, '');
+  return normalizeText(value).replace(/[\s()-]/g, '');
 }
 
 export function normalizeOptionalText(value: unknown): string | undefined {
@@ -96,11 +97,26 @@ function emailKey(email: string): string {
   return createHash('sha256').update(email).digest('hex').slice(0, 24);
 }
 
+function registrationRateLimitKeys(kind: PublicRegistrationKind, ip: string, email: string): { ip: string; email: string } {
+  const prefix = `public-registration:${PUBLIC_REGISTRATION_RATE_LIMIT_VERSION}:${kind}`;
+  return {
+    ip: `${prefix}:ip:${ip || 'unknown'}`,
+    email: `${prefix}:email:${emailKey(email)}`,
+  };
+}
+
 export async function allowPublicRegistration(kind: PublicRegistrationKind, ip: string, email: string): Promise<boolean> {
-  const prefix = `public-registration:${kind}`;
-  const ipAllowed = await checkRateLimit(`${prefix}:ip:${ip || 'unknown'}`, 5, 60 * 60 * 1000);
+  const keys = registrationRateLimitKeys(kind, ip, email);
+  const ipAllowed = await checkRateLimit(keys.ip, 5, 60 * 60 * 1000);
   if (!ipAllowed) return false;
-  return checkRateLimit(`${prefix}:email:${emailKey(email)}`, 3, 24 * 60 * 60 * 1000);
+  return checkRateLimit(keys.email, 3, 24 * 60 * 60 * 1000);
+}
+
+/** Release quota after a server-side persistence failure. Validation and
+ * Turnstile failures intentionally remain counted as abusive/invalid attempts. */
+export async function releasePublicRegistrationLimit(kind: PublicRegistrationKind, ip: string, email: string): Promise<void> {
+  const keys = registrationRateLimitKeys(kind, ip, email);
+  await Promise.all([resetRateLimit(keys.ip), resetRateLimit(keys.email)]);
 }
 
 export function genericRegistrationResponse(status = 400): Response {
