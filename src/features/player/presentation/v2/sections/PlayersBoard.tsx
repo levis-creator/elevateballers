@@ -2,7 +2,7 @@ import { usePlayersDirectoryStore } from "@/features/player/presentation/stores/
 import type { PlayerSort, PosFilter } from "@/features/player/presentation/stores/v2/usePlayersDirectoryStore";
 import type { PlayersDirectoryData, PlayerCard } from "@/features/player/domain/entities/players-directory-v2";
 import { useEffect } from 'react';
-import { playersListToken, type PublicPlayersListSettings } from '@/features/settings';
+import { playersListToken, type PublicPlayersListSettings } from '@/features/settings/application/playersListSettings';
 
 interface Props {
 	data: PlayersDirectoryData;
