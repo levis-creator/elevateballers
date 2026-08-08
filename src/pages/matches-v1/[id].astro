@@ -19,6 +19,7 @@ import type { MatchWithFullDetails } from "../../features/cms/types";
 import PageLoader from "../../components/PageLoader";
 import ContentLoader from "../../components/ContentLoader";
 import { getDisplayImageUrl } from "../../lib/asset-url";
+import { fetchMatchHighlightUrl } from '@/features/matches/data/datasources/match-detail-v2';
 
 export const prerender = false;
 
@@ -71,7 +72,11 @@ const [matchSettingRecords, currentUser] = await Promise.all([
   getCurrentUser(Astro.request).catch(() => null),
 ]);
 const matchSettings = resolvePublicMatchPageSettings(matchSettingRecords);
-const canViewBoxScore = canViewMatchBoxScore(matchSettings.boxScore, Boolean(currentUser), Boolean((currentUser as any)?.userRoles?.length));
+const staff = Boolean((currentUser as any)?.userRoles?.length);
+const canViewBoxScore = canViewMatchBoxScore(matchSettings.boxScore, Boolean(currentUser), staff);
+if (match?.status === 'COMPLETED' && !(match as any).resultPublishedAt && !staff) return Astro.rewrite('/404');
+const highlightUrl = match ? await fetchMatchHighlightUrl(match.id, matchSlug) : null;
+const publicMatch = match && !canViewBoxScore ? { ...match, matchPlayers: [] } : match;
 const matchDate = match?.date
   ? new Date(match.date).toLocaleDateString("en-US", {
       timeZone: MATCH_TIMEZONE,
@@ -143,7 +148,7 @@ const cacheControl =
   matchStatus === "COMPLETED"
     ? "public, s-maxage=86400, stale-while-revalidate=604800"
     : matchStatus === "LIVE"
-      ? "public, s-maxage=15, stale-while-revalidate=60"
+      ? `public, s-maxage=${Math.max(1, matchSettings.delay)}, stale-while-revalidate=${Math.max(1, matchSettings.delay)}`
       : "public, s-maxage=60, stale-while-revalidate=300";
 Astro.response.headers.set("Cache-Control", cacheControl);
 
@@ -295,7 +300,7 @@ const eventStatusUrl = "https://schema.org/EventScheduled";
                       />
                     ) : match ? (
                       <div style="max-width: 960px; margin: 0 auto;">
-                        <MatchDetail client:load match={match} settings={matchSettings} canViewBoxScore={canViewBoxScore} />
+                        <MatchDetail client:load match={publicMatch!} settings={matchSettings} canViewBoxScore={canViewBoxScore} highlightUrl={highlightUrl} />
                       </div>
                     ) : null
                   }

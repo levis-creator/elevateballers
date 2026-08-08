@@ -234,7 +234,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 				select: { id: true, slug: true, firstName: true, lastName: true, team: { select: { name: true } } },
 			}),
 			prisma.match.findMany({
-				where: { status: "COMPLETED" },
+				where: { status: "COMPLETED", resultPublishedAt: { not: null } },
 				select: {
 					id: true,
 					status: true,
@@ -276,7 +276,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 		};
 
 		const [completed, teamCount, awardCount] = await Promise.all([
-			prisma.match.count({ where: { status: "COMPLETED" } }),
+			prisma.match.count({ where: { status: "COMPLETED", resultPublishedAt: { not: null } } }),
 			prisma.team.count({ where: { approved: true } }),
 			prisma.playerOfTheWeek.count(),
 		]);

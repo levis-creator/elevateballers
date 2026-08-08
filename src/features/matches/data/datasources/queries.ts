@@ -51,6 +51,7 @@ export async function getCompletedMatches(limit?: number): Promise<MatchWithTeam
   const matches = await (prisma.match.findMany({
     where: {
       status: 'COMPLETED',
+      resultPublishedAt: { not: null },
     },
     // @ts-expect-error - Prisma types will be correct after migration
     include: {
@@ -141,6 +142,9 @@ export async function getFilteredMatches(
   // Status filter
   if (filter.status && filter.status !== 'all') {
     where.status = filter.status;
+    if (filter.status === 'COMPLETED' && !filter.includeUnpublishedFinals) {
+      where.resultPublishedAt = { not: null };
+    }
   }
 
   // Stage filter

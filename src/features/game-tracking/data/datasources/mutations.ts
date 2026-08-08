@@ -250,7 +250,7 @@ export async function startGame(matchId: string, gameRulesId?: string): Promise<
  * End game (set match status to COMPLETED)
  * Automatically calculates and tracks the winner (or sets to null for draws)
  */
-export async function endGame(matchId: string): Promise<boolean> {
+export async function endGame(matchId: string, publishFinal = false): Promise<boolean> {
   try {
     const match = await prisma.match.findUnique({
       where: { id: matchId },
@@ -301,6 +301,7 @@ export async function endGame(matchId: string): Promise<boolean> {
         data: {
           status: 'COMPLETED',
           clockRunning: false,
+          resultPublishedAt: publishFinal ? new Date() : null,
         },
       });
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { PermissionProvider, usePermissions } from '@/features/rbac/usePermissions';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { ChevronLeft, Zap, AlertCircle, RefreshCw, Repeat } from 'lucide-react';
+import { ChevronLeft, Zap, AlertCircle, RefreshCw, Repeat, Upload } from 'lucide-react';
 import type { MatchView, BoxRow, PbpEvent, MatchState, TimelineKind } from '../../domain/entities/match-detail-v2';
 import { computeLeaders } from '../../domain/usecases/match-detail-leaders';
 import { useMatchDetailData } from './hooks/useMatchDetailData';
@@ -498,6 +498,43 @@ function ConsoleButton({ matchId, state }: { matchId: string; state: MatchState 
   );
 }
 
+function FinalPublicationButton({ view, onPublished }: { view: MatchView; onPublished: () => void }) {
+  const { can } = usePermissions();
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState('');
+  if (view.state !== 'final') return null;
+  if (view.resultPublished) {
+    return <span className="rounded-lg border border-[#1f9d55]/30 bg-[#1f9d55]/10 px-3 py-2 font-['Space_Mono'] text-[10px] uppercase tracking-[0.08em] text-[#1f9d55]">Final published</span>;
+  }
+  if (!can('matches:update')) return null;
+
+  const publish = async () => {
+    setPublishing(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/matches/${view.id}/publish-final`, { method: 'POST' });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'Unable to publish final');
+      }
+      onPublished();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to publish final');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {error && <span className="font-['Archivo'] text-[11px] text-[var(--brand)]">{error}</span>}
+      <button type="button" onClick={() => void publish()} disabled={publishing} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2.5 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.05em] text-white disabled:opacity-60">
+        <Upload className="h-4 w-4" /> {publishing ? 'Publishing…' : 'Publish Final'}
+      </button>
+    </div>
+  );
+}
+
 function MatchDetailContent({ matchId }: { matchId: string }) {
   const { view, loading, error, refetch } = useMatchDetailData(matchId);
   const [tab, setTab] = useState<TabKey>('box');
@@ -544,7 +581,10 @@ function MatchDetailContent({ matchId }: { matchId: string }) {
         <a href="/admin/matches" className="inline-flex items-center gap-1.5 font-['Space_Mono'] text-[11px] uppercase tracking-[0.1em] text-[var(--txm)] no-underline hover:text-[var(--tx)]">
           <ChevronLeft className="h-4 w-4" /> All Matches
         </a>
-        <ConsoleButton matchId={view.id || matchId} state={view.state} />
+        <div className="flex flex-wrap items-center gap-2">
+          <FinalPublicationButton view={view} onPublished={refetch} />
+          <ConsoleButton matchId={view.id || matchId} state={view.state} />
+        </div>
       </div>
 
       <div className="space-y-4">

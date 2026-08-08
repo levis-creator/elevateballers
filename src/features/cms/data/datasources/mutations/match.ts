@@ -70,6 +70,7 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
     team1Score: data.team1Score,
     team2Score: data.team2Score,
     status: data.status || 'UPCOMING',
+    resultPublishedAt: data.resultPublishedAt ?? null,
   };
 
   if (data.stage && data.stage.trim() !== '') matchData.stage = data.stage;
@@ -144,6 +145,7 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
   if (data.team1Score !== undefined) updateData.team1Score = data.team1Score;
   if (data.team2Score !== undefined) updateData.team2Score = data.team2Score;
   if (data.status !== undefined) updateData.status = data.status;
+  if (data.resultPublishedAt !== undefined) updateData.resultPublishedAt = data.resultPublishedAt;
   if (data.duration !== undefined) updateData.duration = data.duration;
 
   if (data.stage !== undefined) {

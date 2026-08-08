@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLeadersStore } from "@/features/stats/presentation/stores/v2/useLeadersStore";
 import { ALL_LEAGUES } from "@/features/stats/domain/entities/leaders-v2";
 import type { LeadersData, LeaderRow, StatKey } from "@/features/stats/domain/entities/leaders-v2";
 import type { PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 import { leadersToken, type PublicLeadersSettings } from "@/features/settings/application/leadersSettings";
+import { resolveConfiguredLeaderCategories } from "@/features/stats/domain/usecases/configured-leader-categories";
 
 interface Props {
 	data: LeadersData;
@@ -39,24 +40,11 @@ function Select({ value, options, onChange, suffix }: { value: string; options: 
 
 /** Stat-Leaders board — hero controls + category tabs + podium + full leaderboard.
  *  React island; the selected stat/league/season live in a Zustand store. */
-const statKeyFor = (name: string): StatKey | null => {
-	const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-	if (normalized.startsWith("point")) return "Points";
-	if (normalized.startsWith("rebound")) return "Rebounds";
-	if (normalized.startsWith("assist")) return "Assists";
-	if (normalized.startsWith("steal")) return "Steals";
-	if (normalized.startsWith("block")) return "Blocks";
-	if (normalized.includes("3") || normalized.includes("three")) return "3-Pointers";
-	return null;
-};
-
 export default function LeadersBoard({ data, competitionSettings, settings }: Props) {
 	const { stat, league, season, setStat, setLeague, setSeason } = useLeadersStore();
-	const categories = settings.categories
-		.map((category) => ({ ...category, key: statKeyFor(category.name) }))
-		.filter((category): category is typeof category & { key: StatKey } => Boolean(category.key))
-		.filter((category, index, all) => all.findIndex((item) => item.key === category.key) === index);
-	const activeCategory = categories.find((category) => category.key === stat) ?? categories[0];
+	const categories = resolveConfiguredLeaderCategories(settings.categories);
+	const [selectedStat, setSelectedStat] = useState<StatKey>(() => categories[0]?.key ?? stat);
+	const activeCategory = categories.find((category) => category.key === selectedStat) ?? categories[0];
 	const activeStat = activeCategory?.key ?? "Points";
 	const activeSeason = season || data.defaultSeason;
 	const fallbackLeague = competitionSettings.allLabel || data.leagues[0] || ALL_LEAGUES;
@@ -76,7 +64,7 @@ export default function LeadersBoard({ data, competitionSettings, settings }: Pr
 		.filter((r) => r.season === activeSeason)
 		.filter((r) => activeLeague === competitionSettings.allLabel || r.league === activeLeague)
 		.filter((r) => r.gp >= settings.minGames)
-		.map((r) => ({ row: r, val: settings.perGame ? r.vals[activeStat] : r.vals[activeStat] * r.gp }))
+		.map((r) => ({ row: r, val: settings.perGame ? r.vals[activeStat] : r.totals[activeStat] }))
 		.sort((a, b) => b.val - a.val);
 
 	const leaderboard = pool.slice(0, settings.boardRows);
@@ -84,6 +72,10 @@ export default function LeadersBoard({ data, competitionSettings, settings }: Pr
 	const tags = ["Leader", "Runner-up", "Third"];
 	const fmt = (v: number) => settings.perGame ? v.toFixed(1) : String(Math.round(v));
 	const valueMode = settings.perGame ? "per game" : "season total";
+	const selectCategory = (key: StatKey) => {
+		setSelectedStat(key);
+		setStat(key);
+	};
 
 	return (
 		<>
@@ -111,7 +103,7 @@ export default function LeadersBoard({ data, competitionSettings, settings }: Pr
 				<div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-2 px-8 py-5 max-[960px]:px-6">
 					<span className="mr-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Category</span>
 					{categories.map((category) => (
-						<button key={category.key} type="button" onClick={() => setStat(category.key)} className={pill(activeStat === category.key)}>
+						<button key={category.key} type="button" onClick={() => selectCategory(category.key)} className={pill(activeStat === category.key)}>
 							{category.name}
 						</button>
 					))}

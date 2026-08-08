@@ -9,6 +9,7 @@ import { cacheDel, cacheInvalidatePattern } from '../../../../lib/cache';
 import { publishToJob } from '../../../../lib/qstash';
 import { prisma } from '../../../../lib/prisma';
 import { standingsCachePattern } from '../../../../features/standings/lib/standings-cache';
+import { resolvePublicMatchPageSettings, siteSettingsService } from '../../../../features/settings';
 export const prerender = false;
 
 /**
@@ -34,7 +35,10 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const success = await endGame(matchId);
+    const matchSettings = resolvePublicMatchPageSettings(
+      await siteSettingsService.list('match').catch(() => []),
+    );
+    const success = await endGame(matchId, matchSettings.autoPublish);
 
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to end game' }), {
@@ -65,8 +69,8 @@ export const POST: APIRoute = async ({ params, request }) => {
     }
 
     const state = await getGameState(matchId);
-    await logAudit(request, 'GAME_ENDED', { matchId });
-    return new Response(JSON.stringify(state), {
+    await logAudit(request, 'GAME_ENDED', { matchId, finalPublished: matchSettings.autoPublish });
+    return new Response(JSON.stringify({ ...state, finalPublished: matchSettings.autoPublish }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

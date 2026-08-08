@@ -126,6 +126,8 @@ export interface MatchView {
 	/** Canonical slug, or null — the route 301s the cuid URL to this. */
 	slug: string | null;
 	state: MatchState;
+	/** Whether a completed result is visible on the public site. */
+	resultPublished: boolean;
 	/** score exists once the game tips off (live or final). */
 	hasScore: boolean;
 	/** quarters / box / play-by-play shown for live + final. */

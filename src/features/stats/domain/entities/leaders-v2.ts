@@ -40,6 +40,8 @@ export interface LeaderRow {
 	gp: number;
 	/** Per-game average for every category, so the client can switch tabs freely. */
 	vals: Record<StatKey, number>;
+	/** Exact season totals for every category. */
+	totals: Record<StatKey, number>;
 }
 
 export interface LeadersData {

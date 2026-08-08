@@ -131,7 +131,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     // Fetch all completed matches with events in a single query
     const matches = await prisma.match.findMany({
-      where: { status: 'COMPLETED' },
+      where: { status: 'COMPLETED', resultPublishedAt: { not: null } },
       select: {
         id: true,
         status: true,

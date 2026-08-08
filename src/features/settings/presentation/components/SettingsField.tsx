@@ -111,6 +111,7 @@ export default function SettingsField({
         ) : (
           <input
             id={`setting-${field.key}`}
+            type={field.type === 'number' ? 'number' : 'text'}
             className="eb-in"
             value={value}
             onChange={(event) => onChange(field.key, event.target.value)}

@@ -11,24 +11,14 @@ import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
 import { isFeatureEnabled } from "../../lib/feature-flags";
 import { getLeadersData } from "@/features/stats/domain/usecases/get-leaders-data";
-import type { StatKey } from "@/features/stats/domain/entities/leaders-v2";
 import { leadersToken, resolvePublicLeadersSettings, siteSettingsService } from "@/features/settings";
+import { resolveConfiguredLeaderCategories } from "@/features/stats/domain/usecases/configured-leader-categories";
 
 export const prerender = false;
 
 const [data, settingRecords] = await Promise.all([getLeadersData(), siteSettingsService.list('leaders').catch(() => [])]);
 const settings = resolvePublicLeadersSettings(settingRecords);
-const statKeyFor = (name: string): StatKey | null => {
-    const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (normalized.startsWith('point')) return 'Points';
-    if (normalized.startsWith('rebound')) return 'Rebounds';
-    if (normalized.startsWith('assist')) return 'Assists';
-    if (normalized.startsWith('steal')) return 'Steals';
-    if (normalized.startsWith('block')) return 'Blocks';
-    if (normalized.includes('3') || normalized.includes('three')) return '3-Pointers';
-    return null;
-};
-const categories = settings.categories.map((category) => ({ ...category, key: statKeyFor(category.name) })).filter((category): category is typeof category & { key: StatKey } => Boolean(category.key));
+const categories = resolveConfiguredLeaderCategories(settings.categories);
 const activeSeason = data.defaultSeason;
 const allLeaders = categories.map((category) => ({
     label: category.name,
@@ -39,7 +29,7 @@ const allLeaders = categories.map((category) => ({
             id: row.playerId,
             slug: row.href.split('/').filter(Boolean).pop(),
             imageSrc: '/images/default-player.png',
-            displayStat: settings.perGame ? row.vals[category.key].toFixed(1) : Math.round(row.vals[category.key] * row.gp),
+            displayStat: settings.perGame ? row.vals[category.key].toFixed(1) : row.totals[category.key],
             fullName: row.name,
             team: { name: row.team },
         }))

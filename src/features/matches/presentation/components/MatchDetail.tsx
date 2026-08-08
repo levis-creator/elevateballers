@@ -85,9 +85,10 @@ interface MatchDetailProps {
   match: MatchWithFullDetails;
   settings: PublicMatchPageSettings;
   canViewBoxScore: boolean;
+  highlightUrl?: string | null;
 }
 
-export default function MatchDetail({ match: initialMatch, settings, canViewBoxScore }: MatchDetailProps) {
+export default function MatchDetail({ match: initialMatch, settings, canViewBoxScore, highlightUrl }: MatchDetailProps) {
   const [match, setMatch] = useState(initialMatch);
   const [page1, setPage1] = useState(1);
   const [page2, setPage2] = useState(1);
@@ -158,6 +159,11 @@ export default function MatchDetail({ match: initialMatch, settings, canViewBoxS
   const isTie = match.status === 'COMPLETED' && match.team1Score !== null && match.team2Score !== null && match.team1Score === match.team2Score;
   const isLive = match.status === 'LIVE';
   const isCompleted = match.status === 'COMPLETED';
+
+  const youtubeEmbed = (url: string): string | null => {
+    const found = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{6,})/i);
+    return found ? `https://www.youtube.com/embed/${found[1]}?rel=0&modestbranding=1` : null;
+  };
   const isUpcoming = match.status === 'UPCOMING';
   const team1HasPossession = isLive && match.possessionTeamId === team1Id;
   const team2HasPossession = isLive && match.possessionTeamId === team2Id;
@@ -350,6 +356,17 @@ export default function MatchDetail({ match: initialMatch, settings, canViewBoxS
         )}
       </section>
 
+      {settings.video && highlightUrl && (
+        <section className="md-section">
+          <header className="md-section-banner"><span className="md-section-bar" aria-hidden /><h2 className="md-section-title">Highlights</h2></header>
+          <div className="md-highlight">
+            {youtubeEmbed(highlightUrl)
+              ? <iframe src={youtubeEmbed(highlightUrl)!} title="Match highlights" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              : <video src={highlightUrl} controls preload="metadata" />}
+          </div>
+        </section>
+      )}
+
       {settings.quarters && periodRows.length > 0 && (isLive || isCompleted) && (
         <section className="md-section">
           <header className="md-section-banner"><span className="md-section-bar" aria-hidden /><h2 className="md-section-title">Scoring by Quarter</h2></header>
@@ -507,6 +524,8 @@ export default function MatchDetail({ match: initialMatch, settings, canViewBoxS
         }
 
         .md-detail-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:24px 0; padding:12px; border:1px solid rgba(255,255,255,.1); border-radius:14px; background:rgba(255,255,255,.03); }
+        .md-highlight { position:relative; width:100%; aspect-ratio:16/9; overflow:hidden; border:1px solid rgba(255,255,255,.1); border-radius:14px; background:#0c0b0a; }
+        .md-highlight iframe, .md-highlight video { width:100%; height:100%; border:0; object-fit:contain; }
         .md-detail-tabs button { border:1px solid rgba(255,255,255,.14); border-radius:9px; padding:10px 16px; background:transparent; color:#cbd5e1; font-weight:800; text-transform:uppercase; letter-spacing:.08em; cursor:pointer; }
         .md-detail-tabs button.is-active { border-color:var(--brand); background:var(--brand); color:var(--brandfg,#fff); }
         .md-quarter-grid { display:grid; overflow-x:auto; gap:1px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(255,255,255,.08); }

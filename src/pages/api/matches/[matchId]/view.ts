@@ -33,7 +33,14 @@ export const GET: APIRoute = async ({ params, request }) => {
 	}
 
 	const settings = resolvePublicMatchPageSettings(records);
-	const canViewBox = canViewMatchBoxScore(settings.boxScore, Boolean(currentUser), Boolean((currentUser as any)?.userRoles?.length));
+	const staff = Boolean((currentUser as any)?.userRoles?.length);
+	if (view.state === "final" && !view.resultPublished && !staff) {
+		return new Response(JSON.stringify({ error: "Match not found" }), {
+			status: 404,
+			headers: { "Content-Type": "application/json" },
+		});
+	}
+	const canViewBox = canViewMatchBoxScore(settings.boxScore, Boolean(currentUser), staff);
 	const publicView = canViewBox ? view : { ...view, box: { home: [], away: [] } };
 	const cacheSeconds = Math.max(1, settings.delay);
 	return new Response(JSON.stringify(publicView), {
