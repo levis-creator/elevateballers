@@ -103,6 +103,7 @@ describe('public registration endpoints', () => {
   it('normalizes the team payload before persistence', async () => {
     const response = await postTeam({ request: request(teamPayload) } as any);
     expect(response.status).toBe(201);
+    expect(mocks.checkRegistrationOpen).toHaveBeenCalledWith(undefined, undefined, undefined, { siteMasterOpen: true });
     expect(mocks.submitTeamRegistration).toHaveBeenCalledWith(expect.objectContaining({ name: 'Mavs Basketball', contactEmail: 'jane@example.com', contactPhone: '+254700000000', idempotencyKey: 'test-idempotency-key' }));
   });
 

@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (!await allowPublicRegistration('player', ip, data.email)) return genericRegistrationResponse(429);
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
     if (!await verifyTurnstile(turnstileToken, ip)) return new Response(JSON.stringify({ error: 'Security check failed. Please refresh and try again.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId);
+    const gate = await checkRegistrationOpen(data.leagueId, data.seasonId, data.leagueSeasonId, { siteMasterOpen: true });
     if (!gate.open) return new Response(JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     let teamId: string | undefined;
     if (data.teamName) teamId = (await prisma.team.findUnique({ where: { name: data.teamName }, select: { id: true } }))?.id;

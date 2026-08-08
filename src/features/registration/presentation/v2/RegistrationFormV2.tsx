@@ -191,7 +191,9 @@ export default function RegistrationFormV2({ settings, registrationOpen }: { set
 				registrationClosesAt: selectedCompetition.registrationClosesAt,
 			}
 		: selectedSeason;
-	const registrationStatus = selectedLeague ? isRegistrationOpen(selectedLeague, registrationSeason) : { open: true };
+	const registrationStatus = selectedLeague
+		? isRegistrationOpen({ ...selectedLeague, registrationOpen: true }, registrationSeason)
+		: { open: true };
 	const registrationBlocked = !registrationOpen || !registrationStatus.open;
 
 	const handleTeamChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
