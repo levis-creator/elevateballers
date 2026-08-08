@@ -29,6 +29,8 @@ export type MatchFilter = {
   dateFrom?: Date;
   dateTo?: Date;
   search?: string;
+  /** Internal/admin callers may opt into completed results not published publicly. */
+  includeUnpublishedFinals?: boolean;
 };
 
 // Match sort options

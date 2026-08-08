@@ -66,7 +66,7 @@ export async function fetchPlayersDirectory(): Promise<PlayersDirectoryData | nu
 				},
 			}),
 			prisma.match.findMany({
-				where: { status: "COMPLETED" },
+				where: { status: "COMPLETED", resultPublishedAt: { not: null } },
 				select: {
 					id: true,
 					status: true,

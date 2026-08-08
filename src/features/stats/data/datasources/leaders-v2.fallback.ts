@@ -36,7 +36,10 @@ function toRow(d: Demo): LeaderRow {
 		Blocks: blk,
 		"3-Pointers": tpg,
 	};
-	return { playerId: name, name, team, initials: initialsOf(name), href: "#", league, season: "2026 Season", gp, vals };
+	const totals = Object.fromEntries(
+		Object.entries(vals).map(([key, value]) => [key, Math.round(value * gp)]),
+	) as Record<StatKey, number>;
+	return { playerId: name, name, team, initials: initialsOf(name), href: "#", league, season: "2026 Season", gp, vals, totals };
 }
 
 export const FALLBACK_LEADERS: LeadersData = {

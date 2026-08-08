@@ -5,11 +5,11 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm run migrate:media-to-r2 --apply
-8 verbose argv "run" "migrate:media-to-r2" "--" "--apply"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-06T18_08_11_293Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-06T18_08_11_293Z-debug-0.log
+7 verbose title npm run dev
+8 verbose argv "run" "dev"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-08T23_47_10_181Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-08T23_47_10_181Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
-13 notice run elevateballers@0.0.1 migrate:media-to-r2
-14 notice run tsx scripts/migrate-supabase-media-to-r2.ts --apply
+13 notice run elevateballers@0.0.1 dev
+14 notice run prisma generate && astro dev

@@ -6,6 +6,8 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { json, handleApiError } from '../../../lib/apiError';
 import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rules';
 import { resolveLeagueSeasonById } from '../../../features/seasons/data/league-season-scope';
+import { getCurrentUser } from '../../../features/cms/lib/auth';
+import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from '../../../features/settings';
 
 export const prerender = false;
 
@@ -30,12 +32,25 @@ export const GET: APIRoute = async ({ params, url, request }) => {
 
     if (!match) return json({ error: 'Match not found' }, 404);
 
+    const currentUser = await getCurrentUser(request).catch(() => null);
+    const staff = Boolean((currentUser as any)?.userRoles?.length);
+    if (match.status === 'COMPLETED' && !(match as any).resultPublishedAt && !staff) {
+      return json({ error: 'Match not found' }, 404);
+    }
+    const matchSettings = resolvePublicMatchPageSettings(
+      await siteSettingsService.list('match').catch(() => []),
+    );
+    const canViewBoxScore = canViewMatchBoxScore(matchSettings.boxScore, Boolean(currentUser), staff);
+    const responseMatch = includeDetails && !canViewBoxScore
+      ? { ...match, matchPlayers: [] }
+      : match;
+
     // Completed matches are immutable — cache aggressively
     const cacheControl = match.status === 'COMPLETED'
       ? 'public, s-maxage=3600, stale-while-revalidate=300'
       : 'no-store, max-age=0';
 
-    return new Response(JSON.stringify(match), {
+    return new Response(JSON.stringify(responseMatch), {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': cacheControl,
@@ -62,6 +77,15 @@ export const PUT: APIRoute = async ({ params, request }) => {
     }
 
     const data = await request.json();
+
+    if (data.status === 'COMPLETED' && existingMatch?.status !== 'COMPLETED') {
+      const settings = resolvePublicMatchPageSettings(
+        await siteSettingsService.list('match').catch(() => []),
+      );
+      data.resultPublishedAt = settings.autoPublish ? new Date() : null;
+    } else if (data.status && data.status !== 'COMPLETED') {
+      data.resultPublishedAt = null;
+    }
 
     if (data.date) data.date = new Date(data.date);
 

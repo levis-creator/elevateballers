@@ -3,7 +3,7 @@ import Spacing from '../../../shared/components/ui/Spacing.astro';
 import { prisma } from '../../../lib/prisma';
 
 const [completedMatches, approvedPlayers, approvedTeams, playerHonors] = await Promise.all([
-  prisma.match.count({ where: { status: 'COMPLETED' } }),
+  prisma.match.count({ where: { status: 'COMPLETED', resultPublishedAt: { not: null } } }),
   prisma.player.count({ where: { approved: true } }),
   prisma.team.count({ where: { approved: true } }),
   prisma.playerOfTheWeek.count(),

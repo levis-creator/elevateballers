@@ -124,6 +124,7 @@ export async function getTeamPlayerStats(
   const matches = await prisma.match.findMany({
     where: {
       status: 'COMPLETED',
+      resultPublishedAt: { not: null },
       OR: [{ team1Id: teamId }, { team2Id: teamId }],
     },
     select: {

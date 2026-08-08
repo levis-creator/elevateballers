@@ -387,6 +387,7 @@ model Match {
   team1Score            Int?             @map("team1_score")
   team2Score            Int?             @map("team2_score")
   status                MatchStatus      @default(UPCOMING)
+  resultPublishedAt     DateTime?        @map("result_published_at")
   createdAt             DateTime         @default(now()) @map("created_at")
   updatedAt             DateTime         @updatedAt @map("updated_at")
   leagueId              String?          @map("league_id")
@@ -437,6 +438,7 @@ model Match {
 
   @@index([date])
   @@index([status])
+  @@index([resultPublishedAt])
   @@index([stage])
   @@index([team1Id])
   @@index([team2Id])

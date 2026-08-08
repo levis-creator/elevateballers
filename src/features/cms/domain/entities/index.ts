@@ -222,6 +222,7 @@ export type CreateMatchInput = {
   team1Score?: number;
   team2Score?: number;
   status?: MatchStatus;
+  resultPublishedAt?: Date | null;
   stage?: import('@prisma/client').MatchStage;
   duration?: number; // Match duration in minutes
   // Bracket relationship fields

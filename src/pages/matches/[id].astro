@@ -27,6 +27,7 @@ const matchSettings = resolvePublicMatchPageSettings(matchSettingRecords);
 const authenticated = Boolean(currentUser);
 const staff = Boolean((currentUser as any)?.userRoles?.length);
 const canViewBoxScore = canViewMatchBoxScore(matchSettings.boxScore, authenticated, staff);
+if (view.state === "final" && !view.resultPublished && !staff) return Astro.rewrite("/404");
 
 // Consolidate SEO on the canonical slug URL when reached via the legacy cuid.
 if (view.slug && slugOrId !== view.slug) return Astro.redirect(`/matches/${view.slug}/`, 301);
@@ -36,7 +37,7 @@ const cacheControl =
 	view.state === "final"
 		? "public, s-maxage=86400, stale-while-revalidate=604800"
 		: view.state === "live"
-			? "public, s-maxage=15, stale-while-revalidate=60"
+			? `public, s-maxage=${Math.max(1, matchSettings.delay)}, stale-while-revalidate=${Math.max(1, matchSettings.delay)}`
 			: "public, s-maxage=60, stale-while-revalidate=300";
 Astro.response.headers.set("Cache-Control", cacheControl);
 

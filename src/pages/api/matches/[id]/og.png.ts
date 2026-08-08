@@ -438,6 +438,9 @@ export const GET: APIRoute = async ({ params }) => {
   }
 
   if (!match) return new Response('Match not found', { status: 404 });
+  if (match.status === 'COMPLETED' && !(match as any).resultPublishedAt) {
+    return new Response('Match not found', { status: 404 });
+  }
 
   const team1Name = match.team1Name || match.team1?.name || 'TBD';
   const team2Name = match.team2Name || match.team2?.name || 'TBD';

@@ -34,7 +34,7 @@ export async function fetchLeadersData(): Promise<LeadersData | null> {
 				select: { id: true, slug: true, firstName: true, lastName: true, team: { select: { name: true } } },
 			}),
 			prisma.match.findMany({
-				where: { status: "COMPLETED" },
+				where: { status: "COMPLETED", resultPublishedAt: { not: null } },
 				select: {
 					id: true,
 					status: true,
@@ -88,6 +88,14 @@ export async function fetchLeadersData(): Promise<LeadersData | null> {
 					Blocks: r1(s.blocksPerGame),
 					"3-Pointers": r1(s.totalThreePointersMade / s.totalMatches),
 				};
+				const totals: Record<StatKey, number> = {
+					Points: s.totalPoints,
+					Rebounds: s.totalRebounds,
+					Assists: s.totalAssists,
+					Steals: s.totalSteals,
+					Blocks: s.totalBlocks,
+					"3-Pointers": s.totalThreePointersMade,
+				};
 				rows.push({
 					playerId: pid,
 					name: `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || "Unknown",
@@ -98,6 +106,7 @@ export async function fetchLeadersData(): Promise<LeadersData | null> {
 					season: b.season,
 					gp: s.totalMatches,
 					vals,
+					totals,
 				});
 			}
 		}

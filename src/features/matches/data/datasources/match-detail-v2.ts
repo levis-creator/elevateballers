@@ -357,21 +357,25 @@ async function buildWatch(
 		});
 }
 
+export async function fetchMatchHighlightUrl(matchId: string, slug?: string | null): Promise<string | null> {
+	const videos = await prisma.media.findMany({
+		where: { type: "VIDEO", isPrivate: false },
+		select: { url: true, tags: true },
+		orderBy: { createdAt: "desc" },
+		take: 100,
+	}).catch(() => []);
+	const attachmentKeys = new Set([`match:${matchId}`, `match:${slug ?? ""}`, matchId, slug].filter(Boolean));
+	return videos.find((video) => {
+		const tags = Array.isArray(video.tags) ? video.tags : [];
+		return tags.some((tag) => attachmentKeys.has(String(tag).trim()));
+	})?.url ?? null;
+}
+
 export async function fetchMatchView(slugOrId: string): Promise<MatchView | null> {
 	try {
 		const match = await getMatchWithFullDetails(slugOrId);
 		if (!match) return null;
-		const videos = await prisma.media.findMany({
-			where: { type: "VIDEO", isPrivate: false },
-			select: { url: true, tags: true },
-			orderBy: { createdAt: "desc" },
-			take: 100,
-		}).catch(() => []);
-		const attachmentKeys = new Set([`match:${match.id}`, `match:${(match as any).slug ?? ""}`, match.id, (match as any).slug].filter(Boolean));
-		const highlightUrl = videos.find((video) => {
-			const tags = Array.isArray(video.tags) ? video.tags : [];
-			return tags.some((tag) => attachmentKeys.has(String(tag).trim()));
-		})?.url ?? null;
+		const highlightUrl = await fetchMatchHighlightUrl(match.id, (match as any).slug);
 
 		const state: MatchState = match.status === "COMPLETED" ? "final" : match.status === "LIVE" ? "live" : "upcoming";
 		const hasScore = state === "final" || state === "live";
@@ -416,6 +420,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			id: match.id,
 			slug: (match as any).slug ?? null,
 			state,
+			resultPublished: state !== "final" || Boolean((match as any).resultPublishedAt),
 			hasScore,
 			showStats,
 			league: match.league?.name || match.leagueName || "Elevate Ballers",

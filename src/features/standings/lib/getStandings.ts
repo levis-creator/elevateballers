@@ -162,6 +162,7 @@ export async function getStandings(options: GetStandingsOptions): Promise<Standi
       where: {
         leagueSeasonId: scope.leagueSeasonId,
         status: "COMPLETED",
+        resultPublishedAt: { not: null },
       },
       select: {
         team1Id: true,

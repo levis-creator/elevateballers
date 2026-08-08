@@ -5,14 +5,14 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec tsx scripts/update-media-references-to-cdn.ts
-8 verbose argv "exec" "--" "tsx" "scripts/update-media-references-to-cdn.ts"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-06T18_51_10_123Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-06T18_51_10_123Z-debug-0.log
+7 verbose title npm run build
+8 verbose argv "run" "build"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-08T23_40_01_558Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-08T23_40_01_558Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
-13 notice run elevateballers@0.0.1 npx
-14 notice run tsx scripts/update-media-references-to-cdn.ts
+13 notice run elevateballers@0.0.1 build
+14 notice run prisma generate && astro build
 15 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 16 verbose os Windows_NT 10.0.26200
 17 verbose node v24.18.0
