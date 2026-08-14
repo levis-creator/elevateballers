@@ -1,7 +1,13 @@
 import type { APIRoute } from 'astro';
+import { randomBytes } from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
 import { saveFile, sanitizeFolderName } from '../../../lib/file-storage';
-import { compressImage, shouldCompress } from '../../../lib/image-compression';
+import {
+  compressImage,
+  shouldCompress,
+  validateImageBuffer,
+  type CompressionResult,
+} from '../../../lib/image-compression';
 import { getFolderByName } from '../../../lib/folder-access';
 import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
@@ -14,10 +20,17 @@ export const POST: APIRoute = async ({ request }) => {
     const user = await requirePermission(request, 'media:create');
 
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const fileValue = formData.get('file');
+    if (!fileValue || typeof fileValue === 'string') {
+      return new Response(JSON.stringify({ error: 'No file provided' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const file = fileValue as File;
     const folderName = (formData.get('folder') as string) || 'general';
     const isPrivate = formData.get('isPrivate') === 'true' || formData.get('isPrivate') === '1';
-    const title = (formData.get('title') as string) || file.name;
+    const title = (formData.get('title') as string) || file.name || 'uploaded-image';
     const tagsParam = formData.get('tags') as string | null;
     let tags: string[] | null = null;
     if (tagsParam) {
@@ -28,17 +41,8 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    if (!file) {
-      return new Response(
-        JSON.stringify({ error: 'No file provided' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // Validate file type
+    // Validate the declared type before reading the body, then validate the
+    // actual bytes below. File.type is browser-controlled and is not trusted.
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       return new Response(
@@ -86,22 +90,38 @@ export const POST: APIRoute = async ({ request }) => {
     const arrayBuffer = await file.arrayBuffer();
     const originalBuffer = Buffer.from(arrayBuffer);
     const originalSize = originalBuffer.length;
+    let inspectedImage;
+    try {
+      inspectedImage = await validateImageBuffer(originalBuffer);
+    } catch (error) {
+      return new Response(JSON.stringify({
+        error: error instanceof Error ? error.message : 'Invalid image content.',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const declaredMimeType = file.type === 'image/jpg' ? 'image/jpeg' : file.type;
+    if (declaredMimeType !== inspectedImage.mimeType) {
+      return new Response(JSON.stringify({ error: 'The file content does not match its declared type.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const uploadMimeType = inspectedImage.mimeType;
 
     // Compress image if needed
     let finalBuffer = originalBuffer;
-    let compressionResult = {
+    let compressionResult: CompressionResult = {
       buffer: originalBuffer,
       originalSize,
       compressedSize: originalSize,
       compressionRatio: 0,
     };
 
-    if (shouldCompress(originalSize, file.type)) {
+    if (shouldCompress(originalSize, uploadMimeType) && uploadMimeType !== 'image/gif') {
       try {
         compressionResult = await compressImage(originalBuffer, {
           maxWidthOrHeight: 1920,
           quality: 0.8,
-          mimeType: file.type,
+          mimeType: uploadMimeType,
         });
         finalBuffer = compressionResult.buffer;
       } catch (error) {
@@ -112,14 +132,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Determine file extension from MIME type or original filename
     let fileExtension = 'jpg'; // default
-    if (file.type === 'image/png') fileExtension = 'png';
-    else if (file.type === 'image/gif') fileExtension = 'gif';
-    else if (file.type === 'image/webp') fileExtension = 'webp';
-    else if (file.type === 'image/jpeg' || file.type === 'image/jpg') fileExtension = 'jpg';
+    if (uploadMimeType === 'image/png') fileExtension = 'png';
+    else if (uploadMimeType === 'image/gif') fileExtension = 'gif';
+    else if (uploadMimeType === 'image/webp') fileExtension = 'webp';
     
     // Generate filename with correct extension
     const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2, 15);
+    const randomStr = randomBytes(8).toString('hex');
     const fileName = `${timestamp}-${randomStr}.${fileExtension}`;
 
     // Save file to local storage with proper extension
@@ -131,8 +150,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
 
     // Determine media type
-    const mediaType = file.type.startsWith('image/') ? 'IMAGE' : 
-                     file.type.startsWith('video/') ? 'VIDEO' : 'AUDIO';
+    const mediaType = 'IMAGE';
 
     // For images, automatically set thumbnail to the same URL as the main image
     // For videos/audio, thumbnail can be set separately later
@@ -150,10 +168,10 @@ export const POST: APIRoute = async ({ request }) => {
         size: compressionResult.compressedSize,
         originalSize: compressionResult.originalSize,
         compressionRatio: compressionResult.compressionRatio,
-        mimeType: file.type,
+        mimeType: uploadMimeType,
         isPrivate: folder.isPrivate,
         uploadedBy: user.id,
-        tags: tags ? tags : null,
+        tags: tags ?? undefined,
       },
       include: {
         folder: true,

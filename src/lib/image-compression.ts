@@ -35,6 +35,49 @@ export interface CompressionResult {
   height?: number;
 }
 
+export interface ValidatedImage {
+  mimeType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+  width: number;
+  height: number;
+}
+
+/** Decode and validate actual image bytes; File.type is browser-controlled. */
+export async function validateImageBuffer(
+  buffer: Buffer,
+  maxBytes = 10 * 1024 * 1024,
+  maxDimension = 8192,
+  maxPixels = 40_000_000,
+): Promise<ValidatedImage> {
+  if (buffer.length === 0 || buffer.length > maxBytes) {
+    throw new Error('Image exceeds the 10 MB upload limit.');
+  }
+
+  const sharp = await getSharp();
+  if (!sharp) throw new Error('Image validation is unavailable.');
+
+  const metadata = await sharp(buffer, { failOn: 'error' }).metadata();
+  const mimeType = metadata.format === 'jpeg'
+    ? 'image/jpeg'
+    : metadata.format === 'png'
+      ? 'image/png'
+      : metadata.format === 'gif'
+        ? 'image/gif'
+        : metadata.format === 'webp'
+          ? 'image/webp'
+          : null;
+  const width = metadata.width ?? 0;
+  const height = metadata.height ?? 0;
+
+  if (!mimeType || width < 1 || height < 1) {
+    throw new Error('Unsupported or invalid image content.');
+  }
+  if (width > maxDimension || height > maxDimension || width * height > maxPixels) {
+    throw new Error('Image dimensions exceed the upload limit.');
+  }
+
+  return { mimeType, width, height };
+}
+
 const DEFAULT_OPTIONS: Required<CompressionOptions> = {
   maxWidthOrHeight: 1920,
   quality: 0.8,

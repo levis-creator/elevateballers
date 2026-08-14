@@ -10,6 +10,8 @@ export function useVerifyOtp() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [verified, setVerified] = useState(false);
+	const [lockedOut, setLockedOut] = useState(false);
+	const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
 
 	const setCode = (next: string) => {
 		setCodeRaw(next);
@@ -37,6 +39,8 @@ export function useVerifyOtp() {
 			const data = await res.json().catch(() => ({}));
 
 			if (!res.ok) {
+				if (typeof data.attemptsRemaining === "number") setAttemptsRemaining(data.attemptsRemaining);
+				if (res.status === 429 || data.lockedUntil) setLockedOut(true);
 				setError(data.error || "Verification failed. Please try again.");
 				setCodeRaw("");
 				return;
@@ -59,7 +63,9 @@ export function useVerifyOtp() {
 		error,
 		loading,
 		verified,
+		lockedOut,
+		attemptsRemaining,
 		submit,
-		canSubmit: code.length === 6 && !loading && !verified,
+		canSubmit: code.length === 6 && !loading && !verified && !lockedOut,
 	};
 }

@@ -5,6 +5,8 @@ export default function OtpForm() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lockedOut, setLockedOut] = useState(false);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +30,8 @@ export default function OtpForm() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (typeof data.attemptsRemaining === 'number') setAttemptsRemaining(data.attemptsRemaining);
+        if (response.status === 429 || data.lockedUntil) setLockedOut(true);
         setError(data.error || 'Verification failed. Please try again.');
         return;
       }
@@ -89,18 +93,21 @@ export default function OtpForm() {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 required
-                disabled={loading}
+                disabled={loading || lockedOut}
                 placeholder="000000"
                 autoComplete="one-time-code"
                 inputMode="numeric"
                 maxLength={6}
                 className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-600 rounded-xl px-4 py-4 text-center text-3xl tracking-[0.6em] font-mono focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition disabled:opacity-50"
               />
+              {attemptsRemaining !== null && !lockedOut && (
+                <p className="mt-2 text-center text-xs text-gray-500">{attemptsRemaining} attempt{attemptsRemaining === 1 ? '' : 's'} remaining.</p>
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={loading || code.trim().length !== 6}
+              disabled={loading || lockedOut || code.trim().length !== 6}
               className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm uppercase tracking-widest transition-colors shadow-lg shadow-red-600/20 disabled:shadow-none"
             >
               {loading ? (
@@ -116,6 +123,11 @@ export default function OtpForm() {
               )}
             </button>
           </form>
+          {lockedOut && (
+            <a href="/admin/login" className="mt-4 block text-center text-sm font-medium text-red-400 hover:text-red-300">
+              Return to login to request a new code
+            </a>
+          )}
         </div>
 
         {/* Back link */}

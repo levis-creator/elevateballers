@@ -95,6 +95,9 @@ export const GET: APIRoute = async ({ params, request }) => {
       status: 200,
       headers: {
         'Content-Type': contentType,
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'; sandbox",
+        'X-Download-Options': 'noopen',
         'Cache-Control': isPrivate
           ? 'private, max-age=3600'
           : 'public, max-age=31536000, immutable',
