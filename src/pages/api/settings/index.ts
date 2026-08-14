@@ -5,6 +5,7 @@ import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/a
 
 import { handleApiError } from '../../../lib/apiError';
 import { maskSensitiveSetting } from '../../../features/settings/application/sensitiveSettingValues';
+import { enforceRateLimit } from '../../../lib/rateLimit';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
@@ -26,7 +27,14 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'site_settings:manage');
+    const user = await requirePermission(request, 'site_settings:manage');
+    const limited = await enforceRateLimit(
+      `settings:${user.id}:create`,
+      30,
+      10 * 60 * 1000,
+      'Too many settings changes. Please try again shortly.',
+    );
+    if (limited) return limited;
     const data = await request.json();
 
     const setting = await siteSettingsService.create({

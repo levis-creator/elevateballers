@@ -11,7 +11,7 @@ async function getSharp() {
     try {
       const sharpImport = await import('sharp');
       sharpModule = sharpImport.default;
-    } catch (error) {
+    } catch {
       console.warn('Sharp not available. Image compression will be limited.');
       return null;
     }

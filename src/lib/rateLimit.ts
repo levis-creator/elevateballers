@@ -19,6 +19,7 @@ interface Entry {
 }
 
 const store = new Map<string, Entry>();
+const distributedResets = new Map<string, number>();
 
 // Prune expired entries every 10 minutes to prevent unbounded growth
 setInterval(() => {
@@ -105,10 +106,12 @@ export async function checkRateLimit(
   if (!limiter) return memoryCheck(key, max, windowMs);
 
   try {
-    const { success } = await limiter.limit(key);
+    const { success, reset } = await limiter.limit(key);
+    distributedResets.set(key, reset);
     return success;
   } catch (err) {
     console.warn('[rateLimit] Redis failed, using in-memory fallback:', err);
+    distributedResets.delete(key);
     return memoryCheck(key, max, windowMs);
   }
 }
@@ -116,6 +119,7 @@ export async function checkRateLimit(
 /** Reset rate limit for a key (e.g. after a successful login). */
 export async function resetRateLimit(key: string): Promise<void> {
   store.delete(key);
+  distributedResets.delete(key);
   if (redis) {
     try {
       // Delete all Upstash ratelimit keys for this identifier
@@ -130,6 +134,37 @@ export async function resetRateLimit(key: string): Promise<void> {
 export async function getRateLimitRetryAfter(
   key: string,
 ): Promise<number> {
-  // In-memory fallback always available
+  const distributedReset = distributedResets.get(key);
+  if (distributedReset !== undefined) {
+    const remaining = distributedReset - Date.now();
+    if (remaining > 0) return Math.ceil(remaining / 1000);
+    distributedResets.delete(key);
+  }
   return memoryRetryAfter(key);
+}
+
+/** Build a consistent JSON 429 response for protected mutation endpoints. */
+export function rateLimitResponse(
+  retryAfterSeconds: number,
+  message = 'Too many requests. Please try again later.',
+): Response {
+  const retryAfter = Math.max(1, Math.ceil(retryAfterSeconds));
+  return new Response(JSON.stringify({ error: message, retryAfter }), {
+    status: 429,
+    headers: {
+      'Content-Type': 'application/json',
+      'Retry-After': String(retryAfter),
+    },
+  });
+}
+
+/** Apply a scoped limiter and return a response when the request is blocked. */
+export async function enforceRateLimit(
+  key: string,
+  max: number,
+  windowMs: number,
+  message?: string,
+): Promise<Response | null> {
+  if (await checkRateLimit(key, max, windowMs)) return null;
+  return rateLimitResponse(await getRateLimitRetryAfter(key), message);
 }
