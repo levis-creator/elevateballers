@@ -4,6 +4,7 @@ import { saveFile } from '@/lib/file-storage';
 import { prisma } from '@/lib/prisma';
 import { getFolderByName } from '@/lib/folder-access';
 import { handleApiError } from '@/lib/apiError';
+import { enforceRateLimit } from '@/lib/rateLimit';
 
 export const prerender = false;
 
@@ -21,6 +22,13 @@ function createPdfFileName(originalName: string): string {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const user = await requirePermission(request, 'site_settings:manage');
+    const limited = await enforceRateLimit(
+      `settings:${user.id}:rules-upload`,
+      10,
+      10 * 60 * 1000,
+      'Too many rules uploads. Please try again shortly.',
+    );
+    if (limited) return limited;
 
     const formData = await request.formData();
     const file = formData.get('file');

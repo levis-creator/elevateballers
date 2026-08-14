@@ -13,13 +13,58 @@ import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
 
 export const prerender = false;
+const MAX_UPLOAD_BODY_BYTES = 12 * 1024 * 1024;
+
+async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint8Array> {
+  if (!request.body) return new Uint8Array();
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error('Upload exceeds the 12 MB request limit.');
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
 
 export const POST: APIRoute = async ({ request }) => {
   try {
     // Require admin authentication
     const user = await requirePermission(request, 'media:create');
 
-    const formData = await request.formData();
+    const contentLength = Number(request.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > MAX_UPLOAD_BODY_BYTES) {
+      return new Response(JSON.stringify({ error: 'Upload exceeds the 12 MB request limit.' }), {
+        status: 413,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    let boundedBody: Uint8Array;
+    try {
+      boundedBody = await readBoundedBody(request, MAX_UPLOAD_BODY_BYTES);
+    } catch (error) {
+      return new Response(JSON.stringify({
+        error: error instanceof Error ? error.message : 'Upload is too large.',
+      }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+    }
+    const boundedRequest = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: boundedBody.length > 0 ? new Blob([boundedBody]) : undefined,
+    });
+    const formData = await boundedRequest.formData();
     const fileValue = formData.get('file');
     if (!fileValue || typeof fileValue === 'string') {
       return new Response(JSON.stringify({ error: 'No file provided' }), {
@@ -57,34 +102,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Sanitize folder name
     const sanitizedFolderName = sanitizeFolderName(folderName);
     
-    // Get or create folder in database
+    // Read the existing folder before validation; mutations happen only after
+    // the actual image bytes have passed validation.
     let folder = await getFolderByName(sanitizedFolderName);
-    if (!folder) {
-      // Create folder if it doesn't exist
-      // Path format: "public/folder-name" or "private/folder-name"
-      const folderPath = `${isPrivate ? 'private' : 'public'}/${sanitizedFolderName}`;
-      folder = await prisma.folder.create({
-        data: {
-          name: sanitizedFolderName,
-          path: folderPath,
-          isPrivate,
-          createdBy: user.id,
-        },
-      });
-    } else {
-      // Update folder privacy if changed (but keep existing path structure)
-      if (folder.isPrivate !== isPrivate) {
-        // Update path to reflect new privacy status
-        const newPath = `${isPrivate ? 'private' : 'public'}/${sanitizedFolderName}`;
-        folder = await prisma.folder.update({
-          where: { id: folder.id },
-          data: { 
-            isPrivate,
-            path: newPath,
-          },
-        });
-      }
-    }
 
     // Convert File to Buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -128,6 +148,19 @@ export const POST: APIRoute = async ({ request }) => {
         console.warn('Image compression failed, using original:', error);
         // Continue with original buffer if compression fails
       }
+    }
+
+    if (!folder) {
+      const folderPath = `${isPrivate ? 'private' : 'public'}/${sanitizedFolderName}`;
+      folder = await prisma.folder.create({
+        data: { name: sanitizedFolderName, path: folderPath, isPrivate, createdBy: user.id },
+      });
+    } else if (folder.isPrivate !== isPrivate) {
+      const newPath = `${isPrivate ? 'private' : 'public'}/${sanitizedFolderName}`;
+      folder = await prisma.folder.update({
+        where: { id: folder.id },
+        data: { isPrivate, path: newPath },
+      });
     }
 
     // Determine file extension from MIME type or original filename

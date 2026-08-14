@@ -4,11 +4,19 @@ import { deleteFile } from '@/lib/file-storage';
 import { prisma } from '@/lib/prisma';
 
 import { handleApiError } from '../../../lib/apiError';
+import { enforceRateLimit } from '../../../lib/rateLimit';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'site_settings:manage');
+    const user = await requirePermission(request, 'site_settings:manage');
+    const limited = await enforceRateLimit(
+      `settings:${user.id}:rules-delete`,
+      10,
+      10 * 60 * 1000,
+      'Too many rules deletions. Please try again shortly.',
+    );
+    if (limited) return limited;
 
     const { filePath } = await request.json();
 

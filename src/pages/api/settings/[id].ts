@@ -5,6 +5,7 @@ import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/a
 
 import { handleApiError } from '../../../lib/apiError';
 import { maskSensitiveSetting } from '../../../features/settings/application/sensitiveSettingValues';
+import { enforceRateLimit } from '../../../lib/rateLimit';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params, request }) => {
@@ -30,7 +31,14 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'site_settings:manage');
+    const user = await requirePermission(request, 'site_settings:manage');
+    const limited = await enforceRateLimit(
+      `settings:${user.id}:update`,
+      30,
+      10 * 60 * 1000,
+      'Too many settings changes. Please try again shortly.',
+    );
+    if (limited) return limited;
     const data = await request.json();
 
     const setting = await siteSettingsService.update(params.id!, data);
@@ -59,7 +67,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'site_settings:manage');
+    const user = await requirePermission(request, 'site_settings:manage');
+    const limited = await enforceRateLimit(
+      `settings:${user.id}:delete`,
+      10,
+      10 * 60 * 1000,
+      'Too many settings deletions. Please try again shortly.',
+    );
+    if (limited) return limited;
     const success = await siteSettingsService.remove(params.id!);
 
     if (!success) {

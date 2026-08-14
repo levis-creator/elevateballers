@@ -245,29 +245,57 @@ export async function verifyOtpForUser(
     orderBy: { createdAt: 'desc' },
   });
   if (!otp) return { valid: false, attemptsRemaining: 0 };
-  if (otp.lockedUntil && otp.lockedUntil > now) {
-    return { valid: false, attemptsRemaining: 0, lockedUntil: otp.lockedUntil };
-  }
+  const availableOtpWhere = {
+    id: otp.id,
+    expiresAt: { gt: now },
+    attemptCount: { lt: MAX_OTP_ATTEMPTS },
+    OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }],
+  } as const;
+
   if (otp.codeHash === codeHash) {
-    await prisma.twoFactorOtp.deleteMany({ where: { id: otp.id } });
-    return { valid: true, attemptsRemaining: MAX_OTP_ATTEMPTS };
+    const consumed = await prisma.twoFactorOtp.deleteMany({
+      where: { ...availableOtpWhere, codeHash },
+    });
+    if (consumed.count === 1) {
+      return { valid: true, attemptsRemaining: MAX_OTP_ATTEMPTS };
+    }
+  } else {
+    const incremented = await prisma.twoFactorOtp.updateMany({
+      where: availableOtpWhere,
+      data: { attemptCount: { increment: 1 }, lockedUntil: null },
+    });
+    if (incremented.count === 1) {
+      await prisma.twoFactorOtp.updateMany({
+        where: { id: otp.id, attemptCount: { gte: MAX_OTP_ATTEMPTS }, lockedUntil: null },
+        data: { lockedUntil: new Date(now.getTime() + OTP_LOCKOUT_MINUTES * 60 * 1000) },
+      });
+    }
   }
-  const nextAttemptCount = otp.attemptCount + 1;
-  await prisma.twoFactorOtp.update({
-    where: { id: otp.id },
-    data: {
-      attemptCount: nextAttemptCount,
-      lockedUntil: nextAttemptCount >= MAX_OTP_ATTEMPTS
-        ? new Date(now.getTime() + OTP_LOCKOUT_MINUTES * 60 * 1000)
-        : null,
-    },
-  });
+
+  const current = await prisma.twoFactorOtp.findUnique({ where: { id: otp.id } });
+  if (!current || current.expiresAt <= now) {
+    return { valid: false, attemptsRemaining: 0 };
+  }
+  if (current.lockedUntil && current.lockedUntil > now) {
+    return { valid: false, attemptsRemaining: 0, lockedUntil: current.lockedUntil };
+  }
+  if (current.codeHash === codeHash) {
+    // A concurrent failed attempt may have raced with the first read. Only a
+    // conditional delete can consume the still-valid, unlocked code safely.
+    const consumed = await prisma.twoFactorOtp.deleteMany({
+      where: { ...availableOtpWhere, codeHash },
+    });
+    if (consumed.count === 1) {
+      return { valid: true, attemptsRemaining: MAX_OTP_ATTEMPTS };
+    }
+  }
+
+  if (current.lockedUntil && current.lockedUntil > now) {
+    return { valid: false, attemptsRemaining: 0, lockedUntil: current.lockedUntil };
+  }
   return {
     valid: false,
-    attemptsRemaining: Math.max(0, MAX_OTP_ATTEMPTS - nextAttemptCount),
-    ...(nextAttemptCount >= MAX_OTP_ATTEMPTS
-      ? { lockedUntil: new Date(now.getTime() + OTP_LOCKOUT_MINUTES * 60 * 1000) }
-      : {}),
+    attemptsRemaining: Math.max(0, MAX_OTP_ATTEMPTS - current.attemptCount),
   };
 }
 
