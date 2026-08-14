@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   BookOpen,
   Calendar,
@@ -18,6 +19,7 @@ import SettingsField from './SettingsField';
 import SettingsHeaderPreview from './SettingsHeaderPreview';
 import SettingsSeoPreview from './SettingsSeoPreview';
 import SettingsEmailPreview from './SettingsEmailPreview';
+import SettingsEmailDeliveryHistory from './SettingsEmailDeliveryHistory';
 
 type Props = {
   section: Section;
@@ -72,6 +74,13 @@ export default function SettingsSection({
   onReset,
   onRestoreSection,
 }: Props) {
+  const [activeGroupLabel, setActiveGroupLabel] = useState(section.groups[0]?.label ?? '');
+  const usesGroupTabs = section.groups.length >= 4;
+
+  useEffect(() => {
+    setActiveGroupLabel(section.groups[0]?.label ?? '');
+  }, [section.id]);
+
   const valueFor = (field: Field) =>
     draft[field.key] ?? settings[field.key]?.value ?? field.defaultValue ?? '';
   const valueForKey = (key: string) => {
@@ -87,6 +96,8 @@ export default function SettingsSection({
   const sectionDirty = section.groups.some((group) =>
     group.fields.some((field) => Object.prototype.hasOwnProperty.call(draft, field.key))
   );
+  const activeGroup = section.groups.find((group) => group.label === activeGroupLabel) ?? section.groups[0];
+  const visibleGroups = usesGroupTabs && activeGroup ? [activeGroup] : section.groups;
 
   return (
     <section className="eb-settings-main">
@@ -114,9 +125,30 @@ export default function SettingsSection({
         </div>
       ) : (
         <>
-          {section.groups.map((group) => (
-            <div className="eb-settings-group" key={group.label}>
-              <div className="eb-settings-group-title">{group.label}</div>
+          {usesGroupTabs && (
+            <div className="eb-settings-group-tabs" role="tablist" aria-label={`${section.label} groups`}>
+              {section.groups.map((group) => {
+                const groupDirty = group.fields.some((field) => Object.prototype.hasOwnProperty.call(draft, field.key));
+                const selected = group.label === activeGroup?.label;
+                return (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    className={selected ? 'is-active' : ''}
+                    onClick={() => setActiveGroupLabel(group.label)}
+                    key={group.label}
+                  >
+                    {group.label}
+                    {groupDirty && <span className="eb-settings-tab-dirty" aria-label="Unsaved changes" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {visibleGroups.map((group) => (
+            <div className={`eb-settings-group ${usesGroupTabs ? 'is-tabbed' : ''}`} key={group.label}>
+              {!usesGroupTabs && <div className="eb-settings-group-title">{group.label}</div>}
               <div className="eb-settings-fields">
                 {group.fields.map((field) => (
                   <SettingsField
@@ -152,7 +184,10 @@ export default function SettingsSection({
               description={valueForKey('seo_metaDescription')}
             />
           )}
-          {section.id === 'emailTemplates' && <SettingsEmailPreview values={allValues} />}
+          {section.id === 'emailTemplates' && activeGroup?.label !== 'Defaults' && (
+            <SettingsEmailPreview values={allValues} templateLabel={activeGroup?.label} canManage={canManage} />
+          )}
+          {section.id === 'emailDelivery' && <SettingsEmailDeliveryHistory values={allValues} />}
         </>
       )}
     </section>

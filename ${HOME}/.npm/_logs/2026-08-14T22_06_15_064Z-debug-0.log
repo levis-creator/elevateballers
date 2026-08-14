@@ -5,10 +5,10 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec vitest run src\features\settings\application\__tests__\notificationSettings.test.ts
-8 verbose argv "exec" "--" "vitest" "run" "src\\features\\settings\\application\\__tests__\\notificationSettings.test.ts"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T21_26_55_731Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T21_26_55_731Z-debug-0.log
+7 verbose title npm run test --run src/features/settings/application/__tests__/notificationSettings.test.ts
+8 verbose argv "run" "test" "--" "--run" "src/features/settings/application/__tests__/notificationSettings.test.ts"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_06_15_064Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_06_15_064Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
