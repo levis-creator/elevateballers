@@ -5,10 +5,8 @@
 import type { PrismaClient } from '@prisma/client';
 
 let prismaInstance: PrismaClient;
-const astroEnv = (import.meta as ImportMeta & { env?: { SSR?: boolean } }).env;
-const isServer = astroEnv?.SSR ?? true;
 
-if (isServer) {
+if (import.meta.env.SSR) {
   const isVercel = process.env.VERCEL === '1' || process.env.DEPLOY_TARGET === 'vercel';
 
   if (!process.env.VERCEL && !process.env.DEPLOY_TARGET) {

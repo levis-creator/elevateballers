@@ -103,7 +103,7 @@ export default function SettingsNavListControl({ field, value, canManage, onChan
           <Plus size={13} /> {field.addLabel || 'Add item'}
         </button>
         <span>
-          {items.length} / {maxItems} items
+          {field.rowNote ? `${field.rowNote} · ` : ''}{items.length} / {maxItems} items
           {atLimit ? ' · remove one to add another' : ''}
         </span>
       </div>

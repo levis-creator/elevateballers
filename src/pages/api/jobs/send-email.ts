@@ -13,7 +13,7 @@ import type { APIRoute } from 'astro';
 import { verifyQStashSignature } from '../../../lib/qstash-verify';
 import { sendTransactionalEmail } from '../../../lib/email/core';
 import { sendContactNotification, sendContactAutoReply } from '../../../lib/email/templates/contact';
-import { sendAdminNotificationEmail } from '../../../lib/email';
+import { sendAdminNotificationEmail, sendRegistrationPaymentEmail } from '../../../lib/email';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 
 export const prerender = false;
@@ -49,6 +49,9 @@ export const POST: APIRoute = async ({ request }) => {
           break;
         case 'admin_notification':
           await sendAdminNotificationEmail(body.data);
+          break;
+        case 'registration_payment_received':
+          await sendRegistrationPaymentEmail(body.data);
           break;
         default:
           return new Response(

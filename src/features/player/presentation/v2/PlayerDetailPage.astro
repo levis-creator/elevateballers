@@ -7,12 +7,30 @@ import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import type { PlayerView } from "@/features/player/domain/entities/player-detail-v2";
+import { resolvePublicPlayerPageSettings, siteSettingsService } from "@/features/settings";
 
 interface Props {
 	view: PlayerView;
 }
 const { view } = Astro.props;
-const footer = await getFooterData();
+const [footer, settingRecords] = await Promise.all([
+	getFooterData(),
+	siteSettingsService.list("player").catch(() => []),
+]);
+const settings = resolvePublicPlayerPageSettings(settingRecords);
+
+const normalizeLabel = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+const factValues = new Map(view.bio.map((item) => [normalizeLabel(item.k), item.v]));
+const heroFacts = settings.bioFacts
+	.map((item) => ({ k: item.label, v: factValues.get(normalizeLabel(item.label)) || "" }))
+	.filter((item) => item.v && item.v !== "—");
+const averageValues = new Map(view.averages.map((item) => [normalizeLabel(item.label), item]));
+const heroAverages = settings.heroAverages
+	.map((item) => averageValues.get(normalizeLabel(item.label)))
+	.filter((item): item is PlayerView["averages"][number] => Boolean(item));
+const initials = `${view.hero.first[0] || ""}${view.hero.last[0] || ""}`.toUpperCase() || "P";
+const visibleGames = view.gamelog.slice(0, settings.logRows);
+const hasSidebar = settings.shooting || (settings.careerHigh && view.highs.length > 0);
 
 const PHOTO_BG = "repeating-linear-gradient(45deg,#1a1714,#1a1714 12px,#151210 12px,#151210 24px)";
 // Efficiency-ring circumference: 2πr with r=52.
@@ -32,21 +50,21 @@ const RING_CIRC = 326.73;
 		<div class="relative mx-auto grid max-w-[1280px] grid-cols-[300px_1fr] items-end gap-12 px-8 pb-[52px] pt-[28px] max-[960px]:grid-cols-1 max-[960px]:gap-8 max-[960px]:px-6">
 			<div class="relative">
 				<div class="aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 max-[960px]:max-w-[300px]" style={`background:${PHOTO_BG};`}>
-					{view.hero.image ? (
+					{settings.headshot && view.hero.image ? (
 						<img src={view.hero.image} alt={`${view.hero.first} ${view.hero.last}`} class="h-full w-full object-cover" />
 					) : (
-						<div class="flex h-full items-end justify-center pb-6"><span class="font-mono text-[12px] uppercase tracking-[0.14em] text-[#6b635a]">player photo</span></div>
+						<div class="flex h-full items-center justify-center"><span class="font-display text-[64px] uppercase text-[#6b635a]">{initials}</span></div>
 					)}
 				</div>
 				<div class="absolute -right-4 -top-4 flex h-[68px] w-[68px] items-center justify-center rounded-full bg-brand font-display text-[30px] text-brandfg shadow-[0_10px_30px_rgb(var(--site-brand-rgb) / 0.4)]">{view.hero.number}</div>
 			</div>
 			<div>
-				<div class="mb-4 inline-flex items-center gap-2 rounded bg-white/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-creamdim">
+				{settings.teamChip && <div class="mb-4 inline-flex items-center gap-2 rounded bg-white/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-creamdim">
 					{view.hero.team}{view.hero.league ? ` · ${view.hero.league}` : ""}
-				</div>
+				</div>}
 				<h1 class="font-display text-[clamp(46px,7vw,96px)] uppercase leading-[0.86]">{view.hero.first}{view.hero.last ? <><br /><span class="text-brand">{view.hero.last}</span></> : ""}</h1>
 				<div class="mt-6 flex flex-wrap gap-x-9 gap-y-4">
-					{view.bio.map((b) => (
+					{heroFacts.map((b) => (
 						<div><div class="font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">{b.k}</div><div class="mt-1 font-body text-[16px] font-bold text-cream">{b.v}</div></div>
 					))}
 				</div>
@@ -57,11 +75,11 @@ const RING_CIRC = 326.73;
 	{view.hasStats ? (
 		<>
 			<!-- SEASON AVERAGES -->
-			<section class="border-b border-black/[0.08] bg-panel">
+			{heroAverages.length > 0 && <section class="border-b border-black/[0.08] bg-panel">
 				<div class="mx-auto max-w-[1280px] px-8 py-9 max-[960px]:px-6">
 					<div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Season Averages{view.seasonLabel ? ` · ${view.seasonLabel}` : ""}</div>
 					<div class="grid grid-cols-6 gap-4 max-[600px]:grid-cols-3 max-[960px]:grid-cols-3">
-						{view.averages.map((a) => (
+						{heroAverages.map((a) => (
 							<div>
 								<div class="font-display text-[42px] leading-none" style={`color:${a.accent ? "var(--brand)" : "var(--ink, #141009)"};`}>{a.value}</div>
 								<div class="mt-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">{a.label}</div>
@@ -69,13 +87,13 @@ const RING_CIRC = 326.73;
 						))}
 					</div>
 				</div>
-			</section>
+			</section>}
 
 			<!-- SPLITS + SHOOTING -->
-			<section class="mx-auto grid max-w-[1280px] grid-cols-[1.35fr_0.65fr] gap-12 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6">
+			{(settings.splits || settings.shooting || settings.gameLog || (settings.careerHigh && view.highs.length > 0)) && <section class:list={["mx-auto grid max-w-[1280px] gap-12 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-9 max-[960px]:px-6", hasSidebar ? "grid-cols-[1.35fr_0.65fr]" : "grid-cols-1"]}>
 				<!-- LEFT -->
 				<div>
-					<h2 class="mb-4 font-display text-[24px] uppercase text-ink">Per-Game Splits</h2>
+					{settings.splits && <><h2 class="mb-4 font-display text-[24px] uppercase text-ink">{settings.splitsHeading}</h2>
 					<div class="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div class="min-w-[560px]">
 							<div class="grid grid-cols-[1.4fr_repeat(6,1fr)] items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
@@ -93,10 +111,10 @@ const RING_CIRC = 326.73;
 								</div>
 							))}
 						</div>
-					</div>
+					</div></>}
 
 					<!-- SHOOTING BREAKDOWN (coordinate-free) -->
-					<div class="mb-4 mt-10 flex items-end justify-between">
+					{settings.shooting && <><div class="mb-4 mt-10 flex items-end justify-between">
 						<h2 class="font-display text-[24px] uppercase text-ink">Shooting Breakdown</h2>
 						<span class="font-mono text-[11px] text-muted2">{view.breakdown.fgm}/{view.breakdown.fga} FG · {view.breakdown.fgPct}%</span>
 					</div>
@@ -149,17 +167,17 @@ const RING_CIRC = 326.73;
 								</div>
 							</div>
 						</div>
-					</div>
+					</div></>}
 
 					<!-- RECENT GAMES -->
-					<h2 class="mb-4 mt-10 font-display text-[24px] uppercase text-ink">Recent Games</h2>
-					{view.gamelog.length > 0 ? (
+					{settings.gameLog && <><h2 class="mb-4 mt-10 font-display text-[24px] uppercase text-ink">Recent Games</h2>
+					{visibleGames.length > 0 ? (
 						<div class="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 							<div class="min-w-[560px]">
 								<div class="grid grid-cols-[1.6fr_60px_repeat(4,1fr)] items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
 									<span>Opponent</span><span class="text-center">Res</span><span class="text-center">PTS</span><span class="text-center">REB</span><span class="text-center">AST</span><span class="text-center">3PT</span>
 								</div>
-								{view.gamelog.map((g) => (
+								{visibleGames.map((g) => (
 									<a href={g.href} class="grid grid-cols-[1.6fr_60px_repeat(4,1fr)] items-center gap-2 border-b border-black/[0.06] px-5 py-3 no-underline last:border-0 hover:bg-paper2">
 										<span class="flex items-center gap-2"><span class="font-mono text-[11px] text-muted2">{g.va}</span><span class="font-body text-[14px] font-bold text-ink2">{g.opp}</span></span>
 										<span class="text-center font-mono text-[12px] font-bold" style={`color:${g.res === "W" ? "#1f9d55" : g.res === "L" ? "var(--brand)" : "var(--muted2,#a49a8d)"};`}>{g.res}</span>
@@ -173,12 +191,12 @@ const RING_CIRC = 326.73;
 						</div>
 					) : (
 						<div class="rounded-xl border border-dashed border-black/[0.16] bg-white px-6 py-10 text-center font-body text-[13px] text-muted">No completed games yet.</div>
-					)}
+					)}</>}
 				</div>
 
 				<!-- RIGHT -->
-				<div class="flex flex-col gap-5">
-					<div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
+				{hasSidebar && <div class="flex flex-col gap-5">
+					{settings.shooting && <div class="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 						<div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Shooting</div>
 						<div class="flex flex-col gap-5">
 							{view.shooting.map((s) => (
@@ -191,9 +209,9 @@ const RING_CIRC = 326.73;
 								</div>
 							))}
 						</div>
-					</div>
+					</div>}
 
-					{view.highs.length > 0 && (
+					{settings.careerHigh && view.highs.length > 0 && (
 						<div class="rounded-2xl border border-black/10 bg-night p-6 text-cream shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
 							<div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted2">Season Highs</div>
 							<div class="flex flex-col gap-4">
@@ -206,8 +224,8 @@ const RING_CIRC = 326.73;
 							</div>
 						</div>
 					)}
-				</div>
-			</section>
+				</div>}
+			</section>}
 		</>
 	) : (
 		<section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6">
@@ -215,6 +233,20 @@ const RING_CIRC = 326.73;
 				<div class="font-display text-[24px] uppercase text-ink">No games recorded yet</div>
 				<p class="max-w-[400px] text-[15px] leading-[1.6] text-muted">Once {view.hero.first} plays a tracked game, season averages, splits and game logs will appear here.</p>
 			</div>
+		</section>
+	)}
+
+	{settings.bio && view.biography && (
+		<section class="mx-auto max-w-[1280px] px-8 pb-[56px] max-[960px]:px-6">
+			<div class="rounded-2xl border border-black/10 bg-white p-7 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
+				<h2 class="mb-4 font-display text-[24px] uppercase text-ink">Biography</h2>
+				<p class="max-w-[760px] whitespace-pre-line text-[15px] leading-[1.75] text-muted">{view.biography}</p>
+			</div>
+		</section>
+	)}
+	{settings.social && view.socialLinks.length > 0 && (
+		<section class="mx-auto flex max-w-[1280px] flex-wrap gap-3 px-8 pb-[56px] max-[960px]:px-6">
+			{view.socialLinks.map((link) => <a href={link.href} rel="me noopener noreferrer" target="_blank" class="rounded-md border border-black/10 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.08em] text-brand no-underline hover:bg-panel">{link.label}</a>)}
 		</section>
 	)}
 

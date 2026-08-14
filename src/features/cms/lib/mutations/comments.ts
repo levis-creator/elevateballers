@@ -13,6 +13,7 @@ export async function createComment(data: CreateCommentInput): Promise<Comment> 
     const parent = await prisma.comment.findUnique({ where: { id: data.parentId } });
     if (!parent) throw new Error('Parent comment not found');
     if (parent.articleId !== data.articleId) throw new Error('Parent comment does not belong to this article');
+    if (parent.parentId) throw new Error('Replies can only be one level deep');
   }
 
   return await prisma.comment.create({
@@ -24,7 +25,7 @@ export async function createComment(data: CreateCommentInput): Promise<Comment> 
       articleId: data.articleId,
       userId: data.userId,
       parentId: data.parentId,
-      approved: true,
+      approved: data.approved ?? true,
     },
   });
 }

@@ -27,6 +27,8 @@ export interface StaffMember {
 	email: string | null;
 	/** Resolved photo URL, or null/undefined → render the striped-initials avatar. */
 	image?: string | null;
+	/** Optional profile copy, shown on directory cards only when enabled in settings. */
+	bio?: string | null;
 }
 
 export interface StaffDepartment {

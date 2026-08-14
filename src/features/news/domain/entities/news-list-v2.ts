@@ -4,6 +4,7 @@
  */
 
 export interface NewsCard {
+	featured: boolean;
 	cat: string;
 	title: string;
 	excerpt: string;

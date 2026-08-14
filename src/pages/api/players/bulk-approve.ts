@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { notifyPlayerRegistrationDecision } from '../../../features/registration/application/send-registration-decision';
 
 export const prerender = false;
 
@@ -18,12 +19,22 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    const shouldApprove = approved !== undefined ? approved : true;
+    const changed = await prisma.player.findMany({
+      where: { id: { in: ids }, approved: { not: shouldApprove } },
+      select: { id: true },
+    });
     const result = await prisma.player.updateMany({
       where: { id: { in: ids } },
-      data: { approved: approved !== undefined ? approved : true },
+      data: { approved: shouldApprove },
     });
 
-    await logAudit(request, (approved !== undefined ? approved : true) ? 'PLAYER_BULK_APPROVED' : 'PLAYER_BULK_UNAPPROVED', {
+    void Promise.allSettled(changed.map((player) => notifyPlayerRegistrationDecision(player.id, shouldApprove)))
+      .then((settled) => {
+        for (const item of settled) if (item.status === 'rejected') console.error('[email] Bulk player decision email failed:', item.reason);
+      });
+
+    await logAudit(request, shouldApprove ? 'PLAYER_BULK_APPROVED' : 'PLAYER_BULK_UNAPPROVED', {
       playerIds: ids,
       updated: result.count,
     });

@@ -105,6 +105,7 @@ export interface PotwStat {
 export interface Potw {
 	name: string;
 	teamLabel: string;
+	tagline: string | null;
 	image: string | null;
 	description: string;
 	stats: PotwStat[];

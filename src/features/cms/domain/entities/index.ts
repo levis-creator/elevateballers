@@ -407,6 +407,7 @@ export type CreateCommentInput = {
   articleId: string;
   userId?: string;
   parentId?: string;
+  approved?: boolean;
 };
 
 export type UpdateCommentInput = {

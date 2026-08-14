@@ -10,6 +10,7 @@ type Props = {
   canManage: boolean;
   onChange: (key: string, value: string) => void;
   onReset: (field: Field) => void;
+  onAction?: (field: Field) => void;
 };
 
 export default function SettingsField({
@@ -19,6 +20,7 @@ export default function SettingsField({
   canManage,
   onChange,
   onReset,
+  onAction,
 }: Props) {
   const validPreviewColor = /^#[0-9a-f]{6}$/i.test(value.trim());
 
@@ -37,7 +39,11 @@ export default function SettingsField({
         )}
       </div>
       <div className="eb-settings-field-control">
-        {field.type === 'file' ? (
+        {field.type === 'action' ? (
+          <button type="button" className="eb-quiet-button" disabled={!canManage} onClick={() => onAction?.(field)}>
+            {field.label}
+          </button>
+        ) : field.type === 'file' ? (
           <SettingsFileControl field={field} value={value} canManage={canManage} onChange={onChange} />
         ) : field.type === 'image' ? (
           <SettingsImageControl

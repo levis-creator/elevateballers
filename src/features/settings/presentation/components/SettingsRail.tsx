@@ -50,10 +50,14 @@ const ICONS = {
   news: FileText,
   article: FileText,
   potw: Trophy,
+  email: Mail,
+  emailTemplates: FileText,
+  emailDelivery: ClipboardList,
 } as const;
 
 const RAIL_GROUPS = [
   { id: 'site-wide', label: 'Site-wide', eyebrow: 'Site-wide' },
+  { id: 'notifications', label: 'Notifications', eyebrow: 'Notifications' },
   { id: 'pages', label: 'Pages', eyebrow: 'Pages' },
   { id: 'competition', label: 'Competition', eyebrow: 'Competition' },
   { id: 'people', label: 'People', eyebrow: 'People' },

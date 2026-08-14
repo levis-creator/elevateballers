@@ -1,10 +1,16 @@
 import { prisma } from '../../../lib/prisma';
 import { sendTeamRegistrationAutoReply, sendPlayerRegistrationAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
+import { resolveEmailDeliverySettings, siteSettingsService } from '../../settings';
 
 export async function processRegistrationEmailJob(jobId: string): Promise<void> {
   const db = prisma as any;
   const job = await db.publicRegistrationEmailJob.findUnique({ where: { id: jobId } });
-  if (!job || job.status === 'SENT') return;
+  if (!job || job.status === 'SENT' || job.status === 'EXHAUSTED') return;
+  const delivery = resolveEmailDeliverySettings(await siteSettingsService.list('emailDelivery').catch(() => []));
+  if (job.attempts >= delivery.retries + 1) {
+    await db.publicRegistrationEmailJob.update({ where: { id: jobId }, data: { status: 'EXHAUSTED', lockedUntil: null } });
+    return;
+  }
   const now = new Date();
   const claimed = await db.publicRegistrationEmailJob.updateMany({ where: { id: jobId, OR: [{ status: 'PENDING' }, { status: 'FAILED' }, { status: 'PROCESSING', lockedUntil: { lt: now } }], }, data: { status: 'PROCESSING', attempts: { increment: 1 }, lockedUntil: new Date(now.getTime() + 10 * 60 * 1000) } });
   if (!claimed.count) return;

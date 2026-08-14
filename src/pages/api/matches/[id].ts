@@ -8,6 +8,7 @@ import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rule
 import { resolveLeagueSeasonById } from '../../../features/seasons/data/league-season-scope';
 import { getCurrentUser } from '../../../features/cms/lib/auth';
 import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from '../../../features/settings';
+import { notifyMatchParticipants } from '../../../features/settings/application/notificationMaintenance';
 
 export const prerender = false;
 
@@ -135,6 +136,16 @@ export const PUT: APIRoute = async ({ params, request }) => {
       date: match.date,
       status: match.status,
     });
+
+    const scheduleChanged = Boolean(existingMatch) && (
+      (data.date !== undefined && new Date(existingMatch.date).getTime() !== new Date(match.date).getTime()) ||
+      (data.team1Id !== undefined && existingMatch.team1Id !== match.team1Id) ||
+      (data.team2Id !== undefined && existingMatch.team2Id !== match.team2Id) ||
+      (data.status === 'UPCOMING' && existingMatch.status !== 'UPCOMING')
+    );
+    if (scheduleChanged && match.status === 'UPCOMING') {
+      void notifyMatchParticipants(match.id).catch((error) => console.error('[email] Match update notification failed:', error));
+    }
 
     return json(match, 200);
   } catch (error) {

@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { approvePendingSeasonRegistrations } from '../../../features/registration/data/datasources/public-submission';
+import { notifyTeamRegistrationDecision } from '../../../features/registration/application/send-registration-decision';
 
 export const prerender = false;
 
@@ -20,6 +21,11 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const shouldApprove = approved !== undefined ? approved : true;
+
+    const changed = await prisma.team.findMany({
+      where: { id: { in: ids }, approved: { not: shouldApprove } },
+      select: { id: true },
+    });
 
     const result = await prisma.team.updateMany({
       where: { id: { in: ids } },
@@ -39,6 +45,11 @@ export const POST: APIRoute = async ({ request }) => {
         },
       });
     }
+
+    void Promise.allSettled(changed.map((team) => notifyTeamRegistrationDecision(team.id, shouldApprove)))
+      .then((settled) => {
+        for (const item of settled) if (item.status === 'rejected') console.error('[email] Bulk team decision email failed:', item.reason);
+      });
 
     await logAudit(request, shouldApprove ? 'TEAM_BULK_APPROVED' : 'TEAM_BULK_UNAPPROVED', {
       teamIds: ids,

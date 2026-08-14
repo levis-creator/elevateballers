@@ -13,13 +13,14 @@ export type SettingRecord = {
 export type Field = {
   key: string;
   label: string;
-  type?: 'text' | 'area' | 'toggle' | 'select' | 'json' | 'image' | 'file' | 'list';
+  type?: 'text' | 'area' | 'toggle' | 'select' | 'json' | 'image' | 'file' | 'list' | 'number' | 'action';
   help?: string;
   placeholder?: string;
   options?: string[];
   defaultValue?: string;
   meta?: string;
   addLabel?: string;
+  rowNote?: string;
   maxItems?: number;
   colorPreview?: boolean;
   counter?: number;
@@ -94,6 +95,14 @@ const editorial = (
   groups: Group[],
   href = `/${id}`
 ) => groupedPages('Editorial', id, label, description, groups, href);
+
+const notifications = (
+  id: string,
+  label: string,
+  description: string,
+  groups: Group[],
+  href = '/admin/settings'
+) => groupedPages('Notifications', id, label, description, groups, href);
 
 export const SECTIONS: Section[] = [
   siteWide(
@@ -540,6 +549,89 @@ export const SECTIONS: Section[] = [
     ],
     '/contacts'
   ),
+  notifications('email', 'Email Sending', 'Who transactional mail comes from, how it is sent, and the signature every message carries. Templates live in the next section.', [
+    { label: 'Automatic replies', fields: [
+      f('email_autoReplies', 'Send automatic replies', 'Master switch. Off queues nothing — no registration, approval, payment or reset mail leaves the system.', { type: 'toggle', defaultValue: 'true' }),
+      f('email_adminCopy', 'Copy the league office', 'Blind-copies the default inbox on every automatic reply.', { type: 'toggle', defaultValue: 'false' }),
+    ] },
+    { label: 'Sender', fields: [
+      f('email_senderName', 'Sender name', 'Shown as the From name in the inbox.', { defaultValue: 'Elevate Ballers' }),
+      f('email_senderEmail', 'Sender address', 'Must be a verified sender on the provider below.', { defaultValue: 'no-reply@elevateballers.com' }),
+      f('email_replyTo', 'Reply-to address', 'Where replies land. Usually a monitored inbox, not the sender.', { defaultValue: 'ballers@elevateballers.com' }),
+    ] },
+    { label: 'Providers', fields: [
+      f('email_providers', 'Configured providers', 'Order sets priority. Resend and Brevo accept an API key; Mailgun accepts key|domain or JSON; SMTP accepts host:port or JSON with host, port, user and pass. Credentials are encrypted and masked after saving.', { type: 'list', addLabel: 'Add provider', rowNote: 'top row sends first', maxItems: 8, columns: [{ key: 'provider', label: 'Provider', placeholder: 'Resend', width: '0.7fr' }, { key: 'credential', label: 'Credential / connection', placeholder: 're_live_…', width: '1.3fr' }, { key: 'useFor', label: 'Use for', placeholder: 'All mail', width: '0.8fr' }, { key: 'status', label: 'Status', placeholder: 'Verified', width: '0.6fr' }], defaultValue: '[{"provider":"Resend","credential":"re_live_••••••••••••••4c1a","useFor":"Transactional","status":"Verified"},{"provider":"Brevo","credential":"xkeysib-••••••••••••••8d3f","useFor":"Bulk & newsletter","status":"Verified"},{"provider":"Mailgun","credential":"key-••••••••••••••7b02","useFor":"Bulk & newsletter","status":"Verified"},{"provider":"SMTP","credential":"smtp.elevateballers.com:587","useFor":"Fallback only","status":"Unverified"}]' }),
+      f('email_routing', 'Routing', 'How a message picks its provider.', { type: 'select', options: ['By “Use for” column', 'Always the top provider', 'Round-robin across verified'], defaultValue: 'By “Use for” column' }),
+    ] },
+    { label: 'Failover', fields: [
+      f('email_failover', 'Fail over automatically', 'On a send error, retry down the provider list before giving up.', { type: 'toggle', defaultValue: 'true' }),
+      f('email_failoverAfter', 'Switch after failures', 'Consecutive failures on one provider before moving to the next.', { type: 'number', defaultValue: '2' }),
+      f('email_failoverCooldown', 'Cooldown (minutes)', 'How long a failing provider is skipped before it is tried again.', { type: 'number', defaultValue: '15' }),
+      f('email_failoverAlert', 'Alert on failover', 'Emails the alert address when sending moves to another provider.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Format & signature', fields: [
+      f('email_format', 'Email format', 'Multipart sends both and lets the client choose — the safest default.', { type: 'select', options: ['HTML and plain text', 'HTML only', 'Plain text only'], defaultValue: 'HTML and plain text' }),
+      f('email_brandHeader', 'Branded header', 'Logo on a dark band at the top of HTML mail.', { type: 'toggle', defaultValue: 'true' }),
+      f('email_signature', 'Signature', 'Appended to every message body.', { type: 'area', defaultValue: 'Elevate Ballers League\nPepo Lane, off Dagoretti Road, Nairobi\n0703 913 923 · ballers@elevateballers.com' }),
+      f('email_footerNote', 'Email footer', 'Small print under the signature. Unsubscribe is added automatically to non-transactional mail.', { type: 'area', defaultValue: 'You are receiving this because you registered with Elevate Ballers.' }),
+    ] },
+  ]),
+  notifications('emailTemplates', 'Email Templates', 'Subject and body for every automatic message. Variables: {name} {firstName} {email} {team} {league} {season} {status} {applicationId} {amount} {matchDate} {opponent} {venue} {link} {expiry}.', [
+    { label: 'Registration received', fields: [
+      f('emailTemplates_registrationEnabled', 'Registration received', 'Sent the moment a team or player form is submitted.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailTemplates_registrationSubject', 'Registration received · subject', 'Variables are resolved when the mail is queued.', { defaultValue: 'We’ve received your {season} registration', counter: 70 }),
+      f('emailTemplates_registrationBody', 'Registration received · body', 'Blank lines separate paragraphs. The signature is appended automatically.', { type: 'area', defaultValue: 'Hi {firstName},\n\nThanks for registering {team} for the {season} {league} season. Your application ID is {applicationId}.\n\nOur team reviews entries within 3 working days and will email you the outcome.' }),
+    ] },
+    { label: 'Approved', fields: [
+      f('emailTemplates_approvedEnabled', 'Application approved', 'Sent when an admin approves a SeasonTeam row.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailTemplates_approvedSubject', 'Application approved · subject', 'Variables are resolved when the mail is queued.', { defaultValue: '{team} is in — {season} registration approved', counter: 70 }),
+      f('emailTemplates_approvedBody', 'Application approved · body', 'Blank lines separate paragraphs. The signature is appended automatically.', { type: 'area', defaultValue: 'Hi {firstName},\n\nGood news: {team} has been accepted into the {season} {league} season. Application {applicationId} is now marked {status}.\n\nYour entry fee of {amount} is due before the roster deadline. Fixtures are published once all entries are confirmed.' }),
+    ] },
+    { label: 'Rejected', fields: [
+      f('emailTemplates_rejectedEnabled', 'Application rejected', 'Sent when an entry is declined. Keep it specific and offer a route back.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailTemplates_rejectedSubject', 'Application rejected · subject', 'Variables are resolved when the mail is queued.', { defaultValue: 'About your {season} registration', counter: 70 }),
+      f('emailTemplates_rejectedBody', 'Application rejected · body', 'Blank lines separate paragraphs. The signature is appended automatically.', { type: 'area', defaultValue: 'Hi {firstName},\n\nThanks for applying to the {season} {league} season. We’re unable to confirm {team} this time — application {applicationId} is marked {status}.\n\nReply to this email and we’ll explain the reason and what would make a future entry successful.' }),
+    ] },
+    { label: 'Payment received', fields: [
+      f('emailTemplates_paymentEnabled', 'Payment received', 'Sent on a confirmed entry-fee payment. Doubles as the receipt.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailTemplates_paymentSubject', 'Payment received · subject', 'Variables are resolved when the mail is queued.', { defaultValue: 'Payment received — {amount} for {team}', counter: 70 }),
+      f('emailTemplates_paymentBody', 'Payment received · body', 'Blank lines separate paragraphs. The signature is appended automatically.', { type: 'area', defaultValue: 'Hi {firstName},\n\nWe’ve received {amount} for {team}’s {season} entry. Application {applicationId} is fully paid.\n\nKeep this email as your receipt.' }),
+    ] },
+    { label: 'Match notification', fields: [
+      f('emailTemplates_matchEnabled', 'Match notification', 'Sent to a club when a fixture is published, moved or cancelled.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailTemplates_matchSubject', 'Match notification · subject', 'Variables are resolved when the mail is queued.', { defaultValue: '{team} vs {opponent} — {matchDate}', counter: 70 }),
+      f('emailTemplates_matchBody', 'Match notification · body', 'Blank lines separate paragraphs. The signature is appended automatically.', { type: 'area', defaultValue: 'Hi {firstName},\n\n{team} play {opponent} on {matchDate} at {venue}.\n\nArrive 45 minutes before tip-off with your squad list. Full fixture details: {link}' }),
+      f('emailTemplates_matchLead', 'Send days ahead', 'How far before tip-off the reminder goes out. 0 sends only on publication.', { type: 'number', defaultValue: '2' }),
+    ] },
+    { label: 'Account & security', fields: [
+      f('emailTemplates_verifyEnabled', 'Verification & password reset', 'One template covers both; {link} carries the right action.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailTemplates_verifySubject', 'Verification & password reset · subject', 'Variables are resolved when the mail is queued.', { defaultValue: 'Confirm your Elevate Ballers account', counter: 70 }),
+      f('emailTemplates_verifyBody', 'Verification & password reset · body', 'Blank lines separate paragraphs. The signature is appended automatically.', { type: 'area', defaultValue: 'Hi {firstName},\n\nUse the link below to continue. It expires in {expiry}.\n\n{link}\n\nIf you didn’t request this, ignore this email and nothing will change.' }),
+      f('emailTemplates_linkExpiry', 'Link valid for (minutes)', 'Fills {expiry} and enforces the real expiry.', { type: 'number', defaultValue: '60' }),
+    ] },
+    { label: 'Defaults', fields: [
+      f('$restoreSection', 'Restore default templates', 'Puts every subject and body in this section back to its original wording. Nothing is written until you save.', { type: 'action' }),
+    ] },
+  ]),
+  notifications('emailDelivery', 'Delivery & Logs', 'Sending limits, duplicate protection, and where failures are recorded.', [
+    { label: 'Rate limiting', fields: [
+      f('emailDelivery_perMinute', 'Messages per minute', 'Queue drains at this rate. Keep at or under your provider’s limit.', { type: 'number', defaultValue: '60' }),
+      f('emailDelivery_perRecipientDay', 'Per recipient, per day', 'Hard cap so a loop cannot flood one inbox.', { type: 'number', defaultValue: '5' }),
+      f('emailDelivery_dedupe', 'Suppress duplicates', 'Drops an identical event and recipient sent inside the window below.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailDelivery_dedupeWindow', 'Duplicate window (minutes)', '', { type: 'number', defaultValue: '30' }),
+    ] },
+    { label: 'Errors', fields: [
+      f('emailDelivery_logErrors', 'Log SMTP and API errors', 'Failures are written to audit logs with the provider response.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailDelivery_retries', 'Retry attempts', 'Exponential backoff between tries. Hard bounces are never retried.', { type: 'number', defaultValue: '3' }),
+      f('emailDelivery_alertEmail', 'Alert address', 'Notified when the queue stalls or the bounce rate spikes. Blank disables alerts.', { defaultValue: 'ballers@elevateballers.com' }),
+      f('emailDelivery_bounceThreshold', 'Bounce alert threshold (%)', 'Alert once bounces exceed this share of a day’s sends.', { type: 'number', defaultValue: '5' }),
+    ] },
+    { label: 'History', fields: [
+      f('emailDelivery_history', 'Keep notification history', 'Every message with its status — queued, sent, opened, bounced, failed.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailDelivery_retention', 'Retain for (days)', 'Older records are purged nightly.', { type: 'number', defaultValue: '90' }),
+      f('emailDelivery_trackOpens', 'Track opens', 'Adds a tracking pixel. Requires cookie consent for marketing mail.', { type: 'toggle', defaultValue: 'false' }),
+    ] },
+  ]),
   siteWide(
     'consent',
     'Cookie Consent',
@@ -1090,46 +1182,130 @@ export const SECTIONS: Section[] = [
       f('players_emptyBodyFiltered', 'Message · filtered', 'Shown when filters, not a search, return nothing.', { type: 'area', defaultValue: 'No players match these filters. Try clearing them.' }),
     ] },
   ]),
-  people('player', 'Player Page', 'Player profile labels and supporting copy.', [
-    {
-      label: 'Profile',
-      fields: [f('player_statsLabel', 'Stats label'), f('player_matchesLabel', 'Matches label')],
-    },
-  ]),
-  people('staff', 'Staff', 'Staff directory headings and supporting copy.', [
-    {
-      label: 'Directory',
-      fields: [f('staff_title', 'Page title'), f('staff_intro', 'Intro', '', { type: 'area' })],
-    },
-  ]),
-  people('staffMember', 'Staff Profile', 'Staff profile labels.', [
-    {
-      label: 'Profile',
-      fields: [
-        f('staffMember_title', 'Page title'),
-        f('staffMember_contactLabel', 'Contact label'),
-      ],
-    },
-  ]),
-  editorial('news', 'News List', 'News listing headings and filters.', [
-    {
-      label: 'Listing',
-      fields: [f('news_title', 'Page title'), f('news_intro', 'Intro', '', { type: 'area' })],
-    },
-  ]),
-  editorial('article', 'Article Page', 'Article detail labels and sharing copy.', [
-    {
-      label: 'Article',
-      fields: [
-        f('article_shareText', 'Share text', '', { type: 'area' }),
-        f('article_relatedLabel', 'Related label'),
-      ],
-    },
-  ]),
-  editorial('potw', 'Player of the Week', 'Player of the Week headings and supporting copy.', [
-    {
-      label: 'Highlight',
-      fields: [f('potw_title', 'Page title'), f('potw_intro', 'Intro', '', { type: 'area' })],
-    },
-  ]),
+  people('player', 'Player Page', 'An individual profile: dark hero, per-game splits, shooting breakdown and recent games.', [
+    { label: 'Hero', fields: [
+      f('player_teamChip', 'Team & league chip', 'Above the name.', { type: 'toggle', defaultValue: 'true' }),
+      f('player_bioFacts', 'Bio facts', 'Row of facts under the name. A fact with no value for a player is hidden.', { type: 'list', addLabel: 'Add fact', maxItems: 8, columns: [{ key: 'label', label: 'Label', placeholder: 'Position', width: '1fr' }], defaultValue: '[{"label":"Position"},{"label":"Height"},{"label":"Age"},{"label":"Games"}]' }),
+      f('player_heroAverages', 'Hero averages', 'Season averages printed across the hero.', { type: 'list', addLabel: 'Add average', maxItems: 8, columns: [{ key: 'label', label: 'Stat', placeholder: 'Points', width: '1fr' }], defaultValue: '[{"label":"Points"},{"label":"Rebounds"},{"label":"Assists"},{"label":"Steals"},{"label":"FG"},{"label":"3PT"}]' }),
+      f('player_headshot', 'Headshot', 'Falls back to initials.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Statistics', fields: [
+      f('player_splits', 'Per-game splits', 'Season-by-season averages table.', { type: 'toggle', defaultValue: 'true' }),
+      f('player_splitsHeading', 'Splits heading', '', { defaultValue: 'Per-Game Splits' }),
+      f('player_shooting', 'Shooting breakdown', 'Field-goal, three-point and free-throw split.', { type: 'toggle', defaultValue: 'true' }),
+      f('player_gameLog', 'Recent games', 'Game-by-game log.', { type: 'toggle', defaultValue: 'true' }),
+      f('player_logRows', 'Games listed', 'Before “show more”.', { type: 'number', defaultValue: '10' }),
+    ] },
+    { label: 'Profile', fields: [
+      f('player_bio', 'Biography', 'Shown when the player has one.', { type: 'toggle', defaultValue: 'true' }),
+      f('player_social', 'Social links', 'Only if the player supplied them.', { type: 'toggle', defaultValue: 'false' }),
+      f('player_careerHigh', 'Career highs', 'Best single-game figures.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+  ], '/players'),
+  people('staff', 'Staff', 'League officials and volunteers, grouped by department.', [
+    { label: 'Hero', fields: [
+      f('staff_eyebrow', 'Eyebrow', '', { defaultValue: 'The People Behind the League' }),
+      f('staff_title', 'Page title', '', { defaultValue: 'Our Staff' }),
+      f('staff_intro', 'Intro', '', { type: 'area', defaultValue: 'The organisers, officials, and volunteers who keep Elevate Ballers running — from tip-off to final buzzer, every match day of the season.' }),
+    ] },
+    { label: 'Leadership', fields: [
+      f('staff_leaders', 'Show leadership', 'Founder and operations lead, above the departments. These cards always show a bio.', { type: 'toggle', defaultValue: 'true' }),
+      f('staff_leaderBadge', 'Card badge', 'Printed on each leadership card.', { defaultValue: 'Leadership' }),
+    ] },
+    { label: 'Directory', fields: [
+      f('staff_groupByRole', 'Group by department', 'Otherwise one alphabetical grid.', { type: 'toggle', defaultValue: 'true' }),
+      f('staff_departments', 'Department order', 'Sections appear in this order; anyone unassigned falls to the end.', { type: 'list', addLabel: 'Add department', maxItems: 12, columns: [{ key: 'name', label: 'Department', placeholder: 'League Management', width: '1fr' }], defaultValue: '[{"name":"League Management"},{"name":"Officiating"},{"name":"Operations & Media"}]' }),
+      f('staff_counts', 'Show counts', 'Number of people beside each department heading.', { type: 'toggle', defaultValue: 'true' }),
+      f('staff_bios', 'Show bios in departments', 'Leadership cards always carry a bio; this controls the department cards.', { type: 'toggle', defaultValue: 'false' }),
+    ] },
+    { label: 'Get involved', fields: [
+      f('staff_recruitBlock', 'Show block', 'Dark recruitment card at the foot of the page.', { type: 'toggle', defaultValue: 'true' }),
+      f('staff_recruitEyebrow', 'Eyebrow', '', { defaultValue: 'Get Involved' }),
+      f('staff_recruitHeading', 'Heading', '', { defaultValue: 'Referee, score, or volunteer with us' }),
+      f('staff_recruitBody', 'Paragraph', '', { type: 'area', defaultValue: "We're always looking for certified officials, table crew, and match-day volunteers. Join the team that runs Kenya's premier basketball league." }),
+      f('staff_recruitCta', 'Button', 'Points at the Officiating desk in Contact & Social.', { defaultValue: 'Get in touch' }),
+    ] },
+  ], '/staff'),
+  people('staffMember', 'Staff Profile', 'An individual staff profile, opened from the Staff directory.', [
+    { label: 'Hero', fields: [
+      f('staffMember_roleEyebrow', 'Role eyebrow', 'Rule-flanked role above the name.', { type: 'toggle', defaultValue: 'true' }),
+      f('staffMember_tagline', 'Tagline', 'One line under the name.', { type: 'toggle', defaultValue: 'true' }),
+      f('staffMember_contactButtons', 'Contact buttons', 'Email and phone, shown only where the person has published them.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Sections', fields: [
+      f('staffMember_aboutHeading', 'About heading', '', { defaultValue: 'About' }),
+      f('staffMember_dutiesHeading', 'Responsibilities heading', 'Two-column list. Hidden when the person has none.', { defaultValue: 'Responsibilities' }),
+      f('staffMember_factsHeading', 'Facts heading', 'Three cards — years served, matches worked, department.', { defaultValue: 'At the League' }),
+      f('staffMember_backLink', 'Back link', 'Returns to the Staff directory.', { defaultValue: 'All staff' }),
+    ] },
+  ], '/staff'),
+  editorial('news', 'News List', 'The article index: featured story, category filter, card grid and the sidebar.', [
+    { label: 'Hero', fields: [
+      f('news_eyebrow', 'Eyebrow', '', { defaultValue: 'From Around the League' }),
+      f('news_title', 'Page title', '', { defaultValue: 'News' }),
+      f('news_searchPlaceholder', 'Search placeholder', '', { defaultValue: 'Search news…' }),
+    ] },
+    { label: 'Featured story', fields: [
+      f('news_featured', 'Show featured card', 'Wide card above the grid. Only on page one with no search or category applied.', { type: 'toggle', defaultValue: 'true' }),
+      f('news_featuredBadge', 'Badge', '', { defaultValue: 'Featured' }),
+    ] },
+    { label: 'Listing', fields: [
+      f('news_categories', 'Categories', 'Filter pills, in this order. “All” is added automatically.', { type: 'list', addLabel: 'Add category', maxItems: 16, columns: [{ key: 'name', label: 'Category', placeholder: 'Match Report', width: '1fr' }], defaultValue: '[{"name":"Match Report"},{"name":"Championships"},{"name":"Interviews"}]' }),
+      f('news_perPage', 'Articles per page', '', { type: 'number', defaultValue: '6' }),
+      f('news_readTime', 'Read time on cards', 'Estimated from word count.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Sidebar', fields: [
+      f('news_sidebarCategories', 'Category list', 'Counts per category.', { type: 'toggle', defaultValue: 'true' }),
+      f('news_archives', 'Archive by month', '', { type: 'toggle', defaultValue: 'true' }),
+      f('news_newsletterCard', 'Newsletter card', 'Dark card in the sidebar. Emails land in Subscribers.', { type: 'toggle', defaultValue: 'true' }),
+      f('news_newsletterHeading', 'Newsletter heading', '', { defaultValue: 'Newsletter' }),
+      f('news_newsletterBlurb', 'Newsletter blurb', '', { defaultValue: 'Get the latest stories in your inbox.' }),
+      f('news_newsletterButton', 'Newsletter button', '', { defaultValue: 'Subscribe' }),
+    ] },
+    { label: 'Empty state', fields: [
+      f('news_emptyBody', 'Message · search', 'Use {q} for what the visitor typed.', { type: 'area', defaultValue: 'Nothing matches “{q}”. Try another search.' }),
+      f('news_emptyBodyCategory', 'Message · category', 'Shown when a category has no articles.', { type: 'area', defaultValue: 'No articles in this category yet — check back soon.' }),
+    ] },
+  ], '/news'),
+  editorial('article', 'Article Page', 'The reading experience: hero, body, tags, share buttons and comments.', [
+    { label: 'Hero', fields: [
+      f('article_categoryChip', 'Category chip', 'Red pill above the headline.', { type: 'toggle', defaultValue: 'true' }),
+      f('article_standfirst', 'Standfirst', 'Large intro paragraph under the headline.', { type: 'toggle', defaultValue: 'true' }),
+      f('article_author', 'Show author', '', { type: 'toggle', defaultValue: 'true' }),
+      f('article_readTime', 'Show read time', 'Estimated from word count.', { type: 'toggle', defaultValue: 'true' }),
+      f('article_heroImage', 'Featured image', 'Hidden when an article has none.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Body', fields: [
+      f('article_tags', 'Tag list', 'Under the article body.', { type: 'toggle', defaultValue: 'true' }),
+      f('article_share', 'Share buttons', 'Shown above and below the article.', { type: 'toggle', defaultValue: 'true' }),
+      f('article_shareTargets', 'Share targets', 'In this order.', { type: 'list', addLabel: 'Add target', maxItems: 8, columns: [{ key: 'name', label: 'Target', placeholder: 'FB', width: '1fr' }], defaultValue: '[{"name":"FB"},{"name":"X"},{"name":"IG"},{"name":"in"}]' }),
+    ] },
+    { label: 'Comments', fields: [
+      f('article_comments', 'Allow comments', 'Off hides the whole section.', { type: 'toggle', defaultValue: 'true' }),
+      f('article_commentsHeading', 'Heading', 'The count is shown beside it.', { defaultValue: 'Comments' }),
+      f('article_commentPlaceholder', 'Field placeholder', '', { defaultValue: 'Add a comment…' }),
+      f('article_commentNote', 'Guideline note', 'Small print beside the button.', { defaultValue: 'Be respectful — comments are moderated.' }),
+      f('article_commentButton', 'Button label', '', { defaultValue: 'Post Comment' }),
+      f('article_moderation', 'Moderation', 'Where a new comment lands.', { type: 'select', options: ['Hold every comment', 'Publish, flag reports', 'Publish immediately'], defaultValue: 'Hold every comment' }),
+      f('article_replies', 'Allow replies', 'One level deep.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+  ], '/news'),
+  editorial('potw', 'Player of the Week', 'The weekly spotlight shown on the homepage; it has no standalone page.', [
+    { label: 'Feature', fields: [
+      f('potw_eyebrow', 'Eyebrow', 'Red mono label above the name.', { defaultValue: 'Player of the Week' }),
+      f('potw_photo', 'Photo', 'Falls back to a striped placeholder when the pick has none.', { type: 'toggle', defaultValue: 'true' }),
+      f('potw_teamChip', 'Team & jersey chip', 'Red chip over the photo, e.g. “CBA Jets · #7”.', { type: 'toggle', defaultValue: 'true' }),
+      f('potw_tagline', 'Tagline', 'The short shout under the name, e.g. “DYNAMITE.”', { type: 'toggle', defaultValue: 'true' }),
+      f('potw_quote', 'Write-up', 'Two paragraphs explaining the pick.', { type: 'toggle', defaultValue: 'true' }),
+    ] },
+    { label: 'Stat line', fields: [
+      f('potw_showStats', 'Show stats', 'Figures from the winning week, across the foot of the block.', { type: 'toggle', defaultValue: 'true' }),
+      f('potw_stats', 'Stats shown', 'Three fit the row.', { type: 'list', addLabel: 'Add stat', maxItems: 8, columns: [{ key: 'label', label: 'Stat', placeholder: 'Points', width: '1fr' }], defaultValue: '[{"label":"Points"},{"label":"Threes"},{"label":"Assists"}]' }),
+    ] },
+    { label: 'Schedule', fields: [
+      f('potw_day', 'Published on', 'When a new pick replaces the current one.', { type: 'select', options: ['Monday', 'Tuesday', 'Wednesday'], defaultValue: 'Monday' }),
+      f('potw_archive', 'Past winners', 'Not built on the public site yet — the CMS keeps the history.', { type: 'toggle', defaultValue: 'false' }),
+      f('potw_profileLink', 'Link to the player', 'Not built yet — the block currently has no button or link out.', { type: 'toggle', defaultValue: 'false' }),
+    ] },
+  ], '/'),
 ];

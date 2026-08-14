@@ -22,6 +22,7 @@ function SettingsPageV2Content() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [teamPreviewHref, setTeamPreviewHref] = useState('/teams');
+  const [environmentProviderDefaults, setEnvironmentProviderDefaults] = useState('');
 
   const active = SECTIONS.find((section) => section.id === activeId) ?? SECTIONS[0];
   const savedLabel = notice ? notice.replace(/^Saved\s*/i, '') : '2 days ago';
@@ -36,9 +37,38 @@ function SettingsPageV2Content() {
   async function loadSettings() {
     setLoading(true);
     try {
-      const response = await fetch('/api/settings?limit=500', { cache: 'no-store' });
+      const [response, providerResponse] = await Promise.all([
+        fetch('/api/settings?limit=500', { cache: 'no-store' }),
+        fetch('/api/settings/email-provider-defaults', { cache: 'no-store' }),
+      ]);
       if (!response.ok) throw new Error('Unable to load settings');
       const records = (await response.json()) as SettingRecord[];
+      if (providerResponse.ok) {
+        const result = await providerResponse.json() as { providers?: Array<Record<string, string>> };
+        const providerDefaults = JSON.stringify(result.providers ?? []);
+        setEnvironmentProviderDefaults(providerDefaults);
+        const providerRecord = records.find((record) => record.key === 'email_providers');
+        if (providerRecord) {
+          try {
+            const current = JSON.parse(providerRecord.value) as Array<Record<string, string>>;
+            const defaults = result.providers ?? [];
+            for (const environment of defaults.filter((provider) => provider.status === 'Configured from environment')) {
+              const existing = current.find((provider) => String(provider.provider || '').toLowerCase() === String(environment.provider || '').toLowerCase());
+              if (existing) {
+                if (!existing.credential) {
+                  existing.credential = environment.credential;
+                  existing.status = environment.status;
+                }
+              } else {
+                const defaultIndex = defaults.findIndex((provider) => provider.provider === environment.provider);
+                const insertion = current.findIndex((provider) => defaults.findIndex((item) => item.provider === provider.provider) > defaultIndex);
+                current.splice(insertion < 0 ? current.length : insertion, 0, environment);
+              }
+            }
+            providerRecord.value = JSON.stringify(current);
+          } catch { /* keep the stored value when malformed */ }
+        }
+      }
       setSettings(Object.fromEntries(records.map((record) => [record.key, record])));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to load settings');
@@ -58,7 +88,16 @@ function SettingsPageV2Content() {
   }, []);
 
   const activeHref = active.id === 'team' ? teamPreviewHref : active.href;
-  const activeSection = activeHref === active.href ? active : { ...active, href: activeHref };
+  const baseActiveSection = activeHref === active.href ? active : { ...active, href: activeHref };
+  const activeSection = environmentProviderDefaults && active.id === 'email'
+    ? {
+        ...baseActiveSection,
+        groups: baseActiveSection.groups.map((group) => ({
+          ...group,
+          fields: group.fields.map((field) => field.key === 'email_providers' ? { ...field, defaultValue: environmentProviderDefaults } : field),
+        })),
+      }
+    : baseActiveSection;
 
   function updateValue(key: string, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -68,6 +107,16 @@ function SettingsPageV2Content() {
     setDraft((current) => {
       const next = { ...current };
       delete next[field.key];
+      return next;
+    });
+  }
+
+  function restoreActiveDefaults() {
+    setDraft((current) => {
+      const next = { ...current };
+      activeSection.groups.flatMap((group) => group.fields).forEach((field) => {
+        if (field.type !== 'action' && field.defaultValue !== undefined) next[field.key] = field.defaultValue;
+      });
       return next;
     });
   }
@@ -210,6 +259,7 @@ function SettingsPageV2Content() {
           loading={loading}
           onChange={updateValue}
           onReset={resetField}
+          onRestoreSection={restoreActiveDefaults}
         />
       </div>
       <SettingsSaveBar

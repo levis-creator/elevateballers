@@ -21,6 +21,9 @@ import PageLoader from "../../components/PageLoader";
 import Spacing from "../../shared/components/ui/Spacing.astro";
 import { getLeagueStaff } from "../../features/cms/lib/queries";
 import PersonCard from "../../features/staff/presentation/components/PersonCard.astro";
+import { resolvePublicStaffPageSettings, siteSettingsService } from "../../features/settings";
+
+const settings = resolvePublicStaffPageSettings(await siteSettingsService.list("staff").catch(() => []));
 
 let staff: any[] = [];
 try {
@@ -29,17 +32,29 @@ try {
   console.error("Error fetching league staff:", error);
 }
 
-const groupedStaff = staff.reduce((groups: Record<string, any[]>, member) => {
+const leadership = settings.leaders
+  ? staff.filter((member) => String(member.department).toLowerCase() === "leadership")
+  : [];
+const directoryStaff = staff.filter((member) => String(member.department).toLowerCase() !== "leadership");
+const groupedStaff = directoryStaff.reduce((groups: Record<string, any[]>, member) => {
   const department = member.department || "Operations";
   groups[department] = groups[department] || [];
   groups[department].push(member);
   return groups;
 }, {});
-const departments = Object.keys(groupedStaff).sort((a, b) => a.localeCompare(b));
+const departmentRank = new Map(settings.departments.map((item, index) => [item.name.toLowerCase(), index]));
+const departments = Object.keys(groupedStaff).sort((a, b) =>
+  (departmentRank.get(a.toLowerCase()) ?? Number.MAX_SAFE_INTEGER) -
+    (departmentRank.get(b.toLowerCase()) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b)
+);
+const directorySections = settings.groupByRole
+  ? departments.map((name) => ({ name, members: groupedStaff[name] }))
+  : directoryStaff.length
+    ? [{ name: "Staff", members: directoryStaff.sort((a, b) => a.name.localeCompare(b.name)) }]
+    : [];
 
-const pageTitle = "League Staff - Elevate Ballers";
-const pageDescription =
-  "Meet the league staff powering Elevate Ballers operations, officiating, statistics, media and events.";
+const pageTitle = `${settings.title} - Elevate Ballers`;
+const pageDescription = settings.intro;
 const pageUrl = `${Astro.url.origin}/staff/`;
 ---
 
@@ -102,25 +117,37 @@ const pageUrl = `${Astro.url.origin}/staff/`;
                     xs="50"
                   />
 
-                  <h1 class="heading-font" style="text-align: center; margin-bottom: 16px; color: #dd3333;">
-                    LEAGUE STAFF
+                  <div class="league-staff-eyebrow">{settings.eyebrow}</div>
+                  <h1 class="heading-font" style="text-align: center; margin-bottom: 16px; color: var(--brand);">
+                    {settings.title}
                   </h1>
                   <p class="league-staff-intro">
-                    Organisation-wide staff are listed here. Team coaches and managers are shown on their team pages.
+                    {settings.intro}
                   </p>
 
-                  {departments.length > 0 ? (
+                  {leadership.length > 0 && (
+                    <section class="league-staff-group league-staff-leadership">
+                      <div class="league-staff-grid">
+                        {leadership.map((member: any) => (
+                          <PersonCard name={member.name} role={member.role} photo={member.photo} email={member.email} bio={member.bio} showBio={true} badge={settings.leaderBadge} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {directorySections.length > 0 ? (
                     <div class="league-staff-groups">
-                      {departments.map((department) => (
+                      {directorySections.map((section) => (
                         <section class="league-staff-group">
-                          <h2>{department}</h2>
+                          {settings.groupByRole && <h2>{section.name}{settings.counts ? ` · ${section.members.length}` : ""}</h2>}
                           <div class="league-staff-grid">
-                            {groupedStaff[department].map((member: any) => (
+                            {section.members.map((member: any) => (
                               <PersonCard
                                 name={member.name}
                                 role={member.role}
                                 photo={member.photo}
                                 email={member.email}
+								bio={member.bio}
+								showBio={settings.bios}
                               />
                             ))}
                           </div>
@@ -132,6 +159,13 @@ const pageUrl = `${Astro.url.origin}/staff/`;
                       League staff profiles are being prepared.
                     </p>
                   )}
+
+				  {settings.recruitBlock && (
+					<section class="league-staff-recruit">
+					  <div><small>{settings.recruitEyebrow}</small><h2>{settings.recruitHeading}</h2><p>{settings.recruitBody}</p></div>
+					  <a href="/contacts#officiating">{settings.recruitCta} →</a>
+					</section>
+				  )}
                 </div>
               </div>
             </div>
@@ -144,6 +178,7 @@ const pageUrl = `${Astro.url.origin}/staff/`;
 </Layout>
 
 <style>
+	.league-staff-eyebrow { margin-bottom: 10px; text-align: center; color: var(--brand); font: 11px "Space Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
   .league-staff-intro {
     max-width: 620px;
     margin: 0 auto 44px;
@@ -157,6 +192,13 @@ const pageUrl = `${Astro.url.origin}/staff/`;
     display: grid;
     gap: 42px;
   }
+
+	.league-staff-leadership { margin-bottom: 42px; }
+	.league-staff-recruit { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin-top: 48px; padding: 32px; border-radius: 16px; background: #141009; color: #f3efe9; }
+	.league-staff-recruit small { color: var(--brandsoft); font: 10px "Space Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+	.league-staff-recruit h2 { margin: 8px 0; color: inherit; }
+	.league-staff-recruit p { max-width: 620px; margin: 0; color: #b8afa6; }
+	.league-staff-recruit a { flex: none; padding: 13px 18px; border-radius: 6px; background: var(--brand); color: var(--brandfg, #fff); font-weight: 700; text-decoration: none; }
 
   .league-staff-group h2 {
     margin: 0 0 18px;
@@ -180,6 +222,7 @@ const pageUrl = `${Astro.url.origin}/staff/`;
   }
 
   @media (max-width: 600px) {
+	.league-staff-recruit { align-items: flex-start; flex-direction: column; }
     .league-staff-grid {
       grid-template-columns: 1fr;
     }

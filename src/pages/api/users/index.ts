@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { createUser, getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendWelcomeSetPasswordEmail } from '../../../lib/email';
+import { getRuntimeEmailTemplates } from '../../../lib/email/runtime-settings';
 import type { UserRole } from '../../../features/cms/types';
 import { handleApiError } from '../../../lib/apiError';
 
@@ -98,8 +99,7 @@ export const POST: APIRoute = async ({ request }) => {
         // Generate a password reset token so the user can set their password
         const token = crypto.randomBytes(32).toString('hex');
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const raw = process.env.INVITE_TTL_MINUTES;
-        const ttlMinutes = raw && Number.isFinite(+raw) && +raw > 0 ? +raw : 1440; // 24 hours default
+        const ttlMinutes = (await getRuntimeEmailTemplates()).linkExpiry;
         const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
         await prisma.passwordResetToken.create({

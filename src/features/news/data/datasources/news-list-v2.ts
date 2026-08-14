@@ -40,6 +40,7 @@ export async function fetchNewsListData(): Promise<NewsListData | null> {
 		);
 
 		const articles: NewsCard[] = sorted.map((n) => ({
+			featured: Boolean(n.feature),
 			cat: CATEGORY_LABEL[n.category] || n.category,
 			title: n.title,
 			excerpt: n.excerpt || "",

@@ -107,7 +107,7 @@ export async function fetchArticleView(slug: string): Promise<ArticleView | null
 			href: `/news?category=${encodeURIComponent(label)}`,
 		}));
 
-		const comments: ArticleComment[] = (commentRows as any[]).map((c) => {
+		const mapComment = (c: any): ArticleComment => {
 			const name = c.user?.name || c.authorName || "Anonymous";
 			return {
 				id: c.id,
@@ -116,8 +116,10 @@ export async function fetchArticleView(slug: string): Promise<ArticleView | null
 				color: colorFor(name),
 				ago: timeAgo(c.createdAt),
 				body: c.content,
+				replies: (c.replies ?? []).slice(0, 50).map(mapComment),
 			};
-		});
+		};
+		const comments: ArticleComment[] = (commentRows as any[]).map(mapComment);
 
 		return {
 			id: article.id,

@@ -1,5 +1,6 @@
 import { C } from '../config';
 import { emailWrapper, btn, sendTransactionalEmail } from '../core';
+import { configuredEmailTemplate } from '../runtime-settings';
 
 export async function sendPasswordResetEmail(data: {
   email: string;
@@ -7,6 +8,8 @@ export async function sendPasswordResetEmail(data: {
   resetUrl: string;
   expiresInMinutes: number;
 }): Promise<void> {
+  const configured = await configuredEmailTemplate('verify', { name: data.name || data.email, firstName: (data.name || 'there').split(/\s+/)[0], email: data.email, link: data.resetUrl, expiry: `${data.expiresInMinutes} minutes` });
+  if (!configured) return;
   const greeting = data.name ? `Hi ${data.name},` : 'Hi there,';
 
   const html = emailWrapper(`
@@ -26,8 +29,8 @@ export async function sendPasswordResetEmail(data: {
 
   await sendTransactionalEmail({
     to: data.email,
-    subject: 'Reset your ElevateBallers password',
-    html,
+    subject: configured.subject,
+    html: configured ? emailWrapper(configured.html) : html,
     audit: { template: 'password_reset' },
   });
   console.log(`[email] Password reset email sent to ${data.email}`);
@@ -72,6 +75,8 @@ export async function sendWelcomeSetPasswordEmail(data: {
   setPasswordUrl: string;
   expiresInMinutes: number;
 }): Promise<void> {
+  const configured = await configuredEmailTemplate('verify', { name: data.name, firstName: data.name.split(/\s+/)[0], email: data.email, link: data.setPasswordUrl, expiry: `${data.expiresInMinutes} minutes` });
+  if (!configured) return;
   const html = emailWrapper(`
     <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Welcome to ElevateBallers!</h2>
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name},</p>
@@ -90,8 +95,8 @@ export async function sendWelcomeSetPasswordEmail(data: {
 
   await sendTransactionalEmail({
     to: data.email,
-    subject: 'Welcome to ElevateBallers — Set your password',
-    html,
+    subject: configured.subject,
+    html: configured ? emailWrapper(configured.html) : html,
     audit: { template: 'welcome_set_password' },
   });
   console.log(`[email] Welcome set-password email sent to ${data.email}`);
