@@ -51,8 +51,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    const valid = await verifyOtpForUser(session.userId, code.trim());
-    if (!valid) {
+    const verification = await verifyOtpForUser(session.userId, code.trim());
+    if (!verification.valid) {
       await prisma.loginEvent.create({
         data: {
           userId: session.userId,
@@ -62,7 +62,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           userAgent: request.headers.get('user-agent') ?? undefined,
         },
       });
-      return json({ error: 'Invalid or expired verification code.' }, 401);
+      if (verification.lockedUntil) {
+        return json({
+          error: 'Too many invalid codes. This code is locked for 15 minutes. Return to login to request a new code.',
+          lockedUntil: verification.lockedUntil.toISOString(),
+          attemptsRemaining: 0,
+        }, 429);
+      }
+      return json({
+        error: verification.attemptsRemaining > 0
+          ? `Invalid verification code. ${verification.attemptsRemaining} attempt${verification.attemptsRemaining === 1 ? '' : 's'} remaining.`
+          : 'Invalid or expired verification code.',
+        attemptsRemaining: verification.attemptsRemaining,
+      }, 401);
     }
 
     const userWithRoles = await prisma.user.findUnique({

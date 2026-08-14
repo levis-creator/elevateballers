@@ -216,13 +216,15 @@ export async function invalidateSessions(userId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 const OTP_TTL_MINUTES = 10;
+const MAX_OTP_ATTEMPTS = 5;
+const OTP_LOCKOUT_MINUTES = 15;
 
 function hashOtpCode(code: string): string {
   return crypto.createHash('sha256').update(code).digest('hex');
 }
 
 export async function createOtpForUser(userId: string): Promise<string> {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
   const codeHash = hashOtpCode(code);
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
@@ -232,14 +234,41 @@ export async function createOtpForUser(userId: string): Promise<string> {
   return code;
 }
 
-export async function verifyOtpForUser(userId: string, code: string): Promise<boolean> {
+export async function verifyOtpForUser(
+  userId: string,
+  code: string,
+): Promise<{ valid: boolean; attemptsRemaining: number; lockedUntil?: Date }> {
   const codeHash = hashOtpCode(code);
+  const now = new Date();
   const otp = await prisma.twoFactorOtp.findFirst({
-    where: { userId, codeHash, expiresAt: { gt: new Date() } },
+    where: { userId, expiresAt: { gt: now } },
+    orderBy: { createdAt: 'desc' },
   });
-  if (!otp) return false;
-  await prisma.twoFactorOtp.delete({ where: { id: otp.id } });
-  return true;
+  if (!otp) return { valid: false, attemptsRemaining: 0 };
+  if (otp.lockedUntil && otp.lockedUntil > now) {
+    return { valid: false, attemptsRemaining: 0, lockedUntil: otp.lockedUntil };
+  }
+  if (otp.codeHash === codeHash) {
+    await prisma.twoFactorOtp.deleteMany({ where: { id: otp.id } });
+    return { valid: true, attemptsRemaining: MAX_OTP_ATTEMPTS };
+  }
+  const nextAttemptCount = otp.attemptCount + 1;
+  await prisma.twoFactorOtp.update({
+    where: { id: otp.id },
+    data: {
+      attemptCount: nextAttemptCount,
+      lockedUntil: nextAttemptCount >= MAX_OTP_ATTEMPTS
+        ? new Date(now.getTime() + OTP_LOCKOUT_MINUTES * 60 * 1000)
+        : null,
+    },
+  });
+  return {
+    valid: false,
+    attemptsRemaining: Math.max(0, MAX_OTP_ATTEMPTS - nextAttemptCount),
+    ...(nextAttemptCount >= MAX_OTP_ATTEMPTS
+      ? { lockedUntil: new Date(now.getTime() + OTP_LOCKOUT_MINUTES * 60 * 1000) }
+      : {}),
+  };
 }
 
 export function createOtpSessionToken(user: { id: string; email: string }): string {

@@ -5,10 +5,10 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec eslint src\pages\api\settings\email-provider-defaults.ts src\features\settings\presentation\pages\SettingsPageV2.tsx
-8 verbose argv "exec" "--" "eslint" "src\\pages\\api\\settings\\email-provider-defaults.ts" "src\\features\\settings\\presentation\\pages\\SettingsPageV2.tsx"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T21_48_36_104Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T21_48_36_104Z-debug-0.log
+7 verbose title npm exec prisma validate
+8 verbose argv "exec" "--" "prisma" "validate"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_40_13_565Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_40_13_565Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers

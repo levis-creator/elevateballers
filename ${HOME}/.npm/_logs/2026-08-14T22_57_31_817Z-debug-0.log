@@ -5,11 +5,11 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm exec eslint src/features/settings/presentation/components/SettingsEmailPreview.tsx
-8 verbose argv "exec" "--" "eslint" "src/features/settings/presentation/components/SettingsEmailPreview.tsx"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_20_02_665Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_20_02_665Z-debug-0.log
-11 silly logfile start cleaning logs, removing 1 files
+7 verbose title npm exec prisma validate
+8 verbose argv "exec" "--" "prisma" "validate"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_57_31_817Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_57_31_817Z-debug-0.log
+11 silly logfile start cleaning logs, removing 3 files
 12 silly logfile done cleaning log files
 13 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 14 verbose os Windows_NT 10.0.26200

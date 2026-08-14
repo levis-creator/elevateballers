@@ -28,6 +28,12 @@ export default function VerifyOtpForm() {
 					</div>
 				)}
 
+				{f.lockedOut && (
+					<a href="/admin/login" className="block rounded-lg border border-brand/30 bg-brand/[0.06] px-4 py-3 text-center font-body text-[13px] font-semibold text-brandsoft hover:text-brand">
+						Return to login to request a new code
+					</a>
+				)}
+
 				{f.verified && (
 					<div className="flex items-start gap-3 rounded-lg border border-[#1f9d55]/40 bg-[#1f9d55]/[0.12] px-4 py-3 [animation:eb-pop_.3s_ease]">
 						<CheckCircle2 className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#1f9d55]" aria-hidden />
@@ -37,13 +43,14 @@ export default function VerifyOtpForm() {
 
 				<div>
 					<label className="mb-2.5 block font-mono text-[11px] uppercase tracking-[0.12em] text-creamdim">Verification Code</label>
-					<OtpInput value={f.code} onChange={f.setCode} disabled={f.loading || f.verified} autoFocus />
+					<OtpInput value={f.code} onChange={f.setCode} disabled={f.loading || f.verified || f.lockedOut} autoFocus />
 					<p className="mt-2.5 font-mono text-[11px] tracking-[0.04em] text-[rgb(var(--site-cream-dim-rgb,95 87 78)/0.55)]">Paste supported — you can paste the whole code at once.</p>
+					{f.attemptsRemaining !== null && !f.lockedOut && <p className="mt-1.5 font-body text-[12px] text-muted2">{f.attemptsRemaining} attempt{f.attemptsRemaining === 1 ? "" : "s"} remaining.</p>}
 				</div>
 
 				<button
 					type="submit"
-					disabled={!f.canSubmit}
+					disabled={!f.canSubmit || f.lockedOut}
 					className="group flex w-full items-center justify-center gap-2.5 rounded-lg bg-brand px-6 py-[17px] font-display text-[17px] uppercase tracking-[0.08em] text-white transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#3a332c] disabled:opacity-70"
 				>
 					{f.loading ? (
