@@ -25,9 +25,13 @@ import PageLoader from "../../components/PageLoader";
 import ContentLoader from "../../components/ContentLoader";
 import { Image } from "astro:assets";
 import { getDisplayImageUrl } from "../../lib/asset-url";
+import { newsListToken, resolvePublicNewsListSettings, siteSettingsService } from "../../features/settings";
+
+const settings = resolvePublicNewsListSettings(await siteSettingsService.list("news").catch(() => []));
 
 // Get query parameters
-const { category, archive, s: searchQuery } = Astro.url.searchParams;
+const { category, archive, s: searchQuery, page: pageQuery } = Astro.url.searchParams;
+const requestedPage = Math.max(1, Number.parseInt(pageQuery || "1", 10) || 1);
 
 // Fetch all articles
 let articles = [];
@@ -72,11 +76,25 @@ try {
   hasError = true;
 }
 
+const hasFilters = Boolean(category || archive || searchQuery);
+const featuredArticle = settings.featured && !hasFilters && requestedPage === 1
+  ? articles.find((article: any) => article.feature) || articles[0] || null
+  : null;
+const listingPool = featuredArticle
+  ? articles.filter((article: any) => article.id !== featuredArticle.id)
+  : articles;
+const totalPages = Math.max(1, Math.ceil(listingPool.length / settings.perPage));
+const currentPage = Math.min(requestedPage, totalPages);
+articles = listingPool.slice((currentPage - 1) * settings.perPage, currentPage * settings.perPage);
+const readTimeOf = (html: string) => `${Math.max(1, Math.round(html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length / 200))} min read`;
+const emptyBody = searchQuery
+  ? newsListToken(settings.emptyBody, searchQuery)
+  : settings.emptyBodyCategory;
+
 // SEO Meta Tags
-const pageTitle = "News - Elevate Ballers";
+const pageTitle = `${settings.title} - Elevate Ballers`;
 const pageDescription = "Latest news and updates from Elevate Ballers";
 const baseNewsUrl = `${Astro.url.origin}/news/`;
-const hasFilters = Boolean(category || archive || searchQuery);
 const pageUrl = hasFilters ? baseNewsUrl : baseNewsUrl;
 const robots = hasFilters ? "noindex,follow" : undefined;
 ---
@@ -163,7 +181,8 @@ const robots = hasFilters ? "noindex,follow" : undefined;
                   <div class="stm-page-title">
                     <div class="container">
                       <div class="clearfix stm-title-box-title-wrapper">
-                        <h1 class="stm-main-title-unit">News</h1>
+						<div class="news-settings-eyebrow">{settings.eyebrow}</div>
+                        <h1 class="stm-main-title-unit">{settings.title}</h1>
                       </div>
                     </div>
                   </div>
@@ -179,6 +198,15 @@ const robots = hasFilters ? "noindex,follow" : undefined;
                   />
                 ) : (
                   <div class="row row-3 row-sm-2">
+					{featuredArticle && (
+					  <div class="col-md-12 news-settings-featured">
+						<a href={`/news/${featuredArticle.slug}`}>
+						  <span>{settings.featuredBadge}</span>
+						  <h2>{featuredArticle.title}</h2>
+						  <p>{featuredArticle.excerpt || featuredArticle.content.substring(0, 240) + "..."}</p>
+						</a>
+					  </div>
+					)}
                     {articles.map((article) => {
                       const articleCategory =
                         reverseCategoryMap[article.category] ||
@@ -221,6 +249,7 @@ const robots = hasFilters ? "noindex,follow" : undefined;
                               </a>
 
                               <div class="clearfix" />
+							  {settings.readTime && <div class="news-settings-read-time">{readTimeOf(article.content || "")}</div>}
 
                               <div class="content">
                                 <p>
@@ -237,13 +266,22 @@ const robots = hasFilters ? "noindex,follow" : undefined;
                     {articles.length === 0 && (
                       <div class="col-md-12">
                         <div class="no-articles">
-                          <p>No news articles found.</p>
+						  <p>{emptyBody}</p>
                         </div>
                       </div>
                     )}
                   </div>
                 )
               }
+			  {totalPages > 1 && (
+				<nav class="news-settings-pagination" aria-label="News pages">
+				  {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => {
+					const params = new URLSearchParams(Astro.url.searchParams);
+					params.set("page", String(pageNumber));
+					return <a class={pageNumber === currentPage ? "active" : ""} href={`/news?${params}`}>{pageNumber}</a>;
+				  })}
+				</nav>
+			  )}
             </div>
 
             <!-- Sidebar -->
@@ -252,6 +290,14 @@ const robots = hasFilters ? "noindex,follow" : undefined;
                 searchQuery={searchQuery || ""}
                 showTags={true}
                 showInstagram={true}
+				showCategories={settings.sidebarCategories}
+				categoryOrder={settings.categories.map((item) => item.name)}
+				showArchives={settings.archives}
+				showNewsletter={settings.newsletterCard}
+				searchPlaceholder={settings.searchPlaceholder}
+				newsletterHeading={settings.newsletterHeading}
+				newsletterBlurb={settings.newsletterBlurb}
+				newsletterButton={settings.newsletterButton}
               />
             </div>
           </div>
@@ -264,6 +310,16 @@ const robots = hasFilters ? "noindex,follow" : undefined;
 
 
   <style>
+	.news-settings-eyebrow { margin-bottom: 8px; color: var(--brand); font: 10px "Space Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+	.news-settings-featured { margin-bottom: 36px; }
+	.news-settings-featured a { display: block; padding: 34px; border-radius: 14px; background: #141009; color: #f3efe9; text-decoration: none; }
+	.news-settings-featured span { color: var(--brandsoft); font: 10px "Space Mono",monospace; letter-spacing: .12em; text-transform: uppercase; }
+	.news-settings-featured h2 { margin: 10px 0; color: inherit; }
+	.news-settings-featured p { margin: 0; color: #b8afa6; }
+	.news-settings-read-time { margin: 8px 0; color: #8a817a; font: 10px "Space Mono",monospace; text-transform: uppercase; }
+	.news-settings-pagination { display: flex; flex-wrap: wrap; gap: 8px; margin: 32px 0; }
+	.news-settings-pagination a { display: inline-flex; width: 38px; height: 38px; align-items: center; justify-content: center; border: 1px solid #ddd; border-radius: 7px; color: #6f665c; text-decoration: none; }
+	.news-settings-pagination a.active { border-color: var(--brand); background: var(--brand); color: var(--brandfg,#fff); }
     /* News Listing Page Styles */
     #main {
       padding-top: 2rem !important;

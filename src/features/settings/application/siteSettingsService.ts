@@ -4,6 +4,7 @@ import type {
   SiteSettingsRepository,
   UpdateSiteSettingInput,
 } from '../domain/siteSetting';
+import { protectSensitiveSettingValue, revealSensitiveSetting } from './sensitiveSettingValues';
 
 const PUBLIC_CATEGORIES = new Set(['appearance', 'contact', 'system']);
 const PUBLIC_KEYS = new Set([
@@ -28,8 +29,8 @@ const PUBLIC_KEYS = new Set([
 export class SiteSettingsService {
   constructor(private readonly repository: SiteSettingsRepository) {}
 
-  list(category?: string): Promise<SiteSetting[]> {
-    return this.repository.findAll(category);
+  async list(category?: string): Promise<SiteSetting[]> {
+    return (await this.repository.findAll(category)).map(revealSensitiveSetting);
   }
 
   async listPublic(category?: string): Promise<SiteSetting[]> {
@@ -42,23 +43,32 @@ export class SiteSettingsService {
   }
 
   async get(identifier: string): Promise<SiteSetting | null> {
-    return (await this.repository.findById(identifier)) ?? this.repository.findByKey(identifier);
+    const setting = (await this.repository.findById(identifier)) ?? await this.repository.findByKey(identifier);
+    return setting ? revealSensitiveSetting(setting) : null;
   }
 
-  create(input: CreateSiteSettingInput): Promise<SiteSetting> {
+  async create(input: CreateSiteSettingInput): Promise<SiteSetting> {
     if (!input.key?.trim() || input.value == null || !input.label?.trim()) {
       throw new Error('Key, value, and label are required');
     }
 
-    return this.repository.create({
+    const created = await this.repository.create({
       ...input,
       key: input.key.trim(),
+      value: protectSensitiveSettingValue(input.key.trim(), input.value),
       label: input.label.trim(),
     });
+    return revealSensitiveSetting(created);
   }
 
-  update(id: string, input: UpdateSiteSettingInput): Promise<SiteSetting | null> {
-    return this.repository.update(id, input);
+  async update(id: string, input: UpdateSiteSettingInput): Promise<SiteSetting | null> {
+    const existing = await this.repository.findById(id);
+    if (!existing) return null;
+    const updated = await this.repository.update(id, {
+      ...input,
+      ...(input.value === undefined ? {} : { value: protectSensitiveSettingValue(existing.key, input.value, existing.value) }),
+    });
+    return updated ? revealSensitiveSetting(updated) : null;
   }
 
   remove(id: string): Promise<boolean> {

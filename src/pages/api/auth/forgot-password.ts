@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
 import { findUserByEmail } from '../../../features/cms/lib/auth';
 import { sendPasswordResetEmail, sendWelcomeSetPasswordEmail } from '../../../lib/email';
+import { getRuntimeEmailTemplates } from '../../../lib/email/runtime-settings';
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
@@ -54,7 +55,8 @@ export const POST: APIRoute = async ({ request }) => {
       const token = crypto.randomBytes(32).toString('hex');
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       const isInvite = !user.activatedAt;
-      const ttlMinutes = isInvite ? getInviteTtlMinutes() : getResetTtlMinutes();
+      const configuredTtl = (await getRuntimeEmailTemplates()).linkExpiry;
+      const ttlMinutes = configuredTtl || (isInvite ? getInviteTtlMinutes() : getResetTtlMinutes());
       const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
       await prisma.passwordResetToken.deleteMany({

@@ -38,6 +38,7 @@ export interface ArticleComment {
 	color: string;
 	ago: string;
 	body: string;
+	replies: ArticleComment[];
 }
 
 export interface ArticleView {

@@ -10,13 +10,15 @@ if (!usePublicV2) return Astro.rewrite("/news-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import NewsListPage from "@/features/news/presentation/v2/NewsListPage.astro";
+import { resolvePublicNewsListSettings, siteSettingsService } from "@/features/settings";
+const settings = resolvePublicNewsListSettings(await siteSettingsService.list("news").catch(() => []));
 ---
 
 <LayoutV2
-	title="News - Elevate Ballers | Match Reports, Interviews & Analysis"
+	title={`${settings.title} - Elevate Ballers | Match Reports, Interviews & Analysis`}
 	description="The latest from Elevate Ballers — match reports, championship coverage, interviews and analysis from Kenya's premier basketball league."
 	canonicalURL={`${Astro.url.origin}/news/`}
 	type="website"
 >
-	<NewsListPage />
+	<NewsListPage settings={settings} />
 </LayoutV2>

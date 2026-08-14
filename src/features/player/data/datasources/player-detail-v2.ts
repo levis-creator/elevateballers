@@ -15,6 +15,25 @@ import type { PlayerView, SplitRow, GameLogRow, HighItem } from "@/features/play
 const pct = (made: number, att: number): string => (att > 0 ? `${Math.round((made / att) * 100)}%` : "—");
 const avg = (sum: number, n: number): string => (n > 0 ? (sum / n).toFixed(1) : "0.0");
 
+const ageOf = (value: Date | string | null | undefined): string => {
+	if (!value) return "";
+	const born = new Date(value);
+	if (Number.isNaN(born.getTime())) return "";
+	const now = new Date();
+	let age = now.getFullYear() - born.getFullYear();
+	if (now.getMonth() < born.getMonth() || (now.getMonth() === born.getMonth() && now.getDate() < born.getDate())) age -= 1;
+	return age >= 0 ? String(age) : "";
+};
+
+const socialLinksOf = (stats: unknown): Array<{ label: string; href: string }> => {
+	if (!stats || typeof stats !== "object") return [];
+	const source = (stats as any).socialLinks ?? (stats as any).social;
+	if (!Array.isArray(source)) return [];
+	return source
+		.map((item) => ({ label: String(item?.label ?? item?.platform ?? "").trim(), href: String(item?.href ?? item?.url ?? "").trim() }))
+		.filter((item) => item.label && /^https?:\/\//i.test(item.href));
+};
+
 /** One completed game with the player's derived line. */
 interface Game {
 	st: PlayerMatchStatistics;
@@ -134,8 +153,8 @@ export async function fetchPlayerView(slugOrId: string): Promise<PlayerView | nu
 			split("Wins", games.filter((g) => g.win)),
 		].filter(Boolean) as SplitRow[];
 
-		// --- recent games (newest first, up to 6) ---
-		const gamelog: GameLogRow[] = games.slice(0, 6).map((g) => ({
+		// Keep the full recent-game collection; presentation settings own the row limit.
+		const gamelog: GameLogRow[] = games.map((g) => ({
 			va: g.isHome ? "vs" : "@",
 			opp: g.opp,
 			res: g.res,
@@ -214,11 +233,17 @@ export async function fetchPlayerView(slugOrId: string): Promise<PlayerView | nu
 				backLabel: teamName,
 			},
 			bio: [
-				{ k: "Position", v: p.position || "—" },
-				{ k: "Height", v: p.height || "—" },
-				{ k: "Weight", v: p.weight || "—" },
+				{ k: "Position", v: p.position || "" },
+				{ k: "Height", v: p.height || (p.heightCm ? `${p.heightCm} cm` : "") },
+				{ k: "Age", v: ageOf(p.dateOfBirth) },
 				{ k: "Games", v: String(stats.totalMatches) },
+				{ k: "Weight", v: p.weight || (p.weightKg ? `${p.weightKg} kg` : "") },
+				{ k: "Jersey number", v: p.jerseyNumber != null ? String(p.jerseyNumber) : "" },
+				{ k: "Team", v: teamName },
+				{ k: "Nationality", v: p.nationality || "" },
 			],
+			biography: p.bio?.trim() || null,
+			socialLinks: socialLinksOf(p.stats),
 			seasonLabel,
 			averages,
 			splits,

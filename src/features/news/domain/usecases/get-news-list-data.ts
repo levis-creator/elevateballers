@@ -7,10 +7,10 @@ import { fetchNewsListData } from "@/features/news/data/datasources/news-list-v2
 
 const FALLBACK: NewsListData = {
 	articles: [
-		{ cat: "Match Report", title: "Breaking Barriers Through Sports: The Star That Is Madina Okot", excerpt: "A young basketball star carrying the hopes and dreams of an entire country — from a volleyball court in Lugari to the WNBA.", date: "April 17, 2026", read: "4 min read", href: "#", image: null },
-		{ cat: "Championships", title: "The Road to the 2026 EBL and EWBL Finals", excerpt: "The matchups, the storylines, and the players who will decide who lifts the trophy this season.", date: "February 11, 2026", read: "5 min read", href: "#", image: null },
-		{ cat: "Match Report", title: "Queens Storm Into the EWBL Final", excerpt: "A commanding fourth quarter sealed a place in the championship game for the reigning favourites.", date: "January 28, 2026", read: "4 min read", href: "#", image: null },
-		{ cat: "Interviews", title: "In Conversation: The Coaches Shaping Kenyan Basketball", excerpt: "The tacticians behind the league's brightest talents talk development, culture and the road ahead.", date: "January 20, 2026", read: "6 min read", href: "#", image: null },
+		{ featured: true, cat: "Match Report", title: "Breaking Barriers Through Sports: The Star That Is Madina Okot", excerpt: "A young basketball star carrying the hopes and dreams of an entire country — from a volleyball court in Lugari to the WNBA.", date: "April 17, 2026", read: "4 min read", href: "#", image: null },
+		{ featured: false, cat: "Championships", title: "The Road to the 2026 EBL and EWBL Finals", excerpt: "The matchups, the storylines, and the players who will decide who lifts the trophy this season.", date: "February 11, 2026", read: "5 min read", href: "#", image: null },
+		{ featured: false, cat: "Match Report", title: "Queens Storm Into the EWBL Final", excerpt: "A commanding fourth quarter sealed a place in the championship game for the reigning favourites.", date: "January 28, 2026", read: "4 min read", href: "#", image: null },
+		{ featured: false, cat: "Interviews", title: "In Conversation: The Coaches Shaping Kenyan Basketball", excerpt: "The tacticians behind the league's brightest talents talk development, culture and the road ahead.", date: "January 20, 2026", read: "6 min read", href: "#", image: null },
 	],
 	categories: [
 		{ label: "Match Report", count: 2 },

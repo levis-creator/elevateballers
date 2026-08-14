@@ -9,6 +9,7 @@ import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rule
 import { resolveLeagueSeasonById } from '../../../features/seasons/data/league-season-scope';
 import { getCurrentUser } from '../../../features/cms/lib/auth';
 import { resolvePublicMatchPageSettings, siteSettingsService } from '../../../features/settings';
+import { notifyMatchParticipants } from '../../../features/settings/application/notificationMaintenance';
 
 export const prerender = false;
 
@@ -258,6 +259,10 @@ export const POST: APIRoute = async ({ request }) => {
       seasonId: match.seasonId,
       date: match.date,
     });
+
+    if (match.status === 'UPCOMING') {
+      void notifyMatchParticipants(match.id).catch((error) => console.error('[email] Match publication notification failed:', error));
+    }
 
     return new Response(JSON.stringify(match), {
       status: 201,

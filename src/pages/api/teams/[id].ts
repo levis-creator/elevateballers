@@ -7,6 +7,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import type { UpdateTeamInput } from '../../../features/cms/types';
 import { approvePendingSeasonRegistrations } from '../../../features/registration/data/datasources/public-submission';
+import { notifyTeamRegistrationDecision } from '../../../features/registration/application/send-registration-decision';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
@@ -44,6 +45,9 @@ export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'teams:update');
     const data = await request.json();
+    const previousApproval = data.approved !== undefined
+      ? await prisma.team.findUnique({ where: { id: params.id! }, select: { approved: true } })
+      : null;
 
     const founded = data.founded === undefined || data.founded === '' || data.founded === null
       ? null
@@ -109,6 +113,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
     }
 
     if (data.approved === true) await approvePendingSeasonRegistrations([team.id]);
+    if (previousApproval && previousApproval.approved !== Boolean(data.approved)) {
+      void notifyTeamRegistrationDecision(team.id, Boolean(data.approved))
+        .catch((error) => console.error('[email] Failed to send team decision email:', error));
+    }
 
     await logAudit(request, 'TEAM_UPDATED', {
       teamId: team.id,

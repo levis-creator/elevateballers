@@ -10,13 +10,15 @@ if (!usePublicV2) return Astro.rewrite("/staff-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import StaffPage from "@/features/staff/presentation/v2/StaffPage.astro";
+import { resolvePublicStaffPageSettings, siteSettingsService } from "@/features/settings";
+const settings = resolvePublicStaffPageSettings(await siteSettingsService.list("staff").catch(() => []));
 ---
 
 <LayoutV2
-	title="Our Staff - Elevate Ballers | Organisers, Officials & Volunteers"
-	description="Meet the people behind Elevate Ballers — the organisers, referees, table officials and volunteers who run Kenya's premier basketball league."
+	title={`${settings.title} - Elevate Ballers`}
+	description={settings.intro}
 	canonicalURL={`${Astro.url.origin}/staff/`}
 	type="website"
 >
-	<StaffPage />
+	<StaffPage settings={settings} />
 </LayoutV2>

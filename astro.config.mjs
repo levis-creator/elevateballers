@@ -85,6 +85,11 @@ export default defineConfig({
       external: deployTarget === 'cpanel' ? ['@prisma/client', '@prisma/adapter-mariadb'] : [],
     },
     server: {
+      watch: {
+        // Production builds can run while the dev server is open. Do not let
+        // their generated output create thousands of Windows watcher handles.
+        ignored: ['**/dist/**', '**/.vercel/**', '**/.astro/**'],
+      },
       fs: {
         // Allow serving files from one level up to the project root
         allow: ['..'],

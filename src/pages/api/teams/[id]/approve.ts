@@ -2,9 +2,9 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
 import { logAudit } from '../../../../features/cms/lib/audit';
-import { sendTeamApprovedEmail } from '../../../../lib/email';
 import { handleApiError } from '../../../../lib/apiError';
 import { approvePendingSeasonRegistrations } from '../../../../features/registration/data/datasources/public-submission';
+import { notifyTeamRegistrationDecision } from '../../../../features/registration/application/send-registration-decision';
 
 export const prerender = false;
 
@@ -22,6 +22,8 @@ export const PATCH: APIRoute = async ({ params, request }) => {
     }
 
     const shouldApprove = data.approved ?? true;
+
+    const previous = await prisma.team.findUnique({ where: { id }, select: { approved: true } });
 
     const team = await prisma.team.update({
       where: { id },
@@ -43,20 +45,11 @@ export const PATCH: APIRoute = async ({ params, request }) => {
         },
       });
 
-      // Email all coaches for this team (fire-and-forget)
-      const coaches = await prisma.teamStaff.findMany({
-        where: { teamId: id, role: 'COACH' },
-        include: { staff: true },
-      });
-      for (const ts of coaches) {
-        if (ts.staff.email) {
-          sendTeamApprovedEmail({
-            coachName: `${ts.staff.firstName} ${ts.staff.lastName}`,
-            email: ts.staff.email,
-            teamName: team.name,
-          }).catch((err) => console.error('[email] Failed to send team approved email:', err));
-        }
-      }
+    }
+
+    if (previous && previous.approved !== shouldApprove) {
+      void notifyTeamRegistrationDecision(id, shouldApprove)
+        .catch((err) => console.error('[email] Failed to send team decision email:', err));
     }
 
     await logAudit(request, shouldApprove ? 'TEAM_APPROVED' : 'TEAM_UNAPPROVED', {

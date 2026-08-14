@@ -100,6 +100,8 @@ export interface PlayerView {
 		backLabel: string;
 	};
 	bio: BioItem[];
+	biography: string | null;
+	socialLinks: Array<{ label: string; href: string }>;
 	seasonLabel: string;
 	averages: AvgTile[];
 	splits: SplitRow[];

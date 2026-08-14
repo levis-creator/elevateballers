@@ -4,6 +4,8 @@ import { updatePlayer, deletePlayer } from '../../../features/cms/lib/mutations'
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { prisma } from '../../../lib/prisma';
+import { notifyPlayerRegistrationDecision } from '../../../features/registration/application/send-registration-decision';
 
 export const prerender = false;
 
@@ -77,6 +79,9 @@ export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'players:update');
     const data = await request.json();
+    const previousApproval = data.approved !== undefined
+      ? await prisma.player.findUnique({ where: { id: params.id! }, select: { approved: true } })
+      : null;
 
     // Convert jerseyNumber to number if provided. Guard null/empty explicitly —
     // a truthy check would turn a valid jersey 0 into null.
@@ -117,6 +122,11 @@ export const PUT: APIRoute = async ({ params, request }) => {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    if (previousApproval && previousApproval.approved !== Boolean(data.approved)) {
+      void notifyPlayerRegistrationDecision(player.id, Boolean(data.approved))
+        .catch((error) => console.error('[email] Failed to send player decision email:', error));
     }
 
     return new Response(JSON.stringify(player), {

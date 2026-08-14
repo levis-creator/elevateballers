@@ -9,11 +9,13 @@ import CommentsSectionV2 from "./CommentsSectionV2.tsx";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { socialIcon } from "@/features/layout/lib/social-icons";
 import type { ArticleView } from "@/features/news/domain/entities/article-v2";
+import type { PublicArticlePageSettings } from "@/features/settings";
 
 interface Props {
 	view: ArticleView;
+	settings: PublicArticlePageSettings;
 }
-const { view } = Astro.props;
+const { view, settings } = Astro.props;
 const footer = await getFooterData();
 
 const NEWS_STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 6px,var(--panel, #f0ece5) 6px,var(--panel, #f0ece5) 12px)";
@@ -22,12 +24,17 @@ const NEWS_STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border
 const pageUrl = `${Astro.url.origin}/news/${view.slug}/`;
 const u = encodeURIComponent(pageUrl);
 const t = encodeURIComponent(view.title);
-const shares = [
+const availableShares = [
 	{ label: "FB", href: `https://www.facebook.com/sharer/sharer.php?u=${u}` },
 	{ label: "X", href: `https://twitter.com/intent/tweet?url=${u}&text=${t}` },
 	{ label: "WA", href: `https://wa.me/?text=${t}%20${u}` },
-	{ label: "IN", href: `https://www.linkedin.com/sharing/share-offsite/?url=${u}` },
+	{ label: "IG", href: "https://www.instagram.com/" },
+	{ label: "in", href: `https://www.linkedin.com/sharing/share-offsite/?url=${u}` },
 ];
+const shares = settings.shareTargets.map((target) => {
+	const normalized = target.name.toLowerCase();
+	return availableShares.find((share) => share.label.toLowerCase() === normalized) ?? { label: target.name, href: pageUrl };
+});
 ---
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
@@ -41,18 +48,20 @@ const shares = [
 				<a href="/news" class="text-muted2 no-underline hover:text-brand">News</a><span class="text-black/20">›</span>
 				<a href={view.categoryHref} class="text-brand no-underline">{view.category}</a>
 			</div>
-			<div class="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-brand">{view.category}</div>
+			{settings.categoryChip && <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-brand">{view.category}</div>}
 			<h1 class="font-display text-[clamp(34px,5vw,60px)] uppercase leading-[0.95] text-ink">{view.title}</h1>
-			{view.excerpt && <p class="mt-5 max-w-[640px] text-[18px] leading-[1.6] text-muted">{view.excerpt}</p>}
-			<div class="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.06] pt-5">
-				<div class="flex items-center gap-3">
+			{settings.standfirst && view.excerpt && <p class="mt-5 max-w-[640px] text-[18px] leading-[1.6] text-muted">{view.excerpt}</p>}
+			{(settings.author || settings.readTime || settings.share) && <div class="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.06] pt-5">
+				{(settings.author || settings.readTime) && <div class="flex items-center gap-3">
+					{settings.author && (
 					<span class="flex h-10 w-10 items-center justify-center rounded-full bg-night font-display text-[13px] text-brand">{view.author.initials}</span>
+					)}
 					<div>
-						<div class="font-body text-[14px] font-bold text-ink2">{view.author.name}</div>
-						<div class="font-mono text-[11px] text-muted2">{view.dateText}{view.dateText && " · "}{view.readTime}</div>
+						{settings.author && <div class="font-body text-[14px] font-bold text-ink2">{view.author.name}</div>}
+						{settings.readTime && <div class="font-mono text-[11px] text-muted2">{view.dateText}{view.dateText && " · "}{view.readTime}</div>}
 					</div>
-				</div>
-				<div class="flex items-center gap-2">
+				</div>}
+				{settings.share && <div class="flex items-center gap-2">
 					<span class="mr-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted2">Share</span>
 					{shares.map((s) => {
 						const icon = socialIcon(s.label);
@@ -66,13 +75,13 @@ const shares = [
 							</a>
 						);
 					})}
-				</div>
-			</div>
+				</div>}
+			</div>}
 		</div>
 	</section>
 
 	<!-- HERO IMAGE -->
-	{view.heroImage && (
+	{settings.heroImage && view.heroImage && (
 		<section class="mx-auto max-w-[1000px] px-8 pt-8 max-[960px]:px-6">
 			<img src={view.heroImage} alt={view.title} class="block w-full rounded-2xl border border-black/10 object-cover" style="aspect-ratio:16/9;" loading="eager" />
 		</section>
@@ -85,13 +94,13 @@ const shares = [
 			<div class="article-body" set:html={view.bodyHtml}></div>
 
 			<!-- TAGS + SHARE FOOTER -->
-			<div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.06] pt-6">
-				<div class="flex flex-wrap gap-2">
+			{(settings.tags || settings.share) && <div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.06] pt-6">
+				{settings.tags && <div class="flex flex-wrap gap-2">
 					{view.tags.map((tag) => (
 						<span class="rounded-full border border-black/12 bg-white px-3 py-1.5 font-mono text-[11px] text-muted">#{tag}</span>
 					))}
-				</div>
-				<div class="flex items-center gap-2">
+				</div>}
+				{settings.share && <div class="flex items-center gap-2">
 					{shares.map((s) => {
 						const icon = socialIcon(s.label);
 						return (
@@ -105,8 +114,8 @@ const shares = [
 						);
 					})}
 					<button type="button" data-news-copy="true" class="flex h-9 items-center justify-center rounded-lg border border-black/12 px-3 font-mono text-[10px] uppercase text-muted hover:border-brand hover:text-brand">Copy link</button>
-				</div>
-			</div>
+				</div>}
+			</div>}
 		</article>
 
 		<!-- SIDEBAR -->
@@ -162,9 +171,9 @@ const shares = [
 	</section>
 
 	<!-- COMMENTS -->
-	<section class="border-t border-black/[0.08] bg-white">
-		<CommentsSectionV2 articleId={view.id} initialComments={view.comments} initialCount={view.commentCount} client:load />
-	</section>
+	{settings.comments && <section class="border-t border-black/[0.08] bg-white">
+		<CommentsSectionV2 articleId={view.id} initialComments={view.comments} initialCount={view.commentCount} settings={settings} client:load />
+	</section>}
 
 	<Footer footer={footer} />
 </div>

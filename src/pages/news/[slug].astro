@@ -16,9 +16,14 @@ if (!usePublicV2) return Astro.rewrite(`/news-v1/${slug}`);
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import NewsDetailPage from "@/features/news/presentation/v2/NewsDetailPage.astro";
 import { getArticleView } from "@/features/news/domain/usecases/get-article-view";
+import { resolvePublicArticlePageSettings, siteSettingsService } from "@/features/settings";
 
-const view = await getArticleView(slug);
+const [view, articleRecords] = await Promise.all([
+	getArticleView(slug),
+	siteSettingsService.list("article").catch(() => []),
+]);
 if (!view) return Astro.rewrite("/404");
+const articleSettings = resolvePublicArticlePageSettings(articleRecords);
 
 const seoTitle = view.seo.title;
 const seoDescription = view.seo.description;
@@ -84,7 +89,7 @@ const articleImage = view.seo.socialImage || view.heroImage
 			],
 		})}
 	/>
-	<NewsDetailPage view={view} />
+	<NewsDetailPage view={view} settings={articleSettings} />
 	<script is:inline define:vars={{ articleId: view.id }}>
 		const key = `news-viewed:${articleId}`;
 		if (!sessionStorage.getItem(key)) {

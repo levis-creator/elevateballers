@@ -4,11 +4,14 @@ interface Props {
 	role: string;
 	photo?: string | null;
 	email?: string | null;
+	bio?: string | null;
+	showBio?: boolean;
+	badge?: string;
 	href?: string;
 	class?: string;
 }
 
-const { name, role, photo, email, href, class: className = "" } = Astro.props;
+const { name, role, photo, email, bio, showBio = false, badge, href, class: className = "" } = Astro.props;
 const initials = name
 	.split(/\s+/)
 	.filter(Boolean)
@@ -27,8 +30,10 @@ const STRIPE = "background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#
 		<div class="person-card__initials" style={STRIPE}>{initials}</div>
 	)}
 	<div class="person-card__body">
+		{badge && <div class="person-card__badge">{badge}</div>}
 		<div class="person-card__name">{name}</div>
 		<div class="person-card__role">{role}</div>
+		{showBio && bio && <p class="person-card__bio">{bio}</p>}
 		{email && <div class="person-card__email">{email}</div>}
 	</div>
 </Tag>
@@ -76,6 +81,24 @@ const STRIPE = "background:repeating-linear-gradient(45deg,#e7e2da,#e7e2da 5px,#
 
 	.person-card__body {
 		min-width: 0;
+	}
+
+	.person-card__badge {
+		width: fit-content;
+		margin-bottom: 7px;
+		padding: 3px 7px;
+		border-radius: 999px;
+		background: rgb(var(--site-brand-rgb) / 0.1);
+		color: var(--brand);
+		font: 10px "Space Mono", monospace;
+		text-transform: uppercase;
+	}
+
+	.person-card__bio {
+		margin: 9px 0 0;
+		color: #6f665c;
+		font-size: 13px;
+		line-height: 1.5;
 	}
 
 	.person-card__name {

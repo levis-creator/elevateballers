@@ -51,6 +51,7 @@ export async function getLeagueStaffGrouped(): Promise<LeagueStaffGrouped | null
 				initials: initialsOf(r.name),
 				email: r.email ?? null,
 				image: getDisplayImageUrl(r.photo),
+				bio: r.bio ?? null,
 			};
 			const list = byDept.get(r.department) ?? [];
 			list.push(member);

@@ -18,17 +18,19 @@ import RegisterCta from "./sections/RegisterCta.astro";
 import { getHomeData } from "@/features/home/domain/usecases/get-home-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { buildHomeJsonLd } from "./lib/structured-data";
-import { resolvePublicBrandSettings, resolvePublicHomeSettings, siteSettingsService } from "@/features/settings";
+import { resolvePublicBrandSettings, resolvePublicHomeSettings, resolvePublicPlayerOfTheWeekSettings, siteSettingsService } from "@/features/settings";
 import ManagedStructuredData from '@/features/settings/presentation/components/ManagedStructuredData.astro';
 
-const [home, footer, brandRecords, homeRecords] = await Promise.all([
+const [home, footer, brandRecords, homeRecords, potwRecords] = await Promise.all([
 	getHomeData(),
 	getFooterData(),
 	siteSettingsService.list("brand").catch(() => []),
 	siteSettingsService.list("home").catch(() => []),
+	siteSettingsService.list("potw").catch(() => []),
 ]);
 const brandSettings = resolvePublicBrandSettings(brandRecords);
 const homeSettings = resolvePublicHomeSettings(homeRecords);
+const potwSettings = resolvePublicPlayerOfTheWeekSettings(potwRecords);
 const heroCtaLabel = home.registrationOpen ? homeSettings.ctaLabel : homeSettings.ctaClosedLabel;
 const resultTicker = home.results.map((result) => `${result.home} ${result.hs}–${result.as} ${result.away}`);
 const tickerItems = homeSettings.tickerSource === "Latest headlines"
@@ -50,7 +52,7 @@ const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url),
 	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} counts={home.counts} settings={homeSettings} showArt={brandSettings.heroArt} animateCounters={homeSettings.countUp && brandSettings.counters} />
 	{homeSettings.ticker && tickerItems.length > 0 && <NewsTicker items={tickerItems} label={homeSettings.tickerLabel} speed={homeSettings.tickerSpeed} />}
 	{homeSettings.fixturesBlock && <FixturesResults upcoming={home.upcoming.slice(0, homeSettings.fixturesCount)} results={home.results.slice(0, homeSettings.fixturesCount)} fixturesHeading={homeSettings.fixturesHeading} resultsHeading={homeSettings.resultsHeading} emptyMessage={homeSettings.emptyFixtures} />}
-	{homeSettings.potw && <PlayerOfTheWeek potw={home.potw} />}
+	{homeSettings.potw && <PlayerOfTheWeek potw={home.potw} settings={potwSettings} />}
 	{homeSettings.newsBlock && <LatestNews news={home.news.slice(0, homeSettings.newsCount)} categories={home.newsCategories} eyebrow={homeSettings.newsEyebrow} heading={homeSettings.newsHeading} showFilters={homeSettings.newsFilters} client:visible />}
 	{homeSettings.leadersBlock && <StatsSection
 		leaderData={leaderData}

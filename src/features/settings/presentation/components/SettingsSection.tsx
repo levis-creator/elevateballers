@@ -13,10 +13,11 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
-import type { Section, SettingRecord, Field } from '../settingsSections';
+import { SECTIONS, type Section, type SettingRecord, type Field } from '../settingsSections';
 import SettingsField from './SettingsField';
 import SettingsHeaderPreview from './SettingsHeaderPreview';
 import SettingsSeoPreview from './SettingsSeoPreview';
+import SettingsEmailPreview from './SettingsEmailPreview';
 
 type Props = {
   section: Section;
@@ -26,6 +27,7 @@ type Props = {
   loading: boolean;
   onChange: (key: string, value: string) => void;
   onReset: (field: Field) => void;
+  onRestoreSection: () => void;
 };
 
 const SECTION_ICONS = {
@@ -55,6 +57,9 @@ const SECTION_ICONS = {
   news: FileText,
   article: FileText,
   potw: Trophy,
+  email: Mail,
+  emailTemplates: FileText,
+  emailDelivery: ClipboardList,
 } as const;
 
 export default function SettingsSection({
@@ -65,17 +70,20 @@ export default function SettingsSection({
   loading,
   onChange,
   onReset,
+  onRestoreSection,
 }: Props) {
   const valueFor = (field: Field) =>
     draft[field.key] ?? settings[field.key]?.value ?? field.defaultValue ?? '';
   const valueForKey = (key: string) => {
-    const field = section.groups
+    const field = SECTIONS
+      .flatMap((candidate) => candidate.groups)
       .flatMap((group) => group.fields)
       .find((candidate) => candidate.key === key);
     return draft[key] ?? settings[key]?.value ?? field?.defaultValue ?? '';
   };
   const Icon = SECTION_ICONS[section.id as keyof typeof SECTION_ICONS] ?? Settings2;
   const routeLabel = section.id === 'header' ? 'all pages' : section.href;
+  const allValues = Object.fromEntries(SECTIONS.flatMap((candidate) => candidate.groups).flatMap((group) => group.fields).filter((field) => field.type !== 'action').map((field) => [field.key, valueForKey(field.key)]));
   const sectionDirty = section.groups.some((group) =>
     group.fields.some((field) => Object.prototype.hasOwnProperty.call(draft, field.key))
   );
@@ -119,6 +127,7 @@ export default function SettingsSection({
                     canManage={canManage}
                     onChange={onChange}
                     onReset={onReset}
+                    onAction={onRestoreSection}
                   />
                 ))}
               </div>
@@ -143,6 +152,7 @@ export default function SettingsSection({
               description={valueForKey('seo_metaDescription')}
             />
           )}
+          {section.id === 'emailTemplates' && <SettingsEmailPreview values={allValues} />}
         </>
       )}
     </section>

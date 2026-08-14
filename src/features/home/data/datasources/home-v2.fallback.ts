@@ -109,6 +109,7 @@ export const FALLBACK_MEDIA_TABS: string[] = ["All", "Images", "Audio"];
 export const FALLBACK_POTW: Potw = {
 	name: "Travious Kitondo",
 	teamLabel: "CBA Jets · #7",
+	tagline: "Dynamite.",
 	image: null,
 	description:
 		"Size, physicality, strength — none of which Travious has. But inside that lean frame is a mean competitor, a silent assassin afraid of no one on the court. All game long she was quiet, calculating and methodical as she tore City Hawks to shreds.",

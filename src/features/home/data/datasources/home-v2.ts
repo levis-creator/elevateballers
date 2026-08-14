@@ -223,7 +223,7 @@ export async function fetchRegistrationOpen(): Promise<boolean | null> {
 export interface StatsResult {
 	leaderData: LeaderData;
 	counts: CountTargets;
-	statsByPlayer: Record<string, { pointsPerGame: number; reboundsPerGame: number; assistsPerGame: number }>;
+	statsByPlayer: Record<string, { pointsPerGame: number; reboundsPerGame: number; assistsPerGame: number; threesPerGame: number }>;
 }
 
 export async function fetchStats(): Promise<StatsResult | null> {
@@ -255,6 +255,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 					pointsPerGame: s.pointsPerGame,
 					reboundsPerGame: s.reboundsPerGame,
 					assistsPerGame: s.assistsPerGame,
+					threesPerGame: s.totalMatches ? s.totalThreePointersMade / s.totalMatches : 0,
 				};
 			}
 		}
@@ -310,12 +311,24 @@ export async function fetchPotw(
 		const stats = s
 			? [
 					{ value: String(Math.round(s.pointsPerGame * 10) / 10), label: "Points" },
+					{ value: String(Math.round(s.threesPerGame * 10) / 10), label: "Threes" },
 					{ value: String(Math.round(s.reboundsPerGame * 10) / 10), label: "Rebounds" },
 					{ value: String(Math.round(s.assistsPerGame * 10) / 10), label: "Assists" },
 				]
 			: [];
 		const href = p.slug || p.id ? `/players/${p.slug || p.id}` : null;
-		return { name, teamLabel, image, description: potw.description ?? "", stats, href };
+		const descriptionParts = String(potw.description ?? "").split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
+		const first = descriptionParts[0] ?? "";
+		const hasTagline = descriptionParts.length > 1 && first.length <= 60;
+		return {
+			name,
+			teamLabel,
+			tagline: hasTagline ? first : null,
+			image,
+			description: hasTagline ? descriptionParts.slice(1).join("\n\n") : String(potw.description ?? ""),
+			stats,
+			href,
+		};
 	} catch {
 		return null;
 	}

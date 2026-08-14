@@ -11,6 +11,7 @@ import Spacing from '../../shared/components/ui/Spacing.astro';
 import { Image } from 'astro:assets';
 import { getStaffBySlug } from '../../features/cms/lib/queries';
 import { getDisplayImageUrl } from '../../lib/asset-url';
+import { resolvePublicStaffProfileSettings, siteSettingsService } from '../../features/settings';
 
 const { slug } = Astro.params;
 if (!slug) {
@@ -46,6 +47,11 @@ const formatRole = (role: string): string =>
     .join(' ');
 
 const approvedTeams = (staff.teams || []).filter((teamStaff: any) => teamStaff.team?.approved);
+const settings = resolvePublicStaffProfileSettings(await siteSettingsService.list('staffMember').catch(() => []));
+const tagline = approvedTeams.length
+  ? `${formatRole(staff.role)} · ${approvedTeams.map((teamStaff: any) => teamStaff.team.name).join(' · ')}`
+  : formatRole(staff.role);
+const yearsServed = Math.max(1, new Date().getFullYear() - new Date(staff.createdAt).getFullYear() + 1);
 ---
 
 <Layout
@@ -102,6 +108,7 @@ const approvedTeams = (staff.teams || []).filter((teamStaff: any) => teamStaff.t
             <div class="wpb_column vc_column_container vc_col-sm-12">
               <div class="vc_column-inner">
                 <div class="wpb_wrapper">
+				  <a href="/staff" class="staff-back-link">← {settings.backLink}</a>
                   <Spacing
                     id="stm-spacing-staff-header"
                     lg="80"
@@ -137,8 +144,9 @@ const approvedTeams = (staff.teams || []).filter((teamStaff: any) => teamStaff.t
                       }
                       <div class="staff-header-info">
                         <h1 class="staff-title">{fullName}</h1>
-                        <div class="staff-role">{formatRole(staff.role)}</div>
-                        {(staff.email || staff.phone) && (
+						{settings.roleEyebrow && <div class="staff-role">{formatRole(staff.role)}</div>}
+						{settings.tagline && <p class="staff-tagline">{tagline}</p>}
+                        {settings.contactButtons && (staff.email || staff.phone) && (
                           <div class="staff-contact">
                             {staff.email && <a href={`mailto:${staff.email}`}>{staff.email}</a>}
                             {staff.phone && <a href={`tel:${staff.phone}`}>{staff.phone}</a>}
@@ -158,7 +166,7 @@ const approvedTeams = (staff.teams || []).filter((teamStaff: any) => teamStaff.t
 
                   {staff.bio && (
                     <div class="staff-bio-section">
-                      <h3 class="section-title">Bio</h3>
+					  <h3 class="section-title">{settings.aboutHeading}</h3>
                       <p class="staff-bio">{staff.bio}</p>
                     </div>
                   )}
@@ -171,9 +179,8 @@ const approvedTeams = (staff.teams || []).filter((teamStaff: any) => teamStaff.t
                     xs="20"
                   />
 
-                  <div class="staff-teams-section">
-                    <h3 class="section-title">Teams</h3>
-                    {approvedTeams.length > 0 ? (
+				  {approvedTeams.length > 0 && <div class="staff-teams-section">
+                    <h3 class="section-title">{settings.dutiesHeading}</h3>
                       <ul class="staff-teams-list">
                         {approvedTeams.map((teamStaff: any) => (
                           <li class="staff-team-item">
@@ -186,10 +193,17 @@ const approvedTeams = (staff.teams || []).filter((teamStaff: any) => teamStaff.t
                           </li>
                         ))}
                       </ul>
-                    ) : (
-                      <p class="no-data">No team assignments listed.</p>
-                    )}
-                  </div>
+                  </div>}
+
+				  <Spacing id="stm-spacing-staff-facts" lg="50" md="40" sm="30" xs="20" />
+				  <section class="staff-facts-section">
+					<h3 class="section-title">{settings.factsHeading}</h3>
+					<div class="staff-facts-grid">
+					  <div><strong>{yearsServed}</strong><span>Years served</span></div>
+					  <div><strong>—</strong><span>Matches worked</span></div>
+					  <div><strong>{formatRole(staff.role)}</strong><span>Department</span></div>
+					</div>
+				  </section>
                 </div>
               </div>
             </div>
@@ -200,3 +214,16 @@ const approvedTeams = (staff.teams || []).filter((teamStaff: any) => teamStaff.t
     <Footer />
   </div>
 </Layout>
+
+<style>
+	.staff-back-link { display: inline-block; margin-bottom: 24px; color: var(--brand); font: 11px "Space Mono", monospace; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
+	.staff-tagline { margin: 10px 0 0; color: #6f665c; font-size: 15px; }
+	.staff-contact { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+	.staff-contact a { padding: 9px 12px; border: 1px solid rgba(20,16,9,.12); border-radius: 6px; color: var(--brand); text-decoration: none; }
+	.staff-facts-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+	.staff-facts-grid > div { padding: 20px; border: 1px solid rgba(20,16,9,.1); border-radius: 12px; background: #fff; }
+	.staff-facts-grid strong,.staff-facts-grid span { display: block; }
+	.staff-facts-grid strong { color: #141009; font: 28px Teko,sans-serif; }
+	.staff-facts-grid span { margin-top: 5px; color: #6f665c; font: 10px "Space Mono",monospace; text-transform: uppercase; }
+	@media (max-width:600px) { .staff-facts-grid { grid-template-columns: 1fr; } }
+</style>
