@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { resolveAssetUrl } from '@/lib/asset-url';
 
 const EVENT_BY_LABEL: Record<string, string> = {
   'Registration received': 'registration',
@@ -21,6 +22,11 @@ export default function SettingsEmailPreview({ values, templateLabel = 'Registra
   const enabled = values[`emailTemplates_${event}Enabled`] !== 'false' && values.email_autoReplies !== 'false';
   const subject = fill(values[`emailTemplates_${event}Subject`] || '');
   const body = fill(values[`emailTemplates_${event}Body`] || '');
+  const logoUrl = resolveAssetUrl(
+    values.header_logo === 'assets/elevate-logo.png'
+      ? '/logo/Elevate_Logo.png'
+      : values.header_logo
+  );
 
   async function sendTest() {
     if (!recipient.trim() || !canManage) return;
@@ -54,7 +60,7 @@ export default function SettingsEmailPreview({ values, templateLabel = 'Registra
         </div>
         {values.email_brandHeader !== 'false' && (
           <div className="eb-email-preview-brand">
-            {values.header_logo ? <img src={values.header_logo} alt="Elevate Ballers" /> : <span>ELEVATE BALLERS</span>}
+            {logoUrl ? <img src={logoUrl} alt="Elevate Ballers" /> : <span>ELEVATE BALLERS</span>}
           </div>
         )}
         <div className="eb-email-preview-message">
