@@ -12,10 +12,11 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError, json } from '../../../lib/apiError';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 import { notifySecurityAdmins } from '../../../lib/securityNotifications';
+import { getClientIp } from '../../../lib/getClientIp';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   try {
     let body;
     try {
@@ -30,10 +31,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return json({ error: 'A 6-digit verification code is required' }, 400);
     }
 
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-      request.headers.get('x-real-ip') ??
-      'unknown';
+    const ip = getClientIp(request, clientAddress);
 
     const otpSessionToken = cookies.get('otp-session')?.value;
     if (!otpSessionToken) {

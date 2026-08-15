@@ -15,16 +15,9 @@ import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
+import { getClientIp } from '../../../lib/getClientIp';
 
 export const prerender = false;
-
-function getIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    request.headers.get('x-real-ip') ??
-    'unknown'
-  );
-}
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
@@ -40,8 +33,8 @@ function json(body: unknown, status: number) {
   });
 }
 
-export const POST: APIRoute = async ({ request, cookies }) => {
-  const ip = getIp(request);
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
+  const ip = getClientIp(request, clientAddress);
   const userAgent = request.headers.get('user-agent') ?? undefined;
 
   const security = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));

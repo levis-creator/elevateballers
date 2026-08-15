@@ -8,6 +8,7 @@ import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { getResetTtlMinutes, getInviteTtlMinutes } from '../../../features/auth/lib/reset-ttl';
+import { getClientIp } from '../../../lib/getClientIp';
 
 export const prerender = false;
 
@@ -15,11 +16,8 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export const POST: APIRoute = async ({ request }) => {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    request.headers.get('x-real-ip') ??
-    'unknown';
+export const POST: APIRoute = async ({ request, clientAddress }) => {
+  const ip = getClientIp(request, clientAddress);
 
   // Rate limit: 5 requests per 15 minutes per IP
   if (!await checkRateLimit(`forgot:${ip}`, 5, 15 * 60 * 1000)) {
