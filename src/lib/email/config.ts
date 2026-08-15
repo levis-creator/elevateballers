@@ -16,7 +16,11 @@ export type AdminNotificationType =
   | 'contact_message'
   | 'team_registered'
   | 'player_registered'
-  | 'player_auto_linked';
+  | 'player_auto_linked'
+  | 'security_settings_changed'
+  | 'security_session_activity'
+  | 'security_password_activity'
+  | 'security_auth_incidents';
 
 // v2 brand palette (matches the site redesign). Kept on the same keys so every
 // template rebrands centrally.

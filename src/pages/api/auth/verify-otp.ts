@@ -11,6 +11,7 @@ import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError, json } from '../../../lib/apiError';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
+import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 
 export const prerender = false;
 
@@ -124,6 +125,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         reason: 'concurrent_limit',
         source: 'explicit',
       });
+      await notifySecurityAdmins('security_session_activity', 'Session limit enforced', 'An older administrator session was revoked because the concurrent-session limit was reached.');
     }
 
     const authToken = createToken({

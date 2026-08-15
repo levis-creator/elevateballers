@@ -699,6 +699,8 @@ export const SECTIONS: Section[] = [
       {
         label: 'OTP & Login Protection',
         fields: [
+          f('security_loginMaxAttempts', 'Maximum login attempts', 'Invalid passwords allowed before the account is locked. Allowed range: 3–10.', { type: 'number', defaultValue: '5' }),
+          f('security_loginLockoutMinutes', 'Login lockout duration', 'Minutes an account stays locked after too many invalid passwords. Allowed range: 5–60.', { type: 'number', defaultValue: '15' }),
           f('security_otpExpiryMinutes', 'OTP expiry duration', 'Minutes before a sign-in verification code expires. Allowed range: 5–30.', { type: 'number', defaultValue: '10' }),
           f('security_otpMaxAttempts', 'Maximum OTP attempts', 'Invalid codes allowed before the current code is locked. Allowed range: 3–10.', { type: 'number', defaultValue: '5' }),
           f('security_otpLockoutMinutes', 'OTP lockout duration', 'Minutes a code stays locked after too many invalid codes. Allowed range: 5–60.', { type: 'number', defaultValue: '15' }),
@@ -721,14 +723,23 @@ export const SECTIONS: Section[] = [
       {
         label: 'Rate limits',
         fields: [
+          f('security_loginRateLimitMax', 'Login requests per window', 'Login attempts allowed for one source IP before a temporary limit. Allowed range: 3–30.', { type: 'number', defaultValue: '10' }),
+          f('security_loginRateLimitWindowMinutes', 'Login rate-limit window', 'Minutes in the login rate-limit window. Allowed range: 5–60.', { type: 'number', defaultValue: '15' }),
           f('security_otpRateLimitMax', 'OTP requests per window', 'Verification requests allowed for one administrator before a temporary limit. Allowed range: 3–20.', { type: 'number', defaultValue: '5' }),
           f('security_otpRateLimitWindowMinutes', 'OTP rate-limit window', 'Minutes in the OTP verification rate-limit window. Allowed range: 5–60.', { type: 'number', defaultValue: '15' }),
           f('security_settingsMutationMax', 'Settings changes per window', 'Creates and updates allowed for one administrator before a temporary limit. Allowed range: 10–100.', { type: 'number', defaultValue: '30' }),
           f('security_settingsMutationWindowMinutes', 'Settings rate-limit window', 'Minutes in the Site Settings mutation rate-limit window. Allowed range: 5–60.', { type: 'number', defaultValue: '10' }),
         ],
       },
-      { label: 'Passwords', fields: [], available: false, description: 'Password policy controls are not configurable here yet.' },
-      { label: 'Alerts & Audit', fields: [], available: false, description: 'Security alert routing and audit controls are not configurable here yet.' },
+      {
+        label: 'Passwords',
+        fields: [
+          f('security_passwordMinLength', 'Minimum password length', 'Applies to new and changed passwords; existing passwords are not changed automatically. Allowed range: 8–64.', { type: 'number', defaultValue: '8' }),
+          f('security_passwordHistoryCount', 'Password history count', 'Recent password hashes retained and rejected for reuse. Allowed range: 0–10.', { type: 'number', defaultValue: '5' }),
+          f('security_passwordBreachCheck', 'Breached-password checks', 'Reject passwords found by the privacy-preserving breach range check.', { type: 'toggle', defaultValue: 'true' }),
+        ],
+      },
+      { label: 'Alerts & Audit', fields: [], available: true, description: 'Review security audit events. Email change alerts use the existing transactional email delivery.' },
       { label: 'Uploads & Integrations', fields: [], available: false, description: 'Upload and integration security controls are not configurable here yet.' },
     ],
     '/admin/settings'

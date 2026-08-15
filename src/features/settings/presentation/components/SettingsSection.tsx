@@ -22,6 +22,7 @@ import SettingsEmailPreview from './SettingsEmailPreview';
 import SettingsEmailDeliveryHistory from './SettingsEmailDeliveryHistory';
 import SettingsUnavailable from './SettingsUnavailable';
 import SessionHistoryPanel from './SessionHistoryPanel';
+import SecurityAuditPanel from './SecurityAuditPanel';
 
 type Props = {
   section: Section;
@@ -135,7 +136,7 @@ export default function SettingsSection({
               <div className="eb-settings-security-overview-grid">
                 <span><strong>Sign-in</strong> OTP & Login Protection</span>
                 <span><strong>Rate limits</strong> OTP and settings mutations</span>
-                <span><strong>Future areas</strong> Clearly marked as unavailable</span>
+                <span><strong>Visibility</strong> Sessions and audit events are reviewable</span>
               </div>
             </div>
           )}
@@ -165,6 +166,8 @@ export default function SettingsSection({
               {!usesGroupTabs && <div className="eb-settings-group-title">{group.label}</div>}
               {section.id === 'security' && group.label === 'Session history' ? (
                 <SessionHistoryPanel canManage={canManage} />
+              ) : section.id === 'security' && group.label === 'Alerts & Audit' ? (
+                <SecurityAuditPanel canManage={canManage} />
               ) : group.available === false ? (
                 <SettingsUnavailable
                   title={group.label}

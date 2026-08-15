@@ -5,7 +5,7 @@
  * src/features/cms/lib/auth.ts → validatePasswordStrength().
  *
  * Usage:
- *   <PasswordStrengthMeter password={password} />
+ *   <PasswordStrengthMeter password={password} minLength={minLength} />
  */
 
 interface Rule {
@@ -13,17 +13,19 @@ interface Rule {
   test: (pw: string) => boolean;
 }
 
-const RULES: Rule[] = [
-  { label: 'At least 8 characters',           test: (pw) => pw.length >= 8 },
-  { label: 'One uppercase letter (A–Z)',       test: (pw) => /[A-Z]/.test(pw) },
-  { label: 'One lowercase letter (a–z)',       test: (pw) => /[a-z]/.test(pw) },
-  { label: 'One number (0–9)',                 test: (pw) => /\d/.test(pw) },
-  { label: 'One special character (!@#$…)',    test: (pw) => /[^A-Za-z0-9]/.test(pw) },
-];
+function getRules(minLength: number): Rule[] {
+  return [
+    { label: `At least ${minLength} characters`, test: (pw) => pw.length >= minLength },
+    { label: 'One uppercase letter (A–Z)',       test: (pw) => /[A-Z]/.test(pw) },
+    { label: 'One lowercase letter (a–z)',       test: (pw) => /[a-z]/.test(pw) },
+    { label: 'One number (0–9)',                 test: (pw) => /\d/.test(pw) },
+    { label: 'One special character (!@#$…)',    test: (pw) => /[^A-Za-z0-9]/.test(pw) },
+  ];
+}
 
-function getStrength(password: string): number {
+function getStrength(password: string, rules: Rule[]): number {
   if (!password) return 0;
-  return RULES.filter((r) => r.test(password)).length;
+  return rules.filter((r) => r.test(password)).length;
 }
 
 const STRENGTH_LABELS = ['', 'Very weak', 'Weak', 'Fair', 'Good', 'Strong'];
@@ -38,12 +40,14 @@ const STRENGTH_COLORS = [
 
 interface Props {
   password: string;
+  minLength?: number;
 }
 
-export default function PasswordStrengthMeter({ password }: Props) {
+export default function PasswordStrengthMeter({ password, minLength = 8 }: Props) {
   if (!password) return null;
 
-  const strength = getStrength(password);
+  const RULES = getRules(minLength);
+  const strength = getStrength(password, RULES);
   const color = STRENGTH_COLORS[strength];
   const label = STRENGTH_LABELS[strength];
 

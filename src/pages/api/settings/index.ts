@@ -6,6 +6,8 @@ import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/a
 import { handleApiError } from '../../../lib/apiError';
 import { maskSensitiveSetting } from '../../../features/settings/application/sensitiveSettingValues';
 import { enforceRateLimit } from '../../../lib/rateLimit';
+import { resolveSecuritySettings } from '../../../features/settings/application/securitySettings';
+import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
@@ -28,10 +30,11 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const user = await requirePermission(request, 'site_settings:manage');
+    const security = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));
     const limited = await enforceRateLimit(
       `settings:${user.id}:create`,
-      30,
-      10 * 60 * 1000,
+      security.security_settingsMutationMax,
+      security.security_settingsMutationWindowMinutes * 60 * 1000,
       'Too many settings changes. Please try again shortly.',
     );
     if (limited) return limited;
@@ -47,11 +50,12 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     const adminId = getUserIdFromRequest(request) ?? 'unknown';
-    await writeAuditLog(adminId, 'SETTING_CREATED', adminId, {
+    await writeAuditLog(adminId, setting.category === 'security' ? 'SECURITY_SETTING_CHANGED' : 'SETTING_CREATED', adminId, {
       settingId: setting.id,
       key: setting.key,
       category: setting.category,
     }).catch(() => {});
+    if (setting.category === 'security') await notifySecurityAdmins('security_settings_changed', 'Security settings changed', 'An administrator changed a Security setting.');
 
     return new Response(JSON.stringify(maskSensitiveSetting(setting)), {
       status: 201,

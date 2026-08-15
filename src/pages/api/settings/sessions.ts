@@ -4,6 +4,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { writeAuditLog } from '../../../features/cms/lib/auth';
 import { handleApiError, json } from '../../../lib/apiError';
 import { enforceRateLimit } from '../../../lib/rateLimit';
+import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 
 export const prerender = false;
 
@@ -92,6 +93,7 @@ export const DELETE: APIRoute = async ({ request }) => {
       sessionId: session.id,
       reason: 'admin_revoked',
     });
+    await notifySecurityAdmins('security_session_activity', 'Session revoked', 'An administrator revoked an active session.');
     return json({ message: 'Session revoked' }, 200);
   } catch (error) {
     return handleApiError(error, 'revoke session', request);

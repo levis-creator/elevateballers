@@ -13,6 +13,8 @@ import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
+import { notifySecurityAdmins } from '../../../lib/securityNotifications';
+import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 
 export const prerender = false;
 
@@ -42,13 +44,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const ip = getIp(request);
   const userAgent = request.headers.get('user-agent') ?? undefined;
 
-  // Rate limit: 10 attempts per 15 minutes per IP
-  if (!await checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000)) {
+  const security = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));
+
+  if (!await checkRateLimit(`login:${ip}`, security.security_loginRateLimitMax, security.security_loginRateLimitWindowMinutes * 60 * 1000)) {
     const retryAfter = await getRateLimitRetryAfter(`login:${ip}`);
     await logAudit(request, 'AUTH_LOGIN_RATE_LIMITED', {
       ip,
       userAgent,
     });
+    await notifySecurityAdmins('security_auth_incidents', 'Login rate limit triggered', 'A login source was temporarily rate limited.');
     return json(
       { error: `Too many login attempts. Please try again in ${retryAfter} seconds.` },
       429
@@ -123,6 +127,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         },
         user.id
       );
+      await notifySecurityAdmins('security_auth_incidents', 'Account lockout encountered', 'A login attempt was made while an account was locked.');
       return json(
         { error: `Account locked. Try again in ${Math.ceil(secondsLeft / 60)} minutes.` },
         423

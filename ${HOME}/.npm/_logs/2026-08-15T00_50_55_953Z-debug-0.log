@@ -5,15 +5,15 @@
 4 silly config load:file:C:\Users\Levi\Documents\GitHub\elevateballers\.npmrc
 5 silly config load:file:C:\Users\Levi\.npmrc
 6 silly config load:file:C:\Users\Levi\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm test --run
-8 verbose argv "test" "--" "--run"
-9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_57_31_725Z-
-10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-14T22_57_31_725Z-debug-0.log
-11 silly logfile start cleaning logs, removing 2 files
+7 verbose title npm exec tsc --noEmit --pretty false
+8 verbose argv "exec" "--" "tsc" "--noEmit" "--pretty" "false"
+9 verbose logfile logs-max:10 dir:C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-15T00_50_55_953Z-
+10 verbose logfile C:\Users\Levi\Documents\GitHub\elevateballers\${HOME}\.npm\_logs\2026-08-15T00_50_55_953Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
 13 verbose cwd C:\Users\Levi\Documents\GitHub\elevateballers
 14 verbose os Windows_NT 10.0.26200
 15 verbose node v24.18.0
 16 verbose npm  v11.16.0
-17 verbose exit 1
-18 verbose code 1
+17 verbose exit 2
+18 verbose code 2

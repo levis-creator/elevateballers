@@ -3,8 +3,13 @@ import { ShieldCheck } from 'lucide-react';
 import { usePermissions } from '@/features/rbac/usePermissions';
 import SettingsUnavailable from '@/features/settings/presentation/components/SettingsUnavailable';
 import SessionHistoryPanel from '@/features/settings/presentation/components/SessionHistoryPanel';
+import SecurityAuditPanel from '@/features/settings/presentation/components/SecurityAuditPanel';
 
 const FIELDS = [
+  { key: 'security_loginMaxAttempts', label: 'Maximum login attempts', description: 'Invalid passwords allowed before the account is locked.', min: 3, max: 10, defaultValue: '5' },
+  { key: 'security_loginLockoutMinutes', label: 'Login lockout duration', description: 'Minutes an account stays locked after too many invalid passwords.', min: 5, max: 60, defaultValue: '15' },
+  { key: 'security_loginRateLimitMax', label: 'Login requests per window', description: 'Login attempts allowed for one source IP before a temporary limit.', min: 3, max: 30, defaultValue: '10' },
+  { key: 'security_loginRateLimitWindowMinutes', label: 'Login rate-limit window', description: 'Minutes in the login rate-limit window.', min: 5, max: 60, defaultValue: '15' },
   { key: 'security_otpExpiryMinutes', label: 'OTP expiry duration', description: 'Minutes before a sign-in verification code expires.', min: 5, max: 30, defaultValue: '10' },
   { key: 'security_otpMaxAttempts', label: 'Maximum OTP attempts', description: 'Invalid codes allowed before the current code is locked.', min: 3, max: 10, defaultValue: '5' },
   { key: 'security_otpLockoutMinutes', label: 'OTP lockout duration', description: 'Minutes a code stays locked after too many invalid codes.', min: 5, max: 60, defaultValue: '15' },
@@ -19,15 +24,21 @@ const SESSION_FIELDS = [
   { key: 'security_maxConcurrentSessions', label: 'Maximum concurrent sessions', description: 'Active admin sessions retained per user; oldest sessions are revoked first.', min: 1, max: 10, defaultValue: '3' },
 ] as const;
 
-const ALL_FIELDS = [...FIELDS, ...SESSION_FIELDS];
+const PASSWORD_FIELDS = [
+  { key: 'security_passwordMinLength', label: 'Minimum password length', description: 'Applies to new and changed passwords; existing passwords are not changed automatically.', min: 8, max: 64, defaultValue: '8' },
+  { key: 'security_passwordHistoryCount', label: 'Password history count', description: 'Recent password hashes retained and rejected for reuse.', min: 0, max: 10, defaultValue: '5' },
+] as const;
+const BREACH_FIELD = { key: 'security_passwordBreachCheck', label: 'Breached-password checks', description: 'Reject passwords found by the privacy-preserving breach range check.', defaultValue: 'true' } as const;
+
+const ALL_FIELDS = [...FIELDS, ...SESSION_FIELDS, ...PASSWORD_FIELDS, BREACH_FIELD];
 
 const GROUPS = [
   { id: 'overview', label: 'Overview' },
   { id: 'otp', label: 'OTP & Login Protection' },
   { id: 'sessions', label: 'Sessions' },
   { id: 'history', label: 'Session history' },
-  { id: 'passwords', label: 'Passwords', unavailable: true },
-  { id: 'alerts', label: 'Alerts & Audit', unavailable: true },
+  { id: 'passwords', label: 'Passwords' },
+  { id: 'alerts', label: 'Alerts & Audit' },
   { id: 'uploads', label: 'Uploads & Integrations', unavailable: true },
 ] as const;
 
@@ -140,7 +151,7 @@ export default function SecuritySettingsEditor() {
           <div className="grid gap-4 md:grid-cols-3">
             <div><p className="text-sm font-medium">Admin sign-in</p><p className="text-xs text-muted-foreground">OTP expiry, attempts, lockout, and verification limits.</p></div>
             <div><p className="text-sm font-medium">Server enforced</p><p className="text-xs text-muted-foreground">Values are range-checked and secure defaults apply if invalid.</p></div>
-            <div><p className="text-sm font-medium">More protection areas</p><p className="text-xs text-muted-foreground">Session history, passwords, alerts, and uploads are planned but not configurable yet.</p></div>
+            <div><p className="text-sm font-medium">Protection areas</p><p className="text-xs text-muted-foreground">Sessions, password policy, and security audit events are available; uploads remain separate.</p></div>
           </div>
         )}
         {activeGroup === 'otp' && (
@@ -191,14 +202,27 @@ export default function SecuritySettingsEditor() {
           </div>
         )}
         {activeGroup === 'history' && <SessionHistoryPanel canManage={canManage} />}
-        {activeGroup !== 'overview' && activeGroup !== 'otp' && activeGroup !== 'sessions' && activeGroup !== 'history' && (
+        {activeGroup === 'passwords' && (
+          <div className="grid gap-5 md:grid-cols-2">
+            {PASSWORD_FIELDS.map((field) => (
+              <label key={field.key} className="space-y-1.5">
+                <span className="block text-sm font-medium">{field.label}</span>
+                <span className="block text-xs text-muted-foreground">{field.description} Allowed range: {field.min}–{field.max}.</span>
+                <input className="w-full rounded-md border bg-background px-3 py-2 text-sm" type="number" min={field.min} max={field.max} step="1" value={values[field.key]} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} disabled={!canManage || loading || saving} />
+              </label>
+            ))}
+            <div className="space-y-1.5"><span className="block text-sm font-medium">{BREACH_FIELD.label}</span><span className="block text-xs text-muted-foreground">{BREACH_FIELD.description}</span><button type="button" role="switch" aria-checked={values[BREACH_FIELD.key] !== 'false'} className="rounded-md border px-3 py-2 text-sm" onClick={() => setValues((current) => ({ ...current, [BREACH_FIELD.key]: current[BREACH_FIELD.key] === 'false' ? 'true' : 'false' }))} disabled={!canManage || loading || saving}>{values[BREACH_FIELD.key] !== 'false' ? 'Enabled' : 'Disabled'}</button></div>
+          </div>
+        )}
+        {activeGroup === 'alerts' && <SecurityAuditPanel canManage={canManage} />}
+        {activeGroup !== 'overview' && activeGroup !== 'otp' && activeGroup !== 'sessions' && activeGroup !== 'history' && activeGroup !== 'passwords' && activeGroup !== 'alerts' && (
           <SettingsUnavailable
             title={GROUPS.find((group) => group.id === activeGroup)?.label ?? 'Settings area'}
             description="This settings area is not configurable here yet."
             context="It is intentionally shown as unavailable until its server-side behavior is implemented."
           />
         )}
-        {(activeGroup === 'otp' || activeGroup === 'sessions') && canManage ? (
+        {(activeGroup === 'otp' || activeGroup === 'sessions' || activeGroup === 'passwords') && canManage ? (
           <button type="button" className="mt-6 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50" onClick={() => void save()} disabled={loading || saving}>
             {saving ? 'Saving…' : 'Save Security settings'}
           </button>
