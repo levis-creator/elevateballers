@@ -4,8 +4,10 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import AuditLogTable from '../../../features/cms/components/AuditLogTable';
+import AuditLogsPageV2 from '../../../features/audit-logs/presentation/v2/AuditLogsPageV2';
 import { checkAuth } from '../../../features/cms/lib/auth-astro';
 import { hasPermission } from '../../../features/rbac/permissions';
+import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 
 const user = await checkAuth(Astro.request);
 const canManageAudit = user ? await hasPermission(user.id, 'audit_logs:manage') : false;
@@ -15,12 +17,16 @@ const canManageAudit = user ? await hasPermission(user.id, 'audit_logs:manage') 
   title="Audit Logs - Admin"
   permissionsAny={['audit_logs:read', 'audit_logs:manage']}
 >
-  <div class="space-y-6">
-    <div class="pb-6 border-b">
-      <h1 class="text-3xl font-heading font-semibold mb-2">Audit Logs</h1>
-      <p class="text-muted-foreground">Review user and system actions recorded for compliance and security.</p>
-    </div>
+  {usePublicAdminV2 ? (
+    <AuditLogsPageV2 client:load />
+  ) : (
+    <div class="space-y-6">
+      <div class="pb-6 border-b">
+        <h1 class="text-3xl font-heading font-semibold mb-2">Audit Logs</h1>
+        <p class="text-muted-foreground">Review user and system actions recorded for compliance and security.</p>
+      </div>
 
-    <AuditLogTable client:load canManage={canManageAudit} />
-  </div>
+      <AuditLogTable client:load canManage={canManageAudit} />
+    </div>
+  )}
 </AdminLayout>
