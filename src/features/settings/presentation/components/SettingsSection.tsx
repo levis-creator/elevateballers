@@ -21,6 +21,7 @@ import SettingsSeoPreview from './SettingsSeoPreview';
 import SettingsEmailPreview from './SettingsEmailPreview';
 import SettingsEmailDeliveryHistory from './SettingsEmailDeliveryHistory';
 import SettingsUnavailable from './SettingsUnavailable';
+import SessionHistoryPanel from './SessionHistoryPanel';
 
 type Props = {
   section: Section;
@@ -162,7 +163,9 @@ export default function SettingsSection({
           {visibleGroups.map((group) => (
             <div className={`eb-settings-group ${usesGroupTabs ? 'is-tabbed' : ''}`} key={group.label}>
               {!usesGroupTabs && <div className="eb-settings-group-title">{group.label}</div>}
-              {group.available === false ? (
+              {section.id === 'security' && group.label === 'Session history' ? (
+                <SessionHistoryPanel canManage={canManage} />
+              ) : group.available === false ? (
                 <SettingsUnavailable
                   title={group.label}
                   description={group.description ?? 'This settings area is not configurable here yet.'}
