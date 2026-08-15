@@ -27,6 +27,7 @@ export * from './application/newsListSettings';
 export * from './application/articlePageSettings';
 export * from './application/playerOfTheWeekSettings';
 export * from './application/notificationSettings';
+export * from './application/securitySettings';
 export * from './application/headerSettings';
 export * from './application/footerSettings';
 export * from './application/brandSettings';

@@ -20,6 +20,7 @@ import SettingsHeaderPreview from './SettingsHeaderPreview';
 import SettingsSeoPreview from './SettingsSeoPreview';
 import SettingsEmailPreview from './SettingsEmailPreview';
 import SettingsEmailDeliveryHistory from './SettingsEmailDeliveryHistory';
+import SettingsUnavailable from './SettingsUnavailable';
 
 type Props = {
   section: Section;
@@ -29,7 +30,7 @@ type Props = {
   loading: boolean;
   onChange: (key: string, value: string) => void;
   onReset: (field: Field) => void;
-  onRestoreSection: () => void;
+  onRestoreSection: (field?: Field) => void;
 };
 
 const SECTION_ICONS = {
@@ -39,6 +40,7 @@ const SECTION_ICONS = {
   seo: Search,
   contact: Mail,
   consent: ShieldCheck,
+  security: ShieldCheck,
   system: Settings2,
   home: LayoutDashboard,
   about: FileText,
@@ -125,6 +127,17 @@ export default function SettingsSection({
         </div>
       ) : (
         <>
+          {section.id === 'security' && (
+            <div className="eb-settings-security-overview">
+              <div className="eb-settings-security-overview-kicker">Protection overview</div>
+              <p>Security controls are scoped to administrators and enforced on the server. Missing or invalid values fall back to conservative defaults.</p>
+              <div className="eb-settings-security-overview-grid">
+                <span><strong>Sign-in</strong> OTP & Login Protection</span>
+                <span><strong>Rate limits</strong> OTP and settings mutations</span>
+                <span><strong>Future areas</strong> Clearly marked as unavailable</span>
+              </div>
+            </div>
+          )}
           {usesGroupTabs && (
             <div className="eb-settings-group-tabs" role="tablist" aria-label={`${section.label} groups`}>
               {section.groups.map((group) => {
@@ -149,20 +162,28 @@ export default function SettingsSection({
           {visibleGroups.map((group) => (
             <div className={`eb-settings-group ${usesGroupTabs ? 'is-tabbed' : ''}`} key={group.label}>
               {!usesGroupTabs && <div className="eb-settings-group-title">{group.label}</div>}
-              <div className="eb-settings-fields">
-                {group.fields.map((field) => (
-                  <SettingsField
-                    key={field.key}
-                    field={field}
-                    value={valueFor(field)}
-                    dirty={Object.prototype.hasOwnProperty.call(draft, field.key)}
-                    canManage={canManage}
-                    onChange={onChange}
-                    onReset={onReset}
-                    onAction={onRestoreSection}
-                  />
-                ))}
-              </div>
+              {group.available === false ? (
+                <SettingsUnavailable
+                  title={group.label}
+                  description={group.description ?? 'This settings area is not configurable here yet.'}
+                  context="It will appear here once its server-side behavior is ready."
+                />
+              ) : (
+                <div className="eb-settings-fields">
+                  {group.fields.map((field) => (
+                    <SettingsField
+                      key={field.key}
+                      field={field}
+                      value={valueFor(field)}
+                      dirty={Object.prototype.hasOwnProperty.call(draft, field.key)}
+                      canManage={canManage}
+                      onChange={onChange}
+                      onReset={onReset}
+                      onAction={onRestoreSection}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {section.id === 'header' && (

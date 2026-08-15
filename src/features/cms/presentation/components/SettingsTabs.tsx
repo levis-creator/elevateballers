@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, SearchIcon, ClipboardListIcon, PanelBottomIcon } from 'lucide-react';
+import { ImageIcon, PhoneIcon, InfoIcon, BookOpenIcon, TrophyIcon, HomeIcon, SearchIcon, ClipboardListIcon, PanelBottomIcon, ShieldCheckIcon } from 'lucide-react';
 import { PermissionProvider } from '@/features/rbac/usePermissions';
 import BannerSettingsEditor from './BannerSettingsEditor';
 import ContactSettingsEditor from './ContactSettingsEditor';
@@ -13,8 +13,9 @@ import RulesContentEditor from './RulesContentEditor';
 import MatchSettingsEditor from './MatchSettingsEditor';
 import RegistrationSettingsEditor from './RegistrationSettingsEditor';
 import FooterSettingsEditor from './FooterSettingsEditor';
+import SecuritySettingsEditor from './SecuritySettingsEditor';
 
-type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches' | 'registration' | 'footer';
+type Tab = 'header' | 'contact' | 'homepage' | 'seo' | 'about' | 'rules' | 'matches' | 'registration' | 'footer' | 'security';
 
 const NAV_ITEMS: { value: Tab; label: string; Icon: React.ElementType }[] = [
   { value: 'header',       label: 'Header',           Icon: ImageIcon         },
@@ -26,6 +27,7 @@ const NAV_ITEMS: { value: Tab; label: string; Icon: React.ElementType }[] = [
   { value: 'matches',      label: 'Matches',          Icon: TrophyIcon        },
   { value: 'registration', label: 'Registration',     Icon: ClipboardListIcon },
   { value: 'footer',       label: 'Footer',           Icon: PanelBottomIcon   },
+  { value: 'security',     label: 'Security',         Icon: ShieldCheckIcon   },
 ];
 
 export default function SettingsTabs() {
@@ -67,6 +69,7 @@ export default function SettingsTabs() {
           {active === 'matches'  && <MatchSettingsEditor />}
           {active === 'registration' && <RegistrationSettingsEditor />}
           {active === 'footer'   && <FooterSettingsEditor />}
+          {active === 'security' && <SecuritySettingsEditor />}
         </div>
       </div>
     </PermissionProvider>

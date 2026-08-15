@@ -30,6 +30,7 @@ const ICONS = {
   seo: Globe2,
   contact: Mail,
   consent: ShieldCheck,
+  security: ShieldCheck,
   system: Settings2,
   home: LayoutDashboard,
   about: FileText,

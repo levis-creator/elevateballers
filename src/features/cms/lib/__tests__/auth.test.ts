@@ -23,6 +23,13 @@ vi.mock('../../../../lib/prisma', () => ({
       delete: vi.fn(),
     },
     userAuditLog: { create: vi.fn() },
+    userSession: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -126,5 +133,11 @@ describe('createToken + verifyToken', () => {
     const token = createToken(v2User);
     const payload = verifyToken(token);
     expect(payload!.tokenVersion).toBe(2);
+  });
+
+  it('binds a session-bound token to the opaque session identifier without changing the default path', () => {
+    const token = createToken(user, 3, 'opaque-session-secret');
+    const payload = verifyToken(token);
+    expect(payload!.sessionToken).toBe('opaque-session-secret');
   });
 });
