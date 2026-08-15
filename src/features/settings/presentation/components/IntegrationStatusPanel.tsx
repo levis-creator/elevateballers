@@ -26,7 +26,8 @@ const SOURCE_LABEL: Record<Source, string> = {
 };
 
 type RecordValue = { id: string; value: string };
-type Status = Record<string, Source>;
+type AnalyticsInfo = { provider: string; analyticsId: string | null };
+type Status = Record<string, Source> & { brevo: Source; analytics: AnalyticsInfo };
 
 export default function IntegrationStatusPanel({ canManage }: { canManage: boolean }) {
   const [status, setStatus] = useState<Status | null>(null);
@@ -160,6 +161,20 @@ export default function IntegrationStatusPanel({ canManage }: { canManage: boole
               Managed under Notifications → Email providers, not here — this just shows whether a credential is set.
               {' '}<span className={status?.brevo === 'unset' ? 'eb-security-audit-status-missing' : 'eb-security-audit-status-ok'}>
                 {status?.brevo === 'database' ? 'Set under Notifications' : status?.brevo === 'environment' ? 'Set via environment' : 'Not configured'}
+              </span>
+            </p>
+          </div>
+
+          <div className="eb-security-audit-integration-infra">
+            <div className="eb-settings-group-title">Analytics</div>
+            <p className="eb-session-history-muted">
+              Managed under SEO → Analytics, not here — this shows which provider and key the site is actually using. It isn&apos;t a secret, so the key itself is shown, not just a status.
+              {' '}<span className={status?.analytics.analyticsId ? 'eb-security-audit-status-ok' : 'eb-security-audit-status-missing'}>
+                {status?.analytics.provider === 'None'
+                  ? 'Disabled'
+                  : status?.analytics.analyticsId
+                    ? `${status.analytics.provider} — ${status.analytics.analyticsId}`
+                    : `${status?.analytics.provider} — no ID set`}
               </span>
             </p>
           </div>

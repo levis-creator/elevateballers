@@ -464,10 +464,11 @@ export const SECTIONS: Section[] = [
           f('seo_analytics', 'Provider', 'Only loads after cookie consent is granted.', {
             type: 'select',
             options: ['None', 'Google Analytics 4', 'Plausible'],
-            defaultValue: 'Plausible',
+            defaultValue: 'Google Analytics 4',
           }),
-          f('seo_analyticsId', 'Site or measurement ID', '', {
-            defaultValue: 'elevateballers.com',
+          f('seo_analyticsId', 'Measurement or site ID', 'A GA4 Measurement ID (G-XXXXXXXXXX) or, for Plausible, your site domain.', {
+            placeholder: 'G-XXXXXXXXXX',
+            defaultValue: 'G-VVZ9P3XBLP',
           }),
           f('seo_verification', 'Verification codes', 'Rendered as ownership verification meta tags.', {
             type: 'list',

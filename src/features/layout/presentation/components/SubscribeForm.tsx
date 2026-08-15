@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
+import { trackEvent } from '../../../../lib/analytics';
 
 export default function SubscribeForm() {
   const [email, setEmail] = useState('');
@@ -36,6 +37,7 @@ export default function SubscribeForm() {
 
       setStatus('success');
       setMessage(data.alreadySubscribed ? 'You are already subscribed!' : 'Thank you for subscribing!');
+      if (!data.alreadySubscribed) trackEvent('newsletter_signup');
       setEmail('');
       setTurnstileToken(null);
     } catch {

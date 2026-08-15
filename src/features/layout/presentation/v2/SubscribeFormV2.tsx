@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '@/components/TurnstileWidget';
+import { trackEvent } from '@/lib/analytics';
 
 /**
  * v2 footer newsletter form — React island.
@@ -56,6 +57,7 @@ export default function SubscribeFormV2({
       setMessage(
         data.alreadySubscribed ? 'You are already subscribed!' : 'Thanks — you are subscribed!'
       );
+      if (!data.alreadySubscribed) trackEvent('newsletter_signup');
       setEmail('');
       setToken(null);
     } catch {
