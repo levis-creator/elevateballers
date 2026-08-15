@@ -18,6 +18,7 @@ import { SECTIONS, type Section, type SettingRecord, type Field } from '../setti
 import SettingsField from './SettingsField';
 import SettingsHeaderPreview from './SettingsHeaderPreview';
 import SettingsSeoPreview from './SettingsSeoPreview';
+import SettingsMatchSharePreview from './SettingsMatchSharePreview';
 import SettingsEmailPreview from './SettingsEmailPreview';
 import SettingsEmailDeliveryHistory from './SettingsEmailDeliveryHistory';
 import SettingsUnavailable from './SettingsUnavailable';
@@ -213,6 +214,14 @@ export default function SettingsSection({
               canonical={valueForKey('seo_canonical')}
               title={valueForKey('seo_metaTitle')}
               description={valueForKey('seo_metaDescription')}
+            />
+          )}
+          {section.id === 'match' && activeGroup?.label === 'Sharing' && (
+            <SettingsMatchSharePreview
+              enabled={valueForKey('match_autoShareCards') !== 'false'}
+              watermark={valueForKey('match_shareWatermark')}
+              leagueFallback={valueForKey('match_shareLeagueFallback')}
+              accent={valueForKey('brand_brand')}
             />
           )}
           {section.id === 'emailTemplates' && activeGroup?.label !== 'Defaults' && (

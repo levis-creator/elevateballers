@@ -13,6 +13,9 @@ export type PublicMatchPageSettings = {
   delay: number;
   autoPublish: boolean;
   liveBadge: string;
+  autoShareCards: boolean;
+  shareWatermark: string;
+  shareLeagueFallback: string;
 };
 
 export const DEFAULT_PUBLIC_MATCH_PAGE_SETTINGS: PublicMatchPageSettings = {
@@ -25,6 +28,9 @@ export const DEFAULT_PUBLIC_MATCH_PAGE_SETTINGS: PublicMatchPageSettings = {
   delay: 30,
   autoPublish: false,
   liveBadge: 'LIVE',
+  autoShareCards: true,
+  shareWatermark: 'ELEVATEBALLERS.COM',
+  shareLeagueFallback: 'Elevate Basketball',
 };
 
 const bool = (value: string | undefined, fallback: boolean) => value === 'true' ? true : value === 'false' ? false : fallback;
@@ -57,6 +63,9 @@ export function resolvePublicMatchPageSettings(settings: SiteSetting[]): PublicM
     delay: integer(values.match_delay, defaults.delay, 0, 300),
     autoPublish: bool(values.match_autoPublish, defaults.autoPublish),
     liveBadge: values.match_liveBadge === undefined ? defaults.liveBadge : values.match_liveBadge.trim(),
+    autoShareCards: bool(values.match_autoShareCards, defaults.autoShareCards),
+    shareWatermark: values.match_shareWatermark === undefined ? defaults.shareWatermark : values.match_shareWatermark.trim() || defaults.shareWatermark,
+    shareLeagueFallback: values.match_shareLeagueFallback === undefined ? defaults.shareLeagueFallback : values.match_shareLeagueFallback.trim() || defaults.shareLeagueFallback,
   };
 }
 

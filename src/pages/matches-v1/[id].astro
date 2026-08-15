@@ -139,7 +139,7 @@ pageTitle = applyTitlePattern(seoSettings.patternMatch, {
 
 // Per-match OG image — generated server-side at /api/matches/[id]/og.png so
 // social shares get a real 1200×630 scoreboard instead of the site icon.
-const ogImage = seoSettings.autoCards && match
+const ogImage = matchSettings.autoShareCards && match
   ? `${Astro.url.origin}/api/matches/${match.id}/og.png`
   : undefined;
 

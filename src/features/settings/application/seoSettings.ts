@@ -13,7 +13,6 @@ export type PublicSeoSettings = {
   patternMatch: string;
   patternArticle: string;
   ogImage: string;
-  autoCards: boolean;
   twitterHandle: string;
   indexing: boolean;
   sitemap: boolean;
@@ -35,7 +34,6 @@ export const DEFAULT_PUBLIC_SEO_SETTINGS: PublicSeoSettings = {
   patternMatch: '{home} vs {away} — {date} Box Score',
   patternArticle: '{title}',
   ogImage: '/media/general/og-default-2026.jpg',
-  autoCards: true,
   twitterHandle: '@elevateballers',
   indexing: true,
   sitemap: true,
@@ -101,7 +99,6 @@ export function resolvePublicSeoSettings(settings: SiteSetting[]): PublicSeoSett
     patternMatch: text(values.seo_patternMatch, defaults.patternMatch),
     patternArticle: text(values.seo_patternArticle, defaults.patternArticle),
     ogImage: assetPath(values.seo_ogImage ?? values.seo_homepage_image, defaults.ogImage),
-    autoCards: boolean(values.seo_autoCards, defaults.autoCards),
     twitterHandle: text(values.seo_twitterHandle, defaults.twitterHandle),
     indexing: boolean(values.seo_indexing, defaults.indexing),
     sitemap: boolean(values.seo_sitemap, defaults.sitemap),
