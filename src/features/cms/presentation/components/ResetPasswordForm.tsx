@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { Lock, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 
-const MIN_PASSWORD_LENGTH = 8;
-
 export default function ResetPasswordForm() {
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
@@ -11,6 +9,7 @@ export default function ResetPasswordForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [minPasswordLength, setMinPasswordLength] = useState(8);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -19,6 +18,13 @@ export default function ResetPasswordForm() {
     if (!tokenParam) {
       setError('Reset token is missing. Please request a new link.');
     }
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/auth/password-policy')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (data?.minLength) setMinPasswordLength(data.minLength); })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,8 +37,8 @@ export default function ResetPasswordForm() {
       return;
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+    if (password.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters.`);
       return;
     }
     if (!/[A-Z]/.test(password)) { setError('Password must contain at least one uppercase letter.'); return; }
@@ -129,7 +135,7 @@ export default function ResetPasswordForm() {
                   className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition disabled:opacity-50"
                 />
               </div>
-              <PasswordStrengthMeter password={password} />
+              <PasswordStrengthMeter password={password} minLength={minPasswordLength} />
             </div>
 
             {/* Confirm password */}

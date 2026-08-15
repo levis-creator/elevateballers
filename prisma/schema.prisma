@@ -31,6 +31,7 @@ model User {
   seasonRegistrationReviews SeasonRegistrationApplication[] @relation("SeasonRegistrationReviewer")
   teamOwnerships            TeamOwnership[]
   sessions                  UserSession[]
+  passwordHistory           PasswordHistory[]
 
   @@map("users")
 }
@@ -50,6 +51,17 @@ model UserSession {
   @@index([userId, createdAt])
   @@index([expiresAt])
   @@map("user_sessions")
+}
+
+model PasswordHistory {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_history")
 }
 
 model UserNotificationSetting {

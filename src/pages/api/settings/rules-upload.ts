@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getFolderByName } from '@/lib/folder-access';
 import { handleApiError } from '@/lib/apiError';
 import { enforceRateLimit } from '@/lib/rateLimit';
+import { resolveSecuritySettings } from '../../../features/settings/application/securitySettings';
 
 export const prerender = false;
 
@@ -22,10 +23,11 @@ function createPdfFileName(originalName: string): string {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const user = await requirePermission(request, 'site_settings:manage');
+    const security = resolveSecuritySettings(await prisma.siteSetting.findMany({ where: { category: 'security' } }).catch(() => []));
     const limited = await enforceRateLimit(
       `settings:${user.id}:rules-upload`,
-      10,
-      10 * 60 * 1000,
+      Math.min(security.security_settingsMutationMax, 10),
+      Math.max(security.security_settingsMutationWindowMinutes, 10) * 60 * 1000,
       'Too many rules uploads. Please try again shortly.',
     );
     if (limited) return limited;

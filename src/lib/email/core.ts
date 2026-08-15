@@ -366,6 +366,10 @@ const DEFAULT_EMAIL_PREFS: Record<AdminNotificationType, boolean> = {
   team_registered: true,
   player_registered: true,
   player_auto_linked: true,
+  security_settings_changed: true,
+  security_session_activity: true,
+  security_password_activity: true,
+  security_auth_incidents: true,
 };
 
 function normalizeEmailPreferences(input: any): Record<AdminNotificationType, boolean> {
@@ -375,6 +379,10 @@ function normalizeEmailPreferences(input: any): Record<AdminNotificationType, bo
     team_registered: input.team_registered !== undefined ? Boolean(input.team_registered) : true,
     player_registered: input.player_registered !== undefined ? Boolean(input.player_registered) : true,
     player_auto_linked: input.player_auto_linked !== undefined ? Boolean(input.player_auto_linked) : true,
+    security_settings_changed: input.security_settings_changed !== undefined ? Boolean(input.security_settings_changed) : true,
+    security_session_activity: input.security_session_activity !== undefined ? Boolean(input.security_session_activity) : true,
+    security_password_activity: input.security_password_activity !== undefined ? Boolean(input.security_password_activity) : true,
+    security_auth_incidents: input.security_auth_incidents !== undefined ? Boolean(input.security_auth_incidents) : true,
   };
 }
 

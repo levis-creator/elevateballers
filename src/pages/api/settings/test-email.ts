@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
 import { emailWrapper, sendTransactionalEmail } from '../../../lib/email/core';
 import { enforceRateLimit } from '../../../lib/rateLimit';
+import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 
 export const prerender = false;
 
@@ -11,10 +12,11 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => (
 export const POST: APIRoute = async ({ request }) => {
   try {
     const user = await requirePermission(request, 'site_settings:manage');
+    const security = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));
     const limited = await enforceRateLimit(
       `settings:${user.id}:test-email`,
-      5,
-      15 * 60 * 1000,
+      Math.min(security.security_settingsMutationMax, 5),
+      Math.max(security.security_settingsMutationWindowMinutes, 15) * 60 * 1000,
       'Too many test emails. Please try again later.',
     );
     if (limited) return limited;

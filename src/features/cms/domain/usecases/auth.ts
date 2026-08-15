@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import type { User } from '../../types';
 import { siteSettingsService } from '../../../settings';
-import { resolveSecuritySettings } from '../../../settings/application/securitySettings';
+import { resolveSecuritySettings, type SecuritySettings } from '../../../settings/application/securitySettings';
 
 const DEFAULT_SECRET = 'your-secret-key-change-in-production';
 const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_SECRET;
@@ -21,8 +21,8 @@ if (JWT_SECRET === DEFAULT_SECRET) {
 // Password
 // ---------------------------------------------------------------------------
 
-export function validatePasswordStrength(password: string): string | null {
-  if (password.length < 8) return 'Password must be at least 8 characters.';
+export function validatePasswordStrength(password: string, minimumLength = 8): string | null {
+  if (password.length < minimumLength) return `Password must be at least ${minimumLength} characters.`;
   if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
   if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter.';
   if (!/\d/.test(password)) return 'Password must contain at least one number.';
@@ -122,6 +122,57 @@ export function createToken(
   );
 }
 
+async function checkPasswordBreach(password: string): Promise<boolean> {
+  const digest = crypto.createHash('sha1').update(password, 'utf8').digest('hex').toUpperCase();
+  const response = await fetch(`https://api.pwnedpasswords.com/range/${digest.slice(0, 5)}`, {
+    headers: { 'Add-Padding': 'true', 'User-Agent': 'ElevateBallers-password-policy' },
+    signal: AbortSignal.timeout(5_000),
+  });
+  if (response.status === 404) return false;
+  if (!response.ok) throw new Error(`Breach check unavailable (${response.status})`);
+  const suffix = digest.slice(5);
+  const body = await response.text();
+  return body.split(/\r?\n/).some((line) => line.split(':', 1)[0]?.trim().toUpperCase() === suffix);
+}
+
+export async function validatePasswordAgainstPolicy(
+  userId: string | null,
+  password: string,
+  securitySettings?: SecuritySettings,
+): Promise<string | null> {
+  const security = securitySettings ?? await getRuntimeSecuritySettings();
+  const strengthError = validatePasswordStrength(password, security.security_passwordMinLength);
+  if (strengthError) return strengthError;
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+    const history = security.security_passwordHistoryCount > 0
+      ? await prisma.passwordHistory.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: security.security_passwordHistoryCount, select: { passwordHash: true } })
+      : [];
+    if (user && await verifyPassword(password, user.passwordHash)) return 'You cannot reuse a recent password.';
+    for (const previous of history) if (await verifyPassword(password, previous.passwordHash)) return 'You cannot reuse a recent password.';
+  }
+  if (security.security_passwordBreachCheck) {
+    try {
+      if (await checkPasswordBreach(password)) return 'Choose a different password because this one has appeared in known breach data.';
+    } catch (error) {
+      console.warn('[auth] Password breach check unavailable, allowing password:', error instanceof Error ? error.message : String(error));
+    }
+  }
+  return null;
+}
+
+export async function recordPasswordHistory(
+  database: Prisma.TransactionClient | typeof prisma,
+  userId: string,
+  passwordHash: string,
+  keep: number,
+): Promise<void> {
+  if (keep <= 0) return;
+  await database.passwordHistory.create({ data: { userId, passwordHash } });
+  const old = await database.passwordHistory.findMany({ where: { userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip: keep, select: { id: true } });
+  if (old.length) await database.passwordHistory.deleteMany({ where: { id: { in: old.map((item) => item.id) } } });
+}
+
 export function verifyToken(
   token: string
 ): { userId: string; email: string; tokenVersion: number; sessionToken?: string } | null {
@@ -205,10 +256,8 @@ export async function requireAuth(request: Request): Promise<User> {
 // Account lockout
 // ---------------------------------------------------------------------------
 
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
-
 export async function recordFailedLogin(userId: string): Promise<void> {
+  const security = await getRuntimeSecuritySettings();
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { failedLoginAttempts: true },
@@ -218,8 +267,8 @@ export async function recordFailedLogin(userId: string): Promise<void> {
   const attempts = (user.failedLoginAttempts ?? 0) + 1;
   const data: any = { failedLoginAttempts: attempts };
 
-  if (attempts >= MAX_FAILED_ATTEMPTS) {
-    data.lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000);
+  if (attempts >= security.security_loginMaxAttempts) {
+    data.lockedUntil = new Date(Date.now() + security.security_loginLockoutMinutes * 60 * 1000);
   }
 
   await prisma.user.update({ where: { id: userId }, data });

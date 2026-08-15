@@ -4,6 +4,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError, json } from '../../../lib/apiError';
 import { enforceRateLimit } from '../../../lib/rateLimit';
 import { invalidateAllSessions } from '../../../features/cms/lib/auth';
+import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 
 export const prerender = false;
 
@@ -21,6 +22,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const affectedUsers = await invalidateAllSessions();
     cookies.delete('auth-token', { path: '/' });
     logAudit(request, 'AUTH_SIGN_OUT_ALL', { affectedUsers, sessionsRevoked: true });
+    await notifySecurityAdmins('security_session_activity', 'All sessions signed out', 'An administrator signed out all authenticated users.');
 
     return json({
       message: 'All authenticated sessions have been signed out.',

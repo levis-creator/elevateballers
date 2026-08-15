@@ -25,6 +25,7 @@ export default function UserProfile() {
     email: '',
     password: '',
   });
+  const [minPasswordLength, setMinPasswordLength] = useState(8);
 
   const [icons, setIcons] = useState<{
     User?: ComponentType<any>;
@@ -52,6 +53,11 @@ export default function UserProfile() {
     });
 
     fetchUser();
+
+    fetch('/api/auth/password-policy')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (data?.minLength) setMinPasswordLength(data.minLength); })
+      .catch(() => {});
   }, []);
 
   const fetchUser = async () => {
@@ -241,7 +247,7 @@ export default function UserProfile() {
                 onChange={handleChange}
                 placeholder="Leave blank to keep current password"
               />
-              <PasswordStrengthMeter password={formData.password} />
+              <PasswordStrengthMeter password={formData.password} minLength={minPasswordLength} />
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 p-6 flex justify-end">

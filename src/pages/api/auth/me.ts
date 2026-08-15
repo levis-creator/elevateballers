@@ -1,9 +1,11 @@
 import type { APIRoute } from 'astro';
-import { getCurrentUser, hashPassword, verifyPassword, validatePasswordStrength, invalidateSessions } from '../../../features/cms/lib/auth';
+import { getCurrentUser, hashPassword, verifyPassword, validatePasswordAgainstPolicy, invalidateSessions, recordPasswordHistory } from '../../../features/cms/lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { getUserWithPermissions } from '../../../features/rbac/permissions';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
+import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 
 export const prerender = false;
 
@@ -66,6 +68,8 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
     const { name, email, password, currentPassword } = data;
 
     const updateData: any = {};
+    let previousPasswordHash: string | null = null;
+    let passwordHistoryCount = 0;
     if (name) updateData.name = name;
 
     const isEmailChange = Boolean(email);
@@ -96,7 +100,9 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
     }
 
     if (isPasswordChange) {
-      const strengthError = validatePasswordStrength(String(password));
+      const security = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));
+      passwordHistoryCount = security.security_passwordHistoryCount;
+      const strengthError = await validatePasswordAgainstPolicy(user.id, String(password), security);
       if (strengthError) {
         return new Response(JSON.stringify({ error: strengthError }), {
           status: 400,
@@ -125,6 +131,7 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
           headers: { 'Content-Type': 'application/json' },
         });
       }
+      if (isPasswordChange) previousPasswordHash = dbUser.passwordHash;
 
       const ok = await verifyPassword(current, dbUser.passwordHash);
       if (!ok) {
@@ -135,15 +142,18 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: updateData,
+    await prisma.$transaction(async (database) => {
+      await database.user.update({ where: { id: user.id }, data: updateData });
+      if (previousPasswordHash && passwordHistoryCount > 0) {
+        await recordPasswordHistory(database, user.id, previousPasswordHash, passwordHistoryCount);
+      }
     });
 
     await logAudit(request, 'AUTH_PROFILE_UPDATED', {
       userId: user.id,
       updatedFields: Object.keys(updateData),
     }, user.id);
+    if (isPasswordChange) await notifySecurityAdmins('security_password_activity', 'Password changed', 'An administrator password was changed.');
 
     if (requiresReauth) {
       // Invalidate all existing sessions after sensitive changes
