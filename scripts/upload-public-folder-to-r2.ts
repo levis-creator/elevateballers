@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import { promises as fs } from 'node:fs';
 import { extname, relative, resolve } from 'node:path';
-import { putR2Object, r2Configured, toR2Key } from '../src/lib/r2';
+import { putR2Object, isR2Configured, toR2Key } from '../src/lib/r2';
 
 const sourceRoot = resolve(process.argv[2] || 'C:/Users/Levi/Downloads/public');
 
-if (!r2Configured) {
+if (!(await isR2Configured())) {
   throw new Error(
     'R2 is not configured. Set R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY.'
   );

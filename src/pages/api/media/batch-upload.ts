@@ -5,6 +5,8 @@ import { deleteFile, saveFile, sanitizeFolderName } from '../../../lib/file-stor
 import { compressImage, shouldCompress } from '../../../lib/image-compression';
 import { getFolderByName } from '../../../lib/folder-access';
 import { handleApiError } from '../../../lib/apiError';
+import { enforceRateLimit } from '../../../lib/rateLimit';
+import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 
 export const prerender = false;
 
@@ -31,6 +33,15 @@ export const POST: APIRoute = async ({ request }) => {
     // Require admin authentication
     const user = await requirePermission(request, 'media:batch_upload');
 
+    const security = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));
+    const limited = await enforceRateLimit(
+      `upload:${user.id}:batch`,
+      security.security_mediaUploadRateLimitMax,
+      security.security_mediaUploadRateLimitWindowMinutes * 60 * 1000,
+      'Too many uploads. Please try again shortly.',
+    );
+    if (limited) return limited;
+
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
     const folderName = (formData.get('folder') as string) || 'general';
@@ -46,6 +57,30 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    if (files.length > security.security_batchUploadMaxFiles) {
+      return new Response(
+        JSON.stringify({ error: `Too many files. A maximum of ${security.security_batchUploadMaxFiles} files are allowed per batch upload.` }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const maxFileBytes = security.security_mediaUploadMaxSizeMB * 1024 * 1024;
+    const oversizedFiles = files.filter((file) => file.size > maxFileBytes);
+    if (oversizedFiles.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: `Files exceed the ${security.security_mediaUploadMaxSizeMB} MB limit: ${oversizedFiles.map((f) => f.name).join(', ')}`,
+        }),
+        {
+          status: 413,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Validate supported media types before creating a folder or writing files.
     const validTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
@@ -55,8 +90,8 @@ export const POST: APIRoute = async ({ request }) => {
     const invalidFiles = files.filter(file => !validTypes.includes(file.type));
     if (invalidFiles.length > 0) {
       return new Response(
-        JSON.stringify({ 
-            error: `Invalid file types. Supported formats are JPEG, PNG, GIF, WebP, MP4, WebM, MOV, MP3, WAV, and OGG. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}` 
+        JSON.stringify({
+            error: `Invalid file types. Supported formats are JPEG, PNG, GIF, WebP, MP4, WebM, MOV, MP3, WAV, and OGG. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}`
         }),
         {
           status: 400,

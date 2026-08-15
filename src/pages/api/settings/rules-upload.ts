@@ -49,6 +49,14 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    const maxDocumentBytes = security.security_documentUploadMaxSizeMB * 1024 * 1024;
+    if (file.size > maxDocumentBytes) {
+      return new Response(JSON.stringify({ error: `The PDF exceeds the ${security.security_documentUploadMaxSizeMB} MB limit.` }), {
+        status: 413,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const fileName = createPdfFileName(file.name);
     const { publicUrl, filePath } = await saveFile('documents', file, false, fileName);
     let folder = await getFolderByName('documents');

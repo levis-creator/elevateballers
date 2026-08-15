@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
           const fileName = filePath.split('/').pop() || 'file';
           // Determine if private based on path
           const isPrivate = filePath.includes('/private/') || filePath.startsWith('uploads/private/');
-          const url = getFileUrl(filePath, isPrivate);
+          const url = await getFileUrl(filePath, isPrivate);
 
           files.push({ url, name: fileName });
         } else {

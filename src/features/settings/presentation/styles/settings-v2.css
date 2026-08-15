@@ -480,6 +480,19 @@
 .eb-security-audit-item span, .eb-security-audit-item p { color: var(--muted); font-size: 11px; }
 .eb-security-audit-item p { margin: 0; }
 .eb-security-audit-item code { overflow-wrap: anywhere; color: var(--muted); font-size: 10px; }
+.eb-security-audit-integration-status { margin-top: 24px; }
+.eb-security-audit-integration-group { margin-top: 20px; }
+.eb-security-audit-integration-group:first-of-type { margin-top: 0; }
+.eb-security-audit-integration-infra { margin-top: 24px; }
+.eb-security-audit-integration-infra .eb-settings-group-title { margin-bottom: 4px; }
+.eb-security-audit-status-ok,
+.eb-security-audit-status-missing {
+  font: 700 9.5px 'Space Mono', monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.eb-security-audit-status-ok { color: #1a7f37 !important; }
+.eb-security-audit-status-missing { color: #b42318 !important; }
 
 @media (max-width: 700px) {
   .eb-session-history-item { grid-template-columns: 1fr; }

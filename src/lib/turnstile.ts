@@ -1,9 +1,16 @@
 import { TURNSTILE_SECRET_KEY } from 'astro:env/server';
+import { siteSettingsService, resolveSecuritySettings } from '../features/settings';
 
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 export async function verifyTurnstile(token: string | undefined, ip?: string): Promise<boolean> {
+  const records = await siteSettingsService.list('security').catch(() => []);
+  const security = resolveSecuritySettings(records);
+  if (!security.security_turnstileEnabled) return true;
+
   if (!token) return false;
+
+  const secretKey = records.find((record) => record.key === 'security_turnstileSecretKey')?.value || TURNSTILE_SECRET_KEY;
 
   // Local dev: skip the Cloudflare siteverify round-trip. A dev machine often
   // can't reach challenges.cloudflare.com (the request times out), and bot
@@ -17,7 +24,7 @@ export async function verifyTurnstile(token: string | undefined, ip?: string): P
 
   try {
     const body = new FormData();
-    body.append('secret', TURNSTILE_SECRET_KEY);
+    body.append('secret', secretKey);
     body.append('response', token);
     if (ip) body.append('remoteip', ip);
 

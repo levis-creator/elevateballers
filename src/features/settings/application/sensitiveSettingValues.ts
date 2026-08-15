@@ -27,7 +27,22 @@ const parse = (value: string): Array<Record<string, string>> => {
   try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
 };
 
+/**
+ * Keys stored as a single opaque secret string (as opposed to `email_providers`,
+ * which is a JSON array with a nested credential field per provider).
+ */
+export const SENSITIVE_TEXT_KEYS = new Set([
+  'security_turnstileSecretKey',
+  'security_resendWebhookSecret',
+  'security_mailgunWebhookSigningKey',
+]);
+
 export function protectSensitiveSettingValue(keyName: string, value: string, previousValue?: string): string {
+  if (SENSITIVE_TEXT_KEYS.has(keyName)) {
+    if (!value) return '';
+    if (value.includes('•') || value.includes('*')) return previousValue ?? '';
+    return encrypt(value);
+  }
   if (keyName !== 'email_providers') return value;
   const previous = parse(previousValue ?? '[]');
   return JSON.stringify(parse(value).map((provider, index) => {
@@ -40,11 +55,22 @@ export function protectSensitiveSettingValue(keyName: string, value: string, pre
 }
 
 export function revealSensitiveSetting(setting: SiteSetting): SiteSetting {
+  if (SENSITIVE_TEXT_KEYS.has(setting.key)) {
+    if (!setting.value) return setting;
+    try { return { ...setting, value: decrypt(setting.value) }; } catch { return { ...setting, value: '' }; }
+  }
   if (setting.key !== 'email_providers') return setting;
   return { ...setting, value: JSON.stringify(parse(setting.value).map((provider) => ({ ...provider, credential: decrypt(String(provider.credential ?? '')) }))) };
 }
 
 export function maskSensitiveSetting(setting: SiteSetting): SiteSetting {
+  if (SENSITIVE_TEXT_KEYS.has(setting.key)) {
+    if (!setting.value) return setting;
+    let plain = setting.value;
+    try { plain = decrypt(setting.value); } catch { plain = ''; }
+    const suffix = plain && !plain.includes('•') && !plain.includes('*') ? plain.slice(-4) : '';
+    return { ...setting, value: plain ? `${MASK}${suffix}` : '' };
+  }
   if (setting.key !== 'email_providers') return setting;
   return { ...setting, value: JSON.stringify(parse(setting.value).map((provider) => {
     let credential = String(provider.credential ?? '');

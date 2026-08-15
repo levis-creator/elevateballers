@@ -4,6 +4,7 @@ import { usePermissions } from '@/features/rbac/usePermissions';
 import SettingsUnavailable from '@/features/settings/presentation/components/SettingsUnavailable';
 import SessionHistoryPanel from '@/features/settings/presentation/components/SessionHistoryPanel';
 import SecurityAuditPanel from '@/features/settings/presentation/components/SecurityAuditPanel';
+import IntegrationStatusPanel from '@/features/settings/presentation/components/IntegrationStatusPanel';
 
 const FIELDS = [
   { key: 'security_loginMaxAttempts', label: 'Maximum login attempts', description: 'Invalid passwords allowed before the account is locked.', min: 3, max: 10, defaultValue: '5' },
@@ -30,7 +31,16 @@ const PASSWORD_FIELDS = [
 ] as const;
 const BREACH_FIELD = { key: 'security_passwordBreachCheck', label: 'Breached-password checks', description: 'Reject passwords found by the privacy-preserving breach range check.', defaultValue: 'true' } as const;
 
-const ALL_FIELDS = [...FIELDS, ...SESSION_FIELDS, ...PASSWORD_FIELDS, BREACH_FIELD];
+const UPLOAD_FIELDS = [
+  { key: 'security_mediaUploadMaxSizeMB', label: 'Media upload max size (MB)', description: 'Largest image or media file accepted by the media library, per file.', min: 1, max: 50, defaultValue: '12' },
+  { key: 'security_documentUploadMaxSizeMB', label: 'Document upload max size (MB)', description: 'Largest PDF accepted for the rulebook document upload.', min: 1, max: 50, defaultValue: '25' },
+  { key: 'security_mediaUploadRateLimitMax', label: 'Media uploads per window', description: 'Uploads allowed for one administrator before a temporary limit.', min: 3, max: 60, defaultValue: '20' },
+  { key: 'security_mediaUploadRateLimitWindowMinutes', label: 'Media upload rate-limit window', description: 'Minutes in the media upload rate-limit window.', min: 5, max: 60, defaultValue: '15' },
+  { key: 'security_batchUploadMaxFiles', label: 'Maximum files per batch upload', description: 'Files accepted in a single batch media upload request.', min: 1, max: 50, defaultValue: '20' },
+] as const;
+const TURNSTILE_FIELD = { key: 'security_turnstileEnabled', label: 'Bot protection (Turnstile)', description: 'Require a passed Cloudflare Turnstile check on login, registration, and public forms.', defaultValue: 'true' } as const;
+
+const ALL_FIELDS = [...FIELDS, ...SESSION_FIELDS, ...PASSWORD_FIELDS, BREACH_FIELD, ...UPLOAD_FIELDS, TURNSTILE_FIELD];
 
 const GROUPS = [
   { id: 'overview', label: 'Overview' },
@@ -39,7 +49,7 @@ const GROUPS = [
   { id: 'history', label: 'Session history' },
   { id: 'passwords', label: 'Passwords' },
   { id: 'alerts', label: 'Alerts & Audit' },
-  { id: 'uploads', label: 'Uploads & Integrations', unavailable: true },
+  { id: 'uploads', label: 'Uploads & Integrations' },
 ] as const;
 
 type RecordValue = { id: string; value: string };
@@ -141,7 +151,6 @@ export default function SecuritySettingsEditor() {
               onClick={() => setActiveGroup(group.id)}
             >
               {group.label}
-              {group.unavailable && <span className="ml-1.5 text-[10px]">Soon</span>}
             </button>
           ))}
         </div>
@@ -151,7 +160,7 @@ export default function SecuritySettingsEditor() {
           <div className="grid gap-4 md:grid-cols-3">
             <div><p className="text-sm font-medium">Admin sign-in</p><p className="text-xs text-muted-foreground">OTP expiry, attempts, lockout, and verification limits.</p></div>
             <div><p className="text-sm font-medium">Server enforced</p><p className="text-xs text-muted-foreground">Values are range-checked and secure defaults apply if invalid.</p></div>
-            <div><p className="text-sm font-medium">Protection areas</p><p className="text-xs text-muted-foreground">Sessions, password policy, and security audit events are available; uploads remain separate.</p></div>
+            <div><p className="text-sm font-medium">Protection areas</p><p className="text-xs text-muted-foreground">Sessions, password policy, uploads, integrations, and security audit events are all configurable here.</p></div>
           </div>
         )}
         {activeGroup === 'otp' && (
@@ -215,14 +224,29 @@ export default function SecuritySettingsEditor() {
           </div>
         )}
         {activeGroup === 'alerts' && <SecurityAuditPanel canManage={canManage} />}
-        {activeGroup !== 'overview' && activeGroup !== 'otp' && activeGroup !== 'sessions' && activeGroup !== 'history' && activeGroup !== 'passwords' && activeGroup !== 'alerts' && (
+        {activeGroup === 'uploads' && (
+          <div className="space-y-6">
+            <div className="grid gap-5 md:grid-cols-2">
+              {UPLOAD_FIELDS.map((field) => (
+                <label key={field.key} className="space-y-1.5">
+                  <span className="block text-sm font-medium">{field.label}</span>
+                  <span className="block text-xs text-muted-foreground">{field.description} Allowed range: {field.min}–{field.max}.</span>
+                  <input className="w-full rounded-md border bg-background px-3 py-2 text-sm" type="number" min={field.min} max={field.max} step="1" value={values[field.key]} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} disabled={!canManage || loading || saving} />
+                </label>
+              ))}
+              <div className="space-y-1.5"><span className="block text-sm font-medium">{TURNSTILE_FIELD.label}</span><span className="block text-xs text-muted-foreground">{TURNSTILE_FIELD.description}</span><button type="button" role="switch" aria-checked={values[TURNSTILE_FIELD.key] !== 'false'} className="rounded-md border px-3 py-2 text-sm" onClick={() => setValues((current) => ({ ...current, [TURNSTILE_FIELD.key]: current[TURNSTILE_FIELD.key] === 'false' ? 'true' : 'false' }))} disabled={!canManage || loading || saving}>{values[TURNSTILE_FIELD.key] !== 'false' ? 'Enabled' : 'Disabled'}</button></div>
+            </div>
+            <IntegrationStatusPanel canManage={canManage} />
+          </div>
+        )}
+        {activeGroup !== 'overview' && activeGroup !== 'otp' && activeGroup !== 'sessions' && activeGroup !== 'history' && activeGroup !== 'passwords' && activeGroup !== 'alerts' && activeGroup !== 'uploads' && (
           <SettingsUnavailable
             title={GROUPS.find((group) => group.id === activeGroup)?.label ?? 'Settings area'}
             description="This settings area is not configurable here yet."
             context="It is intentionally shown as unavailable until its server-side behavior is implemented."
           />
         )}
-        {(activeGroup === 'otp' || activeGroup === 'sessions' || activeGroup === 'passwords') && canManage ? (
+        {(activeGroup === 'otp' || activeGroup === 'sessions' || activeGroup === 'passwords' || activeGroup === 'uploads') && canManage ? (
           <button type="button" className="mt-6 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50" onClick={() => void save()} disabled={loading || saving}>
             {saving ? 'Saving…' : 'Save Security settings'}
           </button>

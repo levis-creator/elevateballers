@@ -106,6 +106,41 @@ export const SECURITY_SETTING_DEFINITIONS = {
     max: 10,
     defaultValue: 5,
   },
+  security_mediaUploadMaxSizeMB: {
+    label: 'Media upload max size (MB)',
+    description: 'Largest image or media file accepted by the media library, per file.',
+    min: 1,
+    max: 50,
+    defaultValue: 12,
+  },
+  security_documentUploadMaxSizeMB: {
+    label: 'Document upload max size (MB)',
+    description: 'Largest PDF accepted for the rulebook document upload.',
+    min: 1,
+    max: 50,
+    defaultValue: 25,
+  },
+  security_mediaUploadRateLimitMax: {
+    label: 'Media uploads per window',
+    description: 'Uploads allowed for one administrator before a temporary rate limit.',
+    min: 3,
+    max: 60,
+    defaultValue: 20,
+  },
+  security_mediaUploadRateLimitWindowMinutes: {
+    label: 'Media upload rate-limit window',
+    description: 'Length of the media upload rate-limit window in minutes.',
+    min: 5,
+    max: 60,
+    defaultValue: 15,
+  },
+  security_batchUploadMaxFiles: {
+    label: 'Maximum files per batch upload',
+    description: 'Files accepted in a single batch media upload request.',
+    min: 1,
+    max: 50,
+    defaultValue: 20,
+  },
 } as const;
 
 export const SECURITY_ALERT_SETTING_DEFINITIONS = {
@@ -119,14 +154,41 @@ export const SECURITY_PASSWORD_TOGGLE_DEFINITIONS = {
   security_passwordBreachCheck: { label: 'Breached-password checks', description: 'Reject passwords found in the privacy-preserving breach range service.', defaultValue: true },
 } as const;
 
+export const SECURITY_INTEGRATION_TOGGLE_DEFINITIONS = {
+  security_turnstileEnabled: { label: 'Bot protection (Turnstile)', description: 'Require a passed Cloudflare Turnstile check on login, registration, and public forms.', defaultValue: true },
+} as const;
+
 export const SECURITY_BOOLEAN_SETTING_DEFINITIONS = {
   ...SECURITY_ALERT_SETTING_DEFINITIONS,
   ...SECURITY_PASSWORD_TOGGLE_DEFINITIONS,
+  ...SECURITY_INTEGRATION_TOGGLE_DEFINITIONS,
+} as const;
+
+/**
+ * Opaque secret values (Turnstile secret key, webhook signing secrets) stored
+ * encrypted at rest. Unlike SECURITY_SETTING_DEFINITIONS these have no
+ * min/max/default — an empty value means "not configured here, fall back to
+ * the environment variable" (see sensitiveSettingValues.ts for encryption).
+ */
+export const SECURITY_SECRET_SETTING_DEFINITIONS = {
+  security_turnstileSecretKey: { label: 'Turnstile secret key', description: 'Overrides the TURNSTILE_SECRET_KEY environment variable when set. Leave blank to use the environment variable.' },
+  security_resendWebhookSecret: { label: 'Resend webhook secret', description: 'Overrides the RESEND_WEBHOOK_SECRET environment variable when set. Leave blank to use the environment variable.' },
+  security_mailgunWebhookSigningKey: { label: 'Mailgun webhook signing key', description: 'Overrides the MAILGUN_WEBHOOK_SIGNING_KEY environment variable when set. Leave blank to use the environment variable.' },
+  security_upstashRedisUrl: { label: 'Upstash Redis REST URL', description: 'Overrides UPSTASH_REDIS_REST_URL when set, together with the token below. Both must be set to take effect.' },
+  security_upstashRedisToken: { label: 'Upstash Redis REST token', description: 'Overrides UPSTASH_REDIS_REST_TOKEN when set, together with the URL above. Both must be set to take effect.' },
+  security_r2AccountId: { label: 'R2 account ID', description: 'Overrides R2_ACCOUNT_ID. All four R2 fields must be set to take effect.' },
+  security_r2BucketName: { label: 'R2 bucket name', description: 'Overrides R2_BUCKET_NAME. All four R2 fields must be set to take effect.' },
+  security_r2AccessKeyId: { label: 'R2 access key ID', description: 'Overrides R2_ACCESS_KEY_ID. All four R2 fields must be set to take effect.' },
+  security_r2SecretAccessKey: { label: 'R2 secret access key', description: 'Overrides R2_SECRET_ACCESS_KEY. All four R2 fields must be set to take effect.' },
+  security_r2PublicUrl: { label: 'R2 public URL', description: 'Overrides R2_PUBLIC_URL. Optional — public objects fall back to a proxied URL when unset.' },
+  security_supabaseUrl: { label: 'Supabase project URL', description: 'Overrides SUPABASE_URL when set, together with the service role key below. Both must be set to take effect.' },
+  security_supabaseServiceRoleKey: { label: 'Supabase service role key', description: 'Overrides SUPABASE_SERVICE_ROLE_KEY when set, together with the project URL above. Both must be set to take effect.' },
 } as const;
 
 export type SecuritySettingKey = keyof typeof SECURITY_SETTING_DEFINITIONS;
 export type SecurityAlertSettingKey = keyof typeof SECURITY_ALERT_SETTING_DEFINITIONS;
 export type SecurityBooleanSettingKey = keyof typeof SECURITY_BOOLEAN_SETTING_DEFINITIONS;
+export type SecuritySecretSettingKey = keyof typeof SECURITY_SECRET_SETTING_DEFINITIONS;
 
 export type SecuritySettings = {
   [K in SecuritySettingKey]: number;
@@ -161,6 +223,9 @@ export function resolveSecuritySettings(settings: Pick<SiteSetting, 'key' | 'val
 }
 
 export function normalizeSecuritySettingValue(key: string, value: string): string | null {
+  if (key in SECURITY_SECRET_SETTING_DEFINITIONS) {
+    return value;
+  }
   if (key in SECURITY_BOOLEAN_SETTING_DEFINITIONS) {
     return value === 'true' || value === 'false' ? value : null;
   }
@@ -172,7 +237,7 @@ export function normalizeSecuritySettingValue(key: string, value: string): strin
 }
 
 export function isSecuritySettingKey(key: string): key is SecuritySettingKey {
-  return key in SECURITY_SETTING_DEFINITIONS || key in SECURITY_BOOLEAN_SETTING_DEFINITIONS;
+  return key in SECURITY_SETTING_DEFINITIONS || key in SECURITY_BOOLEAN_SETTING_DEFINITIONS || key in SECURITY_SECRET_SETTING_DEFINITIONS;
 }
 
 export function isSecurityAlertSettingKey(key: string): key is SecurityAlertSettingKey {
@@ -181,4 +246,8 @@ export function isSecurityAlertSettingKey(key: string): key is SecurityAlertSett
 
 export function isSecurityBooleanSettingKey(key: string): key is SecurityBooleanSettingKey {
   return key in SECURITY_BOOLEAN_SETTING_DEFINITIONS;
+}
+
+export function isSecuritySecretSettingKey(key: string): key is SecuritySecretSettingKey {
+  return key in SECURITY_SECRET_SETTING_DEFINITIONS;
 }

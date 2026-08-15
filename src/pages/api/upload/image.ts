@@ -11,11 +11,12 @@ import {
 import { getFolderByName } from '../../../lib/folder-access';
 import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
+import { enforceRateLimit } from '../../../lib/rateLimit';
+import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 
 export const prerender = false;
-const MAX_UPLOAD_BODY_BYTES = 12 * 1024 * 1024;
 
-async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint8Array> {
+async function readBoundedBody(request: Request, maxBytes: number, maxLabel: string): Promise<Uint8Array> {
   if (!request.body) return new Uint8Array();
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -26,7 +27,7 @@ async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint
     total += value.byteLength;
     if (total > maxBytes) {
       await reader.cancel();
-      throw new Error('Upload exceeds the 12 MB request limit.');
+      throw new Error(`Upload exceeds the ${maxLabel} request limit.`);
     }
     chunks.push(value);
   }
@@ -44,16 +45,28 @@ export const POST: APIRoute = async ({ request }) => {
     // Require admin authentication
     const user = await requirePermission(request, 'media:create');
 
+    const security = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));
+    const limited = await enforceRateLimit(
+      `upload:${user.id}:image`,
+      security.security_mediaUploadRateLimitMax,
+      security.security_mediaUploadRateLimitWindowMinutes * 60 * 1000,
+      'Too many uploads. Please try again shortly.',
+    );
+    if (limited) return limited;
+
+    const maxUploadBodyBytes = security.security_mediaUploadMaxSizeMB * 1024 * 1024;
+    const maxLabel = `${security.security_mediaUploadMaxSizeMB} MB`;
+
     const contentLength = Number(request.headers.get('content-length'));
-    if (Number.isFinite(contentLength) && contentLength > MAX_UPLOAD_BODY_BYTES) {
-      return new Response(JSON.stringify({ error: 'Upload exceeds the 12 MB request limit.' }), {
+    if (Number.isFinite(contentLength) && contentLength > maxUploadBodyBytes) {
+      return new Response(JSON.stringify({ error: `Upload exceeds the ${maxLabel} request limit.` }), {
         status: 413,
         headers: { 'Content-Type': 'application/json' },
       });
     }
     let boundedBody: Uint8Array;
     try {
-      boundedBody = await readBoundedBody(request, MAX_UPLOAD_BODY_BYTES);
+      boundedBody = await readBoundedBody(request, maxUploadBodyBytes, maxLabel);
     } catch (error) {
       return new Response(JSON.stringify({
         error: error instanceof Error ? error.message : 'Upload is too large.',

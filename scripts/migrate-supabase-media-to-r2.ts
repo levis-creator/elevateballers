@@ -1,14 +1,15 @@
 import { prisma } from '../src/lib/prisma';
-import { supabase, STORAGE_BUCKET } from '../src/lib/supabase';
+import { getSupabaseClient, STORAGE_BUCKET } from '../src/lib/supabase';
 import { getFileUrl } from '../src/lib/file-storage';
-import { putR2Object, r2Configured, toR2Key } from '../src/lib/r2';
+import { putR2Object, isR2Configured, toR2Key } from '../src/lib/r2';
 
 const apply = process.argv.includes('--apply');
 const limitArg = process.argv.find((arg) => arg.startsWith('--limit='));
 const limit = limitArg ? Number.parseInt(limitArg.split('=')[1], 10) : undefined;
 
+const supabase = await getSupabaseClient();
 if (!supabase) throw new Error('Supabase credentials are required to read the source media.');
-if (!r2Configured || process.env.STORAGE_TYPE !== 'r2') {
+if (!(await isR2Configured()) || process.env.STORAGE_TYPE !== 'r2') {
   throw new Error('Configure R2 credentials and set STORAGE_TYPE=r2 before running this migration.');
 }
 
@@ -128,7 +129,7 @@ for (const item of media) {
       const buffer = Buffer.from(await downloaded.data.arrayBuffer());
       await putR2Object(key, buffer, item.mimeType || 'application/octet-stream');
 
-      const publicUrl = getFileUrl(item.filePath, item.isPrivate);
+      const publicUrl = await getFileUrl(item.filePath, item.isPrivate);
       addReplacement(item.url, publicUrl);
       addReplacement(item.thumbnail, publicUrl);
       await prisma.media.update({

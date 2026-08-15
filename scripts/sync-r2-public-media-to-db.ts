@@ -3,10 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { basename, extname, relative, resolve } from 'node:path';
 import mysql from 'mysql2/promise';
-import { R2_PUBLIC_URL, r2Configured, toR2Key } from '../src/lib/r2';
+import { getR2PublicUrl, isR2Configured, toR2Key } from '../src/lib/r2';
 
 const sourceRoot = resolve(process.argv[2] || 'C:/Users/Levi/Downloads/public');
-if (!r2Configured) throw new Error('R2 credentials are required.');
+if (!(await isR2Configured())) throw new Error('R2 credentials are required.');
+const R2_PUBLIC_URL = await getR2PublicUrl();
 if (!R2_PUBLIC_URL) throw new Error('R2_PUBLIC_URL must be set to https://cdn.elevateballers.com.');
 if (process.env.DB_SSL !== 'true' && process.env.DB_ALLOW_INSECURE_CONNECTION !== 'true') {
   throw new Error('This database does not support TLS. Set DB_ALLOW_INSECURE_CONNECTION=true only when running from a trusted server/network, or enable DB_SSL=true.');

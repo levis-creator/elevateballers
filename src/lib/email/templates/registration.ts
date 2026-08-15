@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { logAuditSystem } from '../../../features/cms/lib/audit';
 import { C, SITE_URL, BREVO_FROM, BREVO_SENDER_NAME } from '../config';
 import { getBrevoClient, hashValue, hashRecipients } from '../providers';
-import { emailWrapper, btn, sendTransactionalEmail, getAdminRecipientEmails } from '../core';
+import { emailWrapper, btn, sendTransactionalEmail, getAdminRecipientEmails, getBrevoCredential } from '../core';
 import { configuredEmailTemplate } from '../runtime-settings';
 
 export async function sendTeamRegistrationAutoReply(data: {
@@ -48,7 +48,7 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
   teamName: string;
   leagueName?: string | null;
 }): Promise<void> {
-  const brevo = getBrevoClient();
+  const brevo = getBrevoClient(await getBrevoCredential());
   if (!brevo) return;
 
   const recipients = await getAdminRecipientEmails('team_registered');
@@ -156,7 +156,7 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
   email: string;
   teamName?: string | null;
 }): Promise<void> {
-  const brevo = getBrevoClient();
+  const brevo = getBrevoClient(await getBrevoCredential());
   if (!brevo) return;
 
   const recipients = await getAdminRecipientEmails('player_registered');
