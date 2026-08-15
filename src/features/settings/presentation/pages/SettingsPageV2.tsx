@@ -111,7 +111,26 @@ function SettingsPageV2Content() {
     });
   }
 
-  function restoreActiveDefaults() {
+  async function signOutAllUsers() {
+    if (!window.confirm('Sign out every user, including yourself? Everyone will need to sign in again.')) return;
+    setSaving(true);
+    setNotice('');
+    try {
+      const response = await fetch('/api/settings/sign-out-all', { method: 'POST' });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? 'Unable to sign out all users');
+      window.location.href = '/admin/login';
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Unable to sign out all users');
+      setSaving(false);
+    }
+  }
+
+  function restoreActiveDefaults(field?: Field) {
+    if (field?.key === 'security_signOutAll') {
+      void signOutAllUsers();
+      return;
+    }
     setDraft((current) => {
       const next = { ...current };
       activeSection.groups.flatMap((group) => group.fields).forEach((field) => {

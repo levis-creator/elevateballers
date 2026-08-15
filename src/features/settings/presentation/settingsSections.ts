@@ -27,7 +27,7 @@ export type Field = {
   columns?: Array<{ key: string; label: string; placeholder?: string; width?: string }>;
 };
 
-export type Group = { label: string; fields: Field[] };
+export type Group = { label: string; fields: Field[]; available?: boolean; description?: string };
 export type Section = {
   id: string;
   label: string;
@@ -690,6 +690,48 @@ export const SECTIONS: Section[] = [
         ],
       },
     ]
+  ),
+  siteWide(
+    'security',
+    'Security',
+    'Admin-only controls for sign-in verification and sensitive Site Settings changes. Values are bounded server-side and secure defaults apply when they are missing or invalid.',
+    [
+      {
+        label: 'OTP & Login Protection',
+        fields: [
+          f('security_otpExpiryMinutes', 'OTP expiry duration', 'Minutes before a sign-in verification code expires. Allowed range: 5–30.', { type: 'number', defaultValue: '10' }),
+          f('security_otpMaxAttempts', 'Maximum OTP attempts', 'Invalid codes allowed before the current code is locked. Allowed range: 3–10.', { type: 'number', defaultValue: '5' }),
+          f('security_otpLockoutMinutes', 'OTP lockout duration', 'Minutes a code stays locked after too many invalid codes. Allowed range: 5–60.', { type: 'number', defaultValue: '15' }),
+        ],
+      },
+      {
+        label: 'Sessions',
+        fields: [
+          f('security_sessionDurationDays', 'Admin session duration', 'Days before an authenticated admin session expires. Allowed range: 1–14.', { type: 'number', defaultValue: '7' }),
+          f('security_maxConcurrentSessions', 'Maximum concurrent sessions', 'Active admin sessions retained per user; oldest sessions are revoked first. Allowed range: 1–10.', { type: 'number', defaultValue: '3' }),
+          f('security_signOutAll', 'Sign out all users', 'Immediately invalidates every existing authenticated session. You will need to sign in again.', { type: 'action' }),
+        ],
+      },
+      {
+        label: 'Session history',
+        fields: [],
+        available: false,
+        description: 'Per-device session visibility and selective revocation are not configurable yet; the active-session limit is enforced server-side in Sessions.',
+      },
+      {
+        label: 'Rate limits',
+        fields: [
+          f('security_otpRateLimitMax', 'OTP requests per window', 'Verification requests allowed for one administrator before a temporary limit. Allowed range: 3–20.', { type: 'number', defaultValue: '5' }),
+          f('security_otpRateLimitWindowMinutes', 'OTP rate-limit window', 'Minutes in the OTP verification rate-limit window. Allowed range: 5–60.', { type: 'number', defaultValue: '15' }),
+          f('security_settingsMutationMax', 'Settings changes per window', 'Creates and updates allowed for one administrator before a temporary limit. Allowed range: 10–100.', { type: 'number', defaultValue: '30' }),
+          f('security_settingsMutationWindowMinutes', 'Settings rate-limit window', 'Minutes in the Site Settings mutation rate-limit window. Allowed range: 5–60.', { type: 'number', defaultValue: '10' }),
+        ],
+      },
+      { label: 'Passwords', fields: [], available: false, description: 'Password policy controls are not configurable here yet.' },
+      { label: 'Alerts & Audit', fields: [], available: false, description: 'Security alert routing and audit controls are not configurable here yet.' },
+      { label: 'Uploads & Integrations', fields: [], available: false, description: 'Upload and integration security controls are not configurable here yet.' },
+    ],
+    '/admin/settings'
   ),
   siteWide('system', 'System Pages', 'Error, redirect and loading states, plus the site-wide maintenance switch.', [
     {

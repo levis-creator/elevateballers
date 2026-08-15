@@ -5,6 +5,10 @@ import type {
   UpdateSiteSettingInput,
 } from '../domain/siteSetting';
 import { protectSensitiveSettingValue, revealSensitiveSetting } from './sensitiveSettingValues';
+import {
+  isSecuritySettingKey,
+  normalizeSecuritySettingValue,
+} from './securitySettings';
 
 const PUBLIC_CATEGORIES = new Set(['appearance', 'contact', 'system']);
 const PUBLIC_KEYS = new Set([
@@ -52,10 +56,24 @@ export class SiteSettingsService {
       throw new Error('Key, value, and label are required');
     }
 
+    const key = input.key.trim();
+    if (key.startsWith('security_')) {
+      if (!isSecuritySettingKey(key)) throw new Error('Unknown security setting');
+      const value = normalizeSecuritySettingValue(key, input.value);
+      if (value === null) throw new Error('Security setting value is outside the permitted range');
+      input = {
+        ...input,
+        key,
+        value,
+        type: 'number',
+        category: 'security',
+      };
+    }
+
     const created = await this.repository.create({
       ...input,
-      key: input.key.trim(),
-      value: protectSensitiveSettingValue(input.key.trim(), input.value),
+      key,
+      value: protectSensitiveSettingValue(key, input.value),
       label: input.label.trim(),
     });
     return revealSensitiveSetting(created);
@@ -64,6 +82,14 @@ export class SiteSettingsService {
   async update(id: string, input: UpdateSiteSettingInput): Promise<SiteSetting | null> {
     const existing = await this.repository.findById(id);
     if (!existing) return null;
+    if (isSecuritySettingKey(existing.key)) {
+      input = { ...input, type: 'number', category: 'security' };
+      if (input.value !== undefined) {
+        const value = normalizeSecuritySettingValue(existing.key, input.value);
+        if (value === null) throw new Error('Security setting value is outside the permitted range');
+        input = { ...input, value };
+      }
+    }
     const updated = await this.repository.update(id, {
       ...input,
       ...(input.value === undefined ? {} : { value: protectSensitiveSettingValue(existing.key, input.value, existing.value) }),

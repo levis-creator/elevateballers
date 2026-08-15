@@ -3,11 +3,14 @@ import {
   verifyOtpSessionToken,
   verifyOtpForUser,
   createToken,
+  createUserSession,
+  writeAuditLog,
 } from '../../../features/cms/lib/auth';
-import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
+import { checkRateLimit, getRateLimitRetryAfter, rateLimitResponse } from '../../../lib/rateLimit';
 import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError, json } from '../../../lib/apiError';
+import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 
 export const prerender = false;
 
@@ -42,12 +45,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return json({ error: 'Session expired. Please sign in again.' }, 401);
     }
 
-    // Rate limit OTP attempts per user: 5 per 15 minutes
-    if (!await checkRateLimit(`otp:${session.userId}`, 5, 15 * 60 * 1000)) {
+    const security = resolveSecuritySettings(
+      await siteSettingsService.list('security').catch(() => []),
+    );
+
+    if (!await checkRateLimit(
+      `otp:${session.userId}`,
+      security.security_otpRateLimitMax,
+      security.security_otpRateLimitWindowMinutes * 60 * 1000,
+    )) {
       const retryAfter = await getRateLimitRetryAfter(`otp:${session.userId}`);
-      return json(
-        { error: `Too many attempts. Please try again in ${retryAfter} seconds.` },
-        429
+      return rateLimitResponse(
+        retryAfter,
+        `Too many attempts. Please try again in ${retryAfter} seconds.`,
       );
     }
 
@@ -64,7 +74,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
       if (verification.lockedUntil) {
         return json({
-          error: 'Too many invalid codes. This code is locked for 15 minutes. Return to login to request a new code.',
+          error: `Too many invalid codes. This code is locked for ${security.security_otpLockoutMinutes} minutes. Return to login to request a new code.`,
           lockedUntil: verification.lockedUntil.toISOString(),
           attemptsRemaining: 0,
         }, 429);
@@ -102,11 +112,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
     // Include tokenVersion so existing sessions can be invalidated
+    const userSession = await createUserSession(
+      userWithRoles.id,
+      security.security_sessionDurationDays,
+      security.security_maxConcurrentSessions,
+    );
+    if (userSession.evictedCount > 0) {
+      await writeAuditLog(userWithRoles.id, 'AUTH_SESSION_EVICTED', userWithRoles.id, {
+        evictedCount: userSession.evictedCount,
+        maxConcurrentSessions: security.security_maxConcurrentSessions,
+        reason: 'concurrent_limit',
+        source: 'explicit',
+      });
+    }
+
     const authToken = createToken({
       id: userWithRoles.id,
       email: userWithRoles.email,
       tokenVersion: userWithRoles.tokenVersion,
-    });
+    }, security.security_sessionDurationDays, userSession.sessionToken);
 
     const forwardedProto = request.headers.get('x-forwarded-proto');
     const forwardedSsl = request.headers.get('x-forwarded-ssl');
@@ -121,13 +145,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       path: '/',
     };
 
-    cookies.set('auth-token', authToken, { ...cookieOptions, maxAge: 60 * 60 * 24 * 7 });
+    cookies.set('auth-token', authToken, {
+      ...cookieOptions,
+      maxAge: 60 * 60 * 24 * security.security_sessionDurationDays,
+    });
     cookies.delete('otp-session', { path: '/' });
 
     await logAudit(request, 'AUTH_LOGIN_SUCCESS', {
       userId: userWithRoles.id,
       email: userWithRoles.email,
       ip,
+      sessionCreated: true,
+      sessionDurationDays: security.security_sessionDurationDays,
     }, userWithRoles.id);
 
     return json(

@@ -2,7 +2,10 @@ import { prisma } from '../../../../lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import type { User } from '../../types';
+import { siteSettingsService } from '../../../settings';
+import { resolveSecuritySettings } from '../../../settings/application/securitySettings';
 
 const DEFAULT_SECRET = 'your-secret-key-change-in-production';
 const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_SECRET;
@@ -99,22 +102,35 @@ export async function createUser(
 // JWT
 // ---------------------------------------------------------------------------
 
-export function createToken(user: { id: string; email: string; tokenVersion: number }): string {
+export function createToken(
+  user: { id: string; email: string; tokenVersion: number },
+  sessionDurationDays = 7,
+  sessionToken?: string,
+): string {
+  const safeDurationDays = Number.isInteger(sessionDurationDays)
+    ? Math.max(1, Math.min(14, sessionDurationDays))
+    : 7;
   return jwt.sign(
-    { userId: user.id, email: user.email, tokenVersion: user.tokenVersion },
+    {
+      userId: user.id,
+      email: user.email,
+      tokenVersion: user.tokenVersion,
+      ...(sessionToken ? { sessionToken } : {}),
+    },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: `${safeDurationDays}d` }
   );
 }
 
 export function verifyToken(
   token: string
-): { userId: string; email: string; tokenVersion: number } | null {
+): { userId: string; email: string; tokenVersion: number; sessionToken?: string } | null {
   try {
     return jwt.verify(token, JWT_SECRET) as {
       userId: string;
       email: string;
       tokenVersion: number;
+      sessionToken?: string;
     };
   } catch {
     return null;
@@ -160,6 +176,19 @@ export async function getCurrentUser(request: Request): Promise<User | null> {
     if (!user) return null;
     if (!(user as any).active) return null;
     if ((user as any).tokenVersion !== payload.tokenVersion) return null;
+    if (payload.sessionToken) {
+      const session = await prisma.userSession.findUnique({
+        where: { tokenHash: hashSessionToken(payload.sessionToken) },
+        select: { userId: true, expiresAt: true, revokedAt: true, id: true, lastSeenAt: true },
+      });
+      if (!session || session.userId !== user.id || session.revokedAt || session.expiresAt <= new Date()) return null;
+      if (!session.lastSeenAt || session.lastSeenAt.getTime() < Date.now() - 5 * 60 * 1000) {
+        void prisma.userSession.updateMany({
+          where: { id: session.id, revokedAt: null },
+          data: { lastSeenAt: new Date() },
+        });
+      }
+    }
     return user;
   } catch {
     return null;
@@ -203,30 +232,102 @@ export async function resetFailedLogin(userId: string): Promise<void> {
   });
 }
 
-/** Increment tokenVersion to invalidate all existing sessions for a user. */
-export async function invalidateSessions(userId: string): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { tokenVersion: { increment: 1 } },
+function hashSessionToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+export function getSessionTokenFromRequest(request: Request): string | null {
+  const token = getTokenFromRequest(request);
+  if (!token) return null;
+  return verifyToken(token)?.sessionToken ?? null;
+}
+
+export async function createUserSession(
+  userId: string,
+  sessionDurationDays: number,
+  maxConcurrentSessions: number,
+): Promise<{ sessionToken: string; expiresAt: Date; evictedCount: number }> {
+  const sessionToken = crypto.randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + sessionDurationDays * 24 * 60 * 60 * 1000);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const evictedCount = await prisma.$transaction(async (database) => {
+        await database.userSession.create({
+          data: { userId, tokenHash: hashSessionToken(sessionToken), expiresAt, lastSeenAt: new Date() },
+        });
+        const activeSessions = await database.userSession.findMany({
+          where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: { id: true },
+        });
+        const revokeCount = Math.max(0, activeSessions.length - maxConcurrentSessions);
+        if (revokeCount > 0) {
+          await database.userSession.updateMany({
+            where: { id: { in: activeSessions.slice(0, revokeCount).map((session) => session.id) }, revokedAt: null },
+            data: { revokedAt: new Date(), revokeReason: 'concurrent_limit' },
+          });
+        }
+        return revokeCount;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      return { sessionToken, expiresAt, evictedCount };
+    } catch (error: unknown) {
+      if (attempt === 0 && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2034') continue;
+      throw error;
+    }
+  }
+  throw new Error('Unable to create user session');
+}
+
+export async function revokeSessionFromRequest(request: Request): Promise<void> {
+  const sessionToken = getSessionTokenFromRequest(request);
+  if (!sessionToken) return;
+  await prisma.userSession.updateMany({
+    where: { tokenHash: hashSessionToken(sessionToken), revokedAt: null },
+    data: { revokedAt: new Date(), revokeReason: 'logout' },
   });
+}
+
+/** Increment tokenVersion and revoke records to invalidate all sessions for a user. */
+export async function invalidateSessions(userId: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { tokenVersion: { increment: 1 } } }),
+    prisma.userSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date(), revokeReason: 'user_invalidation' },
+    }),
+  ]);
+}
+
+export async function invalidateAllSessions(): Promise<number> {
+  const [users] = await prisma.$transaction([
+    prisma.user.updateMany({ data: { tokenVersion: { increment: 1 } } }),
+    prisma.userSession.updateMany({
+      where: { revokedAt: null },
+      data: { revokedAt: new Date(), revokeReason: 'global_invalidation' },
+    }),
+  ]);
+  return users.count;
 }
 
 // ---------------------------------------------------------------------------
 // Email OTP helpers
 // ---------------------------------------------------------------------------
 
-const OTP_TTL_MINUTES = 10;
-const MAX_OTP_ATTEMPTS = 5;
-const OTP_LOCKOUT_MINUTES = 15;
-
 function hashOtpCode(code: string): string {
   return crypto.createHash('sha256').update(code).digest('hex');
 }
 
+async function getRuntimeSecuritySettings() {
+  const records = await siteSettingsService.list('security').catch(() => []);
+  return resolveSecuritySettings(records);
+}
+
 export async function createOtpForUser(userId: string): Promise<string> {
+  const security = await getRuntimeSecuritySettings();
   const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
   const codeHash = hashOtpCode(code);
-  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+  const expiresAt = new Date(Date.now() + security.security_otpExpiryMinutes * 60 * 1000);
 
   await prisma.twoFactorOtp.deleteMany({ where: { userId } });
   await prisma.twoFactorOtp.create({ data: { userId, codeHash, expiresAt } });
@@ -238,6 +339,7 @@ export async function verifyOtpForUser(
   userId: string,
   code: string,
 ): Promise<{ valid: boolean; attemptsRemaining: number; lockedUntil?: Date }> {
+  const security = await getRuntimeSecuritySettings();
   const codeHash = hashOtpCode(code);
   const now = new Date();
   const otp = await prisma.twoFactorOtp.findFirst({
@@ -245,19 +347,19 @@ export async function verifyOtpForUser(
     orderBy: { createdAt: 'desc' },
   });
   if (!otp) return { valid: false, attemptsRemaining: 0 };
-  const availableOtpWhere = {
+  const availableOtpWhere: Prisma.TwoFactorOtpWhereInput = {
     id: otp.id,
     expiresAt: { gt: now },
-    attemptCount: { lt: MAX_OTP_ATTEMPTS },
+    attemptCount: { lt: security.security_otpMaxAttempts },
     OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }],
-  } as const;
+  };
 
   if (otp.codeHash === codeHash) {
     const consumed = await prisma.twoFactorOtp.deleteMany({
       where: { ...availableOtpWhere, codeHash },
     });
     if (consumed.count === 1) {
-      return { valid: true, attemptsRemaining: MAX_OTP_ATTEMPTS };
+      return { valid: true, attemptsRemaining: security.security_otpMaxAttempts };
     }
   } else {
     const incremented = await prisma.twoFactorOtp.updateMany({
@@ -266,8 +368,8 @@ export async function verifyOtpForUser(
     });
     if (incremented.count === 1) {
       await prisma.twoFactorOtp.updateMany({
-        where: { id: otp.id, attemptCount: { gte: MAX_OTP_ATTEMPTS }, lockedUntil: null },
-        data: { lockedUntil: new Date(now.getTime() + OTP_LOCKOUT_MINUTES * 60 * 1000) },
+        where: { id: otp.id, attemptCount: { gte: security.security_otpMaxAttempts }, lockedUntil: null },
+        data: { lockedUntil: new Date(now.getTime() + security.security_otpLockoutMinutes * 60 * 1000) },
       });
     }
   }
@@ -286,7 +388,7 @@ export async function verifyOtpForUser(
       where: { ...availableOtpWhere, codeHash },
     });
     if (consumed.count === 1) {
-      return { valid: true, attemptsRemaining: MAX_OTP_ATTEMPTS };
+      return { valid: true, attemptsRemaining: security.security_otpMaxAttempts };
     }
   }
 
@@ -295,7 +397,7 @@ export async function verifyOtpForUser(
   }
   return {
     valid: false,
-    attemptsRemaining: Math.max(0, MAX_OTP_ATTEMPTS - current.attemptCount),
+    attemptsRemaining: Math.max(0, security.security_otpMaxAttempts - current.attemptCount),
   };
 }
 
@@ -334,7 +436,7 @@ export async function writeAuditLog(
     source: metadata && 'source' in metadata ? metadata.source : 'legacy',
   };
   await prisma.userAuditLog.create({
-    data: { userId, action, performedBy, metadata: nextMetadata },
+    data: { userId, action, performedBy, metadata: nextMetadata as Prisma.InputJsonValue },
   });
 }
 
