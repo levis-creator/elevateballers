@@ -22,6 +22,20 @@ async function getRuntimeSettings() {
   runtimeSettingsCache = { expires: Date.now() + 30_000, outbound: resolveOutboundEmailSettings(email), delivery: resolveEmailDeliverySettings(delivery) };
   return runtimeSettingsCache;
 }
+
+/**
+ * The Brevo credential configured under Notifications → Email providers, if
+ * any. Callers that build a Brevo client directly (bulk campaign sends that
+ * bypass sendTransactionalEmail's provider routing) need this so a client's
+ * own Brevo account is actually used instead of always falling back to the
+ * BREVO_API_KEY environment variable.
+ */
+export async function getBrevoCredential(): Promise<string | undefined> {
+  const { outbound } = await getRuntimeSettings();
+  const provider = outbound.providers.find((item) => item.provider.trim().toLowerCase() === 'brevo');
+  const credential = provider?.credential;
+  return credential && !credential.includes('•') ? credential : undefined;
+}
 const htmlToText = (html: string) => html.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
 function applyEmailPresentation(html: string, settings: OutboundEmailSettings): string {

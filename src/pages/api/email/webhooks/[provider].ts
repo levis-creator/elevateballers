@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import type { APIRoute } from 'astro';
 import { recordEmailDeliveryEvent } from '../../../../lib/email/core';
+import { siteSettingsService } from '../../../../features/settings';
 
 export const prerender = false;
 
@@ -9,8 +10,12 @@ function safeEqual(left: string, right: string) {
   return crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right));
 }
 
-function verifyResend(request: Request, body: string) {
-  const secret = process.env.RESEND_WEBHOOK_SECRET;
+async function getWebhookSecret(key: string, envVar: string | undefined): Promise<string | undefined> {
+  const setting = await siteSettingsService.get(key).catch(() => null);
+  return setting?.value || envVar;
+}
+
+function verifyResend(request: Request, body: string, secret: string | undefined) {
   if (!secret) return false;
   const id = request.headers.get('svix-id') || '';
   const timestamp = request.headers.get('svix-timestamp') || '';
@@ -21,8 +26,7 @@ function verifyResend(request: Request, body: string) {
   return signatures.some((value) => safeEqual(value.replace(/^v1,/, ''), expected));
 }
 
-function verifyMailgun(payload: any) {
-  const key = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
+function verifyMailgun(payload: any, key: string | undefined) {
   const signature = payload?.signature;
   if (!key || !signature?.timestamp || !signature?.token || !signature?.signature) return false;
   if (Math.abs(Date.now() / 1000 - Number(signature.timestamp)) > 300) return false;
@@ -37,11 +41,13 @@ export const POST: APIRoute = async ({ params, request }) => {
   try { payload = JSON.parse(raw); } catch { return new Response('Invalid JSON', { status: 400 }); }
 
   if (provider === 'resend') {
-    if (!verifyResend(request, raw)) return new Response('Unauthorized', { status: 401 });
+    const secret = await getWebhookSecret('security_resendWebhookSecret', process.env.RESEND_WEBHOOK_SECRET);
+    if (!verifyResend(request, raw, secret)) return new Response('Unauthorized', { status: 401 });
     if (payload.type === 'email.bounced') await recordEmailDeliveryEvent({ provider, event: 'bounced', providerMessageId: payload.data?.email_id });
     if (payload.type === 'email.opened') await recordEmailDeliveryEvent({ provider, event: 'opened', providerMessageId: payload.data?.email_id });
   } else if (provider === 'mailgun') {
-    if (!verifyMailgun(payload)) return new Response('Unauthorized', { status: 401 });
+    const key = await getWebhookSecret('security_mailgunWebhookSigningKey', process.env.MAILGUN_WEBHOOK_SIGNING_KEY);
+    if (!verifyMailgun(payload, key)) return new Response('Unauthorized', { status: 401 });
     const event = payload['event-data']?.event;
     const severity = payload['event-data']?.severity;
     const id = payload['event-data']?.message?.headers?.['message-id'];

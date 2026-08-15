@@ -740,7 +740,17 @@ export const SECTIONS: Section[] = [
         ],
       },
       { label: 'Alerts & Audit', fields: [], available: true, description: 'Review security audit events. Email change alerts use the existing transactional email delivery.' },
-      { label: 'Uploads & Integrations', fields: [], available: false, description: 'Upload and integration security controls are not configurable here yet.' },
+      {
+        label: 'Uploads & Integrations',
+        fields: [
+          f('security_mediaUploadMaxSizeMB', 'Media upload max size (MB)', 'Largest image or media file accepted by the media library, per file. Allowed range: 1–50.', { type: 'number', defaultValue: '12' }),
+          f('security_documentUploadMaxSizeMB', 'Document upload max size (MB)', 'Largest PDF accepted for the rulebook document upload. Allowed range: 1–50.', { type: 'number', defaultValue: '25' }),
+          f('security_mediaUploadRateLimitMax', 'Media uploads per window', 'Uploads allowed for one administrator before a temporary limit. Allowed range: 3–60.', { type: 'number', defaultValue: '20' }),
+          f('security_mediaUploadRateLimitWindowMinutes', 'Media upload rate-limit window', 'Minutes in the media upload rate-limit window. Allowed range: 5–60.', { type: 'number', defaultValue: '15' }),
+          f('security_batchUploadMaxFiles', 'Maximum files per batch upload', 'Files accepted in a single batch media upload request. Allowed range: 1–50.', { type: 'number', defaultValue: '20' }),
+          f('security_turnstileEnabled', 'Bot protection (Turnstile)', 'Require a passed Cloudflare Turnstile check on login, registration, and public forms.', { type: 'toggle', defaultValue: 'true' }),
+        ],
+      },
     ],
     '/admin/settings'
   ),

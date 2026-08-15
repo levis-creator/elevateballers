@@ -10,7 +10,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
 import { getFileUrl } from '../../../lib/file-storage';
 import { prisma } from '../../../lib/prisma';
-import { moveR2Object, r2Configured, toR2Key } from '../../../lib/r2';
+import { moveR2Object, isR2Configured, toR2Key } from '../../../lib/r2';
 
 export const prerender = false;
 
@@ -80,9 +80,10 @@ export const PATCH: APIRoute = async ({ request }) => {
         where: { id: { in: body.ids } },
         select: { id: true, filePath: true, url: true },
       });
+      const r2Available = await isR2Configured();
       for (const item of media) {
         let filePath = item.filePath;
-        if (r2Configured && filePath && !item.url.includes('supabase')) {
+        if (r2Available && filePath && !item.url.includes('supabase')) {
           const fileName = filePath.split('/').pop();
           if (fileName) {
             const nextPath = `uploads/${target.path}/${fileName}`;
@@ -94,7 +95,7 @@ export const PATCH: APIRoute = async ({ request }) => {
           where: { id: item.id },
           data: {
             folderId: target.id,
-            ...(filePath ? { filePath, url: getFileUrl(filePath, target.isPrivate) } : {}),
+            ...(filePath ? { filePath, url: await getFileUrl(filePath, target.isPrivate) } : {}),
           },
         });
       }

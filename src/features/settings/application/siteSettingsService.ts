@@ -8,6 +8,7 @@ import { protectSensitiveSettingValue, revealSensitiveSetting } from './sensitiv
 import {
   isSecuritySettingKey,
   isSecurityBooleanSettingKey,
+  isSecuritySecretSettingKey,
   normalizeSecuritySettingValue,
 } from './securitySettings';
 
@@ -66,7 +67,7 @@ export class SiteSettingsService {
         ...input,
         key,
         value,
-        type: isSecurityBooleanSettingKey(key) ? 'toggle' : 'number',
+        type: isSecurityBooleanSettingKey(key) ? 'toggle' : isSecuritySecretSettingKey(key) ? 'text' : 'number',
         category: 'security',
       };
     }
@@ -84,7 +85,7 @@ export class SiteSettingsService {
     const existing = await this.repository.findById(id);
     if (!existing) return null;
     if (isSecuritySettingKey(existing.key)) {
-      input = { ...input, type: isSecurityBooleanSettingKey(existing.key) ? 'toggle' : 'number', category: 'security' };
+      input = { ...input, type: isSecurityBooleanSettingKey(existing.key) ? 'toggle' : isSecuritySecretSettingKey(existing.key) ? 'text' : 'number', category: 'security' };
       if (input.value !== undefined) {
         const value = normalizeSecuritySettingValue(existing.key, input.value);
         if (value === null) throw new Error('Security setting value is outside the permitted range');

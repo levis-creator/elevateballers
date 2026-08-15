@@ -5,12 +5,13 @@
  * the caller transparently falls through to a database query (cache miss).
  */
 
-import { redis } from './redis';
+import { getRedisClient } from './redis';
 
 /**
  * Read a cached value. Returns `null` on miss or if Redis is unavailable.
  */
 export async function cacheGet<T>(key: string): Promise<T | null> {
+  const redis = await getRedisClient();
   if (!redis) return null;
   try {
     const value = await redis.get<T>(key);
@@ -29,6 +30,7 @@ export async function cacheSet(
   value: unknown,
   ttlSeconds: number,
 ): Promise<void> {
+  const redis = await getRedisClient();
   if (!redis) return;
   try {
     await redis.set(key, value, { ex: ttlSeconds });
@@ -41,6 +43,7 @@ export async function cacheSet(
  * Delete a single cache key. No-op if Redis is unavailable.
  */
 export async function cacheDel(key: string): Promise<void> {
+  const redis = await getRedisClient();
   if (!redis) return;
   try {
     await redis.del(key);
@@ -54,6 +57,7 @@ export async function cacheDel(key: string): Promise<void> {
  * Uses SCAN to avoid blocking Redis. No-op if Redis is unavailable.
  */
 export async function cacheInvalidatePattern(pattern: string): Promise<void> {
+  const redis = await getRedisClient();
   if (!redis) return;
   try {
     let cursor = 0;

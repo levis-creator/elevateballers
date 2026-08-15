@@ -1,5 +1,5 @@
 import { prisma } from '../../../../../lib/prisma';
-import { deleteR2Prefix, ensureR2Prefix, moveR2Prefix, r2Configured } from '../../../../../lib/r2';
+import { deleteR2Prefix, ensureR2Prefix, moveR2Prefix, isR2Configured } from '../../../../../lib/r2';
 import { getFileUrl, getStorageTypeForUrl } from '../../../../../lib/file-storage';
 import type { CreateFolderInput, UpdateFolderInput, Folder } from '../../../types';
 
@@ -17,7 +17,7 @@ export async function createFolder(data: CreateFolderInput, createdBy?: string):
   const folder = await prisma.folder.create({
     data: { name: sanitizedName, path, description, isPrivate, createdBy: createdBy || null },
   });
-  if (r2Configured) await ensureR2Prefix(path);
+  if (await isR2Configured()) await ensureR2Prefix(path);
   return folder;
 }
 
@@ -46,11 +46,12 @@ export async function updateFolder(id: string, data: UpdateFolderInput): Promise
     }
 
     const updatedPath = updateData.path as string | undefined;
-    if (r2Configured && updatedPath && updatedPath !== existing.path) {
-      await moveR2Prefix(existing.path, updatedPath);
-    }
+    const pathChanged = Boolean(updatedPath && updatedPath !== existing.path);
+    const r2Available = pathChanged && await isR2Configured();
 
-    if (r2Configured && updatedPath && updatedPath !== existing.path) {
+    if (r2Available && updatedPath) {
+      await moveR2Prefix(existing.path, updatedPath);
+
       const r2Media = await prisma.media.findMany({
         where: {
           folderId: id,
@@ -67,9 +68,9 @@ export async function updateFolder(id: string, data: UpdateFolderInput): Promise
           where: { id: media.id },
           data: {
             filePath,
-            url: getFileUrl(filePath, false),
+            url: await getFileUrl(filePath, false),
             ...(media.thumbnail && getStorageTypeForUrl(media.url) === 'r2'
-              ? { thumbnail: getFileUrl(filePath, false) }
+              ? { thumbnail: await getFileUrl(filePath, false) }
               : {}),
           },
         });
@@ -87,7 +88,7 @@ export async function deleteFolder(id: string): Promise<boolean> {
   try {
     const folder = await prisma.folder.findUnique({ where: { id }, include: { media: { select: { id: true } } } });
     if (!folder || folder.media.length > 0) return false;
-    if (r2Configured) await deleteR2Prefix(folder.path);
+    if (await isR2Configured()) await deleteR2Prefix(folder.path);
     await prisma.folder.delete({ where: { id } });
     return true;
   } catch (error) {

@@ -1,9 +1,9 @@
 import 'dotenv/config';
-import { putR2Object, r2Configured } from '../src/lib/r2';
+import { putR2Object, isR2Configured } from '../src/lib/r2';
 
 const folders = ['general', 'players', 'teams', 'news', 'staff', 'leagues', 'matches', 'documents'];
 
-if (!r2Configured) {
+if (!(await isR2Configured())) {
   throw new Error('R2 credentials are required. Configure R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY.');
 }
 

@@ -2,14 +2,14 @@ import crypto from 'node:crypto';
 import { logAuditSystem } from '../../../features/cms/lib/audit';
 import { C, SITE_URL, BREVO_FROM, BREVO_SENDER_NAME } from '../config';
 import { getBrevoClient, hashValue, hashRecipients } from '../providers';
-import { emailWrapper, btn, unsubscribeFooter, sendTransactionalEmail } from '../core';
+import { emailWrapper, btn, unsubscribeFooter, sendTransactionalEmail, getBrevoCredential } from '../core';
 
 // Article notifications use Brevo (campaign emails — no rate limits)
 export async function sendArticleNotification(data: {
   subscribers: { email: string; name: string | null; token: string }[];
   article: { title: string; excerpt: string | null; slug: string; image: string | null };
 }): Promise<{ sent: number; failed: number }> {
-  const brevo = getBrevoClient();
+  const brevo = getBrevoClient(await getBrevoCredential());
   if (!brevo) return { sent: 0, failed: 0 };
 
   const articleUrl = `${SITE_URL}/news/${data.article.slug}`;

@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import { promises as fs } from 'node:fs';
 import { prisma } from '../src/lib/prisma';
-import { headR2Object, R2_PUBLIC_URL, r2Configured, toR2Key } from '../src/lib/r2';
+import { headR2Object, getR2PublicUrl, isR2Configured, toR2Key } from '../src/lib/r2';
 
-if (!r2Configured) throw new Error('R2 credentials are required.');
+if (!(await isR2Configured())) throw new Error('R2 credentials are required.');
+const R2_PUBLIC_URL = await getR2PublicUrl();
 if (!R2_PUBLIC_URL) throw new Error('R2_PUBLIC_URL must be set, for example https://cdn.elevateballers.com.');
 
 const client = prisma as any;

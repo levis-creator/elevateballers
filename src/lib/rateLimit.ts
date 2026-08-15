@@ -7,7 +7,7 @@
  */
 
 import { Ratelimit } from '@upstash/ratelimit';
-import { redis } from './redis';
+import { getRedisClient } from './redis';
 
 // ---------------------------------------------------------------------------
 // In-memory fallback store (original implementation)
@@ -57,11 +57,19 @@ function memoryRetryAfter(key: string): number {
 
 /**
  * Cache of Ratelimit instances keyed by "max:windowMs" so we don't recreate
- * them on every call.
+ * them on every call. Invalidated whenever the underlying Redis client
+ * changes (e.g. an admin points the app at a different Upstash account),
+ * since a stale limiter would keep talking to the old instance.
  */
 const limiters = new Map<string, Ratelimit>();
+let lastRedisClient: Awaited<ReturnType<typeof getRedisClient>> | undefined;
 
-function getLimiter(max: number, windowMs: number): Ratelimit | null {
+async function getLimiter(max: number, windowMs: number): Promise<Ratelimit | null> {
+  const redis = await getRedisClient();
+  if (redis !== lastRedisClient) {
+    limiters.clear();
+    lastRedisClient = redis;
+  }
   if (!redis) return null;
 
   const cacheKey = `${max}:${windowMs}`;
@@ -102,7 +110,7 @@ export async function checkRateLimit(
   max: number,
   windowMs: number,
 ): Promise<boolean> {
-  const limiter = getLimiter(max, windowMs);
+  const limiter = await getLimiter(max, windowMs);
   if (!limiter) return memoryCheck(key, max, windowMs);
 
   try {
@@ -120,6 +128,7 @@ export async function checkRateLimit(
 export async function resetRateLimit(key: string): Promise<void> {
   store.delete(key);
   distributedResets.delete(key);
+  const redis = await getRedisClient();
   if (redis) {
     try {
       // Delete all Upstash ratelimit keys for this identifier

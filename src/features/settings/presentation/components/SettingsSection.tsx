@@ -23,6 +23,7 @@ import SettingsEmailDeliveryHistory from './SettingsEmailDeliveryHistory';
 import SettingsUnavailable from './SettingsUnavailable';
 import SessionHistoryPanel from './SessionHistoryPanel';
 import SecurityAuditPanel from './SecurityAuditPanel';
+import IntegrationStatusPanel from './IntegrationStatusPanel';
 
 type Props = {
   section: Section;
@@ -175,20 +176,23 @@ export default function SettingsSection({
                   context="It will appear here once its server-side behavior is ready."
                 />
               ) : (
-                <div className="eb-settings-fields">
-                  {group.fields.map((field) => (
-                    <SettingsField
-                      key={field.key}
-                      field={field}
-                      value={valueFor(field)}
-                      dirty={Object.prototype.hasOwnProperty.call(draft, field.key)}
-                      canManage={canManage}
-                      onChange={onChange}
-                      onReset={onReset}
-                      onAction={onRestoreSection}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="eb-settings-fields">
+                    {group.fields.map((field) => (
+                      <SettingsField
+                        key={field.key}
+                        field={field}
+                        value={valueFor(field)}
+                        dirty={Object.prototype.hasOwnProperty.call(draft, field.key)}
+                        canManage={canManage}
+                        onChange={onChange}
+                        onReset={onReset}
+                        onAction={onRestoreSection}
+                      />
+                    ))}
+                  </div>
+                  {section.id === 'security' && group.label === 'Uploads & Integrations' && <IntegrationStatusPanel canManage={canManage} />}
+                </>
               )}
             </div>
           ))}
