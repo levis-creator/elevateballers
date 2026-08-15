@@ -45,8 +45,8 @@ export const DEFAULT_PUBLIC_SEO_SETTINGS: PublicSeoSettings = {
     { path: '/search', why: 'Duplicate of listings' },
   ],
   schema: true,
-  analytics: 'Plausible',
-  analyticsId: 'elevateballers.com',
+  analytics: 'Google Analytics 4',
+  analyticsId: 'G-VVZ9P3XBLP',
   verification: [],
 };
 

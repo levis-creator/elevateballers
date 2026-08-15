@@ -30,7 +30,7 @@ const pdfHref = !settings.pdf || /^(https?:)?\/\//.test(settings.pdf) || setting
 				<p class="mt-5 max-w-[540px] text-[16px] leading-[1.7] text-muted">{settings.intro}</p>
 			</div>
 			{pdfHref && (
-				<a href={pdfHref} target="_blank" rel="noopener" class="flex items-center gap-2.5 rounded-md bg-brand px-6 py-4 text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg no-underline hover:bg-brandlt">
+				<a href={pdfHref} target="_blank" rel="noopener" id="rulebook-download-link" class="flex items-center gap-2.5 rounded-md bg-brand px-6 py-4 text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg no-underline hover:bg-brandlt">
 					{settings.pdfLabel}
 				</a>
 			)}
@@ -98,3 +98,8 @@ const pdfHref = !settings.pdf || /^(https?:)?\/\//.test(settings.pdf) || setting
 
 	<Footer footer={footer} />
 </div>
+
+<script>
+	import { trackEvent } from "@/lib/analytics";
+	document.getElementById("rulebook-download-link")?.addEventListener("click", () => trackEvent("rulebook_download"));
+</script>

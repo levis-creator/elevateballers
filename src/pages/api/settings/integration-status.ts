@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { TURNSTILE_SECRET_KEY } from 'astro:env/server';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError, json } from '../../../lib/apiError';
-import { siteSettingsService } from '../../../features/settings';
+import { siteSettingsService, resolvePublicSeoSettings } from '../../../features/settings';
 
 export const prerender = false;
 
@@ -13,6 +13,18 @@ async function sourceFor(key: string, envVar: string | undefined): Promise<Sourc
   if (setting?.value) return 'database';
   if (envVar) return 'environment';
   return 'unset';
+}
+
+/**
+ * Analytics provider + ID lives under SEO → Analytics, not the security_
+ * settings — it isn't a secret (it ships in every visitor's page source), so
+ * it's fine to return the actual value here rather than a database/environment
+ * source flag.
+ */
+async function analyticsInfo(): Promise<{ provider: string; analyticsId: string | null }> {
+  const records = await siteSettingsService.list('seo').catch(() => []);
+  const { analytics, analyticsId } = resolvePublicSeoSettings(records);
+  return { provider: analytics, analyticsId: analytics !== 'None' && analyticsId ? analyticsId : null };
 }
 
 /** Brevo's credential lives in the `email_providers` setting (Notifications), not a dedicated security_ key. */
@@ -45,13 +57,14 @@ export const GET: APIRoute = async ({ request }) => {
       ['supabaseUrl', 'security_supabaseUrl', process.env.SUPABASE_URL],
       ['supabaseServiceRoleKey', 'security_supabaseServiceRoleKey', process.env.SUPABASE_SERVICE_ROLE_KEY],
     ];
-    const [resolved, brevo] = await Promise.all([
+    const [resolved, brevo, analytics] = await Promise.all([
       Promise.all(entries.map(([name, key, envVar]) => sourceFor(key, envVar).then((source) => [name, source] as const))),
       brevoSource(),
+      analyticsInfo(),
     ]);
     const status = Object.fromEntries(resolved) as Record<string, Source>;
 
-    return json({ ...status, brevo }, 200);
+    return json({ ...status, brevo, analytics }, 200);
   } catch (error) {
     return handleApiError(error, 'get integration status', request);
   }

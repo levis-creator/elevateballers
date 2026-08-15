@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
 import { isRegistrationOpen, registrationClosedMessage } from '../../../../lib/registration';
+import { trackEvent } from '../../../../lib/analytics';
 import { registrationToken, type PublicRegistrationSettings } from '../../../settings';
 
 interface League {
@@ -237,6 +238,7 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
       });
       setTeamTurnstileToken(null);
       setSuccess(registrationToken(settings.successBody, 'team'));
+      trackEvent('team_registration_submitted');
     } catch (err) {
       console.error('Error submitting team registration:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit team registration');
@@ -306,6 +308,7 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
       });
       setPlayerTurnstileToken(null);
       setSuccess(registrationToken(settings.successBody, 'player'));
+      trackEvent('player_registration_submitted');
     } catch (err) {
       console.error('Error submitting player registration:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit player registration');
