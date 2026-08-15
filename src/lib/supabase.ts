@@ -1,9 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { config } from 'dotenv';
+import dotenv from 'dotenv';
 import { getEnv } from './env';
 import { siteSettingsService } from '../features/settings';
 
-config();
+dotenv.config();
 
 export const STORAGE_BUCKET = 'ElevateBallers';
 

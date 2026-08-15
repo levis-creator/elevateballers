@@ -1,14 +1,14 @@
 // cPanel-specific Prisma client using CommonJS require
 import { createRequire } from 'node:module';
 import type { PrismaClient as PrismaClientInstance } from '@prisma/client';
-import { config } from 'dotenv';
+import dotenv from 'dotenv';
 
 const require = createRequire(import.meta.url);
 const { PrismaClient } = require('@prisma/client') as { PrismaClient: new (args?: object) => PrismaClientInstance };
 const { PrismaMariaDb } = require('@prisma/adapter-mariadb') as typeof import('@prisma/adapter-mariadb');
 
 // Load environment variables
-config();
+dotenv.config();
 
 interface GlobalWithPrisma {
     prisma?: PrismaClientInstance;
