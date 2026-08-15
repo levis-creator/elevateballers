@@ -417,6 +417,51 @@
   font-size: 14px;
 }
 
+.eb-session-history {
+  display: grid;
+  gap: 14px;
+  padding: 16px 0;
+}
+
+.eb-session-history-intro,
+.eb-session-history-muted {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.eb-session-history-error { color: #b42318; }
+.eb-session-history-list { display: grid; gap: 8px; }
+.eb-session-history-item {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) 2fr auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  padding: 12px;
+}
+.eb-session-history-item > div:first-child { display: grid; gap: 3px; }
+.eb-session-history-item span { color: var(--muted); font-size: 11px; }
+.eb-session-history-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.eb-session-history-item button,
+.eb-session-history-pagination button {
+  border: 1px solid var(--bord);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--tx);
+  font-size: 11px;
+}
+.eb-session-history-item button:hover,
+.eb-session-history-pagination button:hover { background: var(--site-paper-soft); }
+.eb-session-history-item button:disabled,
+.eb-session-history-pagination button:disabled { cursor: not-allowed; opacity: 0.5; }
+.eb-session-history-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
+
+@media (max-width: 700px) {
+  .eb-session-history-item { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 700px) {
   .eb-settings-security-overview {
     margin-inline: 16px;

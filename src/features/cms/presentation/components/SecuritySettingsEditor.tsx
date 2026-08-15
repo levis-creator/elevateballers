@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { usePermissions } from '@/features/rbac/usePermissions';
 import SettingsUnavailable from '@/features/settings/presentation/components/SettingsUnavailable';
+import SessionHistoryPanel from '@/features/settings/presentation/components/SessionHistoryPanel';
 
 const FIELDS = [
   { key: 'security_otpExpiryMinutes', label: 'OTP expiry duration', description: 'Minutes before a sign-in verification code expires.', min: 5, max: 30, defaultValue: '10' },
@@ -24,6 +25,7 @@ const GROUPS = [
   { id: 'overview', label: 'Overview' },
   { id: 'otp', label: 'OTP & Login Protection' },
   { id: 'sessions', label: 'Sessions' },
+  { id: 'history', label: 'Session history' },
   { id: 'passwords', label: 'Passwords', unavailable: true },
   { id: 'alerts', label: 'Alerts & Audit', unavailable: true },
   { id: 'uploads', label: 'Uploads & Integrations', unavailable: true },
@@ -188,7 +190,8 @@ export default function SecuritySettingsEditor() {
             )}
           </div>
         )}
-        {activeGroup !== 'overview' && activeGroup !== 'otp' && activeGroup !== 'sessions' && (
+        {activeGroup === 'history' && <SessionHistoryPanel canManage={canManage} />}
+        {activeGroup !== 'overview' && activeGroup !== 'otp' && activeGroup !== 'sessions' && activeGroup !== 'history' && (
           <SettingsUnavailable
             title={GROUPS.find((group) => group.id === activeGroup)?.label ?? 'Settings area'}
             description="This settings area is not configurable here yet."

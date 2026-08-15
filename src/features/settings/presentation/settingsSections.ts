@@ -715,8 +715,8 @@ export const SECTIONS: Section[] = [
       {
         label: 'Session history',
         fields: [],
-        available: false,
-        description: 'Per-device session visibility and selective revocation are not configurable yet; the active-session limit is enforced server-side in Sessions.',
+        available: true,
+        description: 'Review durable administrator sessions and revoke an active session when needed.',
       },
       {
         label: 'Rate limits',
