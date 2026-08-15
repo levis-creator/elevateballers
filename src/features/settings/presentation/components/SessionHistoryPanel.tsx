@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Session = {
   id: string;
@@ -13,6 +13,10 @@ type Session = {
 
 type Props = { canManage: boolean };
 
+/** Background refresh cadence — a security admin glances at this occasionally
+ *  rather than watching it live, so light polling (not a websocket) is enough. */
+const REFRESH_INTERVAL_MS = 30_000;
+
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString() : 'Not recorded';
 }
@@ -23,9 +27,11 @@ export default function SessionHistoryPanel({ canManage }: Props) {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const pageRef = useRef(page);
+  pageRef.current = page;
 
-  const load = useCallback(async (nextPage: number) => {
-    setLoading(true);
+  const load = useCallback(async (nextPage: number, { background = false }: { background?: boolean } = {}) => {
+    if (!background) setLoading(true);
     setError('');
     try {
       const response = await fetch(`/api/settings/sessions?page=${nextPage}`, { cache: 'no-store' });
@@ -35,13 +41,32 @@ export default function SessionHistoryPanel({ canManage }: Props) {
       setTotalPages(Math.max(1, result.totalPages ?? 1));
       setPage(nextPage);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load session history');
+      // Background refreshes fail silently — a transient blip shouldn't flash
+      // an error over data the admin is already looking at.
+      if (!background) setError(loadError instanceof Error ? loadError.message : 'Unable to load session history');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }, []);
 
   useEffect(() => { void load(1); }, [load]);
+
+  // Keep the currently-viewed page fresh without the admin having to reload:
+  // poll on an interval, and refetch immediately whenever the tab regains
+  // focus (covers "switched away and came back" without a wasted timer tick).
+  useEffect(() => {
+    const refresh = () => void load(pageRef.current, { background: true });
+    const interval = setInterval(refresh, REFRESH_INTERVAL_MS);
+    const onFocus = () => refresh();
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [load]);
 
   async function revoke(session: Session) {
     if (!window.confirm(`Revoke the session for ${session.user.email}? They will need to sign in again.`)) return;
