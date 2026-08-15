@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { getMatchWithFullDetails } from '../../../../features/cms/lib/queries';
 import { MATCH_TIMEZONE } from '../../../../features/matches/domain/usecases/utils';
+import {
+  siteSettingsService,
+  resolvePublicMatchPageSettings,
+  resolvePublicBrandSettings,
+  hexToRgbChannels,
+} from '../../../../features/settings';
 
 export const prerender = false;
 
@@ -85,29 +91,34 @@ interface CardOpts {
   team2Score: number | null;
   league: string;
   dateLine: string;
+  accent: AccentTheme;
+  watermark: string;
 }
 
+type AccentTheme = { hex: string; channels: string };
+
 // One half of the scoreboard — team name + score stacked vertically.
-// `winState` controls colour treatment: 'win' shows gold score,
+// `winState` controls colour treatment: 'win' shows the brand-accent score,
 // 'loss' shows muted score, 'tie'/'none' shows neutral.
 function buildTeamColumn(
   name: string,
   score: number | null,
   showScore: boolean,
   scoreState: 'win' | 'loss' | 'lead' | 'trail' | 'tie' | 'none',
+  accent: AccentTheme,
 ): any {
   const fontSize = fitTeamFontSize(name);
-  // win = brightest gold, lead = gold (less glow), tie/trail = neutral white,
+  // win = brightest accent, lead = accent (less glow), tie/trail = neutral white,
   // loss = muted gray. Loser only when COMPLETED — never during LIVE.
   const scoreColor =
     scoreState === 'win' || scoreState === 'lead'
-      ? '#ffba00'
+      ? accent.hex
       : scoreState === 'loss'
         ? '#64748b'
         : '#e2e8f0';
   const scoreGlow =
     scoreState === 'win'
-      ? '0 0 24px rgba(255, 186, 0, 0.4)'
+      ? `0 0 24px rgba(${accent.channels.replaceAll(' ', ', ')}, 0.4)`
       : 'none';
 
   return {
@@ -166,7 +177,8 @@ function buildTeamColumn(
 
 // Build the satori element tree (React-element shape, no JSX needed).
 function buildCard(opts: CardOpts): any {
-  const { team1Name, team2Name, status, team1Score, team2Score, league, dateLine } = opts;
+  const { team1Name, team2Name, status, team1Score, team2Score, league, dateLine, accent, watermark } = opts;
+  const accentRgb = accent.channels.replaceAll(' ', ', ');
   const showScore =
     (status === 'COMPLETED' || status === 'LIVE') &&
     team1Score != null &&
@@ -221,10 +233,10 @@ function buildCard(opts: CardOpts): any {
             showDot: false,
           }
         : {
-            bg: 'rgba(255, 186, 0, 0.15)',
-            color: '#ffba00',
+            bg: `rgba(${accentRgb}, 0.15)`,
+            color: accent.hex,
             label: 'UPCOMING',
-            border: 'rgba(255, 186, 0, 0.5)',
+            border: `rgba(${accentRgb}, 0.5)`,
             showDot: false,
           };
 
@@ -238,7 +250,7 @@ function buildCard(opts: CardOpts): any {
         height: '100%',
         backgroundColor: '#0f0d18',
         backgroundImage:
-          'radial-gradient(circle at 50% 0%, rgba(255, 186, 0, 0.20) 0%, rgba(255, 186, 0, 0) 55%), linear-gradient(180deg, #0f0d18 0%, #14111f 100%)',
+          `radial-gradient(circle at 50% 0%, rgba(${accentRgb}, 0.20) 0%, rgba(${accentRgb}, 0) 55%), linear-gradient(180deg, #0f0d18 0%, #14111f 100%)`,
         fontFamily: 'Rubik',
         color: '#f8fafc',
         padding: '44px 72px',
@@ -262,10 +274,10 @@ function buildCard(opts: CardOpts): any {
                   style: {
                     display: 'flex',
                     padding: '10px 32px',
-                    border: '1px solid rgba(255, 186, 0, 0.45)',
+                    border: `1px solid rgba(${accentRgb}, 0.45)`,
                     borderRadius: 9999,
                     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                    color: '#ffba00',
+                    color: accent.hex,
                     fontSize: 18,
                     fontWeight: 700,
                     letterSpacing: 6,
@@ -303,7 +315,7 @@ function buildCard(opts: CardOpts): any {
               padding: '8px 0',
             },
             children: [
-              buildTeamColumn(team1Name, team1Score, showScore, team1State),
+              buildTeamColumn(team1Name, team1Score, showScore, team1State, accent),
               // Center divider (vertical line + VS / dash glyph)
               {
                 type: 'div',
@@ -332,7 +344,7 @@ function buildCard(opts: CardOpts): any {
                   ],
                 },
               },
-              buildTeamColumn(team2Name, team2Score, showScore, team2State),
+              buildTeamColumn(team2Name, team2Score, showScore, team2State, accent),
             ],
           },
         },
@@ -409,12 +421,12 @@ function buildCard(opts: CardOpts): any {
                 props: {
                   style: {
                     display: 'flex',
-                    color: '#ffba00',
+                    color: accent.hex,
                     fontSize: 22,
                     fontWeight: 800,
                     letterSpacing: 6,
                   },
-                  children: 'ELEVATEBALLERS.COM',
+                  children: watermark,
                 },
               },
             ],
@@ -442,9 +454,17 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response('Match not found', { status: 404 });
   }
 
+  const [matchSettingRecords, brandSettingRecords] = await Promise.all([
+    siteSettingsService.list('match').catch(() => []),
+    siteSettingsService.list('brand').catch(() => []),
+  ]);
+  const matchSettings = resolvePublicMatchPageSettings(matchSettingRecords);
+  const brandSettings = resolvePublicBrandSettings(brandSettingRecords);
+  const accent: AccentTheme = { hex: brandSettings.brand, channels: hexToRgbChannels(brandSettings.brand) };
+
   const team1Name = match.team1Name || match.team1?.name || 'TBD';
   const team2Name = match.team2Name || match.team2?.name || 'TBD';
-  const league = match.league?.name || match.leagueName || 'Elevate Basketball';
+  const league = match.league?.name || match.leagueName || matchSettings.shareLeagueFallback;
   const status = match.status as 'UPCOMING' | 'LIVE' | 'COMPLETED';
   const dateObj = match.date ? new Date(match.date) : null;
   const dateLine = dateObj ? `${formatDate(dateObj)} · ${formatTime(dateObj)}` : '';
@@ -461,6 +481,8 @@ export const GET: APIRoute = async ({ params }) => {
         team2Score: match.team2Score,
         league,
         dateLine,
+        accent,
+        watermark: matchSettings.shareWatermark,
       }),
       {
         width: W,

@@ -35,6 +35,7 @@ import {
 	resolvePublicConsentSettings,
 	resolvePublicSystemSettings,
 	resolvePublicSeoSettings,
+	resolvePublicMatchPageSettings,
 	matchesSeoPath,
 	applyTitlePattern,
 	siteSettingsService,
@@ -123,7 +124,10 @@ const resolvedRobots = !seoSettings.indexing || isExcludedPath
 	? 'noindex, nofollow'
 	: robots;
 const matchSlug = /^\/matches\/([^/]+)\/?$/.exec(Astro.url.pathname)?.[1];
-const resolvedImage = image || (seoSettings.autoCards && matchSlug
+const matchAutoShareCards = matchSlug
+	? resolvePublicMatchPageSettings(await siteSettingsService.list("match").catch(() => [])).autoShareCards
+	: false;
+const resolvedImage = image || (matchAutoShareCards && matchSlug
 	? `/api/matches/${encodeURIComponent(matchSlug)}/og.png`
 	: seoSettings.ogImage);
 const themeStyle = [

@@ -421,10 +421,6 @@ export const SECTIONS: Section[] = [
             meta: 'Recommended · 1200 × 630',
             defaultValue: '/media/general/og-default-2026.jpg',
           }),
-          f('seo_autoCards', 'Auto match cards', 'Generates a share image with the scoreline and crests for match pages.', {
-            type: 'toggle',
-            defaultValue: 'true',
-          }),
           f('seo_twitterHandle', 'X handle for cards', 'Attributed on shared links.', {
             defaultValue: '@elevateballers',
           }),
@@ -1142,6 +1138,11 @@ export const SECTIONS: Section[] = [
       f('match_delay', 'Live score delay (seconds)', 'Buffer between the Live Console and the public page.', { defaultValue: '30' }),
       f('match_autoPublish', 'Auto-publish finals', 'Publishes when a scorer marks a match FINAL.', { type: 'toggle', defaultValue: 'false' }),
       f('match_liveBadge', 'Live badge', 'Shown on in-progress matches everywhere on the site.', { defaultValue: 'LIVE' }),
+    ] },
+    { label: 'Sharing', fields: [
+      f('match_autoShareCards', 'Auto share cards', 'Generates a scoreboard-style share image per match, used when a match link is shared.', { type: 'toggle', defaultValue: 'true' }),
+      f('match_shareWatermark', 'Card watermark', 'Printed at the bottom of the share image.', { defaultValue: 'ELEVATEBALLERS.COM' }),
+      f('match_shareLeagueFallback', 'League fallback name', 'Used on the share image when a match has no league name set.', { defaultValue: 'Elevate Basketball' }),
     ] },
   ], '/matches'),
   competition('leaders', 'Leaders', 'Statistical leaderboards, their categories and the qualification rule.', [

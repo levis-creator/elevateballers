@@ -4,7 +4,7 @@ import "../styles/design-system.css";
 import "../styles/landing-enhancements.css";
 import SEO from "../components/SEO.astro";
 import CookieConsent from "../components/CookieConsent.astro";
-import { matchesSeoPath, resolvePublicConsentSettings, resolvePublicSeoSettings, resolvePublicSystemSettings, siteSettingsService } from '@/features/settings';
+import { matchesSeoPath, resolvePublicConsentSettings, resolvePublicSeoSettings, resolvePublicSystemSettings, resolvePublicMatchPageSettings, siteSettingsService } from '@/features/settings';
 
 interface Props {
 	title?: string;
@@ -46,7 +46,10 @@ const resolvedTitle = title
 const isExcludedPath = seoSettings.noindexPaths.some(({ path }) => matchesSeoPath(Astro.url.pathname, path || ''));
 const resolvedRobots = !seoSettings.indexing || isExcludedPath ? 'noindex, nofollow' : robots;
 const matchSlug = /^\/matches\/([^/]+)\/?$/.exec(Astro.url.pathname)?.[1];
-const resolvedImage = image || (seoSettings.autoCards && matchSlug
+const matchAutoShareCards = matchSlug
+	? resolvePublicMatchPageSettings(await siteSettingsService.list('match').catch(() => [])).autoShareCards
+	: false;
+const resolvedImage = image || (matchAutoShareCards && matchSlug
 	? `/api/matches/${encodeURIComponent(matchSlug)}/og.png`
 	: seoSettings.ogImage);
 
