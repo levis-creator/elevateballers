@@ -230,7 +230,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 	try {
 		const [players, matches] = await Promise.all([
 			prisma.player.findMany({
-				where: { approved: true },
+				where: { approved: true, archived: false },
 				select: { id: true, slug: true, firstName: true, lastName: true, team: { select: { name: true } } },
 			}),
 			prisma.match.findMany({

@@ -2,13 +2,13 @@ import { prisma } from '../../../../../lib/prisma';
 import type { Player } from '../../../types';
 
 export async function getPlayers(teamId?: string, isAdmin = false): Promise<Player[]> {
-  const where: any = { ...(isAdmin ? {} : { approved: true }) };
+  const where: any = { ...(isAdmin ? {} : { approved: true, archived: false }) };
   if (teamId) where.teamId = teamId;
 
   const select: any = {
     id: true, slug: true, firstName: true, lastName: true, image: true,
     bio: true, height: true, weight: true, position: true, jerseyNumber: true,
-    stats: true, approved: true, teamId: true, createdAt: true, updatedAt: true,
+    stats: true, approved: true, archived: true, teamId: true, createdAt: true, updatedAt: true,
     team: { select: { id: true, name: true, slug: true, approved: true } },
   };
   if (isAdmin) { select.email = true; select.phone = true; }
@@ -23,7 +23,7 @@ export async function getPlayerById(id: string, isAdmin = false): Promise<Player
   const select: any = {
     id: true, slug: true, firstName: true, lastName: true, image: true,
     bio: true, height: true, weight: true, position: true, jerseyNumber: true,
-    stats: true, approved: true, teamId: true, createdAt: true, updatedAt: true, team: true,
+    stats: true, approved: true, archived: true, teamId: true, createdAt: true, updatedAt: true, team: true,
   };
   if (isAdmin) { select.email = true; select.phone = true; }
 
@@ -37,5 +37,5 @@ export async function getPlayerBySlug(slug: string): Promise<Player | null> {
     stats: true, approved: true, teamId: true, createdAt: true, updatedAt: true, team: true,
   };
 
-  return await prisma.player.findFirst({ where: { slug, approved: true }, select }) as unknown as Player | null;
+  return await prisma.player.findFirst({ where: { slug, approved: true, archived: false }, select }) as unknown as Player | null;
 }
