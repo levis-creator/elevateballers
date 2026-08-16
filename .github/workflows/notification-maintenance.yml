@@ -1,0 +1,26 @@
+name: Notification maintenance
+
+# Vercel's Hobby plan only allows cron jobs to run once a day, but match
+# reminders need an hourly check to go out close to their due time. This
+# workflow does the hourly ping instead, calling the same endpoint the
+# Vercel cron used to hit directly.
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call notification-maintenance endpoint
+        run: |
+          status=$(curl -s -o /tmp/response.txt -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://www.elevateballers.com/api/jobs/notification-maintenance")
+          echo "HTTP status: $status"
+          cat /tmp/response.txt
+          if [ "$status" -ge 400 ]; then
+            echo "::error::notification-maintenance returned HTTP $status"
+            exit 1
+          fi
