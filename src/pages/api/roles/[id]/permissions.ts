@@ -4,6 +4,8 @@ import { invalidatePermissionCache } from '../../../../features/rbac/permissions
 import { prisma } from '../../../../lib/prisma';
 import { getUserIdFromRequest, writeAuditLog } from '../../../../features/cms/lib/auth';
 import { json, handleApiError } from '../../../../lib/apiError';
+import { parseBody } from '../../../../lib/validateBody';
+import { SetRolePermissionsSchema } from '../../../../features/roles/domain/entities/role-editor';
 
 export const prerender = false;
 
@@ -79,18 +81,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const data = await request.json();
-    const { permissionIds } = data;
-
-    if (!Array.isArray(permissionIds)) {
-      return new Response(
-        JSON.stringify({ error: 'permissionIds must be an array' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    const { permissionIds } = await parseBody(request, SetRolePermissionsSchema);
 
     // Check if role exists
     const role = await prisma.role.findUnique({

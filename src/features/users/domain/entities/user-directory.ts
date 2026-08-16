@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type UserStatus = 'Active' | 'Pending' | 'Suspended';
 
 export interface RoleOption {
@@ -182,3 +184,17 @@ export const emptyUserDraft: UserDraft = {
 	lastActive: null,
 	signIns: 0,
 };
+
+// ---------------------------------------------------------------------------
+// Request validation schemas — source of truth for API route bodies
+// ---------------------------------------------------------------------------
+
+export const SetNotificationsSchema = z.object({
+	emailEnabled: z.boolean(),
+});
+export type SetNotificationsInput = z.infer<typeof SetNotificationsSchema>;
+
+export const SetCoachTeamsSchema = z.object({
+	teamIds: z.array(z.string()),
+});
+export type SetCoachTeamsInput = z.infer<typeof SetCoachTeamsSchema>;

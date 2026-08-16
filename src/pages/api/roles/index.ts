@@ -4,6 +4,8 @@ import { prisma } from '../../../lib/prisma';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
 import { handleApiError } from '../../../lib/apiError';
+import { parseBody } from '../../../lib/validateBody';
+import { CreateRoleSchema } from '../../../features/roles/domain/entities/role-editor';
 export const prerender = false;
 
 /**
@@ -59,15 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     await requirePermission(request, 'roles:create');
 
-    const data = await request.json();
-    const { name, description } = data;
-
-    if (!name || typeof name !== 'string') {
-      return new Response(JSON.stringify({ error: 'Name is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const { name, description } = await parseBody(request, CreateRoleSchema);
 
     // Check if role already exists
     const existing = await prisma.role.findUnique({
