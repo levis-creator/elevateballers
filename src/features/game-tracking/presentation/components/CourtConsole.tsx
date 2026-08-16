@@ -65,6 +65,25 @@ const TEAM_ONLY: ReadonlySet<EventType> = new Set([
   'FOUL_COACH_TECHNICAL',
 ]);
 
+const FOUL_SUBTYPES: Array<{ value: string; label: string }> = [
+  { value: 'PF1', label: 'PF1 · 1 shot' },
+  { value: 'PF2', label: 'PF2 · 2 shots' },
+  { value: 'PF3', label: 'PF3 · 3 shots' },
+];
+
+const TURNOVER_SUBTYPES: Array<{ value: string; label: string }> = [
+  { value: 'TRAVEL', label: 'Travel' },
+  { value: 'PASS', label: 'Bad pass' },
+  { value: 'DOUBLE_DRIBBLE', label: 'Double dribble' },
+  { value: 'CARRY', label: 'Carry' },
+  { value: 'OUT_OF_BOUNDS', label: 'Out of bounds' },
+  { value: 'BACKCOURT', label: 'Back-court' },
+  { value: 'SHOT_CLOCK', label: 'Shot clock' },
+  { value: 'THREE_SECOND', label: '3-sec violation' },
+  { value: 'OFFENSIVE_FOUL', label: 'Charge / off. foul' },
+  { value: 'ILLEGAL_SCREEN', label: 'Illegal screen' },
+];
+
 interface CourtConsoleProps {
   matchId: string;
   match: MatchWithGameState | null;
@@ -90,7 +109,17 @@ interface ReboundPrompt {
   minute: number;
 }
 
-type Prompt = AssistPrompt | ReboundPrompt | null;
+interface SubtypePrompt {
+  kind: 'foulSubtype' | 'turnoverSubtype';
+  eventType: EventType;
+  teamId: string;
+  playerId: string;
+  period: number;
+  secondsRemaining: number | null;
+  minute: number;
+}
+
+type Prompt = AssistPrompt | ReboundPrompt | SubtypePrompt | null;
 
 function computeGameMinute(
   period: number,
@@ -207,6 +236,7 @@ export default function CourtConsole({
     playerId?: string | null;
     description?: string | null;
     assistPlayerId?: string;
+    metadata?: Record<string, unknown>;
   }
 
   const postEvent = async (payload: EventPayload) => {
@@ -232,7 +262,7 @@ export default function CourtConsole({
     eventType: EventType,
     teamId: string,
     playerId: string | null,
-    extras?: Partial<Pick<EventPayload, 'description' | 'assistPlayerId'>>,
+    extras?: Partial<Pick<EventPayload, 'description' | 'assistPlayerId' | 'metadata'>>,
   ) => {
     const ctx = nowContext();
     const payload: EventPayload = {
@@ -287,6 +317,20 @@ export default function CourtConsole({
       return;
     }
 
+    if (eventType === 'FOUL_PERSONAL' || eventType === 'TURNOVER') {
+      const ctx = nowContext();
+      setPrompt({
+        kind: eventType === 'FOUL_PERSONAL' ? 'foulSubtype' : 'turnoverSubtype',
+        eventType,
+        teamId: armedTeamId,
+        playerId: armedPlayerId,
+        period: ctx.period,
+        secondsRemaining: ctx.secondsRemaining,
+        minute: ctx.minute,
+      });
+      return;
+    }
+
     recordEvent(eventType, armedTeamId, armedPlayerId);
     setFlash('Recorded');
 
@@ -311,12 +355,21 @@ export default function CourtConsole({
     }
   };
 
-  // Auto-dismiss compound prompts after 5s
+  // Auto-dismiss compound prompts after 5s. Foul/turnover prompts gate the
+  // underlying event itself (unlike assist/rebound, which are add-ons to an
+  // already-recorded event), so a silent dismiss must still record it —
+  // otherwise an unanswered prompt would just drop the PF/TO entirely.
   const promptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (promptTimer.current) clearTimeout(promptTimer.current);
     if (prompt) {
-      promptTimer.current = setTimeout(() => setPrompt(null), 5000);
+      promptTimer.current = setTimeout(() => {
+        if (prompt.kind === 'foulSubtype' || prompt.kind === 'turnoverSubtype') {
+          recordEvent(prompt.eventType, prompt.teamId, prompt.playerId);
+          setFlash('Recorded');
+        }
+        setPrompt(null);
+      }, 5000);
     }
     return () => {
       if (promptTimer.current) clearTimeout(promptTimer.current);
@@ -368,6 +421,14 @@ export default function CourtConsole({
     recordEvent(eventType, rebounderTeamId, rebounderPlayerId);
     setFlash(isOffensive ? 'OReb' : 'DReb');
     setArmedPlayerId(rebounderPlayerId);
+  };
+
+  const handleSubtype = (subtype: string | null) => {
+    if (!prompt || (prompt.kind !== 'foulSubtype' && prompt.kind !== 'turnoverSubtype')) return;
+    const { eventType, teamId, playerId } = prompt;
+    setPrompt(null);
+    recordEvent(eventType, teamId, playerId, subtype ? { metadata: { subtype } } : undefined);
+    setFlash('Recorded');
   };
 
   const possessionTeamId = gameState?.possessionTeamId ?? null;
@@ -539,6 +600,36 @@ export default function CourtConsole({
     );
   };
 
+  const renderSubtypePrompt = () => {
+    if (!prompt || (prompt.kind !== 'foulSubtype' && prompt.kind !== 'turnoverSubtype')) return null;
+    const isFoul = prompt.kind === 'foulSubtype';
+    const options = isFoul ? FOUL_SUBTYPES : TURNOVER_SUBTYPES;
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-400/30 bg-red-400/5 p-3">
+        <span className="font-heading text-xs uppercase tracking-[0.18em] text-red-200">
+          {isFoul ? 'Foul type?' : 'Turnover type?'}
+        </span>
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => handleSubtype(opt.value)}
+            className="rounded-md border border-red-400/40 bg-white/[0.05] px-2 py-1 text-sm text-white hover:bg-red-400/20"
+          >
+            {opt.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => handleSubtype(null)}
+          className="rounded-md border border-white/15 bg-white/[0.04] px-2 py-1 text-sm text-slate-300 hover:bg-white/[0.08]"
+        >
+          Skip
+        </button>
+      </div>
+    );
+  };
+
   return (
     <ArenaPanel>
       <ArenaPanelHeader>
@@ -607,7 +698,7 @@ export default function CourtConsole({
 
         {/* Compound prompts take priority over the action strip */}
         {prompt ? (
-          prompt.kind === 'assist' ? renderAssistPrompt() : renderReboundPrompt()
+          prompt.kind === 'assist' ? renderAssistPrompt() : prompt.kind === 'rebound' ? renderReboundPrompt() : renderSubtypePrompt()
         ) : (
           <div className="space-y-2">
             {/* Shots */}
