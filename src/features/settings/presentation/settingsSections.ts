@@ -258,7 +258,7 @@ export const SECTIONS: Section[] = [
           f(
             'footer_partners',
             'Partner strip',
-            'Renders active sponsors from the Sponsors collection.',
+            'Renders active partner logos from the Sponsors collection.',
             { type: 'toggle', defaultValue: 'true' }
           ),
           f('footer_partnersHeading', 'Strip heading', '', { defaultValue: 'Our Partners' }),
