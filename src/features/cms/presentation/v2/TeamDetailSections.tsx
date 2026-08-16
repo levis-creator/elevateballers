@@ -309,14 +309,14 @@ export function RosterSection({ team }: { team: TeamWithPlayers }) {
                         String((page - 1) * pageSize + index + 1).padStart(2, '0')}
                     </td>
                     <td>
-                      <div className="eb-player-cell">
+                      <a className="eb-player-cell" href={`/admin/players/${player.id}`}>
                         <Avatar
                           src={player.image ?? player.avatar ?? player.photo}
                           name={nameOf(player)}
                           className="eb-player-avatar"
                         />
                         <strong>{nameOf(player)}</strong>
-                      </div>
+                      </a>
                     </td>
                     <td className="roster-hide-medium">{player.position ?? '—'}</td>
                     <td className="roster-hide-large">{player.squad ?? 'First team'}</td>
@@ -350,17 +350,19 @@ export function RosterSection({ team }: { team: TeamWithPlayers }) {
           <div className="eb-roster-grid">
             {pageRows.map((player) => (
               <article className="eb-roster-card" key={player.id}>
-                <div className="eb-roster-avatar">
-                  <Avatar
-                    src={player.image ?? player.avatar ?? player.photo}
-                    name={nameOf(player)}
-                    className="eb-roster-avatar-content"
-                  />
-                </div>
-                <strong>{nameOf(player)}</strong>
-                <span>
-                  {player.position ?? 'Position not set'} · {player.height ?? 'Height —'}
-                </span>
+                <a className="eb-roster-card-link" href={`/admin/players/${player.id}`}>
+                  <div className="eb-roster-avatar">
+                    <Avatar
+                      src={player.image ?? player.avatar ?? player.photo}
+                      name={nameOf(player)}
+                      className="eb-roster-avatar-content"
+                    />
+                  </div>
+                  <strong>{nameOf(player)}</strong>
+                  <span>
+                    {player.position ?? 'Position not set'} · {player.height ?? 'Height —'}
+                  </span>
+                </a>
                 <footer>
                   {player.ppg ?? '—'} ppg · {player.gp ?? '—'} gp{' '}
                   <a className="eb-detail-small-button" href={`/admin/players/${player.id}`}>
@@ -410,7 +412,74 @@ export function RosterSection({ team }: { team: TeamWithPlayers }) {
   );
 }
 
+const STAFF_ROLES = [
+  'COACH',
+  'ASSISTANT_COACH',
+  'MANAGER',
+  'ASSISTANT_MANAGER',
+  'PHYSIOTHERAPIST',
+  'TRAINER',
+  'ANALYST',
+  'OTHER',
+] as const;
+
+function roleLabel(role: string) {
+  return role.replaceAll('_', ' ');
+}
+
+function staffName(staff: unknown): string {
+  const member: any = staff;
+  return (
+    (member?.name ?? `${member?.firstName ?? ''} ${member?.lastName ?? ''}`.trim()) ||
+    'Staff member'
+  );
+}
+
 export function StaffSection({ staff }: { staff: TeamStaffWithStaff[] }) {
+  const [editing, setEditing] = useState<TeamStaffWithStaff | null>(null);
+  const [role, setRole] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const openEdit = (item: TeamStaffWithStaff) => {
+    setError('');
+    setRole(item.role);
+    setEditing(item);
+  };
+
+  const saveRole = async () => {
+    if (!editing) return;
+    setSaving(true);
+    setError('');
+    const response = await fetch(`/api/teams/${editing.teamId}/staff`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamStaffId: editing.id, role }),
+    });
+    if (!response.ok) {
+      setError((await response.json().catch(() => ({}))).error || 'Unable to update role.');
+      setSaving(false);
+      return;
+    }
+    window.location.reload();
+  };
+
+  const removeStaff = async (item: TeamStaffWithStaff) => {
+    if (!window.confirm(`Remove ${staffName(item.staff)} from this team?`)) return;
+    setRemovingId(item.id);
+    const response = await fetch(
+      `/api/teams/${item.teamId}/staff?teamStaffId=${item.id}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok) {
+      setError((await response.json().catch(() => ({}))).error || 'Unable to remove staff member.');
+      setRemovingId(null);
+      return;
+    }
+    window.location.reload();
+  };
+
   return (
     <section>
       <SectionHead
@@ -422,12 +491,11 @@ export function StaffSection({ staff }: { staff: TeamStaffWithStaff[] }) {
           </button>
         }
       />
+      {error && <p className="eb-detail-dialog-error">{error}</p>}
       <div className="eb-staff-grid">
         {staff.map((item) => {
           const member: any = item.staff;
-          const name =
-            (member?.name ?? `${member?.firstName ?? ''} ${member?.lastName ?? ''}`.trim()) ||
-            'Staff member';
+          const name = staffName(item.staff);
           return (
             <article className="eb-staff-card" key={item.id}>
               <Avatar
@@ -436,15 +504,23 @@ export function StaffSection({ staff }: { staff: TeamStaffWithStaff[] }) {
                 className="eb-staff-avatar"
               />
               <strong>{name}</strong>
-              <em>{String(item.role).replaceAll('_', ' ')}</em>
+              <em>{roleLabel(item.role)}</em>
               <div>
                 {member?.email ?? 'No email'}
                 <br />
                 {member?.phone ?? 'No phone'}
               </div>
               <div className="eb-detail-action-group">
-                <button className="eb-detail-small-button">Edit</button>
-                <button className="eb-detail-small-button danger">Remove</button>
+                <button className="eb-detail-small-button" onClick={() => openEdit(item)}>
+                  Edit
+                </button>
+                <button
+                  className="eb-detail-small-button danger"
+                  onClick={() => void removeStaff(item)}
+                  disabled={removingId === item.id}
+                >
+                  {removingId === item.id ? 'Removing…' : 'Remove'}
+                </button>
               </div>
             </article>
           );
@@ -454,6 +530,44 @@ export function StaffSection({ staff }: { staff: TeamStaffWithStaff[] }) {
           <strong>Add staff member</strong>
         </button>
       </div>
+      {editing && (
+        <div
+          className="eb-detail-dialog-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setEditing(null);
+          }}
+        >
+          <div className="eb-detail-dialog">
+            <div className="eb-detail-dialog-head">
+              <div>
+                <small>Team staff</small>
+                <h3>Edit role · {staffName(editing.staff)}</h3>
+              </div>
+              <button onClick={() => setEditing(null)} aria-label="Close">
+                ×
+              </button>
+            </div>
+            <label>
+              Role
+              <select value={role} onChange={(event) => setRole(event.target.value)}>
+                {STAFF_ROLES.map((value) => (
+                  <option value={value} key={value}>
+                    {roleLabel(value)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {error && <p className="eb-detail-dialog-error">{error}</p>}
+            <div className="eb-detail-dialog-actions">
+              <button onClick={() => setEditing(null)}>Cancel</button>
+              <button className="eb-detail-primary" onClick={() => void saveRole()} disabled={saving}>
+                {saving ? 'Saving…' : 'Save role'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
