@@ -1,0 +1,159 @@
+/*
+ * Users v2 — admin People page. Scoped under .eb-root so it inherits the same
+ * dark/light tokens as the rest of the redesigned admin (see admin-v2.css).
+ * Reuses shared primitives (.eb-in, .eb-check, .eb-bulk-bar, .eb-kicker,
+ * .eb-primary-button, .eb-quiet-button, .eb-detail-*) where the shape already
+ * matches; only genuinely users-specific pieces (role chips, the coach team
+ * picker, the create/edit drawer) get their own classes here.
+ */
+.eb-users-page { color: var(--tx); font-family: "Archivo", sans-serif; }
+
+.eb-users-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.eb-users-heading h1 { margin: 6px 0 0; color: var(--tx); font: 34px/1 "Anton", sans-serif; text-transform: uppercase; }
+.eb-users-heading p { max-width: 620px; margin: 9px 0 0; color: var(--txm); font-size: 13.5px; line-height: 1.5; }
+
+.eb-users-counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.eb-users-count-card { display: block; width: 100%; text-align: left; border: 1px solid var(--bord); border-radius: 12px; background: var(--surf); padding: 13px 15px; cursor: pointer; }
+.eb-users-count-card.accent { border-color: rgb(var(--site-brand-rgb) / .35); background: rgb(var(--site-brand-rgb) / .07); }
+.eb-users-count-card > span { display: block; color: var(--faint); font: 9px "Space Mono", monospace; letter-spacing: .14em; text-transform: uppercase; }
+.eb-users-count-card > strong { display: block; margin-top: 6px; color: var(--tx); font: 25px/1 "Anton", sans-serif; }
+.eb-users-count-card.accent > strong { color: var(--brand); }
+.eb-users-count-card > small { display: block; margin-top: 4px; color: var(--txm); font-size: 11px; }
+@media (max-width: 1240px) { .eb-users-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .eb-users-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.eb-users-toolbar-card { border: 1px solid var(--bord); border-radius: 12px; background: var(--surf); padding: 11px; margin-bottom: 12px; }
+.eb-users-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.eb-users-toolbar select.eb-in { width: auto; min-width: 148px; padding: 8px 30px 8px 11px; font-size: 12.5px; }
+.eb-users-search { display: flex; min-width: 220px; flex: 1; align-items: center; gap: 9px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surf2); padding: 8px 11px; color: var(--txm); }
+.eb-users-search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--tx); font: 12.5px "Archivo", sans-serif; }
+.eb-users-search input::placeholder { color: var(--faint); }
+.eb-users-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 9px; border-top: 1px solid var(--bord2); padding-top: 9px; }
+.eb-users-chips > span:first-child { color: var(--faint); font: 9px "Space Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+.eb-users-chips button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgb(var(--site-brand-rgb) / .4); border-radius: 999px; background: rgb(var(--site-brand-rgb) / .12); color: var(--brandsoft); padding: 4px 9px 4px 11px; font: 11.5px "Archivo", sans-serif; font-weight: 600; cursor: pointer; }
+.eb-users-clear-all { border: 0 !important; background: transparent !important; color: var(--faint) !important; padding: 4px 0 !important; font: 9.5px "Space Mono", monospace !important; text-transform: uppercase; letter-spacing: .1em; }
+
+.eb-users-bulk-role-select { min-width: 160px; }
+
+.eb-users-table-wrap { border: 1px solid var(--bord); border-radius: 14px; background: var(--surf); overflow: hidden; }
+.eb-users-table { width: 100%; border-collapse: collapse; }
+.eb-users-table th { background: var(--surf2); color: var(--txm); border-bottom: 1px solid var(--bord); padding: 11px 12px; text-align: left; font: 10px "Space Mono", monospace; letter-spacing: .11em; text-transform: uppercase; }
+.eb-users-table td { border-bottom: 1px solid var(--bord2); padding: 10px 12px; vertical-align: middle; font-size: 12.5px; }
+.eb-users-table th.check, .eb-users-table td.check { width: 44px; padding-left: 16px; }
+.eb-users-table tbody tr:hover { background: var(--hov); }
+.eb-users-table td.actions { text-align: right; }
+
+.eb-user-cell { display: flex; width: 100%; align-items: center; gap: 11px; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; }
+.eb-user-avatar { display: flex; align-items: center; justify-content: center; flex: none; width: 34px; height: 34px; border-radius: 999px; color: #fff; background: var(--faint); font: 13px "Anton", sans-serif; letter-spacing: .02em; }
+.eb-user-avatar.admin { background: var(--brand); }
+.eb-user-cell-copy { min-width: 0; }
+.eb-user-name-row { display: flex; align-items: center; gap: 7px; }
+.eb-user-name-row strong { overflow: hidden; color: var(--tx); font-size: 13.5px; text-overflow: ellipsis; white-space: nowrap; }
+.eb-user-name-row em { flex-shrink: 0; border: 1px solid var(--bord); border-radius: 4px; padding: 1px 5px; color: var(--txm); font: 8.5px "Space Mono", monospace; font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.eb-user-cell-copy small { display: block; overflow: hidden; margin-top: 2px; color: var(--txm); font: 10.5px "Space Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
+.eb-user-cell-copy small.eb-user-scope { color: var(--brandsoft); }
+
+.eb-user-roles { display: flex; flex-wrap: wrap; gap: 5px; }
+.eb-role-chip { display: inline-flex; align-items: center; border: 1px solid var(--bord); border-radius: 6px; background: var(--surf2); color: var(--txd); padding: 3px 8px; font: 11px "Archivo", sans-serif; font-weight: 600; white-space: nowrap; }
+.eb-role-chip.admin { border-color: rgb(var(--site-brand-rgb) / .4); background: rgb(var(--site-brand-rgb) / .12); color: var(--brand); }
+.eb-role-chip.muted { color: var(--faint); }
+
+.eb-user-mono { color: var(--txm); font: 10.5px "Space Mono", monospace; }
+.eb-user-status { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font: 9.5px "Space Mono", monospace; text-transform: uppercase; letter-spacing: .08em; background: var(--chip); color: var(--txd); }
+.eb-user-status.pending, .eb-user-status.suspended { background: rgb(var(--site-brand-rgb) / .12); color: var(--brand); }
+
+.eb-users-row-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+.eb-users-empty, .eb-users-loading, .eb-users-error { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 220px; border: 1px solid var(--bord); border-radius: 14px; background: var(--surf); padding: 32px; color: var(--txm); text-align: center; }
+.eb-users-empty strong, .eb-users-error strong { color: var(--tx); font: 20px "Anton", sans-serif; text-transform: uppercase; }
+.eb-users-empty span { max-width: 340px; }
+.eb-users-empty-actions { display: flex; gap: 8px; margin-top: 4px; }
+.eb-users-error button { border: 1px solid var(--bord); border-radius: 6px; background: var(--surf2); color: var(--txd); padding: 7px 11px; cursor: pointer; }
+.eb-users-loading div { height: 90px; border-radius: 14px; background: linear-gradient(90deg, var(--surf2), var(--chip), var(--surf2)); background-size: 200% 100%; animation: eb-users-shimmer 1.2s infinite; }
+@keyframes eb-users-shimmer { to { background-position: -200% 0; } }
+
+/* Create / edit drawer */
+.eb-users-drawer-overlay { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; }
+.eb-users-drawer-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .55); }
+.eb-users-drawer { position: relative; display: flex; width: 560px; max-width: 100%; height: 100%; flex-direction: column; overflow-y: auto; border-left: 1px solid var(--bord); background: var(--surf); box-shadow: 0 0 60px rgba(0, 0, 0, .5); }
+.eb-users-drawer-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--bord2); background: var(--surf); padding: 16px 20px; }
+.eb-users-drawer-title { margin-top: 4px; color: var(--tx); font: 24px/1 "Anton", sans-serif; text-transform: uppercase; }
+.eb-users-drawer-note { margin-top: 6px; color: var(--txm); font-size: 12px; }
+.eb-users-drawer-body { flex: 1; padding: 18px 20px; }
+
+.eb-users-section-label { color: var(--faint); font: 9.5px "Space Mono", monospace; letter-spacing: .18em; text-transform: uppercase; }
+.eb-users-section-label-spaced { margin-top: 22px; display: block; }
+.eb-users-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+.eb-users-hint { color: var(--faint); font: 9.5px "Space Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+.eb-users-hint.error { color: var(--brand); }
+
+.eb-users-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.eb-users-field { display: block; margin-top: 12px; }
+.eb-users-field > span { display: block; margin-bottom: 6px; color: var(--tx); font: 12px "Archivo", sans-serif; font-weight: 700; }
+.eb-users-field > span > em { color: var(--txm); font-style: normal; font-weight: 400; }
+.eb-users-field-error { display: block; margin-top: 6px; color: var(--brand); font-size: 11px; }
+.eb-users-grid-2 .eb-users-field { margin-top: 0; }
+
+.eb-users-role-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.eb-users-role-card { display: flex; width: 100%; gap: 12px; border: 1px solid var(--bord); border-radius: 11px; background: var(--surf2); padding: 12px 14px; text-align: left; cursor: pointer; }
+.eb-users-role-card.on { border-color: var(--brand); background: rgb(var(--site-brand-rgb) / .07); }
+.eb-users-role-box { display: flex; flex: none; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border: 1px solid var(--bord); border-radius: 5px; color: #fff; font: 10px "Space Mono", monospace; }
+.eb-users-role-box.on { border-color: var(--brand); background: var(--brand); }
+.eb-users-role-copy { min-width: 0; flex: 1; }
+.eb-users-role-top { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.eb-users-role-name { color: var(--tx); font: 13px "Archivo", sans-serif; font-weight: 700; }
+.eb-users-role-badge { display: inline-flex; border-radius: 999px; background: rgb(var(--site-brand-rgb) / .14); color: var(--brand); padding: 2px 7px; font: 8.5px "Space Mono", monospace; text-transform: uppercase; letter-spacing: .08em; }
+.eb-users-role-desc { display: block; margin-top: 4px; color: var(--txm); font-size: 11.5px; line-height: 1.4; }
+.eb-users-warning { margin-top: 10px; border: 1px solid rgb(var(--site-brand-rgb) / .4); border-radius: 8px; background: rgb(var(--site-brand-rgb) / .1); color: var(--brand); padding: 10px 14px; font-size: 11.5px; line-height: 1.4; }
+
+.eb-users-team-picker { margin-top: 12px; border: 1px solid var(--bord2); border-radius: 12px; background: var(--surf2); padding: 14px; }
+.eb-users-team-picker-label { display: block; margin-bottom: 9px; color: var(--tx); font: 12px "Archivo", sans-serif; font-weight: 700; }
+.eb-users-team-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+.eb-users-team-chips button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgb(var(--site-brand-rgb) / .4); border-radius: 999px; background: rgb(var(--site-brand-rgb) / .12); color: var(--brand); padding: 4px 9px 4px 11px; font: 11.5px "Archivo", sans-serif; font-weight: 600; cursor: pointer; }
+.eb-users-team-search { display: flex; align-items: center; gap: 9px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surf); padding: 8px 11px; }
+.eb-users-team-search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--tx); font: 12.5px "Archivo", sans-serif; }
+.eb-users-team-search button { border: 0; background: transparent; color: var(--txm); cursor: pointer; }
+.eb-users-team-results { max-height: 212px; overflow-y: auto; margin-top: 8px; border: 1px solid var(--bord2); border-radius: 8px; }
+.eb-users-team-result { display: flex; width: 100%; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid var(--bord2); background: transparent; padding: 9px 13px; text-align: left; cursor: pointer; }
+.eb-users-team-result:last-child { border-bottom: 0; }
+.eb-users-team-result.on { background: rgb(var(--site-brand-rgb) / .07); }
+.eb-users-team-result:disabled { cursor: not-allowed; opacity: .4; }
+.eb-users-team-result span { min-width: 0; flex: 1; overflow: hidden; color: var(--tx); font: 12.5px "Archivo", sans-serif; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.eb-users-team-result em { flex: none; color: var(--faint); font: 9.5px "Space Mono", monospace; font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.eb-users-team-note { margin: 10px 0 0; color: var(--txm); font-size: 11.5px; line-height: 1.4; }
+
+.eb-users-panel { margin-top: 12px; border: 1px solid var(--bord2); border-radius: 12px; background: var(--surf2); padding: 14px; }
+.eb-users-panel-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.eb-users-panel-row span:first-child { color: var(--tx); font: 12.5px "Archivo", sans-serif; font-weight: 700; }
+.eb-users-panel p { margin: 6px 0 0; color: var(--txm); font-size: 11.5px; line-height: 1.4; }
+.eb-users-pill { display: inline-flex; align-items: center; border-radius: 999px; background: var(--chip); color: var(--txd); padding: 3px 9px; font: 9px "Space Mono", monospace; text-transform: uppercase; letter-spacing: .08em; }
+
+.eb-users-toggle-row { display: flex; align-items: flex-start; gap: 12px; margin-top: 12px; border: 1px solid var(--bord2); border-radius: 10px; background: var(--surf2); padding: 12px 14px; }
+.eb-users-toggle-row strong { display: block; color: var(--tx); font: 12.5px "Archivo", sans-serif; }
+.eb-users-toggle-row small { display: block; margin-top: 3px; color: var(--txm); font-size: 11.5px; line-height: 1.4; }
+.eb-users-switch { position: relative; display: inline-flex; flex: none; align-items: center; width: 42px; height: 24px; border: 0; border-radius: 999px; background: var(--chip); padding: 3px; cursor: pointer; }
+.eb-users-switch.on { background: var(--brand); }
+.eb-users-switch span { display: block; width: 18px; height: 18px; border-radius: 999px; background: #fff; transition: transform .14s; }
+.eb-users-switch.on span { transform: translateX(18px); }
+
+.eb-users-account-panel { margin-top: 22px; }
+.eb-users-facts { margin-top: 10px; }
+.eb-users-facts div span { display: block; color: var(--faint); font: 9px "Space Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+.eb-users-facts div strong { display: block; margin-top: 3px; color: var(--txd); font: 12px "Archivo", sans-serif; font-weight: 600; }
+.eb-users-account-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; border-top: 1px solid var(--bord2); padding-top: 14px; }
+.eb-users-danger-button { border: 1px solid rgb(var(--site-brand-rgb) / .4); border-radius: 9px; background: rgb(var(--site-brand-rgb) / .1); color: var(--brand); padding: 8px 14px; font: 12px "Archivo", sans-serif; font-weight: 700; cursor: pointer; }
+.eb-users-danger-button:disabled { cursor: not-allowed; opacity: .45; }
+.eb-users-account-note { margin-top: 8px; color: var(--txm); font-size: 11px; }
+
+.eb-users-drawer-foot { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--bord2); background: var(--surf); padding: 13px 20px; }
+.eb-users-save-hint { color: var(--faint); font: 9.5px "Space Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+.eb-users-drawer-foot-actions { display: flex; align-items: center; gap: 8px; }
+.eb-users-drawer-foot-actions .eb-primary-button:disabled { cursor: not-allowed; opacity: .45; }
+
+.eb-users-toast { position: fixed; bottom: 24px; right: 24px; z-index: 70; border: 1px solid var(--bord); border-radius: 12px; background: var(--surf); color: var(--tx); padding: 12px 16px; font: 12.5px "Archivo", sans-serif; font-weight: 600; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); pointer-events: none; }
+
+@media (max-width: 720px) {
+	.eb-users-heading { flex-direction: column; align-items: flex-start; }
+	.eb-users-grid-2 { grid-template-columns: 1fr; }
+	.eb-users-drawer { width: 100%; }
+}

@@ -3,6 +3,7 @@ import { requirePermission } from '../../../../features/rbac/middleware';
 import { invalidatePermissionCache } from '../../../../features/rbac/permissions';
 import { prisma } from '../../../../lib/prisma';
 import { json, handleApiError } from '../../../../lib/apiError';
+import { ADMIN_ROLE_NAME, COACH_ROLE_NAME } from '../../../../features/users/domain/entities/user-directory';
 
 export const prerender = false;
 
@@ -67,6 +68,22 @@ export const PUT: APIRoute = async ({ params, request }) => {
       );
     }
 
+    const nextRoleNames = new Set(roles.map((r) => r.name));
+
+    // Losing Admin would lock everyone out if this is the last admin account.
+    if (!nextRoleNames.has(ADMIN_ROLE_NAME)) {
+      const wasAdmin = await prisma.userRole.findFirst({ where: { userId, role: { name: ADMIN_ROLE_NAME } } });
+      if (wasAdmin) {
+        const otherAdmins = await prisma.userRole.count({ where: { role: { name: ADMIN_ROLE_NAME }, userId: { not: userId } } });
+        if (otherAdmins === 0) {
+          return new Response(
+            JSON.stringify({ error: 'This is the last admin account — it must keep the Admin role.' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     // Remove all existing roles for this user
     await prisma.userRole.deleteMany({
       where: { userId },
@@ -76,6 +93,15 @@ export const PUT: APIRoute = async ({ params, request }) => {
     if (roleIds.length > 0) {
       await prisma.userRole.createMany({
         data: roleIds.map((roleId: string) => ({ userId, roleId })),
+      });
+    }
+
+    // A coach's club scope only makes sense while they hold the role — drop it
+    // once Team Coach is removed rather than leaving stale TeamOwnership rows.
+    if (!nextRoleNames.has(COACH_ROLE_NAME)) {
+      await prisma.teamOwnership.updateMany({
+        where: { userId, role: COACH_ROLE_NAME, revokedAt: null },
+        data: { revokedAt: new Date() },
       });
     }
 
