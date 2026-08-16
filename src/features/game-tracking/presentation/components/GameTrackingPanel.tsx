@@ -14,6 +14,8 @@ import PlayByPlayLog from './PlayByPlayLog';
 import TimeoutControls from './TimeoutControls';
 import SubstitutionPanel from './SubstitutionPanel';
 import QuickEventButtons from './QuickEventButtons';
+import MatchPlayersManager from '../../../cms/presentation/components/MatchPlayersManager';
+import { Users } from 'lucide-react';
 import { useGameTrackingStore } from '../../stores/useGameTrackingStore';
 import { AlertCircle } from 'lucide-react';
 import { offlineStore } from '../../lib/offlineStore';
@@ -41,6 +43,7 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
   const [eventsRefreshTrigger, setEventsRefreshTrigger] = useState(0);   // play-by-play
   const [timerWarning, setTimerWarning] = useState<string | null>(null);
   const [isEndingGame, setIsEndingGame] = useState(false);
+  const [showRosterManager, setShowRosterManager] = useState(false);
 
   // Match players come directly from the parent (MatchDetailView owns the
   // roster card and refetches after every edit). Reading them here means any
@@ -276,6 +279,31 @@ export default function GameTrackingPanel({ matchId, match, onRefresh }: GameTra
         onEventRecorded={handleEventRecorded}
         matchPlayers={matchPlayers}
       />
+
+      {/* Roster manager — lets the scorekeeper add/remove players and flip
+          starters without leaving the live console for the separate
+          pre-game editor. Collapsed by default to keep the console compact. */}
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowRosterManager((v) => !v)}
+        >
+          <Users className="mr-2 h-4 w-4" />
+          {showRosterManager ? 'Hide roster manager' : 'Manage roster / starters'}
+        </Button>
+        {showRosterManager && (
+          <div className="mt-3">
+            <MatchPlayersManager
+              matchId={matchId}
+              team1Id={match?.team1Id}
+              team2Id={match?.team2Id}
+              onPlayerAdded={handleSubstitutionRecorded}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Secondary controls — substitutions and timeouts live below. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -46,10 +46,15 @@ export default function TeamSquad({ players, playerCount, settings }: Props) {
 					</div>
 				) : settings.squadLayout === 'Card grid' ? (
 					<div className="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
-						{visiblePlayers.map((p) => <a key={p.id} href={p.href} className="overflow-hidden rounded-2xl border border-black/10 bg-white p-4 text-center no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40">
-							{p.image ? <img src={p.image} alt={p.name} loading="lazy" className="mx-auto h-24 w-24 rounded-full border border-black/10 object-cover" /> : <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full font-display text-[28px] text-muted2" style={{ background: STRIPE }}>{p.initials}</span>}
-							<span className="mt-4 block font-body text-[15px] font-extrabold text-ink2">{p.name}</span>
-							{cardStat(p) && <span className="mt-1 block font-mono text-[11px] uppercase text-brand">{cardStat(p)}</span>}
+						{visiblePlayers.map((p) => <a key={p.id} href={p.href} className="group overflow-hidden rounded-2xl border border-black/10 bg-white text-center no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] transition-colors hover:border-brand/40">
+							<div className="relative aspect-square w-full overflow-hidden bg-paper2">
+								{p.image ? <img src={p.image} alt={p.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" /> : <span className="flex h-full w-full items-center justify-center font-display text-[48px] text-muted2" style={{ background: STRIPE }}>{p.initials}</span>}
+								<span className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-ink font-display text-[14px] text-white shadow-[0_1px_2px_rgb(0_0_0/0.2)]">{p.jersey}</span>
+							</div>
+							<div className="p-4">
+								<span className="block font-body text-[15px] font-extrabold text-ink2">{p.name}</span>
+								{cardStat(p) && <span className="mt-1 block font-mono text-[11px] uppercase text-brand">{cardStat(p)}</span>}
+							</div>
 						</a>)}
 					</div>
 				) : tab === "roster" ? (
