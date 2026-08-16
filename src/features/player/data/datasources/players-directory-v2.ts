@@ -52,7 +52,7 @@ export async function fetchPlayersDirectory(): Promise<PlayersDirectoryData | nu
 	try {
 		const [players, matches, season] = await Promise.all([
 			prisma.player.findMany({
-				where: { approved: true },
+				where: { approved: true, archived: false },
 				select: {
 					id: true,
 					slug: true,

@@ -300,6 +300,7 @@ export type CreatePlayerInput = {
   jerseyNumber?: number;
   stats?: Record<string, any>;
   approved?: boolean;
+  archived?: boolean;
 };
 
 export type UpdatePlayerInput = Partial<CreatePlayerInput>;

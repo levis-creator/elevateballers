@@ -76,7 +76,7 @@ export async function getTeamBySlug(slug: string): Promise<TeamWithPlayers | nul
       id: true, name: true, slug: true, logo: true, description: true,
       approved: true, createdAt: true, updatedAt: true,
       players: {
-        where: { approved: true },
+        where: { approved: true, archived: false },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         select: {
           id: true, slug: true, firstName: true, lastName: true, image: true,

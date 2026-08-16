@@ -783,6 +783,7 @@ model Player {
   jerseyNumber                    Int?                             @map("jersey_number")
   stats                           Json?
   approved                        Boolean                          @default(false)
+  archived                        Boolean                          @default(false)
   createdAt                       DateTime                         @default(now()) @map("created_at")
   updatedAt                       DateTime                         @updatedAt @map("updated_at")
   teamId                          String?                          @map("team_id")
@@ -815,6 +816,7 @@ model Player {
   @@index([teamId])
   @@index([slug])
   @@index([approved])
+  @@index([archived])
   @@map("players")
 }
 
