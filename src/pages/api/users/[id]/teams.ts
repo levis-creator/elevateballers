@@ -2,7 +2,8 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
 import { handleApiError } from '../../../../lib/apiError';
-import { COACH_ROLE_NAME, MAX_COACH_TEAMS } from '../../../../features/users/domain/entities/user-directory';
+import { COACH_ROLE_NAME, MAX_COACH_TEAMS, SetCoachTeamsSchema } from '../../../../features/users/domain/entities/user-directory';
+import { parseBody } from '../../../../lib/validateBody';
 
 export const prerender = false;
 
@@ -23,8 +24,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const data = await request.json();
-    const teamIds: string[] = Array.isArray(data.teamIds) ? data.teamIds : [];
+    const { teamIds } = await parseBody(request, SetCoachTeamsSchema);
 
     if (teamIds.length > MAX_COACH_TEAMS) {
       return new Response(JSON.stringify({ error: `A ${COACH_ROLE_NAME} can hold at most ${MAX_COACH_TEAMS} clubs` }), {

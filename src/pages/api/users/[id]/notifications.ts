@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { prisma } from '../../../../lib/prisma';
 import { handleApiError } from '../../../../lib/apiError';
+import { parseBody } from '../../../../lib/validateBody';
+import { SetNotificationsSchema } from '../../../../features/users/domain/entities/user-directory';
 
 export const prerender = false;
 
@@ -21,13 +23,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const data = await request.json();
-    if (typeof data.emailEnabled !== 'boolean') {
-      return new Response(JSON.stringify({ error: 'emailEnabled must be a boolean' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const data = await parseBody(request, SetNotificationsSchema);
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) {

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export interface PermissionOption {
 	id: string;
 	resource: string;
@@ -141,3 +143,24 @@ export function filterRoles(roles: RoleRow[], search: string, kind: RoleKindFilt
 		return true;
 	});
 }
+
+// ---------------------------------------------------------------------------
+// Request validation schemas — source of truth for API route bodies
+// ---------------------------------------------------------------------------
+
+export const CreateRoleSchema = z.object({
+	name: z.string().min(1, 'Name is required'),
+	description: z.string().optional(),
+});
+export type CreateRoleInput = z.infer<typeof CreateRoleSchema>;
+
+export const UpdateRoleSchema = z.object({
+	name: z.string().min(1).optional(),
+	description: z.string().optional(),
+});
+export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>;
+
+export const SetRolePermissionsSchema = z.object({
+	permissionIds: z.array(z.string()),
+});
+export type SetRolePermissionsInput = z.infer<typeof SetRolePermissionsSchema>;

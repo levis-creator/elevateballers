@@ -1,9 +1,12 @@
+import { ZodError } from 'zod';
+
 /**
  * Shared API error handling utilities.
  *
  * Centralises HTTP status mapping so route catch blocks stay small and consistent.
  * Handles:
  *   - Auth/permission errors thrown by requirePermission()
+ *   - Zod validation errors (parseBody) → 400 Bad Request with field-level issues
  *   - Prisma P2002 (unique constraint) → 409 Conflict
  *   - Prisma P2025 (record not found) → 404 Not Found
  *   - LeagueSeasonScopeError → 400 Bad Request
@@ -43,6 +46,11 @@ export function handleApiError(error: unknown, context: string, request?: Reques
     (error.name === 'LeagueSeasonScopeError' || error.name === 'FixtureScopeError')
   ) {
     return json({ error: msg }, 400);
+  }
+
+  // Validation errors thrown by parseBody() / schema.parse()
+  if (error instanceof ZodError) {
+    return json({ error: 'Validation failed', issues: error.flatten().fieldErrors }, 400);
   }
 
   // Prisma known-error codes
