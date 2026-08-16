@@ -4,6 +4,8 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { getUserIdFromRequest, invalidateSessions, writeAuditLog } from '../../../features/cms/lib/auth';
 import { sendEmailChangedAlert } from '../../../lib/email';
 import { handleApiError } from '../../../lib/apiError';
+import { userSelect, toUserRow } from '../../../features/users/data/datasources/queries/user-row';
+import { ADMIN_ROLE_NAME } from '../../../features/users/domain/entities/user-directory';
 
 export const prerender = false;
 
@@ -20,35 +22,7 @@ export const GET: APIRoute = async ({ request, params }) => {
             });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                active: true,
-                activatedAt: true,
-                createdAt: true,
-                updatedAt: true,
-                userRoles: {
-                    select: {
-                        role: {
-                            select: {
-                                id: true,
-                                name: true,
-                                description: true,
-                            }
-                        }
-                    }
-                },
-                _count: {
-                    select: {
-                        newsArticles: true,
-                        uploadedMedia: true,
-                    }
-                }
-            },
-        });
+        const user = await prisma.user.findUnique({ where: { id }, select: userSelect });
 
         if (!user) {
             return new Response(JSON.stringify({ error: 'User not found' }), {
@@ -57,13 +31,7 @@ export const GET: APIRoute = async ({ request, params }) => {
             });
         }
 
-        const transformedUser = {
-            ...user,
-            roles: user.userRoles.map(ur => ur.role),
-            userRoles: undefined,
-        };
-
-        return new Response(JSON.stringify(transformedUser), {
+        return new Response(JSON.stringify(await toUserRow(user)), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
@@ -73,7 +41,7 @@ export const GET: APIRoute = async ({ request, params }) => {
     }
 };
 
-// PUT /api/users/[id] - Update user (name, email, active status)
+// PUT /api/users/[id] - Update user (name, email, phone, active status)
 export const PUT: APIRoute = async ({ request, params }) => {
     try {
         await requirePermission(request, 'users:update');
@@ -112,36 +80,31 @@ export const PUT: APIRoute = async ({ request, params }) => {
             name: data.name,
             email: data.email,
         };
+        if (typeof data.phone === 'string' || data.phone === null) {
+            updateData.phone = data.phone || null;
+        }
 
+        // Suspending the last remaining admin would lock everyone out of the CMS.
         const deactivating = typeof data.active === 'boolean' && !data.active && existing.active;
+        if (deactivating) {
+            const adminRoleCount = await prisma.userRole.count({
+                where: { role: { name: ADMIN_ROLE_NAME }, user: { active: true, id: { not: id } } },
+            });
+            const isLastAdmin = adminRoleCount === 0 && (await prisma.userRole.count({ where: { userId: id, role: { name: ADMIN_ROLE_NAME } } })) > 0;
+            if (isLastAdmin) {
+                return new Response(
+                    JSON.stringify({ error: 'This is the last admin account — suspending it would lock everyone out.' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+        }
         if (typeof data.active === 'boolean') {
             updateData.active = data.active;
         }
 
         const adminId = getUserIdFromRequest(request) ?? 'unknown';
 
-        const updatedUser = await prisma.user.update({
-            where: { id },
-            data: updateData,
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                active: true,
-                updatedAt: true,
-                userRoles: {
-                    select: {
-                        role: {
-                            select: {
-                                id: true,
-                                name: true,
-                                description: true,
-                            }
-                        }
-                    }
-                },
-            }
-        });
+        await prisma.user.update({ where: { id }, data: updateData });
 
         // Invalidate all sessions if user was deactivated
         if (deactivating) {
@@ -171,19 +134,15 @@ export const PUT: APIRoute = async ({ request, params }) => {
             });
 
             sendEmailChangedAlert({
-                name: updatedUser.name,
+                name: data.name ?? existing.name,
                 oldEmail: existing.email,
                 newEmail: data.email,
             }).catch((err) => console.error('[users] Email change alert failed:', err));
         }
 
-        const response = {
-            ...updatedUser,
-            roles: updatedUser.userRoles.map(ur => ur.role),
-            userRoles: undefined,
-        };
+        const updated = await prisma.user.findUnique({ where: { id }, select: userSelect });
 
-        return new Response(JSON.stringify(response), {
+        return new Response(JSON.stringify(updated ? await toUserRow(updated) : null), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
@@ -208,14 +167,42 @@ export const DELETE: APIRoute = async ({ request, params }) => {
         }
 
         const adminId = getUserIdFromRequest(request) ?? 'unknown';
-        const target = await prisma.user.findUnique({ where: { id }, select: { email: true, name: true } });
+
+        if (adminId === id) {
+            return new Response(JSON.stringify({ error: 'You cannot remove your own account.' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        const target = await prisma.user.findUnique({
+            where: { id },
+            select: { email: true, name: true, userRoles: { select: { role: { select: { name: true } } } } },
+        });
+        if (!target) {
+            return new Response(JSON.stringify({ error: 'User not found' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        const targetIsAdmin = target.userRoles.some((ur) => ur.role.name === ADMIN_ROLE_NAME);
+        if (targetIsAdmin) {
+            const otherAdmins = await prisma.userRole.count({
+                where: { role: { name: ADMIN_ROLE_NAME }, userId: { not: id } },
+            });
+            if (otherAdmins === 0) {
+                return new Response(
+                    JSON.stringify({ error: 'This is the last admin account — removing it would lock everyone out.' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } }
+                );
+            }
+        }
 
         await prisma.user.delete({ where: { id } });
 
-        if (target) {
-            // Best-effort audit log — user row is gone so we write to a generic entry
-            await writeAuditLog(id, 'USER_DELETED', adminId, { email: target.email, name: target.name }).catch(() => {});
-        }
+        // Best-effort audit log — user row is gone so we write to a generic entry
+        await writeAuditLog(id, 'USER_DELETED', adminId, { email: target.email, name: target.name }).catch(() => {});
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
