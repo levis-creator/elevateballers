@@ -193,6 +193,15 @@ export default function SettingsSection({
                     ))}
                   </div>
                   {section.id === 'security' && group.label === 'Uploads & Integrations' && <IntegrationStatusPanel canManage={canManage} />}
+                  {section.id === 'footer' && group.label === 'Partners' && (
+                    <a className="eb-settings-manage-link" href="/admin/highlights/sponsors" target="_blank" rel="noreferrer">
+                      <span>
+                        <strong>Add or edit partner logos</strong>
+                        <p>These toggles control how the strip looks. The logos themselves are managed on the Sponsors page.</p>
+                      </span>
+                      <ExternalLink size={14} />
+                    </a>
+                  )}
                 </>
               )}
             </div>
