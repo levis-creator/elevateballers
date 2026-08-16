@@ -57,6 +57,63 @@ function applyEvent(row: PlayerRow, event: MatchEventWithDetails) {
   else if (type === 'FOUL_PERSONAL' || type === 'FOUL_TECHNICAL' || type === 'FOUL_FLAGRANT') row.pf += 1;
 }
 
+const FOUL_SUBTYPE_LABELS: Record<string, string> = {
+  PF1: 'PF1 (1 shot)',
+  PF2: 'PF2 (2 shots)',
+  PF3: 'PF3 (3 shots)',
+};
+
+const TURNOVER_SUBTYPE_LABELS: Record<string, string> = {
+  TRAVEL: 'Travel',
+  PASS: 'Bad pass',
+  DOUBLE_DRIBBLE: 'Double dribble',
+  CARRY: 'Carry',
+  OUT_OF_BOUNDS: 'Out of bounds',
+  BACKCOURT: 'Back-court',
+  SHOT_CLOCK: 'Shot clock',
+  THREE_SECOND: '3-sec violation',
+  OFFENSIVE_FOUL: 'Charge / off. foul',
+  ILLEGAL_SCREEN: 'Illegal screen',
+};
+
+function aggregateSubtypes(
+  teamId: string,
+  eventType: 'FOUL_PERSONAL' | 'TURNOVER',
+  events: MatchEventWithDetails[],
+): Array<{ subtype: string; count: number }> {
+  const counts = new Map<string, number>();
+  events
+    .filter((e) => e.teamId === teamId && !e.isUndone && e.eventType === eventType)
+    .forEach((e) => {
+      const subtype = (e.metadata as { subtype?: string } | null)?.subtype;
+      if (!subtype) return;
+      counts.set(subtype, (counts.get(subtype) ?? 0) + 1);
+    });
+  return Array.from(counts.entries()).map(([subtype, count]) => ({ subtype, count }));
+}
+
+function SubtypeBreakdown({
+  title,
+  labels,
+  breakdown,
+}: {
+  title: string;
+  labels: Record<string, string>;
+  breakdown: Array<{ subtype: string; count: number }>;
+}) {
+  if (breakdown.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-white/10 px-3 py-2 text-xs text-slate-300">
+      <span className="font-heading uppercase tracking-[0.14em] text-slate-500">{title}</span>
+      {breakdown.map(({ subtype, count }) => (
+        <span key={subtype} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">
+          {labels[subtype] ?? subtype} · {count}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function aggregateTeam(
   teamId: string,
   matchPlayers: MatchPlayerWithDetails[],
@@ -116,10 +173,14 @@ function TeamStatTable({
   teamName,
   rows,
   totals,
+  foulBreakdown,
+  turnoverBreakdown,
 }: {
   teamName: string;
   rows: PlayerRow[];
   totals: PlayerRow;
+  foulBreakdown: Array<{ subtype: string; count: number }>;
+  turnoverBreakdown: Array<{ subtype: string; count: number }>;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
@@ -181,6 +242,8 @@ function TeamStatTable({
           </tfoot>
         )}
       </table>
+      <SubtypeBreakdown title="Fouls" labels={FOUL_SUBTYPE_LABELS} breakdown={foulBreakdown} />
+      <SubtypeBreakdown title="Turnovers" labels={TURNOVER_SUBTYPE_LABELS} breakdown={turnoverBreakdown} />
     </div>
   );
 }
@@ -219,8 +282,24 @@ export default function CompletedScoresheet({
       </ArenaPanelHeader>
       <ArenaPanelContent>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {team1 && <TeamStatTable teamName={team1Name} rows={team1.rows} totals={team1.totals} />}
-          {team2 && <TeamStatTable teamName={team2Name} rows={team2.rows} totals={team2.totals} />}
+          {team1 && team1Id && (
+            <TeamStatTable
+              teamName={team1Name}
+              rows={team1.rows}
+              totals={team1.totals}
+              foulBreakdown={aggregateSubtypes(team1Id, 'FOUL_PERSONAL', events)}
+              turnoverBreakdown={aggregateSubtypes(team1Id, 'TURNOVER', events)}
+            />
+          )}
+          {team2 && team2Id && (
+            <TeamStatTable
+              teamName={team2Name}
+              rows={team2.rows}
+              totals={team2.totals}
+              foulBreakdown={aggregateSubtypes(team2Id, 'FOUL_PERSONAL', events)}
+              turnoverBreakdown={aggregateSubtypes(team2Id, 'TURNOVER', events)}
+            />
+          )}
         </div>
       </ArenaPanelContent>
     </ArenaPanel>

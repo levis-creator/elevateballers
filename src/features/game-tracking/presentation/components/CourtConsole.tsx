@@ -427,7 +427,13 @@ export default function CourtConsole({
     if (!prompt || (prompt.kind !== 'foulSubtype' && prompt.kind !== 'turnoverSubtype')) return;
     const { eventType, teamId, playerId } = prompt;
     setPrompt(null);
-    recordEvent(eventType, teamId, playerId, subtype ? { metadata: { subtype } } : undefined);
+    if (!subtype) {
+      recordEvent(eventType, teamId, playerId);
+    } else {
+      const options = prompt.kind === 'foulSubtype' ? FOUL_SUBTYPES : TURNOVER_SUBTYPES;
+      const label = options.find((o) => o.value === subtype)?.label ?? subtype;
+      recordEvent(eventType, teamId, playerId, { metadata: { subtype }, description: label });
+    }
     setFlash('Recorded');
   };
 
