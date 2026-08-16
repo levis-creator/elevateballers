@@ -152,7 +152,11 @@ export function useUsersDirectory() {
 				setUsers((current) => [created, ...current]);
 				say(`Invite sent to ${draft.email.trim()}`);
 			} else if (draft.id) {
-				await usersApi.update(draft.id, { name, email: draft.email.trim(), phone: draft.phone.trim() || undefined, active: draft.active });
+				// Send the trimmed phone as-is (possibly ''), not `|| undefined` — an
+				// omitted key is dropped by JSON.stringify, and the PUT handler only
+				// touches phone when the key is present, so clearing the field would
+				// otherwise silently leave the old number in place.
+				await usersApi.update(draft.id, { name, email: draft.email.trim(), phone: draft.phone.trim(), active: draft.active });
 				await usersApi.setRoles(draft.id, draft.roleIds);
 				if (draftIsCoach) await usersApi.setTeams(draft.id, draft.teamIds);
 				await usersApi.setNotifications(draft.id, draft.notifyEmail);
