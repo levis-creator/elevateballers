@@ -13,6 +13,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# literal ${HOME}/.npm cache accidentally created by a script that ran under
+# a shell which didn't expand the variable (e.g. cmd.exe) — never intentional
+${HOME}/
+
 # environment variables
 .env
 .env.local
