@@ -61,6 +61,23 @@
 
 .eb-roles-footnote { margin: 12px 4px 0; color: var(--faint); font-size: 11.5px; }
 
+.eb-permission-sync { margin-top: 18px; border: 1px solid var(--bord); border-radius: 14px; background: var(--surf); padding: 16px; }
+.eb-permission-sync-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.eb-permission-sync-heading h2 { margin: 4px 0 0; color: var(--tx); font: 22px/1 "Anton", sans-serif; text-transform: uppercase; }
+.eb-permission-sync-heading p { max-width: 650px; margin: 7px 0 0; color: var(--txm); font-size: 12px; line-height: 1.5; }
+.eb-permission-sync-preview { margin-top: 14px; border-top: 1px solid var(--bord2); padding-top: 14px; }
+.eb-permission-sync-summary { display: flex; align-items: center; gap: 7px; color: var(--txd); font-size: 12px; }
+.eb-permission-sync-summary svg { color: var(--brand); }
+.eb-permission-sync-summary strong { color: var(--tx); }
+.eb-permission-sync-preview ul { max-height: 220px; margin: 10px 0; padding: 0; overflow: auto; list-style: none; }
+.eb-permission-sync-preview li { display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--bord2); padding: 7px 0; color: var(--txm); font-size: 11.5px; }
+.eb-permission-sync-preview code { color: var(--tx); font-family: "Space Mono", monospace; font-size: 10px; }
+.eb-permission-sync-confirm { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; color: var(--txd); font-size: 11.5px; line-height: 1.4; }
+.eb-permission-sync-empty, .eb-permission-sync-message { color: var(--txm); font-size: 12px; }
+.eb-permission-sync-message { margin: 10px 0 0; }
+
+@media (max-width: 720px) { .eb-permission-sync-heading { flex-direction: column; } }
+
 /* Editor drawer */
 .eb-roles-drawer-overlay { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; }
 .eb-roles-drawer-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .55); }
