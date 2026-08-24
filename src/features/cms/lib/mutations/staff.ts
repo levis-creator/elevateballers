@@ -118,3 +118,5 @@ export async function removeStaffFromTeam(id: string): Promise<boolean> {
     return false;
   }
 }
+
+export { syncStaffAssignments } from '../../data/datasources/mutations/staff';

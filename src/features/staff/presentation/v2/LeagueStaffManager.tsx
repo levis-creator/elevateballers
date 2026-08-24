@@ -7,20 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MediaLibraryPicker } from "./MediaLibraryPicker";
+import { MediaLibraryPicker } from "@/features/cms/presentation/components/MediaLibraryPicker";
+import { leagueStaffApi, type LeagueStaffRecord } from "@/features/staff/data/datasources/league-staff-api";
 
 /** Org-wide league staff record (mirrors the LeagueStaff model). */
-interface LeagueStaff {
-	id: string;
-	name: string;
-	role: string;
-	department: string;
-	email: string | null;
-	photo: string | null;
-	bio: string | null;
-	active: boolean;
-	sortOrder: number;
-}
+type LeagueStaff = LeagueStaffRecord;
 
 type FormState = {
 	id?: string;
@@ -56,9 +47,7 @@ export default function LeagueStaffManager() {
 		setLoading(true);
 		setError("");
 		try {
-			const res = await fetch("/api/league-staff?includeInactive=true", { credentials: "same-origin" });
-			if (!res.ok) throw new Error(`Failed to load (${res.status})`);
-			setStaff(await res.json());
+			setStaff(await leagueStaffApi.list());
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Failed to load league staff");
 		} finally {
@@ -107,16 +96,7 @@ export default function LeagueStaffManager() {
 				active: form.active,
 				sortOrder: Number(form.sortOrder) || 0,
 			};
-			const res = await fetch(form.id ? `/api/league-staff/${form.id}` : "/api/league-staff", {
-				method: form.id ? "PUT" : "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "same-origin",
-				body: JSON.stringify(payload),
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.error || `Save failed (${res.status})`);
-			}
+			if (form.id) await leagueStaffApi.update(form.id, payload); else await leagueStaffApi.create(payload);
 			setOpen(false);
 			await load();
 		} catch (e) {
@@ -130,8 +110,7 @@ export default function LeagueStaffManager() {
 		if (!confirm(`Delete “${s.name}” from league staff? This cannot be undone.`)) return;
 		setError("");
 		try {
-			const res = await fetch(`/api/league-staff/${s.id}`, { method: "DELETE", credentials: "same-origin" });
-			if (!res.ok) throw new Error(`Delete failed (${res.status})`);
+			await leagueStaffApi.remove(s.id);
 			await load();
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Delete failed");

@@ -118,3 +118,34 @@ export async function removeStaffFromTeam(id: string): Promise<boolean> {
     return false;
   }
 }
+
+export type StaffAssignmentInput = {
+  teamId: string;
+  role: StaffRole;
+  effectiveFrom?: Date | null;
+};
+
+/** Synchronizes the admin staff form's current team assignments. */
+export async function syncStaffAssignments(
+  staffId: string,
+  assignments: StaffAssignmentInput[],
+  db: any = prisma,
+): Promise<void> {
+  const teamIds = assignments.map((assignment) => assignment.teamId);
+  if (new Set(teamIds).size !== teamIds.length) throw new Error('A staff member can only be assigned once to each team');
+
+  await db.$transaction(async (tx: any) => {
+    const existing = await tx.teamStaff.findMany({ where: { staffId }, select: { id: true, teamId: true } });
+    const keep = new Set(teamIds);
+    const removeIds = existing.filter((row: any) => !keep.has(row.teamId)).map((row: any) => row.id);
+    if (removeIds.length) await tx.teamStaff.deleteMany({ where: { id: { in: removeIds } } });
+
+    for (const assignment of assignments) {
+      await tx.teamStaff.upsert({
+        where: { teamId_staffId: { teamId: assignment.teamId, staffId } },
+        create: { teamId: assignment.teamId, staffId, role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? new Date() },
+        update: { role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? undefined },
+      });
+    }
+  });
+}

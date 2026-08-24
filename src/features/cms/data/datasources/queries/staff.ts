@@ -23,7 +23,7 @@ export async function getStaffBySlug(slug: string): Promise<StaffWithTeams | nul
 
 export async function getPublicStaff(): Promise<Staff[]> {
   return await prisma.staff.findMany({
-    where: { approved: true, slug: { not: null } },
+    where: { approved: true, active: true, slug: { not: null } },
     orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
   });
 }

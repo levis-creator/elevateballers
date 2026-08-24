@@ -6,7 +6,7 @@
 import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import StaffMemberCard from "./StaffMemberCard.astro";
-import { getStaffData } from "@/features/staff/domain/usecases/get-staff-data";
+import { getStaffPageData } from "@/features/staff/application/usecases/get-staff-page-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import type { PublicStaffPageSettings } from "@/features/settings";
 
@@ -14,7 +14,7 @@ interface Props {
 	settings: PublicStaffPageSettings;
 }
 const { settings } = Astro.props;
-const [data, footer] = await Promise.all([getStaffData(), getFooterData()]);
+const [data, footer] = await Promise.all([getStaffPageData(), getFooterData()]);
 
 const departmentRank = new Map(settings.departments.map((item, index) => [item.name.toLowerCase(), index]));
 const orderedDepartments = [...data.departments].sort((left, right) => {

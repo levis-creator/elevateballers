@@ -4,7 +4,7 @@
  * every other department is a person grid. Returns null on any failure (incl. the
  * table not existing yet) so the use-case falls back to static content.
  */
-import { prisma } from "@/lib/prisma";
+import { listLeagueStaff } from "@/features/staff/data/datasources/league-staff-repository";
 import { getDisplayImageUrl } from "@/lib/asset-url";
 import type { StaffDepartment, StaffMember, StaffLeader } from "@/features/staff/domain/entities/staff-v2";
 
@@ -24,10 +24,7 @@ export interface LeagueStaffGrouped {
  *  when the table is empty/unavailable. */
 export async function getLeagueStaffGrouped(): Promise<LeagueStaffGrouped | null> {
 	try {
-		const rows = await prisma.leagueStaff.findMany({
-			where: { active: true },
-			orderBy: [{ department: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
-		});
+		const rows = await listLeagueStaff();
 		if (!rows.length) return null;
 
 		const leaders: StaffLeader[] = [];

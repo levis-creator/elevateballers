@@ -328,11 +328,20 @@ export type CreateStaffInput = {
   firstName: string;
   lastName: string;
   slug?: string;
+  tagline?: string;
   email?: string;
   phone?: string;
+  phoneSecondary?: string;
+  nextOfKin?: string;
   role: StaffRole;
   bio?: string;
+  internalNote?: string;
   image?: string;
+  licenseNumber?: string;
+  licenseExpiresAt?: Date | null;
+  safeguardingStatus?: string;
+  idNumber?: string;
+  active?: boolean;
   approved?: boolean;
 };
 
@@ -342,6 +351,7 @@ export type CreateTeamStaffInput = {
   teamId: string;
   staffId: string;
   role: StaffRole;
+  effectiveFrom?: Date | null;
 };
 
 export type UpdateTeamStaffInput = Partial<Omit<CreateTeamStaffInput, 'teamId' | 'staffId'>>;

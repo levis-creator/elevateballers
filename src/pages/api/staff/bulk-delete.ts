@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
-import { prisma } from '../../../lib/prisma';
+import { bulkDeleteStaff } from '@/features/staff/application/usecases/staff-management';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 
@@ -9,21 +9,11 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request }) => {
   try {
     await requirePermission(request, 'staff:bulk_delete');
-    const { ids } = await request.json();
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return new Response(JSON.stringify({ error: 'IDs array is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const result = await prisma.staff.deleteMany({
-      where: { id: { in: ids } },
-    });
+    const body = await request.json();
+    const result = await bulkDeleteStaff(body);
 
     await logAudit(request, 'STAFF_BULK_DELETED', {
-      staffIds: ids,
+      staffIds: body.ids,
       deleted: result.count,
     });
 
@@ -31,7 +21,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error bulk deleting staff:', error);
     return handleApiError(error, 'delete staff', request);
   }
