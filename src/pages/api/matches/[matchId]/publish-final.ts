@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requirePermission } from '@/features/rbac/middleware';
+import { requireMatchScopedPermission } from '@/features/rbac/middleware';
 import { logAudit } from '@/features/cms/lib/audit';
 import { prisma } from '@/lib/prisma';
 import { json, handleApiError } from '@/lib/apiError';
@@ -10,9 +10,9 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'matches:update');
     const matchId = params.matchId;
     if (!matchId) return json({ error: 'Match ID is required' }, 400);
+    await requireMatchScopedPermission(request, matchId, 'matches:update');
 
     const existing = await prisma.match.findUnique({
       where: { id: matchId },

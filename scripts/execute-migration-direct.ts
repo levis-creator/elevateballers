@@ -13,17 +13,14 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Use production connection string - try pooler port 6543 for connection pooling
-const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres.zjnlvnyjsidnelgciqmz:Elevatedb1234!@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true';
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) throw new Error('DATABASE_URL is required to execute a migration');
 
 async function executeMigration() {
   console.log('🚀 Connecting to production database...\n');
 
   const client = new pg.Client({
     connectionString: dbUrl,
-    ssl: {
-      rejectUnauthorized: false
-    }
   });
 
   try {

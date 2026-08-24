@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getTeamById } from '../../../features/cms/lib/queries';
 import { updateTeam, deleteTeam } from '../../../features/cms/lib/mutations';
-import { requirePermission } from '../../../features/rbac/middleware';
+import { requireTeamScopedPermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     // Try to get admin user, but don't fail if not authenticated
     let includeUnapproved = false;
     try {
-      await requirePermission(request, 'teams:update');
+      await requireTeamScopedPermission(request, params.id!, 'teams:update');
       includeUnapproved = true; // Admins can see unapproved teams
     } catch {
       // Not an admin, only show approved teams
@@ -43,7 +43,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'teams:update');
+    await requireTeamScopedPermission(request, params.id!, 'teams:update');
     const data = await request.json();
     const previousApproval = data.approved !== undefined
       ? await prisma.team.findUnique({ where: { id: params.id! }, select: { approved: true } })
@@ -133,7 +133,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'teams:update');
+    await requireTeamScopedPermission(request, params.id!, 'teams:update');
     const success = await deleteTeam(params.id!);
 
     if (!success) {

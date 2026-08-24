@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getPlayerById } from '../../../features/cms/lib/queries';
 import { updatePlayer, deletePlayer } from '../../../features/cms/lib/mutations';
-import { requirePermission } from '../../../features/rbac/middleware';
+import { requirePlayerScopedPermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { prisma } from '../../../lib/prisma';
@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     // Try to get admin user to decide whether to include contact info
     let isAdmin = false;
     try {
-      await requirePermission(request, 'players:update');
+      await requirePlayerScopedPermission(request, params.id!, 'players:update');
       isAdmin = true;
     } catch {
       isAdmin = false;
@@ -77,7 +77,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'players:update');
+    await requirePlayerScopedPermission(request, params.id!, 'players:update');
     const data = await request.json();
     const previousApproval = data.approved !== undefined
       ? await prisma.player.findUnique({ where: { id: params.id! }, select: { approved: true } })
@@ -139,7 +139,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'players:update');
+    await requirePlayerScopedPermission(request, params.id!, 'players:update');
     const success = await deletePlayer(params.id!);
 
     if (!success) {

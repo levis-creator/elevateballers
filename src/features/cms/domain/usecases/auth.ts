@@ -258,20 +258,28 @@ export async function requireAuth(request: Request): Promise<User> {
 
 export async function recordFailedLogin(userId: string): Promise<void> {
   const security = await getRuntimeSecuritySettings();
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { failedLoginAttempts: true },
+  const now = new Date();
+  const lockedUntil = new Date(now.getTime() + security.security_loginLockoutMinutes * 60 * 1000);
+
+  await prisma.$transaction(async (database) => {
+    const incremented = await database.user.updateMany({
+      where: { id: userId },
+      data: { failedLoginAttempts: { increment: 1 } },
+    });
+    if (incremented.count === 0) return;
+
+    // The increment is performed by the database, so concurrent failures
+    // cannot overwrite one another. Any request observing the threshold sets
+    // the same lockout state; no read/modify/write race remains.
+    await database.user.updateMany({
+      where: {
+        id: userId,
+        failedLoginAttempts: { gte: security.security_loginMaxAttempts },
+        OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }],
+      },
+      data: { lockedUntil },
+    });
   });
-  if (!user) return;
-
-  const attempts = (user.failedLoginAttempts ?? 0) + 1;
-  const data: any = { failedLoginAttempts: attempts };
-
-  if (attempts >= security.security_loginMaxAttempts) {
-    data.lockedUntil = new Date(Date.now() + security.security_loginLockoutMinutes * 60 * 1000);
-  }
-
-  await prisma.user.update({ where: { id: userId }, data });
 }
 
 export async function resetFailedLogin(userId: string): Promise<void> {
