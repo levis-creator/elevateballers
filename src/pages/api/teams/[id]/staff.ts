@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getStaffByTeam, getTeamById } from '../../../../features/cms/lib/queries';
 import { assignStaffToTeam, removeStaffFromTeam, updateTeamStaff } from '../../../../features/cms/lib/mutations';
-import { requirePermission } from '../../../../features/rbac/middleware';
+import { requireLegacyTeamStaffScopedPermission } from '../../../../features/rbac/middleware';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../lib/apiError';
@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const POST: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'teams:manage_staff');
+    await requireLegacyTeamStaffScopedPermission(request, params.id!, 'teams:manage_staff');
     const data = await request.json();
 
     // Validate required fields
@@ -65,7 +65,6 @@ export const POST: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'teams:manage_staff');
     const data = await request.json();
 
     if (!data.teamStaffId) {
@@ -74,6 +73,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    await requireLegacyTeamStaffScopedPermission(request, params.id!, 'teams:manage_staff', data.teamStaffId);
 
     const teamStaff = await updateTeamStaff(data.teamStaffId, {
       role: data.role,
@@ -101,7 +101,6 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'teams:manage_staff');
     const url = new URL(request.url);
     const teamStaffId = url.searchParams.get('teamStaffId');
 
@@ -111,6 +110,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    await requireLegacyTeamStaffScopedPermission(request, params.id!, 'teams:manage_staff', teamStaffId);
 
     const success = await removeStaffFromTeam(teamStaffId);
 

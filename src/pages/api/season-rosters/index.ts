@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requirePermission } from '../../../features/rbac/middleware';
+import { requireSeasonTeamScopedPermission } from '../../../features/rbac/middleware';
 import { createPrismaSeasonRegistrationRepository } from '../../../features/registration/data/datasources/season-registration';
 import { createSeasonRegistrationUseCases } from '../../../features/registration/domain/usecases/season-registration';
 import { handleApiError } from '../../../lib/apiError';
@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ url, request }) => {
     const seasonTeamId = url.searchParams.get('seasonTeamId');
     if (!seasonTeamId) return json({ error: 'seasonTeamId is required' }, 400);
     let includePending = false;
-    try { await requirePermission(request, 'teams:update'); includePending = true; } catch { /* public approved roster */ }
+    try { await requireSeasonTeamScopedPermission(request, seasonTeamId, 'teams:update'); includePending = true; } catch { /* public approved roster */ }
     const useCases = createSeasonRegistrationUseCases(createPrismaSeasonRegistrationRepository());
     return json(await useCases.listRoster(seasonTeamId, includePending));
   } catch (error) { return handleApiError(error, 'list season roster', request); }
@@ -21,8 +21,13 @@ export const GET: APIRoute = async ({ url, request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'teams:update');
     const body = await request.json();
+    if (body.action === 'TRANSFER') {
+      await requireSeasonTeamScopedPermission(request, String(body.fromSeasonTeamId), 'teams:update');
+      await requireSeasonTeamScopedPermission(request, String(body.toSeasonTeamId), 'teams:update');
+    } else {
+      await requireSeasonTeamScopedPermission(request, String(body.seasonTeamId), 'teams:update');
+    }
     const useCases = createSeasonRegistrationUseCases(createPrismaSeasonRegistrationRepository());
     if (body.action === 'TRANSFER') {
       return json(await useCases.requestTransfer({ playerId: String(body.playerId), fromSeasonTeamId: String(body.fromSeasonTeamId), toSeasonTeamId: String(body.toSeasonTeamId), reason: body.reason, requestedById: body.requestedById }), 201);

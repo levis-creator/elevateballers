@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requirePermission } from '../../../features/rbac/middleware';
+import { requireRosterScopedPermission } from '../../../features/rbac/middleware';
 import { createPrismaSeasonRegistrationRepository } from '../../../features/registration/data/datasources/season-registration';
 import { createSeasonRegistrationUseCases } from '../../../features/registration/domain/usecases/season-registration';
 import { handleApiError } from '../../../lib/apiError';
@@ -8,7 +8,7 @@ export const prerender = false;
 
 export const PATCH: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'teams:update');
+    await requireRosterScopedPermission(request, params.id!, 'teams:update');
     const body = await request.json();
     const useCases = createSeasonRegistrationUseCases(createPrismaSeasonRegistrationRepository());
     const reviewerId = String(body.reviewerId ?? 'admin');

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getMatchById, getMatchWithFullDetails, getSiteSettingByKey } from '../../../features/cms/lib/queries';
 import { updateMatch, deleteMatch } from '../../../features/cms/lib/mutations';
-import { requirePermission } from '../../../features/rbac/middleware';
+import { requireMatchScopedPermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { json, handleApiError } from '../../../lib/apiError';
 import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rules';
@@ -64,9 +64,10 @@ export const GET: APIRoute = async ({ params, url, request }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'matches:update');
+    await requireMatchScopedPermission(request, params.id!, 'matches:update');
 
     const existingMatch = await getMatchById(params.id!);
+    if (!existingMatch) return json({ error: 'Match not found' }, 404);
     if (existingMatch?.status === 'COMPLETED' && !(await isPostCompletionEditAllowed())) {
       return json(
         {
@@ -155,7 +156,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'matches:update');
+    await requireMatchScopedPermission(request, params.id!, 'matches:update');
     const success = await deleteMatch(params.id!);
 
     if (!success) return json({ error: 'Failed to delete match' }, 500);

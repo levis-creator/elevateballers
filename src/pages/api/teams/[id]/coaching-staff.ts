@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { getTeamById, getTeamStaffMembers } from "@/features/cms/lib/queries";
 import { createTeamStaffMember, removeTeamStaffMember, updateTeamStaffMember } from "@/features/cms/lib/mutations";
-import { requirePermission } from "@/features/rbac/middleware";
+import { requireCoachingStaffScopedPermission } from "@/features/rbac/middleware";
 import { logAudit } from "@/features/cms/lib/audit";
 import { handleApiError } from "@/lib/apiError";
 
@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const POST: APIRoute = async ({ params, request }) => {
 	try {
-		await requirePermission(request, "teams:manage_staff");
+		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff");
 		const data = await request.json();
 		if (!data.name || !data.role || !data.type || !VALID_TYPES.has(data.type)) {
 			return new Response(JSON.stringify({ error: "Name, role, and a valid type are required" }), {
@@ -69,9 +69,8 @@ export const POST: APIRoute = async ({ params, request }) => {
 	}
 };
 
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async ({ params, request }) => {
 	try {
-		await requirePermission(request, "teams:manage_staff");
 		const data = await request.json();
 		if (!data.id) {
 			return new Response(JSON.stringify({ error: "Coaching staff ID is required" }), {
@@ -79,6 +78,7 @@ export const PUT: APIRoute = async ({ request }) => {
 				headers: { "Content-Type": "application/json" },
 			});
 		}
+		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff", data.id);
 
 		const staff = await updateTeamStaffMember(data.id, {
 			seasonId: data.seasonId || null,
@@ -109,7 +109,6 @@ export const PUT: APIRoute = async ({ request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
 	try {
-		await requirePermission(request, "teams:manage_staff");
 		const url = new URL(request.url);
 		const id = url.searchParams.get("id");
 		if (!id) {
@@ -118,6 +117,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 				headers: { "Content-Type": "application/json" },
 			});
 		}
+		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff", id);
 
 		const success = await removeTeamStaffMember(id);
 		if (!success) {

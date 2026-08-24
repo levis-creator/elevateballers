@@ -10,6 +10,7 @@ import {
 } from '../../../lib/image-compression';
 import { getFolderByName } from '../../../lib/folder-access';
 import { requirePermission } from '@/features/rbac/middleware';
+import { checkPermission } from '@/features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
 import { enforceRateLimit } from '../../../lib/rateLimit';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
@@ -169,6 +170,12 @@ export const POST: APIRoute = async ({ request }) => {
         data: { name: sanitizedFolderName, path: folderPath, isPrivate, createdBy: user.id },
       });
     } else if (folder.isPrivate !== isPrivate) {
+      if (!(await checkPermission(request, 'folders:update'))) {
+        return new Response(JSON.stringify({ error: 'This folder privacy setting can only be changed by a folder administrator.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       const newPath = `${isPrivate ? 'private' : 'public'}/${sanitizedFolderName}`;
       folder = await prisma.folder.update({
         where: { id: folder.id },
