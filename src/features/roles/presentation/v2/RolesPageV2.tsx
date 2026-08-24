@@ -1,11 +1,20 @@
 import { Lock, Plus, Search } from 'lucide-react';
 import './roles-v2.css';
+import { PermissionProvider } from '@/features/rbac/usePermissions';
 import { ROLE_KIND_FILTERS, type RoleRow } from '../../domain/entities/role-editor';
 import { useRolesDirectory } from './hooks/useRolesDirectory';
 import RoleEditorDrawer from './RoleEditorDrawer';
 import PermissionSyncPanel from './PermissionSyncPanel';
 
 export default function RolesPageV2() {
+	return (
+		<PermissionProvider>
+			<RolesPageContent />
+		</PermissionProvider>
+	);
+}
+
+function RolesPageContent() {
 	const directory = useRolesDirectory();
 
 	if (directory.loading) return <div className="eb-roles-loading"><div /><div /><div /></div>;
