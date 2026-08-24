@@ -933,11 +933,20 @@ model Staff {
   slug          String?                    @unique
   firstName     String
   lastName      String
+  tagline       String?                    @db.VarChar(90)
   email         String?
   phone         String?
+  phoneSecondary String?                   @map("phone_secondary")
+  nextOfKin     String?                    @map("next_of_kin")
   role          StaffRole
   bio           String?
+  internalNote  String?                    @map("internal_note") @db.Text
   image         String?
+  licenseNumber String?                    @map("license_number")
+  licenseExpiresAt DateTime?               @map("license_expires_at")
+  safeguardingStatus String?               @map("safeguarding_status")
+  idNumber      String?                    @map("id_number")
+  active        Boolean                    @default(true)
   approved      Boolean                    @default(false)
   createdAt     DateTime                   @default(now()) @map("created_at")
   updatedAt     DateTime                   @updatedAt @map("updated_at")
@@ -955,6 +964,7 @@ model TeamStaff {
   teamId    String    @map("team_id")
   staffId   String    @map("staff_id")
   role      StaffRole
+  effectiveFrom DateTime?                 @map("effective_from")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)

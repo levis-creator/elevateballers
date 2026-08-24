@@ -1,16 +1,14 @@
 import type { APIRoute } from 'astro';
-import { getStaffById } from '../../../features/cms/lib/queries';
-import { updateStaff, deleteStaff } from '../../../features/cms/lib/mutations';
+import { deleteStaff, getStaff, updateStaff } from '@/features/staff/application/usecases/staff-management';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
-import { prisma } from '../../../lib/prisma';
 
 export const GET: APIRoute = async ({ params }) => {
   try {
-    const staff = await getStaffById(params.id!);
+    const staff = await getStaff(params.id!);
 
     if (!staff) {
       return new Response(JSON.stringify({ error: 'Staff not found' }), {
@@ -30,9 +28,7 @@ export const GET: APIRoute = async ({ params }) => {
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'staff:update');
-    const data = await request.json();
-
-    const staff = await updateStaff(params.id!, data);
+    const staff = await updateStaff(params.id!, await request.json());
 
     if (!staff) {
       return new Response(JSON.stringify({ error: 'Staff not found' }), {

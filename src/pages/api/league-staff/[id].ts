@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
-import { getLeagueStaffById } from "@/features/cms/lib/queries";
-import { updateLeagueStaff, deleteLeagueStaff } from "@/features/cms/lib/mutations";
+import { deleteLeagueStaff, getLeagueStaff, updateLeagueStaff } from "@/features/staff/application/usecases/league-staff-management";
 import { requirePermission } from "@/features/rbac/middleware";
 import { logAudit } from "@/features/cms/lib/audit";
 import { handleApiError } from "@/lib/apiError";
@@ -9,7 +8,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
 	try {
-		const staff = await getLeagueStaffById(params.id!);
+		const staff = await getLeagueStaff(params.id!);
 		if (!staff) {
 			return new Response(JSON.stringify({ error: "League staff not found" }), {
 				status: 404,
@@ -27,17 +26,7 @@ export const GET: APIRoute = async ({ params }) => {
 export const PUT: APIRoute = async ({ params, request }) => {
 	try {
 		await requirePermission(request, "staff:update");
-		const data = await request.json();
-		const staff = await updateLeagueStaff(params.id!, {
-			name: data.name ? String(data.name).trim() : undefined,
-			role: data.role ? String(data.role).trim() : undefined,
-			department: data.department ? String(data.department).trim() : undefined,
-			email: data.email ? String(data.email).trim() : null,
-			photo: data.photo ? String(data.photo).trim() : null,
-			bio: data.bio !== undefined ? (data.bio ? String(data.bio).trim() : null) : undefined,
-			active: data.active,
-			sortOrder: data.sortOrder === undefined ? undefined : Number(data.sortOrder),
-		});
+		const staff = await updateLeagueStaff(params.id!, await request.json());
 
 		if (!staff) {
 			return new Response(JSON.stringify({ error: "League staff not found" }), {

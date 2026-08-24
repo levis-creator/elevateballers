@@ -19,7 +19,7 @@ import Header from "../../features/layout/components/Header";
 import Footer from "../../features/layout/components/Footer.astro";
 import PageLoader from "../../components/PageLoader";
 import Spacing from "../../shared/components/ui/Spacing.astro";
-import { getLeagueStaff } from "../../features/cms/lib/queries";
+import { listLeagueStaff } from "../../features/staff/data/datasources/league-staff-repository";
 import PersonCard from "../../features/staff/presentation/components/PersonCard.astro";
 import { resolvePublicStaffPageSettings, siteSettingsService } from "../../features/settings";
 
@@ -27,7 +27,7 @@ const settings = resolvePublicStaffPageSettings(await siteSettingsService.list("
 
 let staff: any[] = [];
 try {
-  staff = await getLeagueStaff();
+  staff = await listLeagueStaff();
 } catch (error) {
   console.error("Error fetching league staff:", error);
 }

@@ -7,21 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MediaLibraryPicker } from "./MediaLibraryPicker";
+import { MediaLibraryPicker } from "@/features/cms/presentation/components/MediaLibraryPicker";
+import { teamCoachingStaffApi, type TeamCoachingStaffRecord } from "@/features/staff/data/datasources/team-coaching-staff-api";
 
-type CoachType = "coach" | "manager" | "support";
-
-interface CoachingStaff {
-	id: string;
-	name: string;
-	role: string;
-	type: CoachType;
-	email: string | null;
-	photo: string | null;
-	seasonId: string | null;
-	active: boolean;
-	sortOrder: number;
-}
+type CoachType = TeamCoachingStaffRecord["type"];
+type CoachingStaff = TeamCoachingStaffRecord;
 
 type FormState = {
 	id?: string;
@@ -56,15 +46,11 @@ export default function TeamCoachingStaffManager({ teamId }: Props) {
 	const [saving, setSaving] = useState(false);
 	const [pickerOpen, setPickerOpen] = useState(false);
 
-	const base = `/api/teams/${teamId}/coaching-staff`;
-
 	async function load() {
 		setLoading(true);
 		setError("");
 		try {
-			const res = await fetch(`${base}?includeInactive=true`, { credentials: "same-origin" });
-			if (!res.ok) throw new Error(`Failed to load (${res.status})`);
-			setStaff(await res.json());
+			setStaff(await teamCoachingStaffApi.list(teamId));
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Failed to load coaching staff");
 		} finally {
@@ -74,7 +60,6 @@ export default function TeamCoachingStaffManager({ teamId }: Props) {
 
 	useEffect(() => {
 		load();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [teamId]);
 
 	function openCreate() {
@@ -104,16 +89,7 @@ export default function TeamCoachingStaffManager({ teamId }: Props) {
 				active: form.active,
 			};
 			if (form.id) payload.id = form.id;
-			const res = await fetch(base, {
-				method: form.id ? "PUT" : "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "same-origin",
-				body: JSON.stringify(payload),
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.error || `Save failed (${res.status})`);
-			}
+			await teamCoachingStaffApi.save(teamId, payload, form.id);
 			setOpen(false);
 			await load();
 		} catch (e) {
@@ -127,8 +103,7 @@ export default function TeamCoachingStaffManager({ teamId }: Props) {
 		if (!confirm(`Remove “${s.name}” from this team's coaching staff?`)) return;
 		setError("");
 		try {
-			const res = await fetch(`${base}?id=${encodeURIComponent(s.id)}`, { method: "DELETE", credentials: "same-origin" });
-			if (!res.ok && res.status !== 204) throw new Error(`Delete failed (${res.status})`);
+			await teamCoachingStaffApi.remove(teamId, s.id);
 			await load();
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Delete failed");

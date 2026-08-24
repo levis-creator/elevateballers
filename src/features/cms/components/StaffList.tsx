@@ -1,2 +1,2 @@
-export * from '../presentation/components/StaffList';
-export { default } from '../presentation/components/StaffList';
+/** @deprecated Staff presentation lives in the Staff feature. */
+export { default } from '@/features/staff/presentation/v2/StaffList';

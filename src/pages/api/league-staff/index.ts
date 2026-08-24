@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
-import { getLeagueStaff } from "@/features/cms/lib/queries";
-import { createLeagueStaff } from "@/features/cms/lib/mutations";
+import { createLeagueStaff, listLeagueStaff } from "@/features/staff/application/usecases/league-staff-management";
 import { requirePermission } from "@/features/rbac/middleware";
 import { logAudit } from "@/features/cms/lib/audit";
 import { handleApiError } from "@/lib/apiError";
@@ -11,7 +10,7 @@ export const GET: APIRoute = async ({ request }) => {
 	try {
 		const url = new URL(request.url);
 		const includeInactive = url.searchParams.get("includeInactive") === "true";
-		const staff = await getLeagueStaff(includeInactive);
+		const staff = await listLeagueStaff(includeInactive);
 		return new Response(JSON.stringify(staff), {
 			headers: { "Content-Type": "application/json" },
 		});
@@ -23,24 +22,7 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
 	try {
 		await requirePermission(request, "staff:create");
-		const data = await request.json();
-		if (!data.name || !data.role || !data.department) {
-			return new Response(JSON.stringify({ error: "Name, role, and department are required" }), {
-				status: 400,
-				headers: { "Content-Type": "application/json" },
-			});
-		}
-
-		const staff = await createLeagueStaff({
-			name: String(data.name).trim(),
-			role: String(data.role).trim(),
-			department: String(data.department).trim(),
-			email: data.email ? String(data.email).trim() : undefined,
-			photo: data.photo ? String(data.photo).trim() : undefined,
-			bio: data.bio ? String(data.bio).trim() : undefined,
-			active: data.active ?? true,
-			sortOrder: Number(data.sortOrder ?? 0),
-		});
+		const staff = await createLeagueStaff(await request.json());
 
 		await logAudit(request, "LEAGUE_STAFF_CREATED", {
 			leagueStaffId: staff.id,

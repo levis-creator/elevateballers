@@ -1,19 +1,16 @@
 import type { APIRoute } from "astro";
-import { getTeamById, getTeamStaffMembers } from "@/features/cms/lib/queries";
-import { createTeamStaffMember, removeTeamStaffMember, updateTeamStaffMember } from "@/features/cms/lib/mutations";
+import { createTeamCoachingStaff, deleteTeamCoachingStaff, listTeamCoachingStaff, teamExists, updateTeamCoachingStaff } from "@/features/staff/application/usecases/team-coaching-staff-management";
 import { requireCoachingStaffScopedPermission } from "@/features/rbac/middleware";
 import { logAudit } from "@/features/cms/lib/audit";
 import { handleApiError } from "@/lib/apiError";
 
 export const prerender = false;
 
-const VALID_TYPES = new Set(["coach", "manager", "support"]);
-
 export const GET: APIRoute = async ({ params, request }) => {
 	try {
 		const url = new URL(request.url);
 		const includeInactive = url.searchParams.get("includeInactive") === "true";
-		const staff = await getTeamStaffMembers(params.id!, includeInactive);
+		const staff = await listTeamCoachingStaff(params.id!, includeInactive);
 		return new Response(JSON.stringify(staff), {
 			headers: { "Content-Type": "application/json" },
 		});
@@ -26,14 +23,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 	try {
 		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff");
 		const data = await request.json();
-		if (!data.name || !data.role || !data.type || !VALID_TYPES.has(data.type)) {
-			return new Response(JSON.stringify({ error: "Name, role, and a valid type are required" }), {
-				status: 400,
-				headers: { "Content-Type": "application/json" },
-			});
-		}
-
-		const team = await getTeamById(params.id!, true);
+		const team = await teamExists(params.id!);
 		if (!team) {
 			return new Response(JSON.stringify({ error: "Team not found" }), {
 				status: 404,
@@ -41,16 +31,7 @@ export const POST: APIRoute = async ({ params, request }) => {
 			});
 		}
 
-		const staff = await createTeamStaffMember({
-			teamId: params.id!,
-			seasonId: data.seasonId || null,
-			name: String(data.name).trim(),
-			role: String(data.role).trim(),
-			type: data.type,
-			email: data.email ? String(data.email).trim() : null,
-			photo: data.photo ? String(data.photo).trim() : null,
-			sortOrder: Number(data.sortOrder ?? 0),
-		});
+		const staff = await createTeamCoachingStaff({ ...data, teamId: params.id! });
 
 		await logAudit(request, "TEAM_COACHING_STAFF_CREATED", {
 			teamId: params.id,
@@ -80,16 +61,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 		}
 		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff", data.id);
 
-		const staff = await updateTeamStaffMember(data.id, {
-			seasonId: data.seasonId || null,
-			name: data.name ? String(data.name).trim() : undefined,
-			role: data.role ? String(data.role).trim() : undefined,
-			type: data.type && VALID_TYPES.has(data.type) ? data.type : undefined,
-			email: data.email ? String(data.email).trim() : null,
-			photo: data.photo ? String(data.photo).trim() : null,
-			sortOrder: data.sortOrder === undefined ? undefined : Number(data.sortOrder),
-			active: data.active,
-		});
+		const staff = await updateTeamCoachingStaff(data.id, data);
 
 		if (!staff) {
 			return new Response(JSON.stringify({ error: "Coaching staff not found" }), {
@@ -119,7 +91,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 		}
 		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff", id);
 
-		const success = await removeTeamStaffMember(id);
+		const success = await deleteTeamCoachingStaff(id);
 		if (!success) {
 			return new Response(JSON.stringify({ error: "Coaching staff not found" }), {
 				status: 404,

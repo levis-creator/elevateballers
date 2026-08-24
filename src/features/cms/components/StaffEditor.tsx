@@ -1,2 +1,2 @@
-export * from '../presentation/components/StaffEditor';
-export { default } from '../presentation/components/StaffEditor';
+/** @deprecated Staff presentation lives in the Staff feature. */
+export { default } from '@/features/staff/presentation/v2/StaffEditor';
