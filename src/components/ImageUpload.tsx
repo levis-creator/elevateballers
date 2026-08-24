@@ -20,7 +20,7 @@ interface ImageUploadProps {
   maxWidthOrHeight?: number;
   quality?: number;
   maxSizeMB?: number;
-  variant?: 'default' | 'player' | 'article' | 'potw';
+  variant?: 'default' | 'staff' | 'player' | 'article' | 'potw';
   onOpenMediaLibrary?: () => void;
 }
 
@@ -131,6 +131,21 @@ export default function ImageUpload({
   };
 
   const isProcessing = compressing || uploading;
+
+  if (variant === 'staff') {
+    return (
+      <div className={cn('flex w-[100px] flex-col gap-2', className)}>
+        <div className="relative h-[124px] w-[100px] overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf2)]">
+          {preview ? <img src={preview} alt="Staff portrait preview" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <div className="flex h-full w-full items-center justify-center px-2 text-center font-mono text-[9px] uppercase tracking-[0.08em] text-[var(--faint)]">Portrait 3:4</div>}
+          {isProcessing && <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-white"><Loader2 className="h-5 w-5 animate-spin" /></div>}
+          {preview && !isProcessing && !disabled && <button type="button" aria-label="Remove staff portrait" onClick={handleRemove} className="absolute right-1.5 top-1.5 rounded-md bg-black/60 p-1 text-white hover:bg-black/80"><X className="h-3.5 w-3.5" /></button>}
+        </div>
+        <button type="button" onClick={handleUploadClick} disabled={isProcessing || disabled} className="cursor-pointer rounded-md border border-[var(--bord)] bg-[var(--surf2)] px-2 py-1.5 font-body text-[11px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]">Choose from library</button>
+        <input ref={fileInputRef} id={inputId} type="file" accept={accept} onChange={handleFileSelect} className="hidden" disabled={isProcessing || disabled} />
+        {error && <p className="font-body text-[10px] text-[var(--brand)]">{error}</p>}
+      </div>
+    );
+  }
 
   // Player variant - square image preview with hover overlay
   if (isPlayerVariant) {

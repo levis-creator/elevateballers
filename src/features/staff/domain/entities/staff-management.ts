@@ -2,7 +2,9 @@ import { z } from "zod";
 import type { Prisma, StaffRole, TeamStaff } from "@prisma/client";
 
 export type StaffWithAssignments = Prisma.StaffGetPayload<{ include: { teams: { include: { team: true } } } }>;
-export type StaffAssignment = Pick<TeamStaff, "teamId" | "role" | "effectiveFrom">;
+export type StaffAssignment = Pick<TeamStaff, "teamId" | "role" | "effectiveFrom" | "effectiveTo">;
+export type StaffAssignmentHistory = Prisma.TeamStaffGetPayload<{ include: { team: true } }>;
+export type StaffTransferRecord = Prisma.StaffTransferGetPayload<{ include: { fromTeam: true; toTeam: true } }>;
 
 export const STAFF_ROLES: StaffRole[] = [
   "COACH", "ASSISTANT_COACH", "MANAGER", "ASSISTANT_MANAGER",
@@ -36,14 +38,22 @@ export const staffMutationSchema = z.object({
   idNumber: optionalText(120),
   active: z.boolean().optional(),
   approved: z.boolean().optional(),
-  assignments: z.array(staffAssignmentSchema).max(100).optional(),
+  assignments: z.array(staffAssignmentSchema).max(2, "A staff member can have at most two team assignments.").optional(),
 });
 
 export const staffUpdateSchema = staffMutationSchema.partial();
 export const staffBulkDeleteSchema = z.object({ ids: z.array(z.string().min(1).max(64)).min(1).max(100) });
+export const staffTransferSchema = z.object({
+  fromTeamStaffId: z.string().min(1).max(64),
+  toTeamId: z.string().min(1).max(64),
+  role: z.enum(STAFF_ROLES as [StaffRole, ...StaffRole[]]),
+  effectiveFrom: z.coerce.date(),
+  transferReason: z.string().trim().max(500).optional(),
+});
 
 export type StaffMutationInput = z.infer<typeof staffMutationSchema>;
 export type StaffUpdateInput = z.infer<typeof staffUpdateSchema>;
+export type StaffTransferInput = z.infer<typeof staffTransferSchema>;
 
 export const staffRoleLabel = (role: StaffRole): string => ({
   COACH: "Coach", ASSISTANT_COACH: "Assistant Coach", MANAGER: "Manager",

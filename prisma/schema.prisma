@@ -33,6 +33,8 @@ model User {
   teamOwnerships            TeamOwnership[]
   sessions                  UserSession[]
   passwordHistory           PasswordHistory[]
+  staffTransfersCreated    StaffTransfer[]   @relation("StaffTransferActor")
+  staffProfile              Staff?
 
   @@map("users")
 }
@@ -519,6 +521,8 @@ model Team {
   substitutions                  Substitution[]
   staff                          TeamStaff[]
   coachingStaff                  TeamStaffMember[]
+  staffTransfersFrom              StaffTransfer[]                  @relation("StaffTransferFromTeam")
+  staffTransfersTo                StaffTransfer[]                  @relation("StaffTransferToTeam")
   timeouts                       Timeout[]
   teamHistory                    PlayerTeamHistory[]
   seasonTeams                    SeasonTeam[]
@@ -930,6 +934,7 @@ model SiteSetting {
 
 model Staff {
   id            String                     @id @default(cuid())
+  userId        String?                    @unique @map("user_id")
   slug          String?                    @unique
   firstName     String
   lastName      String
@@ -952,6 +957,8 @@ model Staff {
   updatedAt     DateTime                   @updatedAt @map("updated_at")
   notifications RegistrationNotification[]
   teams         TeamStaff[]
+  transfers     StaffTransfer[]
+  user           User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([slug])
   @@index([approved])
@@ -965,6 +972,7 @@ model TeamStaff {
   staffId   String    @map("staff_id")
   role      StaffRole
   effectiveFrom DateTime?                 @map("effective_from")
+  effectiveTo DateTime?                   @map("effective_to")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
@@ -974,6 +982,27 @@ model TeamStaff {
   @@index([teamId])
   @@index([staffId])
   @@map("team_staff")
+}
+
+model StaffTransfer {
+  id             String   @id @default(cuid())
+  staffId        String   @map("staff_id")
+  fromTeamId     String   @map("from_team_id")
+  toTeamId       String   @map("to_team_id")
+  effectiveFrom  DateTime @map("effective_from")
+  reason         String?  @db.VarChar(500)
+  actorUserId    String?  @map("actor_user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  staff          Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  fromTeam       Team     @relation("StaffTransferFromTeam", fields: [fromTeamId], references: [id], onDelete: Restrict)
+  toTeam         Team     @relation("StaffTransferToTeam", fields: [toTeamId], references: [id], onDelete: Restrict)
+  actor          User?    @relation("StaffTransferActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([staffId, effectiveFrom])
+  @@index([fromTeamId])
+  @@index([toTeamId])
+  @@index([actorUserId])
+  @@map("staff_transfers")
 }
 
 model Comment {

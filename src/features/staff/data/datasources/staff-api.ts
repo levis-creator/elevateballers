@@ -2,10 +2,10 @@ import type { Staff, StaffRole } from "@prisma/client";
 import type { StaffWithAssignments } from "@/features/staff/domain/entities/staff-management";
 
 export type StaffFormData = {
-  firstName: string; lastName: string; tagline?: string; email?: string; phone?: string; phoneSecondary?: string;
+  id?: string; createdAt?: string; updatedAt?: string; lastEditedBy?: string | null; firstName: string; lastName: string; slug?: string; tagline?: string; email?: string; phone?: string; phoneSecondary?: string;
   nextOfKin?: string; role: StaffRole; bio?: string; internalNote?: string; image?: string; licenseNumber?: string;
   licenseExpiresAt?: string | null; safeguardingStatus?: string; idNumber?: string; active?: boolean; approved?: boolean;
-  assignments?: Array<{ teamId: string; role: StaffRole; effectiveFrom?: string | null }>;
+  assignments?: Array<{ teamId: string; role: StaffRole; effectiveFrom?: string | null; effectiveTo?: string | null }>;
 };
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: "same-origin", ...init });

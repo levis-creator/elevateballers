@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { prisma } from '@/lib/prisma';
 import { deleteStaff, getStaff, updateStaff } from '@/features/staff/application/usecases/staff-management';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
@@ -17,7 +18,9 @@ export const GET: APIRoute = async ({ params }) => {
       });
     }
 
-    return new Response(JSON.stringify(staff), {
+    const lastEdit = await prisma.userAuditLog.findFirst({ where: { action: 'STAFF_UPDATED', metadata: { path: 'staffId', equals: params.id! } }, orderBy: { createdAt: 'desc' }, select: { performedBy: true } });
+    const editor = lastEdit ? await prisma.user.findUnique({ where: { id: lastEdit.performedBy }, select: { name: true } }) : null;
+    return new Response(JSON.stringify({ ...staff, lastEditedBy: editor?.name ?? null }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
@@ -37,6 +40,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
+    await logAudit(request, 'STAFF_UPDATED', { staffId: params.id });
     return new Response(JSON.stringify(staff), {
       headers: { 'Content-Type': 'application/json' },
     });
