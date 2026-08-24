@@ -3,6 +3,7 @@ import './roles-v2.css';
 import { ROLE_KIND_FILTERS, type RoleRow } from '../../domain/entities/role-editor';
 import { useRolesDirectory } from './hooks/useRolesDirectory';
 import RoleEditorDrawer from './RoleEditorDrawer';
+import PermissionSyncPanel from './PermissionSyncPanel';
 
 export default function RolesPageV2() {
 	const directory = useRolesDirectory();
@@ -42,6 +43,8 @@ export default function RolesPageV2() {
 			</div>
 
 			<RolesTable directory={directory} />
+
+			<PermissionSyncPanel />
 
 			<p className="eb-roles-footnote">System roles ship with the CMS — their name can't be changed, but permissions can. Custom roles are yours to rename or remove.</p>
 

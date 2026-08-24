@@ -36,4 +36,15 @@ export const rolesApi = {
 		}),
 
 	remove: (id: string) => getJson<{ message: string }>(`/api/roles/${id}`, { method: 'DELETE' }),
+	permissionSyncPreview: () => getJson<{
+		canonicalCount: number;
+		missingCount: number;
+		canApply: boolean;
+		permissions: Array<{ resource: string; action: string; description: string | null; category: string | null }>;
+	}>('/api/roles/permission-sync'),
+	applyPermissionSync: () => getJson<{ applied: boolean; createdCount: number; roleAssignmentsChanged: number }>('/api/roles/permission-sync', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ confirm: true }),
+	}),
 };

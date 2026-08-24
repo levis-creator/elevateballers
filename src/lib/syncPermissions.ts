@@ -2,14 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { prisma } from './prisma';
 
-interface PermissionRow {
+export interface PermissionRow {
   resource: string;
   action: string;
   description: string | null;
   category: string | null;
 }
 
-function loadPermissionsFromCsv(): PermissionRow[] | null {
+export function loadPermissionsFromCsv(): PermissionRow[] | null {
   const csvPath = process.env.PERMISSIONS_CSV
     ? path.resolve(process.env.PERMISSIONS_CSV)
     : path.join(process.cwd(), 'scripts/data/permissions.csv');
@@ -84,4 +84,18 @@ export async function syncPermissions(): Promise<void> {
   await prisma.permission.createMany({ data: toCreate, skipDuplicates: true });
 
   console.log(`[permissions] Auto-synced ${toCreate.length} new permission(s) from CSV.`);
+}
+
+/** Return canonical rows absent from the database without changing anything. */
+export async function findMissingPermissions(): Promise<PermissionRow[]> {
+  const rows = loadPermissionsFromCsv();
+  if (!rows || rows.length === 0) {
+    throw new Error('Canonical permission catalogue is unavailable or empty');
+  }
+
+  const existing = await prisma.permission.findMany({
+    select: { resource: true, action: true },
+  });
+  const existingSet = new Set(existing.map((permission) => `${permission.resource}:${permission.action}`));
+  return rows.filter((row) => !existingSet.has(`${row.resource}:${row.action}`));
 }
