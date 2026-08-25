@@ -33,22 +33,22 @@ model User {
   teamOwnerships            TeamOwnership[]
   sessions                  UserSession[]
   passwordHistory           PasswordHistory[]
-  staffTransfersCreated    StaffTransfer[]   @relation("StaffTransferActor")
+  staffTransfersCreated     StaffTransfer[]                 @relation("StaffTransferActor")
   staffProfile              Staff?
 
   @@map("users")
 }
 
 model UserSession {
-  id         String    @id @default(cuid())
-  userId     String    @map("user_id")
-  tokenHash  String    @unique @map("token_hash")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  lastSeenAt DateTime? @map("last_seen_at")
-  expiresAt  DateTime  @map("expires_at")
-  revokedAt  DateTime? @map("revoked_at")
-  revokeReason String? @map("revoke_reason")
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  tokenHash    String    @unique @map("token_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastSeenAt   DateTime? @map("last_seen_at")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  revokeReason String?   @map("revoke_reason")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt, expiresAt])
   @@index([userId, createdAt])
@@ -214,27 +214,27 @@ model RolePermission {
 }
 
 model NewsArticle {
-  id          String                @id @default(cuid())
-  title       String
-  slug        String                @unique
-  content     String                @db.LongText
-  excerpt     String?
-  category    String
-  image       String?
-  tags        Json?
-  leagueSeasonId String? @map("league_season_id")
-  published   Boolean               @default(false)
-  publishedAt DateTime?             @map("published_at")
-  authorId    String                @map("author_id")
-  createdAt   DateTime              @default(now()) @map("created_at")
-  updatedAt   DateTime              @updatedAt @map("updated_at")
-  feature     Boolean               @default(false)
-  comments    Comment[]
-  metadata    NewsArticleMetadata?
-  events      NewsArticleEvent[]
-  revisions   NewsArticleRevision[]
-  author      User                  @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  leagueSeason LeagueSeason? @relation(fields: [leagueSeasonId], references: [id], onDelete: SetNull)
+  id             String                @id @default(cuid())
+  title          String
+  slug           String                @unique
+  content        String                @db.LongText
+  excerpt        String?
+  category       String
+  image          String?
+  tags           Json?
+  leagueSeasonId String?               @map("league_season_id")
+  published      Boolean               @default(false)
+  publishedAt    DateTime?             @map("published_at")
+  authorId       String                @map("author_id")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  feature        Boolean               @default(false)
+  comments       Comment[]
+  metadata       NewsArticleMetadata?
+  events         NewsArticleEvent[]
+  revisions      NewsArticleRevision[]
+  author         User                  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  leagueSeason   LeagueSeason?         @relation(fields: [leagueSeasonId], references: [id], onDelete: SetNull)
 
   @@index([category])
   @@index([publishedAt])
@@ -284,25 +284,25 @@ model NewsArticleEvent {
 }
 
 model NewsArticleRevision {
-  id          String       @id @default(cuid())
-  articleId   String       @map("article_id")
-  version     Int
-  title       String
-  slug        String
-  content     String       @db.LongText
-  excerpt     String?
-  category    String
-  image       String?
-  tags        Json?
-  leagueSeasonId String? @map("league_season_id")
-  published   Boolean
-  feature     Boolean
-  publishedAt DateTime?    @map("published_at")
-  changedById String?      @map("changed_by_id")
-  changeNote  String?      @map("change_note")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  article     NewsArticle  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  changedBy   User?        @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  id             String      @id @default(cuid())
+  articleId      String      @map("article_id")
+  version        Int
+  title          String
+  slug           String
+  content        String      @db.LongText
+  excerpt        String?
+  category       String
+  image          String?
+  tags           Json?
+  leagueSeasonId String?     @map("league_season_id")
+  published      Boolean
+  feature        Boolean
+  publishedAt    DateTime?   @map("published_at")
+  changedById    String?     @map("changed_by_id")
+  changeNote     String?     @map("change_note")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  article        NewsArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  changedBy      User?       @relation(fields: [changedById], references: [id], onDelete: SetNull)
 
   @@unique([articleId, version])
   @@index([articleId, createdAt])
@@ -383,6 +383,7 @@ model LeagueSeason {
   seasonTeamPlayers        SeasonTeamPlayer[]
   seasonPlayerTransfers    SeasonPlayerTransfer[]
   seasonRosterHistory      SeasonRosterHistory[]
+  staffAssignments         TeamStaff[]                     @relation("LeagueSeasonStaffAssignments")
 
   @@unique([leagueId, seasonId])
   @@index([seasonId])
@@ -412,62 +413,63 @@ model Conference {
 }
 
 model Match {
-  id                    String           @id @default(cuid())
-  slug                  String?          @unique
-  team1Name             String?          @map("team1_name")
-  team1Logo             String?          @map("team1_logo")
-  team2Name             String?          @map("team2_name")
-  team2Logo             String?          @map("team2_logo")
+  id                    String            @id @default(cuid())
+  slug                  String?           @unique
+  team1Name             String?           @map("team1_name")
+  team1Logo             String?           @map("team1_logo")
+  team2Name             String?           @map("team2_name")
+  team2Logo             String?           @map("team2_logo")
   date                  DateTime
-  team1Score            Int?             @map("team1_score")
-  team2Score            Int?             @map("team2_score")
-  status                MatchStatus      @default(UPCOMING)
-  resultPublishedAt     DateTime?        @map("result_published_at")
-  createdAt             DateTime         @default(now()) @map("created_at")
-  updatedAt             DateTime         @updatedAt @map("updated_at")
-  leagueId              String?          @map("league_id")
-  leagueName            String?          @map("league_name")
-  seasonId              String?          @map("season_id")
-  leagueSeasonId        String?          @map("league_season_id")
-  team1Id               String?          @map("team1_id")
-  team2Id               String?          @map("team2_id")
+  team1Score            Int?              @map("team1_score")
+  team2Score            Int?              @map("team2_score")
+  status                MatchStatus       @default(UPCOMING)
+  resultPublishedAt     DateTime?         @map("result_published_at")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  leagueId              String?           @map("league_id")
+  leagueName            String?           @map("league_name")
+  seasonId              String?           @map("season_id")
+  leagueSeasonId        String?           @map("league_season_id")
+  team1Id               String?           @map("team1_id")
+  team2Id               String?           @map("team2_id")
   stage                 MatchStage?
-  gameRulesId           String?          @map("game_rules_id")
-  currentPeriod         Int              @default(1) @map("current_period")
-  clockSeconds          Int?             @map("clock_seconds")
-  clockRunning          Boolean          @default(false) @map("clock_running")
-  clockStartedAt        DateTime?        @map("clock_started_at")
-  clockSecondsAtStart   Int?             @map("clock_seconds_at_start")
-  possessionTeamId      String?          @map("possession_team_id")
-  team1Timeouts         Int              @default(0) @map("team1_timeouts")
-  team2Timeouts         Int              @default(0) @map("team2_timeouts")
-  team1Fouls            Int              @default(0) @map("team1_fouls")
-  team2Fouls            Int              @default(0) @map("team2_fouls")
-  duration              Int?             @map("duration")
-  trackingMode          GameTrackingMode @default(BOTH) @map("tracking_mode")
-  winnerId              String?          @map("winner_id")
-  nextWinnerMatchId     String?          @map("next_winner_match_id")
-  nextLoserMatchId      String?          @map("next_loser_match_id")
-  bracketPosition       Int?             @map("bracket_position")
-  bracketRound          Int?             @map("bracket_round")
-  bracketType           String?          @map("bracket_type")
+  gameRulesId           String?           @map("game_rules_id")
+  currentPeriod         Int               @default(1) @map("current_period")
+  clockSeconds          Int?              @map("clock_seconds")
+  clockRunning          Boolean           @default(false) @map("clock_running")
+  clockStartedAt        DateTime?         @map("clock_started_at")
+  clockSecondsAtStart   Int?              @map("clock_seconds_at_start")
+  possessionTeamId      String?           @map("possession_team_id")
+  team1Timeouts         Int               @default(0) @map("team1_timeouts")
+  team2Timeouts         Int               @default(0) @map("team2_timeouts")
+  team1Fouls            Int               @default(0) @map("team1_fouls")
+  team2Fouls            Int               @default(0) @map("team2_fouls")
+  duration              Int?              @map("duration")
+  trackingMode          GameTrackingMode  @default(BOTH) @map("tracking_mode")
+  winnerId              String?           @map("winner_id")
+  nextWinnerMatchId     String?           @map("next_winner_match_id")
+  nextLoserMatchId      String?           @map("next_loser_match_id")
+  bracketPosition       Int?              @map("bracket_position")
+  bracketRound          Int?              @map("bracket_round")
+  bracketType           String?           @map("bracket_type")
   gameStates            GameState[]
   jumpBalls             JumpBall[]
   events                MatchEvent[]
   periods               MatchPeriod[]
   matchPlayers          MatchPlayer[]
-  gameRules             GameRules?       @relation(fields: [gameRulesId], references: [id])
-  league                League?          @relation(fields: [leagueId], references: [id])
-  leagueSeason          LeagueSeason?    @relation("LeagueSeasonMatches", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
-  nextLoserMatch        Match?           @relation("NextLoserMatches", fields: [nextLoserMatchId], references: [id])
-  previousLoserMatches  Match[]          @relation("NextLoserMatches")
-  nextWinnerMatch       Match?           @relation("NextWinnerMatches", fields: [nextWinnerMatchId], references: [id])
-  previousWinnerMatches Match[]          @relation("NextWinnerMatches")
-  possessionTeam        Team?            @relation("PossessionMatches", fields: [possessionTeamId], references: [id])
-  season                Season?          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  team1                 Team?            @relation("Team1Matches", fields: [team1Id], references: [id])
-  team2                 Team?            @relation("Team2Matches", fields: [team2Id], references: [id])
-  winner                Team?            @relation("WinnerMatches", fields: [winnerId], references: [id])
+  gameRules             GameRules?        @relation(fields: [gameRulesId], references: [id])
+  league                League?           @relation(fields: [leagueId], references: [id])
+  leagueSeason          LeagueSeason?     @relation("LeagueSeasonMatches", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
+  nextLoserMatch        Match?            @relation("NextLoserMatches", fields: [nextLoserMatchId], references: [id])
+  previousLoserMatches  Match[]           @relation("NextLoserMatches")
+  nextWinnerMatch       Match?            @relation("NextWinnerMatches", fields: [nextWinnerMatchId], references: [id])
+  previousWinnerMatches Match[]           @relation("NextWinnerMatches")
+  possessionTeam        Team?             @relation("PossessionMatches", fields: [possessionTeamId], references: [id])
+  season                Season?           @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team1                 Team?             @relation("Team1Matches", fields: [team1Id], references: [id])
+  team2                 Team?             @relation("Team2Matches", fields: [team2Id], references: [id])
+  winner                Team?             @relation("WinnerMatches", fields: [winnerId], references: [id])
+  staffMatchSheets      StaffMatchSheet[]
   substitutions         Substitution[]
   timeouts              Timeout[]
 
@@ -521,8 +523,9 @@ model Team {
   substitutions                  Substitution[]
   staff                          TeamStaff[]
   coachingStaff                  TeamStaffMember[]
-  staffTransfersFrom              StaffTransfer[]                  @relation("StaffTransferFromTeam")
-  staffTransfersTo                StaffTransfer[]                  @relation("StaffTransferToTeam")
+  staffMatchSheets               StaffMatchSheet[]
+  staffTransfersFrom             StaffTransfer[]                 @relation("StaffTransferFromTeam")
+  staffTransfersTo               StaffTransfer[]                 @relation("StaffTransferToTeam")
   timeouts                       Timeout[]
   teamHistory                    PlayerTeamHistory[]
   seasonTeams                    SeasonTeam[]
@@ -933,32 +936,33 @@ model SiteSetting {
 }
 
 model Staff {
-  id            String                     @id @default(cuid())
-  userId        String?                    @unique @map("user_id")
-  slug          String?                    @unique
-  firstName     String
-  lastName      String
-  tagline       String?                    @db.VarChar(90)
-  email         String?
-  phone         String?
-  phoneSecondary String?                   @map("phone_secondary")
-  nextOfKin     String?                    @map("next_of_kin")
-  role          StaffRole
-  bio           String?
-  internalNote  String?                    @map("internal_note") @db.Text
-  image         String?
-  licenseNumber String?                    @map("license_number")
-  licenseExpiresAt DateTime?               @map("license_expires_at")
-  safeguardingStatus String?               @map("safeguarding_status")
-  idNumber      String?                    @map("id_number")
-  active        Boolean                    @default(true)
-  approved      Boolean                    @default(false)
-  createdAt     DateTime                   @default(now()) @map("created_at")
-  updatedAt     DateTime                   @updatedAt @map("updated_at")
-  notifications RegistrationNotification[]
-  teams         TeamStaff[]
-  transfers     StaffTransfer[]
-  user           User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id                 String                     @id @default(cuid())
+  userId             String?                    @unique @map("user_id")
+  slug               String?                    @unique
+  firstName          String
+  lastName           String
+  tagline            String?                    @db.VarChar(90)
+  email              String?
+  phone              String?
+  phoneSecondary     String?                    @map("phone_secondary")
+  nextOfKin          String?                    @map("next_of_kin")
+  role               StaffRole
+  bio                String?
+  internalNote       String?                    @map("internal_note") @db.Text
+  image              String?
+  licenseNumber      String?                    @map("license_number")
+  licenseExpiresAt   DateTime?                  @map("license_expires_at")
+  safeguardingStatus String?                    @map("safeguarding_status")
+  idNumber           String?                    @map("id_number")
+  active             Boolean                    @default(true)
+  approved           Boolean                    @default(false)
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  notifications      RegistrationNotification[]
+  teams              TeamStaff[]
+  transfers          StaffTransfer[]
+  matchSheets        StaffMatchSheet[]
+  user               User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([slug])
   @@index([approved])
@@ -967,36 +971,59 @@ model Staff {
 }
 
 model TeamStaff {
-  id        String    @id @default(cuid())
-  teamId    String    @map("team_id")
-  staffId   String    @map("staff_id")
-  role      StaffRole
-  effectiveFrom DateTime?                 @map("effective_from")
-  effectiveTo DateTime?                   @map("effective_to")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  teamId         String        @map("team_id")
+  staffId        String        @map("staff_id")
+  leagueSeasonId String?       @map("league_season_id")
+  role           StaffRole
+  effectiveFrom  DateTime?     @map("effective_from")
+  effectiveTo    DateTime?     @map("effective_to")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  staff          Staff         @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  team           Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  leagueSeason   LeagueSeason? @relation("LeagueSeasonStaffAssignments", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
 
   @@unique([teamId, staffId])
   @@index([teamId])
   @@index([staffId])
+  @@index([leagueSeasonId])
   @@map("team_staff")
 }
 
+model StaffMatchSheet {
+  id        String   @id @default(cuid())
+  staffId   String   @map("staff_id")
+  matchId   String   @map("match_id")
+  teamId    String   @map("team_id")
+  capacity  String   @db.VarChar(80)
+  status    String   @default("APPEARED") @db.VarChar(32)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, matchId, teamId, capacity])
+  @@index([staffId, createdAt])
+  @@index([matchId])
+  @@index([teamId])
+  @@map("staff_match_sheets")
+}
+
 model StaffTransfer {
-  id             String   @id @default(cuid())
-  staffId        String   @map("staff_id")
-  fromTeamId     String   @map("from_team_id")
-  toTeamId       String   @map("to_team_id")
-  effectiveFrom  DateTime @map("effective_from")
-  reason         String?  @db.VarChar(500)
-  actorUserId    String?  @map("actor_user_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  staff          Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  fromTeam       Team     @relation("StaffTransferFromTeam", fields: [fromTeamId], references: [id], onDelete: Restrict)
-  toTeam         Team     @relation("StaffTransferToTeam", fields: [toTeamId], references: [id], onDelete: Restrict)
-  actor          User?    @relation("StaffTransferActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  id            String   @id @default(cuid())
+  staffId       String   @map("staff_id")
+  fromTeamId    String   @map("from_team_id")
+  toTeamId      String   @map("to_team_id")
+  effectiveFrom DateTime @map("effective_from")
+  reason        String?  @db.VarChar(500)
+  actorUserId   String?  @map("actor_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  staff         Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  fromTeam      Team     @relation("StaffTransferFromTeam", fields: [fromTeamId], references: [id], onDelete: Restrict)
+  toTeam        Team     @relation("StaffTransferToTeam", fields: [toTeamId], references: [id], onDelete: Restrict)
+  actor         User?    @relation("StaffTransferActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([staffId, effectiveFrom])
   @@index([fromTeamId])

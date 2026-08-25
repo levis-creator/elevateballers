@@ -73,6 +73,38 @@
 	font-family: "Rubik", sans-serif;
 }
 
+/* Staff detail is rendered inside the shared admin content wrapper. The main
+   Tailwind config does not define the standalone V2 font utility aliases, so
+   keep these exact reference fonts scoped to this page. */
+.staff-detail-page .font-display {
+	font-family: "Anton", sans-serif !important;
+}
+.staff-detail-page .font-body {
+	font-family: "Archivo", sans-serif !important;
+}
+.staff-detail-page .font-mono {
+	font-family: "Space Mono", monospace !important;
+}
+.staff-detail-page .staff-detail-tabs {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	margin-inline: -24px;
+	padding-inline: 24px;
+	background: var(--bg);
+}
+.staff-detail-page .staff-detail-tabs button {
+	font-family: "Archivo", sans-serif !important;
+	font-size: 12px;
+	font-weight: 700;
+}
+@media (max-width: 600px) {
+	.staff-detail-page .staff-detail-tabs {
+		margin-inline: -16px;
+		padding-inline: 16px;
+	}
+}
+
 /*
  * Reusable v2 form primitives. Every redesigned admin form uses these two
  * classes for its labels and controls, so field styling lives in exactly one

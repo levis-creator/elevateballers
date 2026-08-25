@@ -2,8 +2,13 @@ import { z } from "zod";
 import type { Prisma, StaffRole, TeamStaff } from "@prisma/client";
 
 export type StaffWithAssignments = Prisma.StaffGetPayload<{ include: { teams: { include: { team: true } } } }>;
-export type StaffAssignment = Pick<TeamStaff, "teamId" | "role" | "effectiveFrom" | "effectiveTo">;
-export type StaffAssignmentHistory = Prisma.TeamStaffGetPayload<{ include: { team: true } }>;
+export type StaffAssignment = {
+  teamId: string;
+  leagueSeasonId?: string | null;
+  role: StaffRole;
+  effectiveFrom?: Date | null;
+};
+export type StaffAssignmentHistory = Prisma.TeamStaffGetPayload<{ include: { team: true; leagueSeason: { include: { league: true; season: true } } } }>;
 export type StaffTransferRecord = Prisma.StaffTransferGetPayload<{ include: { fromTeam: true; toTeam: true } }>;
 
 export const STAFF_ROLES: StaffRole[] = [
@@ -15,6 +20,7 @@ const optionalText = (max: number) => z.string().trim().max(max).optional();
 
 export const staffAssignmentSchema = z.object({
   teamId: z.string().min(1).max(64),
+  leagueSeasonId: z.string().min(1).max(64).optional(),
   role: z.enum(STAFF_ROLES as [StaffRole, ...StaffRole[]]),
   effectiveFrom: z.coerce.date().nullable().optional(),
 });

@@ -102,6 +102,9 @@ const isTeamForm = /^\/admin\/teams\/(new|[^/]+)\/?$/.test(Astro.url.pathname);
 const isPlayersList = Astro.url.pathname === '/admin/players' || Astro.url.pathname === '/admin/players/';
 const isPlayerDetail = /^\/admin\/players\/[^/]+\/?$/.test(Astro.url.pathname);
 const isMediaLibrary = Astro.url.pathname === '/admin/media' || Astro.url.pathname === '/admin/media/';
+const isStaffDetail =
+  /^\/admin\/staff\/[^/]+\/?$/.test(Astro.url.pathname) &&
+  Astro.url.searchParams.get('mode') !== 'edit';
 ---
 
 <!doctype html>
@@ -162,9 +165,12 @@ const isMediaLibrary = Astro.url.pathname === '/admin/media' || Astro.url.pathna
         font-family: 'Rubik', sans-serif;
       }
 
-      .admin-page h1,
-      .admin-page h2,
-      .admin-page h3 {
+      /* Keep the legacy Teko headings scoped to the legacy admin shell. The V2
+         shell owns its typography (Anton / Archivo / Space Mono), including
+         detail-page headers and KPI labels. */
+      .flex.min-h-screen .admin-page h1,
+      .flex.min-h-screen .admin-page h2,
+      .flex.min-h-screen .admin-page h3 {
         font-family: 'Teko', sans-serif;
         font-weight: 600;
         line-height: 1.2;
@@ -209,7 +215,7 @@ const isMediaLibrary = Astro.url.pathname === '/admin/media' || Astro.url.pathna
         </script>
         <AdminShellV2 client:load transition:persist />
             <main class="eb-content eb-scroll ml-[var(--admin-sidebar-width,248px)] h-screen min-h-0 overflow-y-auto pt-[57px] transition-[margin] duration-[280ms] ease-out max-[900px]:ml-0">
-          <div class={`mx-auto w-full ${isMediaLibrary ? 'max-w-none p-0' : isPlayersList || isPlayerDetail ? 'max-w-[1320px] px-6 py-6' : isDashboard || isTeamsList || isTeamDetail || isTeamForm ? 'max-w-[1280px] px-6 py-6' : 'max-w-[1400px] p-8 max-md:p-4 max-[480px]:p-3'} max-md:px-4 admin-page scroll-smooth`}>
+          <div class={`mx-auto w-full ${isMediaLibrary ? 'max-w-none p-0' : isStaffDetail || isPlayersList || isPlayerDetail ? 'max-w-[1320px] px-6 py-6' : isDashboard || isTeamsList || isTeamDetail || isTeamForm ? 'max-w-[1280px] px-6 py-6' : 'max-w-[1400px] p-8 max-md:p-4 max-[480px]:p-3'} max-md:px-4 admin-page scroll-smooth`}>
             <slot />
           </div>
         </main>
