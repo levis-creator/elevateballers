@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { invalidateSessions } from '@/features/cms/domain/usecases/auth';
 import { logAudit } from '@/features/cms/lib/audit';
 import { handleApiError } from '@/lib/apiError';
@@ -9,7 +10,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ params, request }) => {
   try {
-    const actor = await requirePermission(request, 'staff:update');
+    const actor = await requireSystemAdmin(request);
     const action = (await request.json().catch(() => ({}))).action;
     if (action !== 'force-2fa' && action !== 'deactivate') {
       return new Response(JSON.stringify({ error: 'Unsupported staff security action' }), { status: 400, headers: { 'Content-Type': 'application/json' } });

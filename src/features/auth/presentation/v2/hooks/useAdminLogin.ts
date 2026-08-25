@@ -42,7 +42,7 @@ export function useAdminLogin(): AdminLogin {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({ email, password, "cf-turnstile-token": turnstileToken }),
+				body: JSON.stringify({ email, password, "cf-turnstile-token": turnstileToken, returnTo: new URLSearchParams(window.location.search).get('returnTo') }),
 			});
 			const data = await response.json();
 			if (!response.ok) {

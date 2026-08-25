@@ -91,3 +91,10 @@ export async function requirePermissionPage(request: Request, permission: string
 export async function requireAdmin(request: Request) {
   return requireRole(request, 'Admin');
 }
+
+/** System-admin gate for API mutations that manage accounts or team scope. */
+export async function requireSystemAdmin(request: Request) {
+  const user = await requireAdmin(request);
+  if (!user) throw new Error('Forbidden: System Admin access required');
+  return user;
+}

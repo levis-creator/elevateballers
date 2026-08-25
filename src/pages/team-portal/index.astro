@@ -1,0 +1,28 @@
+---
+export const prerender = false;
+
+import { getCurrentUser } from '@/features/cms/lib/auth';
+import { getTeamPortalAccess, requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
+import TeamPortalShell from '@/features/team-portal/presentation/TeamPortalShell';
+
+const user = await getCurrentUser(Astro.request);
+if (!user) return Astro.redirect(`/login?returnTo=${encodeURIComponent('/team-portal')}`, 302);
+
+const access = await getTeamPortalAccess(user.id);
+if (access.status !== 'allowed') {
+  const message = access.status === 'no-active-team'
+    ? 'Your account is active, but a System Admin has not assigned you to an active team yet.'
+    : access.status === 'not-activated'
+      ? 'Your portal account has not been activated yet. Check your setup invitation or contact a System Admin.'
+      : 'Your account is not currently eligible for Team Portal access.';
+  return Astro.redirect(`/unauthorized?reason=${encodeURIComponent(message)}`, 302);
+}
+
+const requestedTeam = Astro.url.searchParams.get('team');
+const selectedTeam = (await requireActiveTeamContext(user.id, requestedTeam)).team;
+---
+
+<html lang="en">
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="robots" content="noindex, nofollow" /><title>Team Portal</title></head>
+  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} /></body>
+</html>

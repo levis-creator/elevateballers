@@ -100,7 +100,7 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
       .catch((e) => setError(e instanceof Error ? e.message : 'Unable to load Staff profile'))
       .finally(() => setLoading(false));
   }, [staffId]);
-  const active = useMemo(() => (record?.teams ?? []).filter((item) => !item.effectiveTo), [record]);
+  const active = useMemo(() => { const now = new Date(); return (record?.teams ?? []).filter((item) => item.effectiveFrom <= now && (!item.effectiveTo || item.effectiveTo > now)); }, [record]);
   useEffect(() => {
     const teamIds = active.map((item) => item.teamId).filter(Boolean);
     if (!teamIds.length) {

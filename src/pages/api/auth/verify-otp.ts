@@ -13,6 +13,10 @@ import { handleApiError, json } from '../../../lib/apiError';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 import { getClientIp } from '../../../lib/getClientIp';
+import { hasRole } from '@/features/rbac/data/datasources/permissions';
+import { ADMIN_ROLE_NAME } from '@/features/users/domain/entities/user-directory';
+import { getTeamPortalAccess } from '@/features/team-portal/application/team-portal-access';
+import { isSafeInternalReturnTo } from '@/features/team-portal/domain/entities/team-portal-access';
 
 export const prerender = false;
 
@@ -151,6 +155,21 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
     });
     cookies.delete('otp-session', { path: '/' });
 
+    const requestedReturnTo = cookies.get('login-return-to')?.value || null;
+    const isAdmin = await hasRole(userWithRoles.id, ADMIN_ROLE_NAME);
+    const teamPortalAccess = isAdmin ? null : await getTeamPortalAccess(userWithRoles.id);
+    const defaultDestination = isAdmin
+      ? '/admin'
+      : teamPortalAccess?.status === 'allowed'
+        ? '/team-portal'
+        : '/unauthorized';
+    const redirectTo = isAdmin && isSafeInternalReturnTo(requestedReturnTo) && requestedReturnTo.startsWith('/admin')
+      ? requestedReturnTo
+      : !isAdmin && teamPortalAccess?.status === 'allowed' && isSafeInternalReturnTo(requestedReturnTo) && requestedReturnTo.startsWith('/team-portal')
+        ? requestedReturnTo
+        : defaultDestination;
+    cookies.delete('login-return-to', { path: '/' });
+
     await logAudit(request, 'AUTH_LOGIN_SUCCESS', {
       userId: userWithRoles.id,
       email: userWithRoles.email,
@@ -170,6 +189,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
             name: ur.role.name,
             description: ur.role.description,
           })),
+          redirectTo,
         },
       },
       200

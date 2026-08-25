@@ -1,6 +1,8 @@
 import { prisma } from '../../../../../lib/prisma';
 import { COACH_ROLE_NAME, type UserAccountRow } from '../../../domain/entities/user-directory';
 
+const now = new Date();
+
 export const userSelect = {
 	id: true,
 	name: true,
@@ -16,7 +18,7 @@ export const userSelect = {
 		},
 	},
 	teamOwnerships: {
-		where: { role: COACH_ROLE_NAME, revokedAt: null },
+		where: { role: COACH_ROLE_NAME, revokedAt: null, effectiveFrom: { lte: now }, OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }] },
 		select: { team: { select: { id: true, name: true } } },
 	},
 	notificationSettings: { select: { emailEnabled: true } },
@@ -26,7 +28,7 @@ export const userSelect = {
 		take: 1,
 		select: { lastSeenAt: true, createdAt: true },
 	},
-} as const;
+};
 
 type SelectedUser = {
 	id: string;

@@ -1,0 +1,25 @@
+---
+export const prerender = false;
+import AdminLoginPage from '@/features/auth/presentation/v2/AdminLoginPage.astro';
+import { checkAuth } from '@/features/cms/lib/auth-astro';
+import { hasRole } from '@/features/rbac/data/datasources/permissions';
+import { ADMIN_ROLE_NAME } from '@/features/users/domain/entities/user-directory';
+import { getTeamPortalAccess } from '@/features/team-portal/application/team-portal-access';
+
+const returnTo = Astro.url.searchParams.get('returnTo');
+const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') && !returnTo.includes('\\') ? returnTo : null;
+const user = await checkAuth(Astro.request);
+if (user) {
+  const isAdmin = await hasRole(user.id, ADMIN_ROLE_NAME);
+  const teamAccess = isAdmin ? null : await getTeamPortalAccess(user.id);
+  const defaultDestination = isAdmin ? '/admin' : teamAccess?.status === 'allowed' ? '/team-portal' : '/unauthorized';
+  const requestedDestination = isAdmin && safeReturnTo?.startsWith('/admin')
+    ? safeReturnTo
+    : !isAdmin && teamAccess?.status === 'allowed' && safeReturnTo?.startsWith('/team-portal')
+      ? safeReturnTo
+      : defaultDestination;
+  return Astro.redirect(requestedDestination, 302);
+}
+---
+
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="robots" content="noindex, nofollow" /><title>Sign in - Elevate Ballers</title></head><body><AdminLoginPage /></body></html>
