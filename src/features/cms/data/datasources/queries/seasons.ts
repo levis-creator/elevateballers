@@ -65,6 +65,24 @@ export async function getSeasons(
   return seasons.map((season) => ({ ...season, completedMatches: completed.get(season.id) ?? 0 }));
 }
 
+/** Small option payload for the match form, scoped to one league. */
+export async function getSeasonOptions(
+  leagueId?: string,
+): Promise<Array<{ id: string; name: string; leagueSeasons: Array<{ id: string; leagueId: string }> }>> {
+  return prisma.season.findMany({
+    where: leagueId ? { leagueSeasons: { some: { leagueId } } } : undefined,
+    select: {
+      id: true,
+      name: true,
+      leagueSeasons: {
+        where: leagueId ? { leagueId } : undefined,
+        select: { id: true, leagueId: true },
+      },
+    },
+    orderBy: { startDate: 'desc' },
+  });
+}
+
 export async function getSeasonById(id: string): Promise<SeasonWithCounts | null> {
   return await prisma.season.findUnique({ where: { id }, ...SEASON_INCLUDE }) as SeasonWithCounts | null;
 }

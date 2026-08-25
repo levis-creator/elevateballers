@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getSeasons } from '../../../features/cms/lib/queries';
+import { getSeasonOptions, getSeasons } from '../../../features/cms/lib/queries';
 import { createSeason } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
@@ -13,8 +13,11 @@ export const GET: APIRoute = async ({ url }) => {
     const leagueId = url.searchParams.get('leagueId') || undefined;
     // Opt-in: only the admin board needs played-match counts.
     const withCompletedCounts = url.searchParams.get('counts') === 'matches';
-    const seasons = await getSeasons(activeOnly, leagueId, withCompletedCounts);
-    return new Response(JSON.stringify(seasons), {
+    const compact = url.searchParams.get('compact') === 'true';
+    const compactSeasons = compact
+      ? await getSeasonOptions(leagueId)
+      : await getSeasons(activeOnly, leagueId, withCompletedCounts);
+    return new Response(JSON.stringify(compactSeasons), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
