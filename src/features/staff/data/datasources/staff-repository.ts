@@ -21,7 +21,7 @@ export async function findStaff(id: string): Promise<StaffWithAssignments | null
 }
 
 export async function listStaffAssignmentHistory(staffId: string): Promise<StaffAssignmentHistory[]> {
-  return prisma.teamStaff.findMany({ where: { staffId }, include: { team: true }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] });
+  return prisma.teamStaff.findMany({ where: { staffId }, include: { team: true, leagueSeason: { include: { league: true, season: true } } }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] });
 }
 
 export async function listStaffTransfers(staffId: string): Promise<StaffTransferRecord[]> {
@@ -87,8 +87,8 @@ async function replaceAssignments(staffId: string, assignments: StaffAssignment[
   for (const assignment of assignments) {
     await db.teamStaff.upsert({
       where: { teamId_staffId: { teamId: assignment.teamId, staffId } },
-      create: { teamId: assignment.teamId, staffId, role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? new Date() },
-      update: { role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? undefined, effectiveTo: null },
+      create: { teamId: assignment.teamId, staffId, role: assignment.role, leagueSeasonId: assignment.leagueSeasonId, effectiveFrom: assignment.effectiveFrom ?? new Date() },
+      update: { role: assignment.role, leagueSeasonId: assignment.leagueSeasonId, effectiveFrom: assignment.effectiveFrom ?? undefined, effectiveTo: null },
     });
   }
 }
