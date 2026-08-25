@@ -99,7 +99,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
 
   // Option lists ------------------------------------------------------------
   useEffect(() => {
-    getJson<NamedOption>('/api/leagues').then(setLeagues);
+    getJson<NamedOption>('/api/leagues?compact=true').then(setLeagues);
     // Keep the picker useful before a competition is selected. Once a
     // league/season is chosen, the roster effect below replaces this catalog
     // with the teams eligible for that competition edition.
@@ -137,7 +137,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
     }
     let cancelled = false;
     getJson<NamedOption & { leagueSeasons?: { id: string; leagueId: string }[] }>(
-      `/api/seasons?leagueId=${leagueId}`,
+      `/api/seasons?leagueId=${leagueId}&compact=true`,
     ).then((list) => {
       if (!cancelled) {
         setSeasons(

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getLeagues } from '../../../features/cms/lib/queries';
+import { getLeagueOptions, getLeagues } from '../../../features/cms/lib/queries';
 import { createLeague } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
@@ -12,8 +12,9 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const activeOnly = url.searchParams.get('active') === 'true';
     const withTeamCounts = url.searchParams.get('counts') === 'teams';
+    const compact = url.searchParams.get('compact') === 'true';
 
-    const leagues = await getLeagues(activeOnly, withTeamCounts);
+    const leagues = compact ? await getLeagueOptions() : await getLeagues(activeOnly, withTeamCounts);
 
     return new Response(JSON.stringify(leagues), {
       headers: { 'Content-Type': 'application/json' },

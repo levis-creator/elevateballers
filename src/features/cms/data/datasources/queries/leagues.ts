@@ -44,6 +44,14 @@ export async function getLeagues(
   return leagues.map((league) => ({ ...league, teamCount: teamCounts.get(league.id) ?? 0 }));
 }
 
+/** Small option payload for forms that only need a league id and label. */
+export async function getLeagueOptions(): Promise<Array<{ id: string; name: string }>> {
+  return prisma.league.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+}
+
 export async function getLeagueById(id: string): Promise<LeagueWithMatchCount | null> {
   return await prisma.league.findUnique({ where: { id }, ...LEAGUE_INCLUDE }) as LeagueWithMatchCount | null;
 }
