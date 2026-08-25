@@ -4,7 +4,7 @@
  */
 
 import { getCurrentUser } from '../../../cms/lib/auth';
-import { hasRole, hasPermission, hasAnyRole } from './permissions';
+import { hasRole, hasPermission, hasAnyRole } from '../../data/datasources/permissions';
 
 /**
  * Check if the current user has a specific role
