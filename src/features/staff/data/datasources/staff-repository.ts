@@ -36,7 +36,7 @@ export async function transferStaff(staffId: string, input: StaffTransferInput, 
     const existing = await tx.teamStaff.findUnique({ where: { teamId_staffId: { teamId: input.toTeamId, staffId } }, select: { id: true, effectiveTo: true } });
     if (existing && !existing.effectiveTo) throw new Error("This staff member is already assigned to the selected team");
     await tx.teamStaff.update({ where: { id: previous.id }, data: { effectiveTo: input.effectiveFrom } });
-    await tx.teamStaff.create({ data: { teamId: input.toTeamId, staffId, role: input.role, effectiveFrom: input.effectiveFrom } });
+    await tx.teamStaff.create({ data: { teamId: input.toTeamId, staffId, role: input.role, leagueSeasonId: input.leagueSeasonId ?? previous.leagueSeasonId, effectiveFrom: input.effectiveFrom } });
     return tx.staffTransfer.create({ data: { staffId, fromTeamId: previous.teamId, toTeamId: input.toTeamId, effectiveFrom: input.effectiveFrom, reason: input.transferReason || null, actorUserId }, include: { fromTeam: true, toTeam: true } });
   });
 }

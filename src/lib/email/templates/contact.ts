@@ -101,6 +101,26 @@ export async function sendContactReplyEmail(data: {
   console.log(`[email] Contact reply sent to ${data.email}`);
 }
 
+export async function sendAdminDirectEmail(data: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}): Promise<void> {
+  const html = emailWrapper(`
+    <p style="margin:0 0 20px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${data.name || 'there'},</p>
+    <div style="font-size:15px;color:${C.text};line-height:1.7;">${data.message.replace(/\n/g, '<br />')}</div>
+    <p style="margin:20px 0 0;font-size:15px;color:${C.text};line-height:1.7;">Best regards,<br /><strong>ElevateBallers Team</strong></p>
+  `);
+  await sendTransactionalEmail({
+    to: data.email,
+    replyTo: ADMIN_TO,
+    subject: data.subject,
+    html,
+    audit: { template: 'admin_direct_message' },
+  });
+}
+
 export async function sendContactAutoReply(data: {
   name: string;
   email: string;
