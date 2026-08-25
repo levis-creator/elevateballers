@@ -273,7 +273,7 @@ function Hero({
   }, [menuOpen, onCloseMenu]);
   return (
     <>
-      <section className="mb-0 overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)]">
+      <section className="mb-0 overflow-visible rounded-2xl border border-[var(--bord)] bg-[var(--surf)]">
         <div className="h-[3px] bg-gradient-to-r from-[var(--brand)] via-[var(--brandsoft)] to-transparent" />
         <div className="flex flex-wrap items-start gap-5 px-5 py-5">
           <div className="flex min-w-0 flex-1 items-start gap-4">
