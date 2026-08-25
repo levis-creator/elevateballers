@@ -54,6 +54,7 @@ export const staffTransferSchema = z.object({
   toTeamId: z.string().min(1).max(64),
   role: z.enum(STAFF_ROLES as [StaffRole, ...StaffRole[]]),
   effectiveFrom: z.coerce.date(),
+  leagueSeasonId: z.string().min(1).max(64).optional(),
   transferReason: z.string().trim().max(500).optional(),
 });
 

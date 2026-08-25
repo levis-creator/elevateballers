@@ -60,6 +60,10 @@
 	background: var(--chip);
 	border-radius: 8px;
 }
+.eb-scroll {
+	scrollbar-width: thin;
+	scrollbar-color: var(--chip) transparent;
+}
 
 /*
  * Content surface shared by every admin page. It inherits the themed eb-root

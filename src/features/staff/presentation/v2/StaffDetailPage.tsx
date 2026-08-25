@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   CalendarClock,
   ChevronRight,
@@ -13,7 +13,9 @@ import type {
   StaffAssignmentHistoryRecord,
   StaffTransferRecord,
 } from '@/features/staff/data/datasources/staff-history-api';
-import { staffRoleLabel } from '@/features/staff/domain/entities/staff-management';
+import { staffHistoryApi } from '@/features/staff/data/datasources/staff-history-api';
+import { STAFF_ROLES, staffRoleLabel } from '@/features/staff/domain/entities/staff-management';
+import type { StaffRole } from '@prisma/client';
 
 type Tab = 'overview' | 'history' | 'matches' | 'account' | 'activity';
 type PortalUser = {
@@ -58,7 +60,7 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
   const [sessions, setSessions] = useState<StaffSession[]>([]);
   const [activityEvents, setActivityEvents] = useState<StaffAuditEvent[]>([]);
   const [matchSheets, setMatchSheets] = useState<StaffMatchSheet[]>([]);
-  const [historyFilter, setHistoryFilter] = useState<'all' | 'current' | 'past'>('all');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'mens' | 'womens' | 'head'>('all');
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window === 'undefined') return 'overview';
     const requested = new URLSearchParams(window.location.search).get('tab');
@@ -67,6 +69,7 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
       : 'overview';
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -108,10 +111,9 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
       .then((groups: StaffFixture[][]) => setFixtures(Array.from(new Map(groups.flat().map((match) => [match.id, match])).values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())))
       .catch(() => setFixtures([]));
   }, [active]);
-  const historyRows = assignments.filter(
-    (item) =>
-      !transfers.some((event) => event.fromTeamId === item.teamId && event.staffId === item.staffId)
-  );
+  // Keep closed assignments in the response so a transfer never erases the
+  // outgoing club from the staff member's historical record.
+  const historyRows = assignments;
   if (loading)
     return (
       <Shell>
@@ -170,6 +172,7 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
           menuOpen={menuOpen}
           onToggleMenu={() => setMenuOpen((value) => !value)}
           onCloseMenu={() => setMenuOpen(false)}
+          onOpenTransfer={() => { setMenuOpen(false); setTransferOpen(true); }}
         />
         <div className="staff-detail-tabs mb-5 flex flex-wrap gap-1 overflow-x-auto border-b border-[var(--bord2)]">
           {tabs.map(([id, label, count]) => (
@@ -193,13 +196,14 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
         {tab === 'overview' && (
           <Overview record={record} active={active} />
         )}
-        {tab === 'history' && <History assignments={historyRows} transfers={transfers} filter={historyFilter} onFilterChange={setHistoryFilter} />}
+        {tab === 'history' && <History assignments={historyRows} transfers={transfers} filter={historyFilter} onFilterChange={setHistoryFilter} onOpenTransfer={() => setTransferOpen(true)} />}
         {tab === 'matches' && (
           <Matches fixtures={fixtures} matchSheets={matchSheets} />
         )}
         {tab === 'account' && <Account portal={portal} status={portalStatus} record={record} sessions={sessions} />}
         {tab === 'activity' && <Activity record={record} events={activityEvents} />}
       </div>
+      {transferOpen && <TransferModal staffId={staffId} name={name} assignments={active} onClose={() => setTransferOpen(false)} onSaved={() => window.location.reload()} />}
     </Shell>
   );
 }
@@ -222,6 +226,7 @@ function Hero({
   menuOpen,
   onToggleMenu,
   onCloseMenu,
+  onOpenTransfer,
 }: {
   record: Awaited<ReturnType<typeof staffApi.get>>;
   name: string;
@@ -233,7 +238,39 @@ function Hero({
   menuOpen: boolean;
   onToggleMenu: () => void;
   onCloseMenu: () => void;
+  onOpenTransfer: () => void;
 }) {
+  const editHref = `/admin/staff/${record.id}?mode=edit`;
+  const exportProfile = () => {
+    const csv = [['Field', 'Value'], ['Name', name], ['Email', record.email || ''], ['Role', primaryRole || staffRoleLabel(record.role)], ['Teams', primaryTeam || ''], ['Status', record.active === false ? 'Inactive' : 'Active']].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${record.slug || record.id}-staff-profile.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    onCloseMenu();
+  };
+  const runSecurityAction = async (action: 'force-2fa' | 'deactivate') => {
+    if (action === 'deactivate' && !window.confirm(`Deactivate ${name}? Portal access will be revoked and history will be preserved.`)) return;
+    onCloseMenu();
+    const response = await fetch(`/api/staff/${record.id}/security`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      window.alert(body.error || 'Unable to complete this action.');
+      return;
+    }
+    window.location.reload();
+  };
+  const actionsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!actionsRef.current?.contains(event.target as Node)) onCloseMenu();
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
+  }, [menuOpen, onCloseMenu]);
   return (
     <>
       <section className="mb-0 overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)]">
@@ -288,7 +325,7 @@ function Hero({
               </div>
             </div>
           </div>
-          <div className="relative flex shrink-0 flex-col items-end gap-2.5">
+          <div ref={actionsRef} className="relative flex shrink-0 flex-col items-end gap-2.5">
             <div className="flex flex-wrap items-center justify-end gap-2">
             {portal ? (
               <a
@@ -323,10 +360,13 @@ function Hero({
             {menuOpen && (
               <>
                 <button type="button" aria-label="Close actions" onClick={onCloseMenu} className="fixed inset-0 z-10 cursor-default" />
-                <div className="absolute z-20 mt-[92px] w-56 overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf)] py-1 shadow-xl">
-                  <a href={`/admin/staff/${record.id}?mode=edit`} className="block px-3.5 py-2.5 text-left text-[12px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]">Edit staff record</a>
-                  <a href="/admin/audit-logs" className="block px-3.5 py-2.5 text-left text-[12px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]">View audit history</a>
-                  <a href={record.slug ? `/staff/${record.slug}` : '/staff'} className="block px-3.5 py-2.5 text-left text-[12px] font-semibold text-[var(--txd)] no-underline hover:bg-[var(--hov)]">Open public profile</a>
+                <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-[230px] overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf)] py-1 shadow-[0_14px_40px_rgba(0,0,0,0.45)]">
+                  <a href={`${editHref}#assignments`} onClick={onCloseMenu} className="block w-full border-0 bg-transparent px-3.5 py-2.5 text-left font-body text-[12.5px] font-semibold text-[var(--tx)] no-underline hover:bg-[var(--hov)]">Assign another team</a>
+                  <button type="button" onClick={onOpenTransfer} className="block w-full border-0 bg-transparent px-3.5 py-2.5 text-left font-body text-[12.5px] font-semibold text-[var(--tx)] hover:bg-[var(--hov)]">Transfer to another club…</button>
+                  {record.email ? <a href={`/admin/messages?compose=1&to=${encodeURIComponent(record.email)}&name=${encodeURIComponent(name)}`} onClick={onCloseMenu} className="block w-full border-0 bg-transparent px-3.5 py-2.5 text-left font-body text-[12.5px] font-semibold text-[var(--tx)] no-underline hover:bg-[var(--hov)]">Send a message</a> : <button type="button" disabled className="block w-full border-0 bg-transparent px-3.5 py-2.5 text-left font-body text-[12.5px] font-semibold text-[var(--faint)]">Send a message</button>}
+                  <button type="button" onClick={() => void runSecurityAction('force-2fa')} className="block w-full border-0 bg-transparent px-3.5 py-2.5 text-left font-body text-[12.5px] font-semibold text-[var(--tx)] hover:bg-[var(--hov)]">Force 2FA re-enrolment</button>
+                  <button type="button" onClick={exportProfile} className="block w-full border-0 bg-transparent px-3.5 py-2.5 text-left font-body text-[12.5px] font-semibold text-[var(--tx)] hover:bg-[var(--hov)]">Export profile (CSV)</button>
+                  <button type="button" onClick={() => void runSecurityAction('deactivate')} className="block w-full border-0 bg-transparent px-3.5 py-2.5 text-left font-body text-[12.5px] font-bold text-[var(--brand)] hover:bg-[var(--hov)]">Deactivate staff member</button>
                 </div>
               </>
             )}
@@ -455,62 +495,161 @@ function History({
   transfers,
   filter,
   onFilterChange,
+  onOpenTransfer,
 }: {
   assignments: StaffAssignmentHistoryRecord[];
   transfers: StaffTransferRecord[];
-  filter: 'all' | 'current' | 'past';
-  onFilterChange: (filter: 'all' | 'current' | 'past') => void;
+  filter: 'all' | 'mens' | 'womens' | 'head';
+  onFilterChange: (filter: 'all' | 'mens' | 'womens' | 'head') => void;
+  onOpenTransfer: () => void;
 }) {
-  const visibleAssignments = assignments.filter((item) => filter === 'all' || (filter === 'current' ? !item.effectiveTo : Boolean(item.effectiveTo)));
+  const visibleAssignments = assignments.filter((item) => {
+    const leagueName = item.leagueSeason?.league?.name ?? '';
+    if (filter === 'mens') return !/women/i.test(leagueName);
+    if (filter === 'womens') return /women/i.test(leagueName);
+    if (filter === 'head') return item.role === 'COACH';
+    return true;
+  });
   const historyGroups = Array.from(new Map(visibleAssignments.map((item) => {
-    const season = item.effectiveFrom ? `${new Date(item.effectiveFrom).getFullYear()} Season` : 'Season unavailable';
-    return [season, visibleAssignments.filter((candidate) => (candidate.effectiveFrom ? `${new Date(candidate.effectiveFrom).getFullYear()} Season` : 'Season unavailable') === season)];
+    const season = item.leagueSeason?.season?.name || (item.effectiveFrom ? `${new Date(item.effectiveFrom).getFullYear()} Season` : 'Season unavailable');
+    return [season, visibleAssignments.filter((candidate) => (candidate.leagueSeason?.season?.name || (candidate.effectiveFrom ? `${new Date(candidate.effectiveFrom).getFullYear()} Season` : 'Season unavailable')) === season)];
   })).entries());
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)]">
-      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--bord2)] px-5 py-4">
-        <div className="flex-1">
-          <h2 className="font-display text-[17px] uppercase">Team history</h2>
-          <p className="mt-1 text-[11.5px] text-[var(--txm)]">Every assignment and transfer retained across league seasons.</p>
-        </div>
-        <button type="button" className="rounded-lg border border-[var(--brand)]/40 bg-[var(--brand)]/10 px-3 py-2 font-body text-[11px] font-bold text-[var(--brand)]">Transfer to another club…</button>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--bord2)] px-5 py-3">
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--bord)] bg-[var(--surf)] px-5 py-3.5">
         <span className="mr-1 font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--faint)]">Filter</span>
-        {(['all', 'current', 'past'] as const).map((value) => <button key={value} type="button" onClick={() => onFilterChange(value)} className={`rounded-md px-2.5 py-1.5 font-body text-[11px] font-semibold ${filter === value ? 'border border-[var(--bord)] bg-[var(--surf2)] text-[var(--tx)]' : 'text-[var(--txm)] hover:bg-[var(--hov)]'}`}>{value[0].toUpperCase() + value.slice(1)}</button>)}
+        {([['all', 'All'], ['mens', 'Men’s'], ['womens', 'Women’s'], ['head', 'Head coach only']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => onFilterChange(value)} className={`rounded-md px-2.5 py-1.5 font-body text-[11px] font-semibold ${filter === value ? 'border border-[var(--bord)] bg-[var(--surf2)] text-[var(--tx)]' : 'text-[var(--txm)] hover:bg-[var(--hov)]'}`}>{label}</button>)}
         <span className="ml-auto font-mono text-[10px] text-[var(--faint)]">{visibleAssignments.length} assignments across recorded seasons</span>
+        <button type="button" onClick={onOpenTransfer} className="flex items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 py-2 font-body text-[11.5px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]">Transfer to another club…</button>
       </div>
       {transfers.length || visibleAssignments.length ? (
         <div className="grid gap-4 p-5">
-          {transfers.map((event) => (
-            <div
-              key={event.id}
-              className="rounded-xl border border-[var(--bord)] bg-[var(--surf2)] p-4"
-            >
-              <div className="flex items-center gap-2 text-[13px] font-bold">
-                <span>{event.fromTeam.name}</span>
-                <ChevronRight className="h-4 w-4 text-[var(--brand)]" />
-                <span>{event.toTeam.name}</span>
-              </div>
-              <div className="mt-1 text-[11px] text-[var(--txm)]">
-                Effective {formatDate(event.effectiveFrom)} · Recorded {formatDate(event.createdAt)}
-              </div>
-              {event.reason && (
-                <div className="mt-2 text-[12px] text-[var(--txd)]">{event.reason}</div>
-              )}
-            </div>
-          ))}
-          {historyGroups.map(([season, rows]) => <section key={season} className="overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf)]"><div className="flex flex-wrap items-center gap-2 border-b border-[var(--bord2)] bg-[var(--surf2)] px-4 py-3"><span className="font-display text-[16px] uppercase">{season}</span><span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--txm)]">League season</span><span className="ml-auto rounded-full bg-emerald-500/10 px-2 py-1 font-mono text-[9px] uppercase text-emerald-500">{rows.some((row) => !row.effectiveTo) ? 'In progress' : 'Completed'}</span></div><div className="grid gap-2 p-3">{rows.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--bord2)] bg-[var(--surf2)] px-3 py-3"><span className="flex h-7 w-7 items-center justify-center rounded bg-[var(--brand)]/10 font-mono text-[9px] font-bold text-[var(--brandsoft)]">{item.team.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div className="min-w-[180px] flex-1"><div className="text-[13px] font-bold">{item.team.name}</div><div className="mt-0.5 font-mono text-[10px] text-[var(--txm)]">{formatDate(item.effectiveFrom)} to {item.effectiveTo ? formatDate(item.effectiveTo) : 'present'}</div></div><span className="rounded-md bg-[var(--brand)]/10 px-2 py-1 font-mono text-[9px] uppercase text-[var(--brandsoft)]">{staffRoleLabel(item.role)}</span><span className="rounded-full border border-[var(--bord)] bg-[var(--surf)] px-2 py-1 font-mono text-[9px] uppercase text-[var(--txm)]">{item.effectiveTo ? 'Past' : 'Current'}</span></div>)}</div></section>)}
+          {historyGroups.map(([season, rows]) => <section key={season} className="overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)]"><div className="flex flex-wrap items-center gap-3 border-b border-[var(--bord2)] bg-[var(--surf2)] px-5 py-3"><span className="font-display text-[15px] uppercase">{season}</span><span className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--txm)]"><span className="h-1.5 w-1.5 rounded-full bg-sky-400" />{rows[0]?.leagueSeason?.league?.name || 'League unavailable'}</span><span className="rounded-full bg-emerald-500/10 px-2 py-1 font-mono text-[9px] uppercase text-emerald-500">{rows.some((row) => !row.effectiveTo) ? 'In progress' : 'Completed'}</span><span className="ml-auto font-mono text-[10.5px] text-[var(--faint)]">{rows.map((row) => formatDate(row.effectiveFrom)).join(' · ')}</span></div><div className="grid gap-0">{rows.map((item) => <div key={item.id} className="flex flex-wrap items-center gap-4 border-b border-[var(--bord2)] px-5 py-3.5 last:border-b-0"><span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-[var(--brand)]/10 font-mono text-[10px] font-bold text-[var(--brandsoft)]">{item.team.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><div className="min-w-[180px] flex-1"><a href={`/admin/teams/view/${item.team.id}`} className="font-body text-[13.5px] font-bold text-[var(--tx)] no-underline hover:text-[var(--brand)]">{item.team.name}</a><div className="mt-[3px] flex flex-wrap items-center gap-2 font-mono text-[10.5px] text-[var(--txm)]"><span>{staffRoleLabel(item.role)}</span><span className="text-[var(--faint)]">·</span><span>{formatDate(item.effectiveFrom)} – {item.effectiveTo ? formatDate(item.effectiveTo) : 'present'}</span></div></div><div className="flex items-center gap-5"><div className="text-right"><div className="font-display text-[18px] text-[var(--faint)]">—</div><div className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--txm)]">Record</div></div><div className="text-right"><div className="font-display text-[18px]">—</div><div className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--txm)]">Matches</div></div><div className="text-right max-[720px]:hidden"><div className="font-display text-[18px]">—</div><div className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--txm)]">Finish</div></div></div><span className="rounded-full border border-[var(--bord)] bg-[var(--surf2)] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.08em] text-[var(--txm)]">{item.effectiveTo ? 'Past' : 'Current'}</span></div>)}</div></section>)}
         </div>
       ) : (
         <div className="p-5"><Empty text="No durable assignment history recorded yet." /></div>
       )}
-      <div className="grid grid-cols-5 border-t border-[var(--bord2)] max-[720px]:grid-cols-2">
+      <div className="rounded-2xl border border-[var(--bord)] bg-[var(--surf)] px-5 py-4">
+        <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--faint)]">Career totals</div>
+        <div className="mt-3 grid grid-cols-5 gap-4 max-[900px]:grid-cols-3 max-[560px]:grid-cols-2">
         {['Record as head coach', 'Win rate', 'Matches', 'Clubs', 'Seasons'].map((label) => <div key={label} className="border-r border-[var(--bord2)] px-5 py-4 last:border-r-0"><div className="font-display text-[22px]">—</div><div className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--txm)]">{label}</div></div>)}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
+
+type TransferTeam = { id: string; name: string; logo?: string | null };
+type TransferSeason = { id: string; name: string; startDate?: string; endDate?: string; leagueSeasons?: Array<{ id: string; status?: string; league?: { name?: string | null } | null }> };
+const transferControlClass = 'mt-0 h-8 w-full rounded-md border border-[var(--bord)] bg-[var(--surf2)] px-2 text-[12px] font-body font-bold text-[var(--tx)] outline-none transition-colors [color-scheme:dark] focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)]';
+
+function TransferModal({
+  staffId,
+  name,
+  assignments,
+  onClose,
+  onSaved,
+}: {
+  staffId: string;
+  name: string;
+  assignments: Array<Awaited<ReturnType<typeof staffApi.get>>['teams'][number]>;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const current = assignments[0];
+  const [fromTeamStaffId, setFromTeamStaffId] = useState(current?.id ?? '');
+  const [toTeamId, setToTeamId] = useState('');
+  const [joiningSearch, setJoiningSearch] = useState('');
+  const [joiningOpen, setJoiningOpen] = useState(false);
+  const [role, setRole] = useState<StaffRole>(current?.role ?? 'COACH');
+  const [effectiveFrom, setEffectiveFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [leagueSeasonId, setLeagueSeasonId] = useState(current?.leagueSeasonId ?? '');
+  const [reason, setReason] = useState('');
+  const [teams, setTeams] = useState<TransferTeam[]>([]);
+  const [seasons, setSeasons] = useState<TransferSeason[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const selectedAssignment = assignments.find((item) => item.id === fromTeamStaffId) ?? current;
+  const currentTeamIds = new Set(assignments.map((item) => item.teamId));
+  const availableTeams = teams.filter((team) => !currentTeamIds.has(team.id));
+  const filteredTeams = availableTeams.filter((team) => team.name.toLowerCase().includes(joiningSearch.trim().toLowerCase()));
+  const activeLeagueSeasons = seasons.flatMap((season) => (season.leagueSeasons ?? []).filter((edition) => ['REGISTRATION', 'SCHEDULED', 'ACTIVE', 'PLAYOFFS'].includes(String(edition.status).toUpperCase())).map((edition) => ({ ...edition, seasonName: season.name })));
+  const targetTeam = teams.find((team) => team.id === toTeamId);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/teams?approved=true', { credentials: 'same-origin' }).then((response) => response.ok ? response.json() : []),
+      fetch('/api/seasons?activeOnly=true', { credentials: 'same-origin' }).then((response) => response.ok ? response.json() : []),
+    ]).then(([teamRows, seasonRows]) => {
+      setTeams(Array.isArray(teamRows) ? teamRows : []);
+      setSeasons(Array.isArray(seasonRows) ? seasonRows : []);
+    }).catch(() => setError('Unable to load transfer options.'));
+  }, []);
+
+  const submit = async () => {
+    if (!fromTeamStaffId || !toTeamId || !effectiveFrom) {
+      setError('Choose the outgoing assignment, destination club, and effective date.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await staffHistoryApi.transfer(staffId, {
+        fromTeamStaffId,
+        toTeamId,
+        role,
+        effectiveFrom,
+        leagueSeasonId: leagueSeasonId || undefined,
+        transferReason: reason.trim() || undefined,
+      });
+      onSaved();
+    } catch (transferError) {
+      setError(transferError instanceof Error ? transferError.message : 'Unable to complete the transfer.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="eb-scroll relative max-h-full w-full max-w-[600px] overflow-y-auto rounded-2xl border border-[var(--bord)] bg-[var(--surf)] shadow-[0_28px_80px_rgba(0,0,0,0.55)]" role="dialog" aria-modal="true" aria-labelledby="staff-transfer-title">
+        <div className="flex items-start gap-3 border-b border-[var(--bord2)] px-5 py-4">
+          <div className="flex-1"><div className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-[var(--brandsoft)]">Team transfer</div><h2 id="staff-transfer-title" className="mt-0.5 font-display text-[20px] uppercase leading-none">Move {name}</h2></div>
+          <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[var(--bord)] bg-[var(--surf2)] font-mono text-[12px] text-[var(--txm)] hover:border-[var(--brand)] hover:text-[var(--brand)]" aria-label="Close transfer modal">✕</button>
+        </div>
+        <div className="grid gap-4 px-5 py-5">
+          <TransferField label="Leaving" hint={selectedAssignment ? `Record for this spell: — over — matches — kept in the history once closed.` : 'Select the assignment being closed.'}><select className={transferControlClass} value={fromTeamStaffId} onChange={(event) => { const next = assignments.find((item) => item.id === event.target.value); setFromTeamStaffId(event.target.value); if (next) { setRole(next.role); setLeagueSeasonId(next.leagueSeasonId ?? ''); } }}><option value="">Select assignment</option>{assignments.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.team.name} · {staffRoleLabel(assignment.role)}</option>)}</select></TransferField>
+          <div className="flex items-center gap-3"><span className="h-px flex-1 bg-[var(--bord2)]" /><span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--faint)]">transfers to</span><span className="h-px flex-1 bg-[var(--bord2)]" /></div>
+          <div className="grid grid-cols-2 gap-4 max-[560px]:grid-cols-1">
+            <TransferField label="Joining"><div className="relative"><input className={transferControlClass} role="combobox" aria-expanded={joiningOpen} aria-controls="staff-transfer-team-options" aria-autocomplete="list" value={joiningSearch || targetTeam?.name || ''} onFocus={() => setJoiningOpen(true)} onBlur={() => window.setTimeout(() => setJoiningOpen(false), 100)} onChange={(event) => { setJoiningSearch(event.target.value); setToTeamId(''); setJoiningOpen(true); }} onKeyDown={(event) => { if (event.key === 'Escape') setJoiningOpen(false); if (event.key === 'Enter' && filteredTeams[0]) { event.preventDefault(); setToTeamId(filteredTeams[0].id); setJoiningSearch(filteredTeams[0].name); setJoiningOpen(false); } }} placeholder="Pick a club…" disabled={!availableTeams.length} />{joiningOpen && availableTeams.length > 0 && <div id="staff-transfer-team-options" role="listbox" className="absolute left-0 right-0 top-full z-10 mt-1 max-h-44 overflow-y-auto rounded-md border border-[var(--bord)] bg-[var(--surf2)] p-1 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">{filteredTeams.length ? filteredTeams.map((team) => <button type="button" role="option" aria-selected={toTeamId === team.id} key={team.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { setToTeamId(team.id); setJoiningSearch(team.name); setJoiningOpen(false); }} className={`block w-full rounded px-2.5 py-2 text-left text-[11.5px] font-semibold ${toTeamId === team.id ? 'bg-[var(--brand)]/15 text-[var(--brand)]' : 'text-[var(--tx)] hover:bg-[var(--hov)]'}`}>{team.name}</button>) : <div className="px-2.5 py-2 text-[11px] text-[var(--txm)]">No clubs match your search.</div>}</div>}</div></TransferField>
+            <TransferField label="Capacity"><select className={transferControlClass} value={role} onChange={(event) => setRole(event.target.value as StaffRole)}>{STAFF_ROLES.map((value) => <option key={value} value={value}>{staffRoleLabel(value)}</option>)}</select></TransferField>
+            <TransferField label="Effective from"><input className={transferControlClass} type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} placeholder="2026-09-01" /></TransferField>
+            <TransferField label="League season"><select className={transferControlClass} value={leagueSeasonId} onChange={(event) => setLeagueSeasonId(event.target.value)}><option value="">Keep current season scope</option>{activeLeagueSeasons.map((edition) => <option key={edition.id} value={edition.id}>{edition.seasonName} · {edition.league?.name ?? 'League'}</option>)}</select></TransferField>
+          </div>
+          <TransferField label="Reason (kept on the record)"><input className={transferControlClass} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} placeholder="Left by mutual consent · promoted · club folded" /></TransferField>
+          <div className="rounded-xl border border-[var(--bord)] bg-[var(--surf2)] px-4 py-3.5">
+            <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--faint)]">What this changes</div>
+            <div className="mt-2.5 grid gap-2 text-[11.5px] text-[var(--txd)]">
+              {[
+                ['#39b56a', `The ${selectedAssignment?.team.name ?? 'current'} spell closes on ${effectiveFrom || 'the effective date'}, keeping its — record in the history.`],
+                ['#39b56a', `${targetTeam?.name ?? 'The new club'} gains ${name} as ${role === 'COACH' ? 'Head Coach' : staffRoleLabel(role)} from ${effectiveFrom || 'the effective date'}.`],
+                ['#4a9fe0', `Match sheets before ${effectiveFrom || 'the effective date'} stay credited to ${selectedAssignment?.team.name ?? 'the old club'}; sheets after it go to ${targetTeam?.name ?? 'the new club'}.`],
+                ['#4a9fe0', 'Both club pages and the public staff page update on save.'],
+                ['#f0a020', 'Portal access follows the new assignment — they lose the old squad, gain the new one.'],
+              ].map(([color, text]) => <div className="flex items-start gap-2.5" key={text}><span className="mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} /><span>{text}</span></div>)}
+            </div>
+          </div>
+          {error && <div className="rounded-lg border border-[var(--brand)]/40 bg-[var(--brand)]/10 px-3 py-2 text-[12px] text-[var(--brand)]" role="alert">{error}</div>}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--bord2)] px-5 py-4"><span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--faint)]">The completed spell stays in the history</span><div className="flex items-center gap-2"><button type="button" onClick={onClose} className="cursor-pointer rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 py-2.5 font-body text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]">Cancel</button><button type="button" onClick={() => void submit()} disabled={saving || !availableTeams.length || !effectiveFrom || !toTeamId} className="cursor-pointer rounded-lg border border-[var(--brand)] bg-[var(--brand)] px-4 py-2.5 font-body text-[12px] font-extrabold uppercase tracking-[0.04em] text-white disabled:cursor-default disabled:opacity-45">{saving ? 'Confirming…' : 'Confirm transfer'}</button></div></div>
+      </div>
+    </div>
+  );
+}
+
+function TransferField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return <label className="block"><span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--txm)]">{label}</span>{children}{hint && <span className="mt-1.5 block font-body text-[11px] text-[var(--faint)]">{hint}</span>}</label>;
+}
+
 function Matches({ fixtures, matchSheets }: { fixtures: StaffFixture[]; matchSheets: StaffMatchSheet[] }) {
   const [filter, setFilter] = useState<'all' | 'completed' | 'upcoming'>('all');
   const visibleSheets = matchSheets.filter((sheet) => filter === 'all' || (filter === 'completed' ? sheet.match.status === 'COMPLETED' : sheet.match.status !== 'COMPLETED'));
