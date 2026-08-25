@@ -20,9 +20,11 @@ if (access.status !== 'allowed') {
 
 const requestedTeam = Astro.url.searchParams.get('team');
 const selectedTeam = (await requireActiveTeamContext(user.id, requestedTeam)).team;
+const requestedView = Astro.url.searchParams.get('view');
+const view = requestedView === 'roster' || requestedView === 'fixtures' ? requestedView : 'overview';
 ---
 
 <html lang="en">
   <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="robots" content="noindex, nofollow" /><title>Team Portal</title></head>
-  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} /></body>
+  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} /></body>
 </html>
