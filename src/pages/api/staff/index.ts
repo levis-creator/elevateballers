@@ -6,14 +6,15 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
   try {
+    await requirePermission(request, 'staff:read');
     const staff = await listStaff();
 
     return new Response(JSON.stringify(staff), {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch (error) {

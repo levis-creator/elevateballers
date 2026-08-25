@@ -1,4 +1,4 @@
-import type { Staff, StaffRole } from "@prisma/client";
+import type { Staff, StaffRole, TeamStaff, User } from "@prisma/client";
 import type { StaffWithAssignments } from "@/features/staff/domain/entities/staff-management";
 
 export type StaffFormData = {
@@ -7,6 +7,7 @@ export type StaffFormData = {
   licenseExpiresAt?: string | null; safeguardingStatus?: string; idNumber?: string; active?: boolean; approved?: boolean;
   assignments?: Array<{ teamId: string; role: StaffRole; effectiveFrom?: string | null; effectiveTo?: string | null }>;
 };
+export type StaffListRow = Staff & { user: Pick<User, "id" | "name" | "email" | "active" | "activatedAt"> | null; teams: Array<TeamStaff & { team: { id: string; name: string } }> };
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: "same-origin", ...init });
   const body = await response.json().catch(() => ({}));
@@ -14,7 +15,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 export const staffApi = {
-  list: () => request<Staff[]>("/api/staff"),
+  list: () => request<StaffListRow[]>("/api/staff"),
   get: (id: string) => request<StaffWithAssignments>(`/api/staff/${id}`),
   create: (data: StaffFormData) => request<StaffWithAssignments>("/api/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }),
   update: (id: string, data: Partial<StaffFormData>) => request<StaffWithAssignments>(`/api/staff/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }),

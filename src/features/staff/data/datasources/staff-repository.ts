@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma, Staff } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import type { StaffAssignment, StaffAssignmentHistory, StaffMutationInput, StaffTransferInput, StaffTransferRecord, StaffUpdateInput, StaffWithAssignments } from "@/features/staff/domain/entities/staff-management";
 
 type Db = typeof prisma | Prisma.TransactionClient;
@@ -12,8 +12,8 @@ async function uniqueSlug(base: string, excludeId?: string, db: Db = prisma) {
   return slug;
 }
 
-export async function listStaff(): Promise<Staff[]> {
-  return prisma.staff.findMany({ orderBy: [{ firstName: "asc" }, { lastName: "asc" }] });
+export async function listStaff() {
+  return prisma.staff.findMany({ include: { user: { select: { id: true, name: true, email: true, active: true, activatedAt: true } }, teams: { include: { team: { select: { id: true, name: true } } } } }, orderBy: [{ firstName: "asc" }, { lastName: "asc" }] });
 }
 
 export async function findStaff(id: string): Promise<StaffWithAssignments | null> {
