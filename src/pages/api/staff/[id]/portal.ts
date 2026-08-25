@@ -1,7 +1,12 @@
 import type { APIRoute } from "astro";
+import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/features/rbac/middleware";
 import { logAudit } from "@/features/cms/data/datasources/audit";
+import { hashPassword } from "@/features/cms/lib/auth";
+import { COACH_ROLE_NAME } from "@/features/users/domain/entities/user-directory";
+import { sendWelcomeSetPasswordEmail } from "@/lib/email";
+import { getRuntimeEmailTemplates } from "@/lib/email/runtime-settings";
 
 export const prerender = false;
 
@@ -29,8 +34,48 @@ export const POST: APIRoute = async ({ request, params }) => {
     await requirePermission(request, "staff:update");
     const body = await request.json().catch(() => ({}));
     const userId = typeof body.userId === "string" && body.userId.trim() ? body.userId.trim() : null;
-    const staff = await prisma.staff.findUnique({ where: { id: params.id }, select: { id: true, userId: true } });
+    const staff = await prisma.staff.findUnique({ where: { id: params.id }, select: { id: true, userId: true, firstName: true, lastName: true, email: true, phone: true, teams: { where: { effectiveTo: null }, select: { teamId: true } } } });
     if (!staff) return new Response(JSON.stringify({ error: "Staff member not found" }), { status: 404 });
+
+    if (body.action === "invite") {
+      const email = staff.email?.trim().toLowerCase();
+      if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        return new Response(JSON.stringify({ error: "A valid Staff email is required before sending an invite" }), { status: 400 });
+      }
+
+      const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true, email: true, active: true, activatedAt: true } });
+      if (existing && existing.id !== staff.userId) {
+        return new Response(JSON.stringify({ error: "A User already exists with this email. Link it through User administration instead of creating a duplicate." }), { status: 409 });
+      }
+
+      const ttlMinutes = (await getRuntimeEmailTemplates()).linkExpiry;
+      const token = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+      const name = `${staff.firstName} ${staff.lastName}`.trim();
+      const role = await prisma.role.findUnique({ where: { name: COACH_ROLE_NAME }, select: { id: true } });
+      if (!role) return new Response(JSON.stringify({ error: `Required ${COACH_ROLE_NAME} role is not configured` }), { status: 500 });
+      const passwordHash = await hashPassword(crypto.randomBytes(32).toString("hex"));
+      const user = await prisma.$transaction(async (database) => {
+        const created = existing ?? await database.user.create({ data: { email, name, phone: staff.phone ?? null, passwordHash }, select: { id: true, name: true, email: true, active: true, activatedAt: true } });
+        if (!existing) {
+          await database.userRole.create({ data: { userId: created.id, roleId: role.id } });
+          if (staff.teams.length) await database.teamOwnership.createMany({ data: staff.teams.map(({ teamId }) => ({ teamId, userId: created.id, email, role: COACH_ROLE_NAME, verifiedAt: new Date() })) });
+          await database.staff.update({ where: { id: staff.id }, data: { userId: created.id } });
+        }
+        await database.passwordResetToken.create({ data: { userId: created.id, tokenHash, expiresAt } });
+        return created;
+      });
+      const setPasswordUrl = `${new URL(request.url).origin}/admin/reset-password?token=${token}`;
+      try {
+        await sendWelcomeSetPasswordEmail({ email: user.email, name: user.name, setPasswordUrl, expiresInMinutes: ttlMinutes });
+      } catch (emailError) {
+        console.error("[staff] Failed to send portal invite email:", emailError);
+      }
+      logAudit(request, existing ? "STAFF_PORTAL_INVITE_RESENT" : "STAFF_PORTAL_ACCOUNT_CREATED", { staffId: staff.id, userId: user.id, teamCount: staff.teams.length });
+      return new Response(JSON.stringify({ user: { ...user, activatedAt: user.activatedAt }, invited: true }), { status: existing ? 200 : 201, headers: { "Content-Type": "application/json" } });
+    }
+
     if (userId) {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true, active: true } });
       if (!user) return new Response(JSON.stringify({ error: "User account not found" }), { status: 404 });
