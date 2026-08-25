@@ -4,11 +4,13 @@ export const ssr = false;
 
 import AdminLayout from '../../../features/cms/components/AdminLayout.astro';
 import StaffEditor from '../../../features/staff/presentation/v2/StaffEditor';
+import StaffDetailPage from '../../../features/staff/presentation/v2/StaffDetailPage';
 
 const { id } = Astro.params;
+const editMode = Astro.url.searchParams.get('mode') === 'edit';
 ---
 
-<AdminLayout title="Edit Staff Member - Admin" permission="staff:update">
-  <StaffEditor staffId={id} client:load />
+<AdminLayout title={`${editMode ? 'Edit' : 'View'} Staff Member - Admin`} permission="staff:read">
+  {editMode ? <StaffEditor staffId={id} client:load /> : <StaffDetailPage staffId={id!} client:load />}
 </AdminLayout>
 
