@@ -71,6 +71,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
 
   const [form, setForm] = useState<MatchFormData>({ ...EMPTY, seasonId: seasonId || '' });
   const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [allTeams, setAllTeams] = useState<TeamOption[]>([]);
   const [leagues, setLeagues] = useState<NamedOption[]>([]);
   const [seasons, setSeasons] = useState<SeasonOption[]>([]);
   const [loading, setLoading] = useState(editing);
@@ -99,12 +100,18 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
   // Option lists ------------------------------------------------------------
   useEffect(() => {
     getJson<NamedOption>('/api/leagues').then(setLeagues);
+    // Keep the picker useful before a competition is selected. Once a
+    // league/season is chosen, the roster effect below replaces this catalog
+    // with the teams eligible for that competition edition.
+    getJson<TeamOption>('/api/teams').then((list) => {
+      setAllTeams(list.map((team) => ({ id: team.id, name: team.name, logo: team.logo ?? null })));
+    });
   }, []);
 
   // Fixture eligibility comes from the selected competition roster.
   useEffect(() => {
     if (!form.leagueSeasonId || !form.seasonId) {
-      setTeams([]);
+      setTeams(allTeams);
       return;
     }
     let cancelled = false;
@@ -118,7 +125,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
     return () => {
       cancelled = true;
     };
-  }, [form.leagueSeasonId, form.seasonId]);
+  }, [allTeams, form.leagueSeasonId, form.seasonId]);
 
   // Seasons cascade off the chosen league. Clear the season when the league
   // changes to a different one (but keep a pre-seeded season on first load).
