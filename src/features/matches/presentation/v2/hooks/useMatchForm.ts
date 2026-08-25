@@ -103,7 +103,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
     // Keep the picker useful before a competition is selected. Once a
     // league/season is chosen, the roster effect below replaces this catalog
     // with the teams eligible for that competition edition.
-    getJson<TeamOption>('/api/teams').then((list) => {
+    getJson<TeamOption>('/api/teams?approved=true').then((list) => {
       setAllTeams(list.map((team) => ({ id: team.id, name: team.name, logo: team.logo ?? null })));
     });
   }, []);
