@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 
 export const prerender = false;
 export const ssr = true;
+const reason = Astro.url.searchParams.get('reason');
 ---
 
 <Layout title="Unauthorized" robots="noindex, nofollow">
@@ -10,10 +11,7 @@ export const ssr = true;
     <section class="max-w-xl w-full bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center">
       <p class="text-sm font-semibold text-red-600 uppercase tracking-wide">Access Denied</p>
       <h1 class="text-3xl font-heading font-semibold text-gray-900 mt-2">You don't have permission</h1>
-      <p class="text-gray-600 mt-3">
-        The account you're signed in with doesn't have access to this page.
-        If you believe this is a mistake, contact an administrator.
-      </p>
+      <p class="text-gray-600 mt-3">{reason || "The account you're signed in with doesn't have access to this page."} If you believe this is a mistake, contact an administrator.</p>
 
       <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
         <a

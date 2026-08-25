@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createTeamCoachingStaff, deleteTeamCoachingStaff, listTeamCoachingStaff, teamExists, updateTeamCoachingStaff } from "@/features/staff/application/usecases/team-coaching-staff-management";
 import { requireCoachingStaffScopedPermission } from "@/features/rbac/middleware";
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { logAudit } from "@/features/cms/lib/audit";
 import { handleApiError } from "@/lib/apiError";
 
@@ -8,6 +9,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ params, request }) => {
 	try {
+		await requireCoachingStaffScopedPermission(request, params.id!, "staff:read");
 		const url = new URL(request.url);
 		const includeInactive = url.searchParams.get("includeInactive") === "true";
 		const staff = await listTeamCoachingStaff(params.id!, includeInactive);
@@ -21,7 +23,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const POST: APIRoute = async ({ params, request }) => {
 	try {
-		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff");
+		await requireSystemAdmin(request);
 		const data = await request.json();
 		const team = await teamExists(params.id!);
 		if (!team) {
@@ -59,7 +61,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 				headers: { "Content-Type": "application/json" },
 			});
 		}
-		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff", data.id);
+		await requireSystemAdmin(request);
 
 		const staff = await updateTeamCoachingStaff(data.id, data);
 
@@ -89,7 +91,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 				headers: { "Content-Type": "application/json" },
 			});
 		}
-		await requireCoachingStaffScopedPermission(request, params.id!, "teams:manage_staff", id);
+		await requireSystemAdmin(request);
 
 		const success = await deleteTeamCoachingStaff(id);
 		if (!success) {

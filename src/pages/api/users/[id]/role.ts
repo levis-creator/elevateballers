@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { invalidatePermissionCache } from '../../../../features/rbac/permissions';
 import { prisma } from '../../../../lib/prisma';
@@ -13,7 +14,7 @@ export const prerender = false;
  */
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'users:manage_roles');
+    await requireSystemAdmin(request);
 
     const { id: userId } = params;
 
@@ -101,7 +102,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     if (!nextRoleNames.has(COACH_ROLE_NAME)) {
       await prisma.teamOwnership.updateMany({
         where: { userId, role: COACH_ROLE_NAME, revokedAt: null },
-        data: { revokedAt: new Date() },
+        data: { revokedAt: new Date(), effectiveTo: new Date() },
       });
     }
 

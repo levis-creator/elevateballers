@@ -2,13 +2,17 @@ import type { APIRoute } from 'astro';
 import { prisma } from '@/lib/prisma';
 import { deleteStaff, getStaff, updateStaff } from '@/features/staff/application/usecases/staff-management';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
+    // This response includes internal notes, compliance fields and account
+    // linkage; it must never be a public staff profile endpoint.
+    await requirePermission(request, 'staff:read');
     const staff = await getStaff(params.id!);
 
     if (!staff) {
@@ -30,8 +34,10 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'staff:update');
-    const staff = await updateStaff(params.id!, await request.json());
+    const data = await request.json();
+    if (data.assignments !== undefined) await requireSystemAdmin(request);
+    else await requirePermission(request, 'staff:update');
+    const staff = await updateStaff(params.id!, data);
 
     if (!staff) {
       return new Response(JSON.stringify({ error: 'Staff not found' }), {

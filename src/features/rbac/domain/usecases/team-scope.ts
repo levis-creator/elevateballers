@@ -15,8 +15,16 @@ export async function assertTeamScope(userId: string, teamIds: Array<string | nu
   if (await hasRole(userId, ADMIN_ROLE_NAME)) return;
   if (!(await hasRole(userId, COACH_ROLE_NAME))) return;
 
+  const now = new Date();
   const ownership = await prisma.teamOwnership.findFirst({
-    where: { userId, role: COACH_ROLE_NAME, revokedAt: null, teamId: { in: normalizedTeamIds } },
+    where: {
+      userId,
+      role: COACH_ROLE_NAME,
+      revokedAt: null,
+      teamId: { in: normalizedTeamIds },
+      effectiveFrom: { lte: now },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }],
+    },
     select: { id: true },
   });
   if (!ownership) throw new Error('Forbidden: Team Coach is not assigned to this team');

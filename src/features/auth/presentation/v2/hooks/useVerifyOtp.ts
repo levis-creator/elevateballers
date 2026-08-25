@@ -48,7 +48,7 @@ export function useVerifyOtp() {
 
 			setVerified(true);
 			setTimeout(() => {
-				window.location.href = "/admin";
+				window.location.href = typeof data.redirectTo === 'string' ? data.redirectTo : "/admin";
 			}, 400);
 		} catch {
 			setError("An error occurred. Please try again.");

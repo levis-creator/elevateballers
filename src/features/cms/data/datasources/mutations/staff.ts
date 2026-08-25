@@ -91,9 +91,7 @@ export async function deleteStaff(id: string): Promise<boolean> {
 }
 
 export async function assignStaffToTeam(data: CreateTeamStaffInput, db: any = prisma): Promise<TeamStaff> {
-  const existing = await db.teamStaff.findUnique({
-    where: { teamId_staffId: { teamId: data.teamId, staffId: data.staffId } },
-  });
+  const existing = await db.teamStaff.findFirst({ where: { teamId: data.teamId, staffId: data.staffId, effectiveTo: null } });
 
   if (existing) throw new Error('This staff member is already assigned to this team');
 
@@ -141,11 +139,12 @@ export async function syncStaffAssignments(
     if (removeIds.length) await tx.teamStaff.deleteMany({ where: { id: { in: removeIds } } });
 
     for (const assignment of assignments) {
-      await tx.teamStaff.upsert({
-        where: { teamId_staffId: { teamId: assignment.teamId, staffId } },
-        create: { teamId: assignment.teamId, staffId, role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? new Date() },
-        update: { role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? undefined },
-      });
+      const current = await tx.teamStaff.findFirst({ where: { teamId: assignment.teamId, staffId, effectiveTo: null } });
+      if (current) {
+        await tx.teamStaff.update({ where: { id: current.id }, data: { role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? undefined } });
+      } else {
+        await tx.teamStaff.create({ data: { teamId: assignment.teamId, staffId, role: assignment.role, effectiveFrom: assignment.effectiveFrom ?? new Date() } });
+      }
     }
   });
 }

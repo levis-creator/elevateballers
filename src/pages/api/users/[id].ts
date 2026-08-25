@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { getUserIdFromRequest, invalidateSessions, writeAuditLog } from '../../../features/cms/lib/auth';
 import { sendEmailChangedAlert } from '../../../lib/email';
 import { handleApiError } from '../../../lib/apiError';
@@ -44,9 +45,9 @@ export const GET: APIRoute = async ({ request, params }) => {
 // PUT /api/users/[id] - Update user (name, email, phone, active status)
 export const PUT: APIRoute = async ({ request, params }) => {
     try {
-        await requirePermission(request, 'users:update');
         const { id } = params;
         const data = await request.json();
+        await (typeof data.active === 'boolean' ? requireSystemAdmin(request) : requirePermission(request, 'users:update'));
 
         if (!id) {
             return new Response(JSON.stringify({ error: 'User ID is required' }), {
@@ -156,7 +157,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 // DELETE /api/users/[id] - Delete user
 export const DELETE: APIRoute = async ({ request, params }) => {
     try {
-        await requirePermission(request, 'users:delete');
+        await requireSystemAdmin(request);
         const { id } = params;
 
         if (!id) {

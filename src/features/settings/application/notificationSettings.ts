@@ -1,7 +1,7 @@
 import type { SiteSetting } from '../domain/siteSetting';
 
 export type EmailProviderSetting = { provider: string; credential: string; useFor: string; status: string };
-export type EmailTemplateEvent = 'registration' | 'approved' | 'rejected' | 'payment' | 'match' | 'verify';
+export type EmailTemplateEvent = 'registration' | 'approved' | 'rejected' | 'payment' | 'match' | 'verify' | 'staffTransfer';
 export type EmailTemplate = { enabled: boolean; subject: string; body: string };
 
 export type OutboundEmailSettings = {
@@ -39,6 +39,7 @@ export const DEFAULT_EMAIL_TEMPLATE_SETTINGS: EmailTemplateSettings = {
   payment: { enabled: true, subject: 'Payment received — {amount} for {team}', body: 'Hi {firstName},\n\nWe’ve received {amount} for {team}’s {season} entry. Application {applicationId} is fully paid.\n\nKeep this email as your receipt.' },
   match: { enabled: true, subject: '{team} vs {opponent} — {matchDate}', body: 'Hi {firstName},\n\n{team} play {opponent} on {matchDate} at {venue}.\n\nArrive 45 minutes before tip-off with your squad list. Full fixture details: {link}' },
   verify: { enabled: true, subject: 'Confirm your Elevate Ballers account', body: 'Hi {firstName},\n\nUse the link below to continue. It expires in {expiry}.\n\n{link}\n\nIf you didn’t request this, ignore this email and nothing will change.' },
+  staffTransfer: { enabled: true, subject: 'Your team assignment is moving to {team}', body: 'Hi {firstName},\n\nYour Elevate Ballers staff assignment is moving from {fromTeam} to {team}.\n\nEffective date: {effectiveDate}.' },
   matchLead: 2,
   linkExpiry: 60,
 };
@@ -77,7 +78,7 @@ export function resolveOutboundEmailSettings(settings: SiteSetting[]): OutboundE
 export function resolveEmailTemplateSettings(settings: SiteSetting[]): EmailTemplateSettings {
   const v = valuesOf(settings); const d = DEFAULT_EMAIL_TEMPLATE_SETTINGS;
   const event = (name: EmailTemplateEvent): EmailTemplate => ({ enabled: bool(v[`emailTemplates_${name}Enabled`], d[name].enabled), subject: text(v[`emailTemplates_${name}Subject`], d[name].subject), body: text(v[`emailTemplates_${name}Body`], d[name].body) });
-  return { registration: event('registration'), approved: event('approved'), rejected: event('rejected'), payment: event('payment'), match: event('match'), verify: event('verify'), matchLead: num(v.emailTemplates_matchLead, d.matchLead, 0, 30), linkExpiry: num(v.emailTemplates_linkExpiry, d.linkExpiry, 5, 10080) };
+  return { registration: event('registration'), approved: event('approved'), rejected: event('rejected'), payment: event('payment'), match: event('match'), verify: event('verify'), staffTransfer: event('staffTransfer'), matchLead: num(v.emailTemplates_matchLead, d.matchLead, 0, 30), linkExpiry: num(v.emailTemplates_linkExpiry, d.linkExpiry, 5, 10080) };
 }
 
 export function resolveEmailDeliverySettings(settings: SiteSetting[]): EmailDeliverySettings {

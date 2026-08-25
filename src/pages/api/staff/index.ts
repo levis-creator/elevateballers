@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createStaff, listStaff } from '@/features/staff/application/usecases/staff-management';
 import { requirePermission } from '../../../features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
@@ -25,7 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'staff:create');
+    await requireSystemAdmin(request);
     const staff = await createStaff(await request.json());
 
     await logAudit(request, 'STAFF_CREATED', {

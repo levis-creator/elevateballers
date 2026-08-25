@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/features/rbac/middleware";
+import { requireSystemAdmin } from "@/features/rbac/auth-helpers";
 import { logAudit } from "@/features/cms/data/datasources/audit";
 import { hashPassword } from "@/features/cms/lib/auth";
 import { COACH_ROLE_NAME } from "@/features/users/domain/entities/user-directory";
@@ -31,7 +32,7 @@ export const GET: APIRoute = async ({ request, params }) => {
 
 export const POST: APIRoute = async ({ request, params }) => {
   try {
-    await requirePermission(request, "staff:update");
+    await requireSystemAdmin(request);
     const body = await request.json().catch(() => ({}));
     const userId = typeof body.userId === "string" && body.userId.trim() ? body.userId.trim() : null;
     const staff = await prisma.staff.findUnique({ where: { id: params.id }, select: { id: true, userId: true, firstName: true, lastName: true, email: true, phone: true, teams: { where: { effectiveTo: null }, select: { teamId: true } } } });
@@ -62,6 +63,10 @@ export const POST: APIRoute = async ({ request, params }) => {
           await database.userRole.create({ data: { userId: created.id, roleId: role.id } });
           if (staff.teams.length) await database.teamOwnership.createMany({ data: staff.teams.map(({ teamId }) => ({ teamId, userId: created.id, email, role: COACH_ROLE_NAME, verifiedAt: new Date() })) });
           await database.staff.update({ where: { id: staff.id }, data: { userId: created.id } });
+        } else if (staff.userId === existing.id) {
+          await database.user.update({ where: { id: existing.id }, data: { active: true, tokenVersion: { increment: 1 } } });
+          await database.teamOwnership.updateMany({ where: { userId: existing.id, role: COACH_ROLE_NAME, revokedAt: null }, data: { revokedAt: new Date(), effectiveTo: new Date() } });
+          if (staff.teams.length) await database.teamOwnership.createMany({ data: staff.teams.map(({ teamId }) => ({ teamId, userId: existing.id, email, role: COACH_ROLE_NAME, verifiedAt: new Date(), effectiveFrom: new Date() })) });
         }
         await database.passwordResetToken.create({ data: { userId: created.id, tokenHash, expiresAt } });
         return created;
@@ -74,6 +79,19 @@ export const POST: APIRoute = async ({ request, params }) => {
       }
       logAudit(request, existing ? "STAFF_PORTAL_INVITE_RESENT" : "STAFF_PORTAL_ACCOUNT_CREATED", { staffId: staff.id, userId: user.id, teamCount: staff.teams.length });
       return new Response(JSON.stringify({ user: { ...user, activatedAt: user.activatedAt }, invited: true }), { status: existing ? 200 : 201, headers: { "Content-Type": "application/json" } });
+    }
+
+    if (body.action === "revoke") {
+      if (!staff.userId) return new Response(JSON.stringify({ user: null }), { headers: { "Content-Type": "application/json" } });
+      const now = new Date();
+      await prisma.$transaction(async (database) => {
+        await database.user.update({ where: { id: staff.userId! }, data: { active: false, tokenVersion: { increment: 1 } } });
+        await database.userSession.updateMany({ where: { userId: staff.userId!, revokedAt: null }, data: { revokedAt: now, revokeReason: "staff_portal_access_revoked" } });
+        await database.teamOwnership.updateMany({ where: { userId: staff.userId!, role: COACH_ROLE_NAME, revokedAt: null }, data: { revokedAt: now, effectiveTo: now } });
+      });
+      logAudit(request, "STAFF_PORTAL_ACCESS_REVOKED", { staffId: staff.id, userId: staff.userId });
+      const revoked = await prisma.user.findUnique({ where: { id: staff.userId }, select: { id: true, name: true, email: true, active: true, activatedAt: true } });
+      return new Response(JSON.stringify({ user: revoked }), { headers: { "Content-Type": "application/json" } });
     }
 
     if (userId) {

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { prisma } from '../../../../lib/prisma';
-import { requirePermission } from '../../../../features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { getUserIdFromRequest, writeAuditLog } from '../../../../features/cms/lib/auth';
 import { sendPasswordResetEmail, sendWelcomeSetPasswordEmail } from '../../../../lib/email';
 import { getRuntimeEmailTemplates } from '../../../../lib/email/runtime-settings';
@@ -18,7 +18,7 @@ export const prerender = false;
  */
 export const POST: APIRoute = async ({ params, request }) => {
   try {
-    await requirePermission(request, 'users:update');
+    await requireSystemAdmin(request);
 
     const { id: userId } = params;
     if (!userId) {

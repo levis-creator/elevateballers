@@ -16,7 +16,7 @@ const isoDate = (value: Date | string | null | undefined) => value ? new Date(va
 const toForm = (staff: Awaited<ReturnType<typeof staffApi.get>>): StaffFormData => ({
   id: staff.id, createdAt: isoDate(staff.createdAt), updatedAt: isoDate(staff.updatedAt), lastEditedBy: (staff as typeof staff & { lastEditedBy?: string | null }).lastEditedBy, firstName: staff.firstName, lastName: staff.lastName, slug: staff.slug, tagline: staff.tagline ?? "", email: staff.email ?? "", phone: staff.phone ?? "", phoneSecondary: staff.phoneSecondary ?? "", nextOfKin: staff.nextOfKin ?? "", role: staff.role,
   bio: staff.bio ?? "", internalNote: staff.internalNote ?? "", image: staff.image ?? "", licenseNumber: staff.licenseNumber ?? "", licenseExpiresAt: staff.licenseExpiresAt?.toISOString() ?? null, safeguardingStatus: staff.safeguardingStatus ?? "", idNumber: staff.idNumber ?? "", active: staff.active, approved: staff.approved,
-  assignments: staff.teams.filter((assignment) => !assignment.effectiveTo).map((assignment) => ({ teamId: assignment.teamId, role: assignment.role as StaffRole, effectiveFrom: assignment.effectiveFrom?.toISOString() ?? null })),
+  assignments: staff.teams.filter((assignment) => assignment.effectiveFrom <= new Date() && (!assignment.effectiveTo || assignment.effectiveTo > new Date())).map((assignment) => ({ teamId: assignment.teamId, role: assignment.role as StaffRole, effectiveFrom: assignment.effectiveFrom?.toISOString() ?? null })),
 });
 
 export default function StaffEditor({ staffId }: { staffId?: string }) {

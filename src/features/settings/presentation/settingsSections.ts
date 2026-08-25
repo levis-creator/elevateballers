@@ -573,7 +573,7 @@ export const SECTIONS: Section[] = [
       f('email_footerNote', 'Email footer', 'Small print under the signature. Unsubscribe is added automatically to non-transactional mail.', { type: 'area', defaultValue: 'You are receiving this because you registered with Elevate Ballers.' }),
     ] },
   ]),
-  notifications('emailTemplates', 'Email Templates', 'Subject and body for every automatic message. Variables: {name} {firstName} {email} {team} {league} {season} {status} {applicationId} {amount} {matchDate} {opponent} {venue} {link} {expiry}.', [
+  notifications('emailTemplates', 'Email Templates', 'Subject and body for every automatic message. Variables: {name} {firstName} {email} {team} {fromTeam} {effectiveDate} {league} {season} {status} {applicationId} {amount} {matchDate} {opponent} {venue} {link} {expiry}.', [
     { label: 'Registration received', fields: [
       f('emailTemplates_registrationEnabled', 'Registration received', 'Sent the moment a team or player form is submitted.', { type: 'toggle', defaultValue: 'true' }),
       f('emailTemplates_registrationSubject', 'Registration received · subject', 'Variables are resolved when the mail is queued.', { defaultValue: 'We’ve received your {season} registration', counter: 70 }),
@@ -605,6 +605,11 @@ export const SECTIONS: Section[] = [
       f('emailTemplates_verifySubject', 'Verification & password reset · subject', 'Variables are resolved when the mail is queued.', { defaultValue: 'Confirm your Elevate Ballers account', counter: 70 }),
       f('emailTemplates_verifyBody', 'Verification & password reset · body', 'Blank lines separate paragraphs. The signature is appended automatically.', { type: 'area', defaultValue: 'Hi {firstName},\n\nUse the link below to continue. It expires in {expiry}.\n\n{link}\n\nIf you didn’t request this, ignore this email and nothing will change.' }),
       f('emailTemplates_linkExpiry', 'Link valid for (minutes)', 'Fills {expiry} and enforces the real expiry.', { type: 'number', defaultValue: '60' }),
+    ] },
+    { label: 'Staff transfer', fields: [
+      f('emailTemplates_staffTransferEnabled', 'Staff transfer notification', 'Sent to the staff member when an administrator transfers them between teams.', { type: 'toggle', defaultValue: 'true' }),
+      f('emailTemplates_staffTransferSubject', 'Staff transfer · subject', 'Variables include {firstName}, {fromTeam}, {team}, and {effectiveDate}.', { defaultValue: 'Your team assignment is moving to {team}', counter: 70 }),
+      f('emailTemplates_staffTransferBody', 'Staff transfer · body', 'Sent after an admin records an immediate or scheduled transfer.', { type: 'area', defaultValue: 'Hi {firstName},\n\nYour Elevate Ballers staff assignment is moving from {fromTeam} to {team}.\n\nEffective date: {effectiveDate}.' }),
     ] },
     { label: 'Defaults', fields: [
       f('$restoreSection', 'Restore default templates', 'Puts every subject and body in this section back to its original wording. Nothing is written until you save.', { type: 'action' }),

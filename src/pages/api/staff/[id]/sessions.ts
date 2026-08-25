@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { handleApiError, json } from '@/lib/apiError';
 import { writeAuditLog } from '@/features/cms/lib/auth';
 
@@ -25,7 +26,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
-    const actor = await requirePermission(request, 'staff:update');
+    const actor = await requireSystemAdmin(request);
     const sessionId = new URL(request.url).searchParams.get('sessionId');
     if (!sessionId) return json({ error: 'Session id is required' }, 400);
     const staff = await prisma.staff.findUnique({ where: { id: params.id! }, select: { userId: true } });

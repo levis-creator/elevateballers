@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getStaffByTeam, getTeamById } from '../../../../features/cms/lib/queries';
 import { assignStaffToTeam, removeStaffFromTeam, updateTeamStaff } from '../../../../features/cms/lib/mutations';
-import { requireLegacyTeamStaffScopedPermission } from '../../../../features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../lib/apiError';
@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ params }) => {
 
 export const POST: APIRoute = async ({ params, request }) => {
   try {
-    await requireLegacyTeamStaffScopedPermission(request, params.id!, 'teams:manage_staff');
+    await requireSystemAdmin(request);
     const data = await request.json();
 
     // Validate required fields
@@ -73,7 +73,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    await requireLegacyTeamStaffScopedPermission(request, params.id!, 'teams:manage_staff', data.teamStaffId);
+    await requireSystemAdmin(request);
 
     const teamStaff = await updateTeamStaff(data.teamStaffId, {
       role: data.role,
@@ -110,7 +110,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    await requireLegacyTeamStaffScopedPermission(request, params.id!, 'teams:manage_staff', teamStaffId);
+    await requireSystemAdmin(request);
 
     const success = await removeStaffFromTeam(teamStaffId);
 

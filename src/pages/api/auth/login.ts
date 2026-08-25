@@ -16,6 +16,7 @@ import { verifyTurnstile } from '../../../lib/turnstile';
 import { notifySecurityAdmins } from '../../../lib/securityNotifications';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
 import { getClientIp } from '../../../lib/getClientIp';
+import { isSafeInternalReturnTo } from '@/features/team-portal/domain/entities/team-portal-access';
 
 export const prerender = false;
 
@@ -61,6 +62,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
     }
 
     const { email, password } = body;
+    const returnTo = isSafeInternalReturnTo(body.returnTo) ? body.returnTo : null;
 
     if (!email || !password) {
       return json({ error: 'Email and password are required' }, 400);
@@ -216,6 +218,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       forwardedProto === 'https' || forwardedSsl === 'on' || urlProtocol === 'https:';
 
     cookies.set('otp-session', otpSessionToken, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'strict',
+      maxAge: 60 * 15,
+      path: '/',
+    });
+    cookies.set('login-return-to', returnTo ?? '', {
       httpOnly: true,
       secure: isSecure,
       sameSite: 'strict',

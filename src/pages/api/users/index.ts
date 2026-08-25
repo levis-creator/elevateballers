@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { prisma } from '../../../lib/prisma';
 import { createUser, getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendWelcomeSetPasswordEmail } from '../../../lib/email';
 import { getRuntimeEmailTemplates } from '../../../lib/email/runtime-settings';
@@ -42,7 +43,7 @@ export const GET: APIRoute = async ({ request }) => {
 // A welcome email is sent so the user can set their own password.
 export const POST: APIRoute = async ({ request }) => {
     try {
-        await requirePermission(request, 'users:create');
+        await requireSystemAdmin(request);
         const data = await request.json();
 
         if (!data.email || !data.name) {

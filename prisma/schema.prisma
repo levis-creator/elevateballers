@@ -625,12 +625,14 @@ model TeamOwnership {
   email      String
   role       String    @default("OWNER")
   verifiedAt DateTime  @map("verified_at")
+  effectiveFrom DateTime @default(now()) @map("effective_from")
+  effectiveTo DateTime? @map("effective_to")
   revokedAt  DateTime? @map("revoked_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([teamId, revokedAt])
+  @@index([teamId, revokedAt, effectiveFrom, effectiveTo], map: "team_ownership_scope_idx")
   @@index([email])
   @@map("team_ownerships")
 }
@@ -984,7 +986,8 @@ model TeamStaff {
   team           Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
   leagueSeason   LeagueSeason? @relation("LeagueSeasonStaffAssignments", fields: [leagueSeasonId], references: [id], onDelete: SetNull)
 
-  @@unique([teamId, staffId])
+  // Multiple rows preserve immutable assignment history and allow returning to a former team.
+  @@index([teamId, staffId])
   @@index([teamId])
   @@index([staffId])
   @@index([leagueSeasonId])

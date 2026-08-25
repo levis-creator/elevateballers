@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { requirePermission } from '../../../features/rbac/middleware';
+import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { bulkDeleteStaff } from '@/features/staff/application/usecases/staff-management';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
@@ -8,7 +8,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    await requirePermission(request, 'staff:bulk_delete');
+    await requireSystemAdmin(request);
     const body = await request.json();
     const result = await bulkDeleteStaff(body);
 
