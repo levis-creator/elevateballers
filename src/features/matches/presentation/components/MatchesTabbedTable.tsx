@@ -515,8 +515,12 @@ export default function MatchesTabbedTable({
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [fixturePage, setFixturePage] = useState(1);
   const [resultsPage, setResultsPage] = useState(1);
-  const horizonEnd = Date.now() + fixturesSettings.horizon * 24 * 60 * 60 * 1000;
-  const visibleFixtures = fixtures.filter((match) => new Date(match.date).getTime() <= horizonEnd || match.status === 'LIVE');
+	const horizonEnd = Date.now() + fixturesSettings.horizon * 24 * 60 * 60 * 1000;
+	const now = Date.now();
+	const visibleFixtures = fixtures.filter((match) => {
+		const timestamp = new Date(match.date).getTime();
+		return match.status === 'LIVE' || (timestamp >= now && timestamp <= horizonEnd);
+	});
   const fixtureTotalPages = Math.max(1, Math.ceil(visibleFixtures.length / PAGE_SIZE));
   const resultsTotalPages = Math.max(1, Math.ceil(results.length / resultsSettings.perPage));
   const pagedFixtures = visibleFixtures.slice((fixturePage - 1) * PAGE_SIZE, fixturePage * PAGE_SIZE);

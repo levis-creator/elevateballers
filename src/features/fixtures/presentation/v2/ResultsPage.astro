@@ -14,7 +14,7 @@ const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
 const settings = resolvePublicResultsSettings(resultRecords);
 const competitions = applyCompetitionSettings(data.competitions, competitionSettings);
 const matches = data.matches
-	.filter((match) => !match.leagueSeasonId || competitions.some((item) => item.id === match.leagueSeasonId))
+	.filter((match) => competitions.some((item) => item.id === match.leagueSeasonId))
 	.map((match) => {
 		const competition = competitions.find((item) => item.id === match.leagueSeasonId);
 		return { ...match, league: competition?.leagueLabel ?? match.league, leagueCode: competition?.leagueCode, season: competition?.seasonLabel ?? match.season };
