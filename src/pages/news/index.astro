@@ -10,6 +10,7 @@ if (!usePublicV2) return Astro.rewrite("/news-v1");
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import NewsListPage from "@/features/news/presentation/v2/NewsListPage.astro";
+import ManagedStructuredData from "@/features/settings/presentation/components/ManagedStructuredData.astro";
 import { resolvePublicNewsListSettings, siteSettingsService } from "@/features/settings";
 const settings = resolvePublicNewsListSettings(await siteSettingsService.list("news").catch(() => []));
 ---
@@ -20,5 +21,30 @@ const settings = resolvePublicNewsListSettings(await siteSettingsService.list("n
 	canonicalURL={`${Astro.url.origin}/news/`}
 	type="website"
 >
+	<ManagedStructuredData
+		content={JSON.stringify({
+			"@context": "https://schema.org",
+			"@graph": [
+				{
+					"@type": ["WebPage", "CollectionPage"],
+					"@id": `${Astro.url.origin}/news/#collection`,
+					url: `${Astro.url.origin}/news/`,
+					name: settings.title,
+					description: "The latest from Elevate Ballers — match reports, championship coverage, interviews and analysis from Kenya's premier basketball league.",
+					isPartOf: { "@id": `${Astro.url.origin}/#website` },
+					breadcrumb: { "@id": `${Astro.url.origin}/news/#breadcrumb` },
+					inLanguage: "en-US",
+				},
+				{
+					"@type": "BreadcrumbList",
+					"@id": `${Astro.url.origin}/news/#breadcrumb`,
+					itemListElement: [
+						{ "@type": "ListItem", position: 1, name: "Home", item: `${Astro.url.origin}/` },
+						{ "@type": "ListItem", position: 2, name: "News", item: `${Astro.url.origin}/news/` },
+					],
+				},
+			],
+		})}
+	/>
 	<NewsListPage settings={settings} />
 </LayoutV2>
