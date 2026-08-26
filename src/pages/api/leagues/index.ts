@@ -4,6 +4,7 @@ import { createLeague } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { cacheGet, cacheSet, cacheInvalidatePattern } from '../../../lib/cache';
 
 export const prerender = false;
 
@@ -13,8 +14,12 @@ export const GET: APIRoute = async ({ request }) => {
     const activeOnly = url.searchParams.get('active') === 'true';
     const withTeamCounts = url.searchParams.get('counts') === 'teams';
     const compact = url.searchParams.get('compact') === 'true';
+    const cacheKey = `admin:reference:leagues:${activeOnly ? 'active' : 'all'}:${withTeamCounts ? 'counts' : 'plain'}:${compact ? 'compact' : 'full'}`;
+    const cached = await cacheGet<unknown[]>(cacheKey);
+    if (cached) return new Response(JSON.stringify(cached), { headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' } });
 
     const leagues = compact ? await getLeagueOptions() : await getLeagues(activeOnly, withTeamCounts);
+    await cacheSet(cacheKey, leagues, 30);
 
     return new Response(JSON.stringify(leagues), {
       headers: { 'Content-Type': 'application/json' },
@@ -55,6 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
       leagueId: league.id,
       name: league.name,
     });
+    await cacheInvalidatePattern('admin:reference:leagues:*');
 
     return new Response(JSON.stringify(league), {
       status: 201,

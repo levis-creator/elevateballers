@@ -55,7 +55,9 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
                 // The database user is limited to 30 connections on cPanel.
                 // Vercel can run several function instances at once, so a
                 // pool of 3 per instance can exhaust that limit quickly.
-                connectionLimit: 1,
+                // Vercel can create several instances; keep the per-instance
+                // pool small and allow the deployment to tune it explicitly.
+                connectionLimit: Math.max(1, Number.parseInt(process.env.DB_POOL_LIMIT || '1', 10) || 1),
                 idleTimeout: 10000,
                 connectTimeout: 30000,
                 acquireTimeout: 30000,
@@ -75,9 +77,10 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
 
 function createPrismaClient(): PrismaClientInstance {
     try {
+        const queryDiagnostics = process.env.DB_QUERY_DIAGNOSTICS === 'true';
         return new PrismaClient({
             adapter: getAdapter(),
-            log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+            log: queryDiagnostics ? [{ emit: 'event', level: 'query' }, 'error', 'warn'] : process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
         });
     } catch (error) {
         if (error instanceof Error && error.message.includes('DATABASE_URL')) {
@@ -94,6 +97,12 @@ function createPrismaClient(): PrismaClientInstance {
 const newPrisma = createPrismaClient();
 
 export const prisma = globalForPrisma.prisma ?? newPrisma;
+
+if (process.env.DB_QUERY_DIAGNOSTICS === 'true') {
+    prisma.$on('query', (event) => {
+        console.info(`[db] ${event.duration}ms ${event.query.split(/\s+/).slice(0, 8).join(' ')}…`);
+    });
+}
 
 if (process.env.NODE_ENV !== 'production') {
     globalForPrisma.prisma = prisma;
