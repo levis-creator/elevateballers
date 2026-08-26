@@ -146,6 +146,16 @@ export function useDashboardData() {
 	const [leaders, setLeaders] = useState<Leader[]>([]);
 	const [processing, setProcessing] = useState<Set<string>>(new Set());
 
+	const applyDashboardData = useCallback((dashboard: any) => {
+		setKpis(dashboard.kpis || []);
+		setSeason(dashboard.season);
+		setFixtures(dashboard.fixtures || []);
+		setPipeline(dashboard.pipeline || { published: 0, draft: 0, scheduled: 0, recent: [] });
+		setStorage(dashboard.storage || { usedGb: 0, items: 0, pct: 0 });
+		setApprovals(dashboard.approvals || []);
+		setActivity(dashboard.activity || []);
+	}, []);
+
 	const loadApprovals = useCallback(async () => {
 		if (!can("notifications:read")) return setApprovals([]);
 		const list = await listOf("/api/notifications?unread=true&limit=10", true);
@@ -165,6 +175,8 @@ export function useDashboardData() {
 	useEffect(() => {
 		if (permsLoading) return;
 		let cancelled = false;
+		let dashboardRefreshTimer: number | undefined;
+		let refreshOnFocus: (() => void) | undefined;
 
 		(async () => {
 			setLoading(true);
@@ -173,13 +185,18 @@ export function useDashboardData() {
 				if (dashboardResponse.ok) {
 					const dashboard = await dashboardResponse.json();
 					if (cancelled) return;
-					setKpis(dashboard.kpis || []);
-					setSeason(dashboard.season);
-					setFixtures(dashboard.fixtures || []);
-					setPipeline(dashboard.pipeline || { published: 0, draft: 0, scheduled: 0, recent: [] });
-					setStorage(dashboard.storage || { usedGb: 0, items: 0, pct: 0 });
-					setApprovals(dashboard.approvals || []);
-					setActivity(dashboard.activity || []);
+					applyDashboardData(dashboard);
+					const refreshDashboard = async () => {
+						try {
+							const response = await fetch('/api/admin/dashboard');
+							if (!cancelled && response.ok) applyDashboardData(await response.json());
+						} catch {
+							// Keep the last successful dashboard snapshot visible.
+						}
+					};
+					refreshOnFocus = () => { void refreshDashboard(); };
+					window.addEventListener('focus', refreshOnFocus);
+					dashboardRefreshTimer = window.setInterval(refreshDashboard, 60_000);
 					if (can("players:read") || can("matches:read")) {
 						try {
 							const res = await fetch("/api/stats/leaders?stat=Points&limit=5");
@@ -277,8 +294,10 @@ export function useDashboardData() {
 
 		return () => {
 			cancelled = true;
+			if (dashboardRefreshTimer !== undefined) window.clearInterval(dashboardRefreshTimer);
+			if (refreshOnFocus) window.removeEventListener('focus', refreshOnFocus);
 		};
-	}, [permsLoading, can, canAny, loadApprovals]);
+	}, [permsLoading, can, canAny, loadApprovals, applyDashboardData]);
 
 	const resolve = useCallback(
 		async (approval: Approval, accept: boolean) => {
