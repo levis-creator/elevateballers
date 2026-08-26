@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Archive,
   ArrowLeft,
@@ -30,6 +30,15 @@ type ViewMode = 'list' | 'grid';
 type Status = 'published' | 'draft' | 'scheduled';
 
 const pageSize = 8;
+type AdminNewsResponse = {
+  items: NewsArticleDTO[];
+  total: number;
+  totalPages: number;
+  page: number;
+  categories: string[];
+  authors: { id: string; name: string }[];
+  counts: { published: number; draft: number; scheduled: number };
+};
 
 function getStatus(article: NewsArticleDTO): Status {
   if (article.published) return 'published';
@@ -60,14 +69,30 @@ export default function AdminNewsListV2() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [authors, setAuthors] = useState<{ id: string; name: string }[]>([]);
+  const [counts, setCounts] = useState({ published: 0, draft: 0, scheduled: 0 });
 
   const load = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/news?admin=true');
+      const params = new URLSearchParams({ admin: 'true', page: String(page), limit: String(pageSize), sort });
+      if (query.trim()) params.set('q', query.trim());
+      if (status !== 'all') params.set('status', status);
+      if (category !== 'all') params.set('category', category);
+      if (author !== 'all') params.set('authorId', author);
+      const response = await fetch(`/api/news?${params.toString()}`);
       if (!response.ok) throw new Error('Unable to load news articles');
-      setArticles(await response.json());
+      const result = await response.json() as AdminNewsResponse;
+      setArticles(result.items);
+      setTotal(result.total);
+      setTotalPages(result.totalPages);
+      setCategories(result.categories);
+      setAuthors(result.authors);
+      setCounts(result.counts);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to load news articles');
     } finally {
@@ -75,30 +100,11 @@ export default function AdminNewsListV2() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
-  useEffect(() => { setPage(1); }, [query, status, category, author, sort]);
+  useEffect(() => { void load(); }, [page, query, status, category, author, sort]);
+  useEffect(() => { if (page !== 1) setPage(1); }, [query, status, category, author, sort]);
 
-  const categories = useMemo(() => [...new Set(articles.map(categoryName))].sort(), [articles]);
-  const authors = useMemo(() => [...new Map(articles.map((article) => [article.author.id, article.author.name])).entries()], [articles]);
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return articles
-      .filter((article) => !needle || [article.title, article.slug, article.author.name].some((value) => value.toLowerCase().includes(needle)))
-      .filter((article) => status === 'all' || getStatus(article) === status)
-      .filter((article) => category === 'all' || categoryName(article) === category)
-      .filter((article) => author === 'all' || article.author.id === author)
-      .sort((a, b) => sort === 'title'
-        ? a.title.localeCompare(b.title)
-        : (new Date(sort === 'newest' ? b.createdAt : a.createdAt).getTime() - new Date(sort === 'newest' ? a.createdAt : b.createdAt).getTime()));
-  }, [articles, query, status, category, author, sort]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const visible = articles;
   const allVisibleSelected = visible.length > 0 && visible.every((article) => selected.has(article.id));
-  const counts = useMemo(() => articles.reduce((result, article) => {
-    result[getStatus(article)] += 1;
-    return result;
-  }, { published: 0, draft: 0, scheduled: 0 }), [articles]);
   const pendingComments = articles.reduce((sum, article) => sum + (article.commentsCount || 0), 0);
 
   const toggle = (id: string) => setSelected((current) => {
@@ -139,19 +145,19 @@ export default function AdminNewsListV2() {
     </header>
 
     <div className="eb-news-kpis">
-      <button onClick={() => { setStatus('all'); }}><span className="red"><Newspaper size={17} /></span><strong>{articles.length}</strong><small>Total articles</small></button>
+      <button onClick={() => { setStatus('all'); }}><span className="red"><Newspaper size={17} /></span><strong>{total}</strong><small>Total articles</small></button>
       <button onClick={() => setStatus('published')}><span className="green"><CheckCircle2 size={17} /></span><strong>{counts.published}</strong><small>Published</small></button>
       <button onClick={() => setStatus('draft')}><span className="amber"><FileText size={17} /></span><strong>{counts.draft}</strong><small>Drafts</small></button>
       <button onClick={() => setStatus('scheduled')}><span className="blue"><Clock3 size={17} /></span><strong>{counts.scheduled}</strong><small>Scheduled</small></button>
-      <div><span className="purple"><MessageSquare size={17} /></span><strong>{pendingComments}</strong><small>Comments</small></div>
+      <div><span className="purple"><MessageSquare size={17} /></span><strong>{pendingComments}</strong><small>Comments on this page</small></div>
     </div>
 
     <div className="eb-news-card">
       <div className="eb-news-toolbar">
         <label className="eb-news-search"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Title, slug or author…" aria-label="Search news articles" /></label>
         <div className="eb-news-status-pills">{(['all', 'published', 'draft', 'scheduled'] as const).map((value) => <button key={value} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{value === 'all' ? 'All' : value}</button>)}</div>
-        <select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filter by category"><option value="all">All categories</option>{categories.map((value) => <option key={value}>{value}</option>)}</select>
-        <select value={author} onChange={(event) => setAuthor(event.target.value)} aria-label="Filter by author"><option value="all">All authors</option>{authors.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>
+        <select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filter by category"><option value="all">All categories</option>{categories.map((value) => <option key={value} value={value}>{reverseCategoryMap[value] || value.replaceAll('_', ' ')}</option>)}</select>
+        <select value={author} onChange={(event) => setAuthor(event.target.value)} aria-label="Filter by author"><option value="all">All authors</option>{authors.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}</select>
         <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} aria-label="Sort articles"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A–Z</option></select>
         <button className="eb-news-reset" onClick={reset}><X size={13} /> Reset</button>
         <div className="eb-news-view"><button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')} aria-label="List view"><List size={15} /></button><button className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')} aria-label="Grid view"><Grid2X2 size={15} /></button></div>
@@ -159,8 +165,8 @@ export default function AdminNewsListV2() {
 
       {selected.size > 0 && <div className="eb-news-bulk"><strong>{selected.size} selected</strong><button onClick={() => void deleteArticles([...selected])} disabled={busy}><Trash2 size={14} /> Delete</button><button onClick={() => setSelected(new Set())}><X size={14} /> Clear</button></div>}
 
-      {visible.length === 0 ? <div className="eb-news-empty"><Archive size={32} /><strong>{articles.length ? 'No matching articles' : 'No articles yet'}</strong><span>{articles.length ? 'Try changing your filters.' : 'Create your first story to get started.'}</span>{articles.length === 0 && <a className="eb-news-primary" href="/admin/news/new"><Plus size={14} /> New article</a>}</div> : view === 'list' ? <div className="eb-news-table-scroll"><table className="eb-news-table"><thead><tr><th><button className="eb-news-check" onClick={toggleVisible} aria-label="Select visible articles">{allVisibleSelected && <Check size={12} />}</button></th><th>Article</th><th>Category</th><th>Author</th><th>Status</th><th>Date</th><th>Comments</th><th /></tr></thead><tbody>{visible.map((article) => <tr key={article.id} className={selected.has(article.id) ? 'selected' : ''}><td><button className={`eb-news-check ${selected.has(article.id) ? 'checked' : ''}`} onClick={() => toggle(article.id)} aria-label={`Select ${article.title}`}>{selected.has(article.id) && <Check size={12} />}</button></td><td><div className="eb-news-article-cell">{article.image ? <img src={article.image} alt="" /> : <span className="eb-news-thumb"><FileText size={16} /></span>}<div><strong>{article.title}</strong><small>/{article.slug}</small></div></div></td><td><span className="eb-news-chip">{categoryName(article)}</span></td><td><span className="eb-news-author"><UserRound size={13} /> {article.author.name}</span></td><td><span className={`eb-news-status ${getStatus(article)}`}><i />{getStatus(article)}</span></td><td><span className="eb-news-date"><CalendarDays size={13} /> {formatDate(article.publishedAt || article.createdAt)}</span></td><td><span className="eb-news-comments"><MessageSquare size={13} /> {article.commentsCount || 0}</span></td><td><div className="eb-news-actions"><a href={`/admin/news/view/${article.id}`} aria-label={`View ${article.title}`}><Eye size={14} /></a><a href={`/admin/news/${article.id}`} aria-label={`Edit ${article.title}`}><MoreHorizontal size={16} /></a><button onClick={() => void deleteArticles([article.id])} aria-label={`Delete ${article.title}`}><Trash2 size={14} /></button></div></td></tr>)}</tbody></table></div> : <div className="eb-news-grid">{visible.map((article) => <article className="eb-news-grid-card" key={article.id}>{article.image ? <img src={article.image} alt="" /> : <div className="eb-news-grid-placeholder"><FileText size={24} /></div>}<div className="eb-news-grid-body"><div className="eb-news-grid-meta"><span className="eb-news-chip">{categoryName(article)}</span><span className={`eb-news-status ${getStatus(article)}`}><i />{getStatus(article)}</span></div><h3>{article.title}</h3><p>{article.excerpt || article.content.replace(/<[^>]+>/g, '').slice(0, 130)}</p><footer><span>{article.author.name}</span><span>{article.commentsCount || 0} comments</span><div><a href={`/admin/news/${article.id}`}>Edit</a><button onClick={() => void deleteArticles([article.id])}><Trash2 size={14} /></button></div></footer></div></article>)}</div>}
-      <footer className="eb-news-footer"><span>Showing {filtered.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span><div><button disabled={page <= 1} onClick={() => setPage((value) => value - 1)}><ArrowLeft size={13} /> Previous</button><span>Page {page} of {pageCount}</span><button disabled={page >= pageCount} onClick={() => setPage((value) => value + 1)}>Next <ArrowRight size={13} /></button></div></footer>
+      {visible.length === 0 ? <div className="eb-news-empty"><Archive size={32} /><strong>{total ? 'No matching articles' : 'No articles yet'}</strong><span>{total ? 'Try changing your filters.' : 'Create your first story to get started.'}</span>{total === 0 && <a className="eb-news-primary" href="/admin/news/new"><Plus size={14} /> New article</a>}</div> : view === 'list' ? <div className="eb-news-table-scroll"><table className="eb-news-table"><thead><tr><th><button className="eb-news-check" onClick={toggleVisible} aria-label="Select visible articles">{allVisibleSelected && <Check size={12} />}</button></th><th>Article</th><th>Category</th><th>Author</th><th>Status</th><th>Date</th><th>Comments</th><th /></tr></thead><tbody>{visible.map((article) => <tr key={article.id} className={selected.has(article.id) ? 'selected' : ''}><td><button className={`eb-news-check ${selected.has(article.id) ? 'checked' : ''}`} onClick={() => toggle(article.id)} aria-label={`Select ${article.title}`}>{selected.has(article.id) && <Check size={12} />}</button></td><td><div className="eb-news-article-cell">{article.image ? <img src={article.image} alt="" /> : <span className="eb-news-thumb"><FileText size={16} /></span>}<div><strong>{article.title}</strong><small>/{article.slug}</small></div></div></td><td><span className="eb-news-chip">{categoryName(article)}</span></td><td><span className="eb-news-author"><UserRound size={13} /> {article.author.name}</span></td><td><span className={`eb-news-status ${getStatus(article)}`}><i />{getStatus(article)}</span></td><td><span className="eb-news-date"><CalendarDays size={13} /> {formatDate(article.publishedAt || article.createdAt)}</span></td><td><span className="eb-news-comments"><MessageSquare size={13} /> {article.commentsCount || 0}</span></td><td><div className="eb-news-actions"><a href={`/admin/news/view/${article.id}`} aria-label={`View ${article.title}`}><Eye size={14} /></a><a href={`/admin/news/${article.id}`} aria-label={`Edit ${article.title}`}><MoreHorizontal size={16} /></a><button onClick={() => void deleteArticles([article.id])} aria-label={`Delete ${article.title}`}><Trash2 size={14} /></button></div></td></tr>)}</tbody></table></div> : <div className="eb-news-grid">{visible.map((article) => <article className="eb-news-grid-card" key={article.id}>{article.image ? <img src={article.image} alt="" /> : <div className="eb-news-grid-placeholder"><FileText size={24} /></div>}<div className="eb-news-grid-body"><div className="eb-news-grid-meta"><span className="eb-news-chip">{categoryName(article)}</span><span className={`eb-news-status ${getStatus(article)}`}><i />{getStatus(article)}</span></div><h3>{article.title}</h3><p>{article.excerpt || 'No excerpt available.'}</p><footer><span>{article.author.name}</span><span>{article.commentsCount || 0} comments</span><div><a href={`/admin/news/${article.id}`}>Edit</a><button onClick={() => void deleteArticles([article.id])}><Trash2 size={14} /></button></div></footer></div></article>)}</div>}
+      <footer className="eb-news-footer"><span>Showing {total ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, total)} of {total}</span><div><button disabled={page <= 1} onClick={() => setPage((value) => value - 1)}><ArrowLeft size={13} /> Previous</button><span>Page {page} of {totalPages}</span><button disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)}>Next <ArrowRight size={13} /></button></div></footer>
     </div>
   </section>;
 }

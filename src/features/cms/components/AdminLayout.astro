@@ -127,6 +127,17 @@ const isStaffDetail =
     <ManagedFavicon />
     <ClientRouter />
 
+    <!-- Resolve the loading overlay theme before the React shell is mounted. -->
+    <script is:inline>
+      (function () {
+        try {
+          var preference = localStorage.getItem('eb-cms-theme');
+          var light = preference === 'light' || (preference !== 'dark' && window.matchMedia('(prefers-color-scheme: light)').matches);
+          document.documentElement.dataset.adminTheme = light ? 'light' : 'dark';
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Resolve sidebar collapsed state before paint. Stored preference wins; match-detail auto-hides by default. -->
     <script is:inline>
       (function () {
@@ -159,6 +170,149 @@ const isStaffDetail =
     )}
 
     <style>
+      #admin-navigation-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+        width: 0;
+        height: 2px;
+        pointer-events: none;
+        opacity: 0;
+        background: var(--brand, #e4002b);
+        box-shadow: 0 0 12px rgb(var(--site-brand-rgb, 228 0 43) / 0.8);
+        transition: width 180ms ease-out, opacity 180ms ease-in;
+      }
+
+      #admin-navigation-progress.is-loading {
+        opacity: 1;
+        transition: width 700ms cubic-bezier(0.2, 0.7, 0.3, 1), opacity 180ms ease-in;
+      }
+
+      #admin-navigation-progress.is-complete {
+        width: 100%;
+        opacity: 1;
+        transition: width 160ms ease-out, opacity 220ms ease-in 100ms;
+      }
+
+      #admin-navigation-skeleton {
+        position: fixed;
+        top: 57px;
+        right: 0;
+        bottom: 0;
+        left: var(--admin-sidebar-width, 248px);
+        z-index: 20;
+        display: none;
+        overflow: hidden;
+        padding: 24px;
+        pointer-events: none;
+        background: rgb(var(--site-night-rgb, 12 11 10) / 0.96);
+      }
+
+      #admin-navigation-skeleton.is-loading {
+        display: block;
+      }
+
+      #admin-navigation-skeleton .admin-skeleton-heading {
+        width: min(420px, 55%);
+        height: 34px;
+        margin-bottom: 12px;
+      }
+
+      #admin-navigation-skeleton .admin-skeleton-copy {
+        width: min(620px, 75%);
+        height: 14px;
+        margin-bottom: 28px;
+      }
+
+      #admin-navigation-skeleton .admin-skeleton-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      #admin-navigation-skeleton .admin-skeleton-card {
+        height: 104px;
+        border-radius: 12px;
+      }
+
+      #admin-navigation-skeleton .admin-skeleton-panel {
+        min-height: 330px;
+        border-radius: 14px;
+      }
+
+      #admin-navigation-skeleton .admin-skeleton-heading,
+      #admin-navigation-skeleton .admin-skeleton-copy,
+      #admin-navigation-skeleton .admin-skeleton-card,
+      #admin-navigation-skeleton .admin-skeleton-panel {
+        background: linear-gradient(
+          100deg,
+          rgb(var(--site-night-soft-rgb, 22 21 20)),
+          rgb(var(--site-night-border-rgb, 36 35 34) / 0.72),
+          rgb(var(--site-night-soft-rgb, 22 21 20))
+        );
+        background-size: 220% 100%;
+        animation: admin-skeleton-shimmer 1.15s ease-in-out infinite;
+      }
+
+      /* The skeleton sits outside the React shell, so mirror the shell theme
+         here instead of leaving a dark overlay on light-theme navigation. */
+      body:has(.eb-root.light) #admin-navigation-skeleton {
+        background: rgb(var(--site-paper-rgb, 245 243 239) / 0.96);
+      }
+
+      body:has(.eb-root.light) #admin-navigation-skeleton .admin-skeleton-heading,
+      body:has(.eb-root.light) #admin-navigation-skeleton .admin-skeleton-copy,
+      body:has(.eb-root.light) #admin-navigation-skeleton .admin-skeleton-card,
+      body:has(.eb-root.light) #admin-navigation-skeleton .admin-skeleton-panel {
+        background: linear-gradient(
+          100deg,
+          rgb(var(--site-paper-soft-rgb, 250 249 247)),
+          rgb(var(--site-paper-border-rgb, 223 220 216) / 0.72),
+          rgb(var(--site-paper-soft-rgb, 250 249 247))
+        );
+        background-size: 220% 100%;
+      }
+
+      :root[data-admin-theme="light"] #admin-navigation-skeleton {
+        background: rgb(var(--site-paper-rgb, 245 243 239) / 0.96);
+      }
+
+      :root[data-admin-theme="light"] #admin-navigation-skeleton .admin-skeleton-heading,
+      :root[data-admin-theme="light"] #admin-navigation-skeleton .admin-skeleton-copy,
+      :root[data-admin-theme="light"] #admin-navigation-skeleton .admin-skeleton-card,
+      :root[data-admin-theme="light"] #admin-navigation-skeleton .admin-skeleton-panel {
+        background: linear-gradient(
+          100deg,
+          rgb(var(--site-paper-soft-rgb, 250 249 247)),
+          rgb(var(--site-paper-border-rgb, 223 220 216) / 0.72),
+          rgb(var(--site-paper-soft-rgb, 250 249 247))
+        );
+        background-size: 220% 100%;
+      }
+
+      /* Avoid stacking the generic navigation overlay over a module skeleton. */
+      body:has(.eb-news-loading, .eb-users-loading, .eb-teams-loading, .eb-form-loading, .eb-detail-loading, .eb-potw-v2-loading) #admin-navigation-skeleton {
+        display: none !important;
+      }
+
+      @keyframes admin-skeleton-shimmer {
+        from { background-position: 120% 0; }
+        to { background-position: -120% 0; }
+      }
+
+      @media (max-width: 900px) {
+        #admin-navigation-skeleton {
+          left: 0;
+          padding: 18px 16px;
+        }
+
+        #admin-navigation-skeleton .admin-skeleton-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
       :root {
         --admin-primary: #dd3333;
         --admin-primary-dark: #c02a2a;
@@ -190,6 +344,65 @@ const isStaffDetail =
     </style>
   </head>
   <body>
+    <div id="admin-navigation-progress" aria-hidden="true"></div>
+    <div id="admin-navigation-skeleton" aria-hidden="true">
+      <div class="admin-skeleton-heading"></div>
+      <div class="admin-skeleton-copy"></div>
+      <div class="admin-skeleton-grid">
+        <div class="admin-skeleton-card"></div>
+        <div class="admin-skeleton-card"></div>
+        <div class="admin-skeleton-card"></div>
+        <div class="admin-skeleton-card"></div>
+      </div>
+      <div class="admin-skeleton-panel"></div>
+    </div>
+    <script is:inline>
+      (function () {
+        if (window.__ebAdminNavigationProgressBound) return;
+        window.__ebAdminNavigationProgressBound = true;
+
+        function progress() {
+          return document.getElementById('admin-navigation-progress');
+        }
+
+        function start() {
+          const bar = progress();
+          if (!bar) return;
+          const skeleton = document.getElementById('admin-navigation-skeleton');
+          if (skeleton) skeleton.classList.add('is-loading');
+          bar.classList.remove('is-complete');
+          bar.classList.add('is-loading');
+          bar.style.width = '12%';
+          window.clearTimeout(window.__ebAdminNavigationProgressTimer);
+          window.__ebAdminNavigationProgressTimer = window.setTimeout(function () {
+            if (bar.classList.contains('is-loading')) bar.style.width = '78%';
+          }, 120);
+        }
+
+        function finish() {
+          const bar = progress();
+          if (!bar) return;
+          const skeleton = document.getElementById('admin-navigation-skeleton');
+          if (skeleton) skeleton.classList.remove('is-loading');
+          window.clearTimeout(window.__ebAdminNavigationProgressTimer);
+          bar.classList.remove('is-loading');
+          bar.classList.add('is-complete');
+          window.setTimeout(function () {
+            bar.classList.remove('is-complete');
+            bar.style.width = '0';
+          }, 380);
+        }
+
+        document.addEventListener('astro:before-preparation', start);
+        document.addEventListener('astro:after-swap', function () {
+          window.requestAnimationFrame(function () {
+            const bar = progress();
+            if (bar) bar.style.width = '88%';
+          });
+        });
+        document.addEventListener('astro:page-load', finish);
+      })();
+    </script>
     {redirectUrl ? (
       <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
         <p>Redirecting to <a href={redirectUrl} style="color:#dd3333;text-decoration:none;font-weight:bold;">{redirectUrl}</a>...</p>
