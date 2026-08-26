@@ -94,6 +94,15 @@ const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
 		};
 		if (document.readyState === "complete") hide();
 		else window.addEventListener("load", hide);
+		// `load` does not fire again during Astro client-side navigation.
+		document.addEventListener("astro:page-load", hide, { once: true });
+		document.addEventListener("astro:before-preparation", function () {
+			if (!done && el.parentNode) {
+				done = true;
+				clearTimeout(showTimer);
+				el.parentNode.removeChild(el);
+			}
+		}, { once: true });
 		// Safety net: never let the splash hang.
 		setTimeout(hide, 4000);
 	})();
