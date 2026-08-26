@@ -6,14 +6,6 @@ import {
   type MatchFormData,
 } from '../../../domain/usecases/match-form';
 import { parseLocalDateTimeToUTC, formatUTCToLocalInput } from '../../../domain/usecases/match-datetime';
-import {
-  getTeam1Id,
-  getTeam1Name,
-  getTeam2Id,
-  getTeam2Name,
-} from '../../../domain/usecases/team-helpers';
-import { getLeagueId } from '../../../domain/usecases/league-helpers';
-import { getSeasonId } from '../../../domain/usecases/season-helpers';
 
 export interface TeamOption {
   id: string;
@@ -99,14 +91,38 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
 
   // Option lists ------------------------------------------------------------
   useEffect(() => {
-    getJson<NamedOption>('/api/leagues?compact=true').then(setLeagues);
-    // Keep the picker useful before a competition is selected. Once a
-    // league/season is chosen, the roster effect below replaces this catalog
-    // with the teams eligible for that competition edition.
-    getJson<TeamOption>('/api/teams?approved=true').then((list) => {
-      setAllTeams(list.map((team) => ({ id: team.id, name: team.name, logo: team.logo ?? null })));
-    });
-  }, []);
+    let cancelled = false;
+    const query = matchId ? `?matchId=${encodeURIComponent(matchId)}` : '';
+    fetch(`/api/admin/match-form${query}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Failed to load match form data');
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setLeagues(Array.isArray(data.leagues) ? data.leagues : []);
+        setAllTeams(Array.isArray(data.teams) ? data.teams : []);
+        if (data.match) {
+          const m = data.match;
+          setForm({
+            team1Id: m.team1Id || '', team1Name: m.team1Name || '',
+            team2Id: m.team2Id || '', team2Name: m.team2Name || '',
+            leagueId: m.leagueId || '', seasonId: m.seasonId || '',
+            leagueSeasonId: m.leagueSeasonId || '', date: m.date ? formatUTCToLocalInput(m.date) : '',
+            status: m.status, stage: m.stage || 'REGULAR_SEASON',
+            team1Score: m.team1Score?.toString() || '', team2Score: m.team2Score?.toString() || '',
+            duration: m.duration?.toString() || '',
+          });
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message || 'Failed to load match form data');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [matchId]);
 
   // Fixture eligibility comes from the selected competition roster.
   useEffect(() => {
@@ -154,42 +170,6 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
       cancelled = true;
     };
   }, [leagueId]);
-
-  // Edit mode — load the existing match.
-  useEffect(() => {
-    if (!matchId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/matches/${matchId}`);
-        if (!res.ok) throw new Error('Failed to load match');
-        const m = await res.json();
-        if (cancelled) return;
-        setForm({
-          team1Id: getTeam1Id(m) || '',
-          team1Name: getTeam1Name(m) || '',
-          team2Id: getTeam2Id(m) || '',
-          team2Name: getTeam2Name(m) || '',
-          leagueId: getLeagueId(m) || '',
-          seasonId: getSeasonId(m) || '',
-          leagueSeasonId: m.leagueSeasonId || '',
-          date: m.date ? formatUTCToLocalInput(m.date) : '',
-          status: m.status,
-          stage: (m.stage as MatchStage) || 'REGULAR_SEASON',
-          team1Score: m.team1Score?.toString() || '',
-          team2Score: m.team2Score?.toString() || '',
-          duration: m.duration?.toString() || '',
-        });
-      } catch (err: any) {
-        if (!cancelled) setError(err?.message || 'Failed to load match');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [matchId]);
 
   // Team selection helpers --------------------------------------------------
   const pickTeam = useCallback((slot: 1 | 2, team: TeamOption) => {
