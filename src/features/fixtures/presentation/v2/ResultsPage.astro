@@ -9,7 +9,11 @@ import { getFixturesData } from "@/features/fixtures/domain/usecases/get-fixture
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { applyCompetitionSettings, resolvePublicCompetitionSettings, resolvePublicResultsSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer, leagueRecords, resultRecords] = await Promise.all([getFixturesData(), getFooterData(), siteSettingsService.list("leagues"), siteSettingsService.list("results")]);
+// Avoid opening more database work than the cPanel pool can serve at once.
+const data = await getFixturesData();
+const footer = await getFooterData();
+const leagueRecords = await siteSettingsService.list("leagues");
+const resultRecords = await siteSettingsService.list("results");
 const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
 const settings = resolvePublicResultsSettings(resultRecords);
 const competitions = applyCompetitionSettings(data.competitions, competitionSettings);
