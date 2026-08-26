@@ -306,7 +306,10 @@ export async function fetchPotw(
 		const teamLabel = [p.team?.name, jersey].filter(Boolean).join(" · ");
 		const raw = (potw as any).customImage || p.image;
 		const resolved = resolveAssetUrl(raw);
-		const image = resolved ? optimizeImageUrl(resolved, { width: 600 }) : null;
+		// POTW images may be freshly uploaded to Supabase before Vercel's image
+		// fetcher can see them. Use the public object URL directly here so a
+		// transient optimizer 404 cannot hide the featured player photo.
+		const image = resolved || null;
 		const s = statsByPlayer?.[p.id];
 		const stats = s
 			? [

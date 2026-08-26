@@ -204,10 +204,49 @@ const themeStyle = [
 			verificationCodes={seoSettings.verification}
 		/>
 		<ClientRouter />
+		<script is:inline>
+			(function () {
+				if (window.__ebPublicSplashCleanupBound) return;
+				window.__ebPublicSplashCleanupBound = true;
+				var removeSplash = function () {
+					var splash = document.getElementById('eb-splash');
+					if (splash) splash.remove();
+				};
+				var progress = function () { return document.getElementById('public-navigation-progress'); };
+				var start = function () {
+					removeSplash();
+					var bar = progress();
+					if (!bar) return;
+					bar.classList.remove('is-complete');
+					bar.classList.add('is-loading');
+					bar.style.width = '12%';
+					window.setTimeout(function () { if (bar.classList.contains('is-loading')) bar.style.width = '78%'; }, 180);
+				};
+				var swapped = function () {
+					removeSplash();
+					var bar = progress();
+					if (bar) bar.style.width = '88%';
+				};
+				var finish = function () {
+					removeSplash();
+					var bar = progress();
+					if (!bar) return;
+					bar.classList.remove('is-loading');
+					bar.classList.add('is-complete');
+					window.setTimeout(function () { bar.classList.remove('is-complete'); bar.style.width = '0'; }, 350);
+				};
+				document.addEventListener('astro:before-preparation', start);
+				document.addEventListener('astro:after-swap', swapped);
+				document.addEventListener('astro:page-load', finish);
+			})();
+		</script>
 		<!-- Critical paint styles prevent a white flash while the bundled CSS loads. -->
 		<style is:inline>
 			html, body { margin: 0; min-height: 100%; background: rgb(var(--site-paper-rgb, 245 243 239)); }
 		::view-transition-old(root), ::view-transition-new(root) { background: rgb(var(--site-paper-rgb, 245 243 239)); }
+		#public-navigation-progress { position: fixed; top: 0; left: 0; z-index: 10000; width: 0; height: 3px; pointer-events: none; opacity: 0; background: var(--brand, #e4002b); box-shadow: 0 0 12px rgb(var(--site-brand-rgb, 228 0 43) / 0.7); transition: width 180ms ease-out, opacity 180ms ease-in; }
+		#public-navigation-progress.is-loading { opacity: 1; transition: width 700ms cubic-bezier(.2,.7,.3,1), opacity 180ms ease-in; }
+		#public-navigation-progress.is-complete { width: 100%; opacity: 1; transition: width 160ms ease-out, opacity 220ms ease-in 100ms; }
 		</style>
 
 		{preloadImage && (
@@ -228,6 +267,7 @@ const themeStyle = [
 	<!-- Paper and Ink are the document defaults; individual night sections
 	     override them through the same derived theme palette. -->
 	<body class="min-h-screen bg-paper text-ink antialiased">
+		<div id="public-navigation-progress" aria-hidden="true"></div>
 		<!-- Boot splash: shown once per session on first paint, then removed on load. -->
 		<LoadingSplash settings={systemSettings} />
 		<slot />

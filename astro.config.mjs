@@ -79,7 +79,7 @@ export default defineConfig({
       // Keep dependencies used by lazy admin chunks in one optimizer graph.
       // This prevents Vite's dev server from returning 504 Outdated Optimize
       // Dep responses when the news editor chunk is requested for the first time.
-      include: ['react-masonry-css', '@radix-ui/react-checkbox', 'sanitize-html', 'quill'],
+      include: ['react-masonry-css', '@radix-ui/react-checkbox', 'sanitize-html', 'quill', 'zustand'],
     },
     ssr: {
       noExternal: ['react-masonry-css'],
