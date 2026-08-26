@@ -231,7 +231,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 		const [players, matches] = await Promise.all([
 			prisma.player.findMany({
 				where: { approved: true, archived: false },
-				select: { id: true, slug: true, firstName: true, lastName: true, team: { select: { name: true } } },
+				select: { id: true, slug: true, firstName: true, lastName: true, image: true, team: { select: { name: true } } },
 			}),
 			prisma.match.findMany({
 				where: { status: "COMPLETED", resultPublishedAt: { not: null } },
@@ -265,6 +265,7 @@ export async function fetchStats(): Promise<StatsResult | null> {
 				.map((p) => ({
 					name: `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || "Unknown",
 					team: p.team?.name ?? "—",
+					image: p.image ? getDisplayImageUrl(p.image) : null,
 					val: Math.round(statsByPlayer[p.id][field] * 10) / 10,
 					href: `/players/${p.slug || p.id}`,
 				}))

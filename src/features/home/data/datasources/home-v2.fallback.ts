@@ -65,7 +65,7 @@ export const FALLBACK_NEWS_CATEGORIES: string[] = ["All", "Interviews", "Champio
 
 // Demo rows are not clickable (no real player), so href is null.
 const demoLeaders = (rows: Array<{ name: string; team: string; val: number }>): LeaderData[string] =>
-	rows.map((r) => ({ ...r, href: null }));
+	rows.map((r) => ({ ...r, href: null, image: null }));
 
 export const FALLBACK_LEADER_DATA: LeaderData = {
 	Points: demoLeaders([

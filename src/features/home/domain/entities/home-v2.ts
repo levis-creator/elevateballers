@@ -72,6 +72,7 @@ export interface Leader {
 	name: string;
 	team: string;
 	val: number;
+	image: string | null;
 	/** Link to the player detail page, or null for demo/fallback rows. */
 	href: string | null;
 }
