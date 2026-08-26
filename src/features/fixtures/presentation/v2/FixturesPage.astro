@@ -9,7 +9,14 @@ import { getFixturesData } from "@/features/fixtures/domain/usecases/get-fixture
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import { applyCompetitionSettings, resolvePublicCompetitionSettings, resolvePublicFixturesSettings, resolvePublicMatchPageSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer, leagueRecords, fixtureRecords, matchRecords] = await Promise.all([getFixturesData(), getFooterData(), siteSettingsService.list("leagues"), siteSettingsService.list("fixtures"), siteSettingsService.list("match")]);
+// Keep public bootstrap below the cPanel pool limit. These calls all touch
+// MariaDB; starting five at once can exhaust a three-connection pool and make
+// the whole page fall into its generic data-error state.
+const data = await getFixturesData();
+const footer = await getFooterData();
+const leagueRecords = await siteSettingsService.list("leagues");
+const fixtureRecords = await siteSettingsService.list("fixtures");
+const matchRecords = await siteSettingsService.list("match");
 const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
 const settings = resolvePublicFixturesSettings(fixtureRecords);
 const matchSettings = resolvePublicMatchPageSettings(matchRecords);
