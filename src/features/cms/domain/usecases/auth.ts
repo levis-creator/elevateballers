@@ -326,10 +326,18 @@ export async function createUserSession(
           });
         }
         return revokeCount;
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      }, {
+        // Shared cPanel/MySQL pools can take longer than Prisma's short
+        // default transaction acquisition window. ReadCommitted is sufficient
+        // here because session eviction is best-effort and avoids unnecessary
+        // Serializable contention during login bursts.
+        maxWait: 30_000,
+        timeout: 30_000,
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      });
       return { sessionToken, expiresAt, evictedCount };
     } catch (error: unknown) {
-      if (attempt === 0 && typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2034') continue;
+      if (attempt === 0 && typeof error === 'object' && error !== null && 'code' in error && (error.code === 'P2034' || error.code === 'P2028')) continue;
       throw error;
     }
   }
