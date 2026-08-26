@@ -32,7 +32,9 @@ function getAdapter() {
             user: decodeURIComponent(url.username),
             password: decodeURIComponent(url.password),
             database: url.pathname.slice(1),
-            connectionLimit: 5,
+            // Keep this configurable for shared cPanel plans. Start at 5 and
+            // lower it if the hosting account has a smaller MySQL allowance.
+            connectionLimit: Math.max(1, Number.parseInt(process.env.DB_POOL_LIMIT || '5', 10) || 5),
             idleTimeout: 10000,
             connectTimeout: 30000,
             acquireTimeout: 30000,
@@ -45,14 +47,21 @@ function getAdapter() {
 }
 
 function createPrismaClient(): PrismaClientInstance {
+    const queryDiagnostics = process.env.DB_QUERY_DIAGNOSTICS === 'true';
     return new PrismaClient({
         adapter: getAdapter(),
-        log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+        log: queryDiagnostics ? [{ emit: 'event', level: 'query' }, 'error', 'warn'] : process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     });
 }
 
 const newPrisma = createPrismaClient();
 export const prisma = globalForPrisma.prisma ?? newPrisma;
+
+if (process.env.DB_QUERY_DIAGNOSTICS === 'true') {
+    prisma.$on('query', (event) => {
+        console.info(`[db] ${event.duration}ms ${event.query.split(/\s+/).slice(0, 8).join(' ')}…`);
+    });
+}
 
 if (process.env.NODE_ENV !== 'production') {
     globalForPrisma.prisma = prisma;

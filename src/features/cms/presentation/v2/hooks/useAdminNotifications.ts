@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { navigate } from "astro:transitions/client";
 
 export interface AdminNotification {
@@ -21,26 +21,30 @@ export interface AdminNotification {
 export function useAdminNotifications(enabled: boolean) {
 	const [notifications, setNotifications] = useState<AdminNotification[]>([]);
 	const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+	const requestRef = useRef<AbortController | null>(null);
 
 	const unreadCount = notifications.filter((n) => !n.read).length;
 
 	useEffect(() => {
 		if (!enabled) return;
-		let cancelled = false;
-		fetch("/api/notifications/settings")
+		const controller = new AbortController();
+		fetch("/api/notifications/settings", { signal: controller.signal })
 			.then((r) => (r.ok ? r.json() : { enabled: false }))
-			.then((d) => !cancelled && setNotificationsEnabled(Boolean(d?.enabled)))
+			.then((d) => !controller.signal.aborted && setNotificationsEnabled(Boolean(d?.enabled)))
 			.catch(() => {});
 		return () => {
-			cancelled = true;
+			controller.abort();
 		};
 	}, [enabled]);
 
 	const load = useCallback(() => {
 		if (!enabled) return;
-		fetch("/api/notifications?unread=true&limit=10")
+		requestRef.current?.abort();
+		const controller = new AbortController();
+		requestRef.current = controller;
+		fetch("/api/notifications?unread=true&limit=10", { signal: controller.signal })
 			.then((r) => (r.ok ? r.json() : []))
-			.then((d) => setNotifications(Array.isArray(d) ? d : []))
+			.then((d) => !controller.signal.aborted && setNotifications(Array.isArray(d) ? d : []))
 			.catch(() => {});
 	}, [enabled]);
 
@@ -48,7 +52,10 @@ export function useAdminNotifications(enabled: boolean) {
 		if (!enabled || !notificationsEnabled) return;
 		load();
 		const id = window.setInterval(load, 60_000);
-		return () => window.clearInterval(id);
+		return () => {
+			window.clearInterval(id);
+			requestRef.current?.abort();
+		};
 	}, [enabled, notificationsEnabled, load]);
 
 	const markRead = useCallback(async (id: string) => {

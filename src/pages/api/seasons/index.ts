@@ -5,6 +5,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
+import { cacheGet, cacheSet, cacheInvalidatePattern } from '../../../lib/cache';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
@@ -14,9 +15,13 @@ export const GET: APIRoute = async ({ url }) => {
     // Opt-in: only the admin board needs played-match counts.
     const withCompletedCounts = url.searchParams.get('counts') === 'matches';
     const compact = url.searchParams.get('compact') === 'true';
+    const cacheKey = `admin:reference:seasons:${activeOnly ? 'active' : 'all'}:${leagueId || 'all'}:${withCompletedCounts ? 'counts' : 'plain'}:${compact ? 'compact' : 'full'}`;
+    const cached = await cacheGet<unknown[]>(cacheKey);
+    if (cached) return new Response(JSON.stringify(cached), { headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' } });
     const compactSeasons = compact
       ? await getSeasonOptions(leagueId)
       : await getSeasons(activeOnly, leagueId, withCompletedCounts);
+    await cacheSet(cacheKey, compactSeasons, 30);
     return new Response(JSON.stringify(compactSeasons), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -60,6 +65,7 @@ export const POST: APIRoute = async ({ request }) => {
       leagueIds: data.leagueIds ?? [],
       conferences: data.conferences?.length ?? 0,
     });
+    await cacheInvalidatePattern('admin:reference:seasons:*');
     return new Response(JSON.stringify(season), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
