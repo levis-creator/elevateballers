@@ -26,6 +26,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/700.css";
 // v2 loading-UI animations (boot splash + skeleton shimmer) — global so every page can use them.
 import "@/features/loading/lib/loading.css";
+import { ClientRouter } from "astro:transitions";
 import SEO from "@/components/SEO.astro";
 import LoadingSplash from "@/features/loading/presentation/v2/LoadingSplash.astro";
 import CookieConsent from "@/components/CookieConsent.astro";
@@ -202,9 +203,11 @@ const themeStyle = [
 			schemaEnabled={seoSettings.schema}
 			verificationCodes={seoSettings.verification}
 		/>
+		<ClientRouter />
 		<!-- Critical paint styles prevent a white flash while the bundled CSS loads. -->
 		<style is:inline>
 			html, body { margin: 0; min-height: 100%; background: rgb(var(--site-paper-rgb, 245 243 239)); }
+		::view-transition-old(root), ::view-transition-new(root) { background: rgb(var(--site-paper-rgb, 245 243 239)); }
 		</style>
 
 		{preloadImage && (
