@@ -115,7 +115,7 @@ const isStaffDetail =
     <meta name="robots" content="noindex, nofollow" />
     {redirectUrl && <meta http-equiv="refresh" content={`0;url=${redirectUrl}`} />}
     <title>{title}</title>
-    <ManagedFavicon href={adminBrandSettings?.favicon} />
+    <ManagedFavicon />
     <ClientRouter />
 
     <!-- Resolve sidebar collapsed state before paint. Stored preference wins; match-detail auto-hides by default. -->
