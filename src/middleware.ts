@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 
-export const onRequest = defineMiddleware(async (_context, next) => {
+export const onRequest = defineMiddleware(async (context, next) => {
   const response = await next();
   // Mutate Astro's response in place. Re-wrapping a streaming response with
   // `new Response(response.body, ...)` can make Astro attempt to write to a
@@ -28,14 +28,18 @@ export const onRequest = defineMiddleware(async (_context, next) => {
     headers.set('Content-Type', `${contentType}; charset=UTF-8`);
   }
 
-  // V2 brand settings are emitted as CSS variables in the rendered document.
-  // Apply this at the final response boundary because individual page routes
-  // set their own CDN cache policy after layouts have rendered. Otherwise a
-  // successfully saved colour can remain invisible until s-maxage expires.
+  // Public V2 pages are server-rendered for SEO, but they are also read-heavy.
+  // A short edge cache prevents every visitor from opening a cPanel DB
+  // connection. Admin pages, APIs, and authenticated routes remain private.
   if (contentType?.toLowerCase().includes('text/html') && import.meta.env.PUBLIC_UI_VERSION === 'v2') {
-    headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    headers.set('CDN-Cache-Control', 'no-store');
-    headers.set('Vercel-CDN-Cache-Control', 'no-store');
+    const pathname = context.url.pathname;
+    const isPublicPage = !pathname.startsWith('/admin') && !pathname.startsWith('/api');
+    if (isPublicPage) {
+      const policy = 'public, s-maxage=60, stale-while-revalidate=300';
+      headers.set('Cache-Control', policy);
+      headers.set('CDN-Cache-Control', policy);
+      headers.set('Vercel-CDN-Cache-Control', policy);
+    }
   }
 
   if (process.env.NODE_ENV === 'production') {
