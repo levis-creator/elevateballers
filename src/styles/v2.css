@@ -31,7 +31,7 @@ html[data-hero-art="false"] .eb-hero-art {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-respect-reduced-motion="true"] *,
+html[data-respect-reduced-motion="true"] *,
   html[data-respect-reduced-motion="true"] *::before,
   html[data-respect-reduced-motion="true"] *::after {
     scroll-behavior: auto !important;
@@ -39,4 +39,26 @@ html[data-hero-art="false"] .eb-hero-art {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Team Portal light-theme status surfaces need to override dark translucent utility backgrounds. */
+.team-portal-root.portal-light .team-scoped-badge {
+  background-color: #eceae3 !important;
+  border-color: #d6d0c5 !important;
+  color: #4a443d !important;
+}
+
+/* Apply the saved theme before the React island hydrates, preventing a dark-mode flash on navigation. */
+html[data-team-portal-theme="light"] .team-portal-root {
+  background-color: #f5f3ef !important;
+  color: #141009 !important;
+}
+
+html[data-team-portal-theme="light"] .team-portal-root :is(aside, header, .portal-panel) {
+  background-color: #fff !important;
+  border-color: #e6e1d8 !important;
+}
+
+html[data-team-portal-theme="light"] .team-portal-root main {
+  background-color: #f5f3ef !important;
 }

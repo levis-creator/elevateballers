@@ -1,60 +1,153 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import '@/styles/v2.css';
+import '@fontsource/anton';
+import '@fontsource/archivo/400.css';
+import '@fontsource/archivo/600.css';
+import '@fontsource/archivo/700.css';
+import '@fontsource/space-mono/400.css';
+import { getCurrentUser } from '@/features/cms/lib/auth';
+import { hasRole } from '@/features/rbac/data/datasources/permissions';
+import { ADMIN_ROLE_NAME, COACH_ROLE_NAME, getUserInitials } from '@/features/users/domain/entities/user-directory';
 
 export const prerender = false;
 export const ssr = true;
-const reason = Astro.url.searchParams.get('reason');
+
+const user = await getCurrentUser(Astro.request).catch(() => null);
+const reason = Astro.url.searchParams.get('reason')?.trim() || '';
+const attemptedPath = Astro.url.searchParams.get('attempted')?.trim()
+  || Astro.url.searchParams.get('path')?.trim()
+  || '/team-portal';
+const roles = user?.userRoles?.map(({ role }) => role.name) ?? [];
+const isAdmin = user ? await hasRole(user.id, ADMIN_ROLE_NAME).catch(() => false) : false;
+const isCoach = roles.includes(COACH_ROLE_NAME);
+const signedIn = Boolean(user);
+const primaryHref = !signedIn ? `/login?returnTo=${encodeURIComponent(attemptedPath)}` : isAdmin ? '/admin' : isCoach ? '/team-portal' : '/';
+const primaryLabel = !signedIn ? 'Sign in' : isAdmin ? 'Admin dashboard' : isCoach ? 'Team Portal' : 'Go home';
+const displayName = user?.name?.trim() || 'Signed-out visitor';
+const displayEmail = user?.email || 'No active account';
+const initials = user ? getUserInitials(user.name) : '—';
+const roleLabel = roles[0] || 'Signed-out visitor';
+const denialCopy = reason || (signedIn ? 'You are signed in, but this page needs a permission your role does not carry.' : 'This page sits behind the Elevate Ballers sign-in.');
+const requiredPermission = Astro.url.searchParams.get('permission')?.trim() || (attemptedPath.startsWith('/admin') ? 'Administrator access' : 'Team Portal access');
+const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPath}`;
 ---
 
-<Layout title="Unauthorized" robots="noindex, nofollow">
-  <main class="min-h-screen flex items-center justify-center bg-[#f9fafb] px-6">
-    <section class="max-w-xl w-full bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center">
-      <p class="text-sm font-semibold text-red-600 uppercase tracking-wide">Access Denied</p>
-      <h1 class="text-3xl font-heading font-semibold text-gray-900 mt-2">You don't have permission</h1>
-      <p class="text-gray-600 mt-3">{reason || "The account you're signed in with doesn't have access to this page."} If you believe this is a mistake, contact an administrator.</p>
+<html lang="en">
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="robots" content="noindex, nofollow" /><title>Access denied · Elevate Ballers</title></head>
+  <body>
+    <div class="access-page">
+      <header class="access-header">
+        <a class="brand" href="/" aria-label="Elevate Ballers home"><span class="brand-chip"><img src="/logo/Elevate_Logo.png" alt="Elevate Ballers League" /></span></a>
+        <div class="header-actions">{user && <span class="account-chip"><span class="status-dot"></span>{displayName}</span>}<a class="home-button" href="/">Home <span aria-hidden="true">↗</span></a></div>
+      </header>
 
-      <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-        <a
-          href="/admin"
-          class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors"
-        >
-          Go to Dashboard
-        </a>
-        <button
-          type="button"
-          id="logout-button"
-          class="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-        >
-          Log Out
-        </button>
-        <a
-          href="/admin/login"
-          class="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-        >
-          Sign In
-        </a>
-      </div>
-    </section>
-  </main>
+      <main class="access-main">
+        <section class="hero" aria-labelledby="blocked-title">
+          <div class="blocked-shot" aria-hidden="true"><div class="backboard"><span class="target"></span></div><div class="rim"></div><div class="rim-shadow"></div><div class="net"></div><div class="ball"><span></span><i></i></div><div class="block-bar"></div></div>
+          <div class="eyebrow"><span></span>{signedIn ? 'Error 403 · Access denied' : 'Error 401 · Sign-in required'}<span></span></div>
+          <h1 id="blocked-title">{signedIn ? 'Block' : 'Locked '}<span>{signedIn ? 'ed' : 'out'}</span></h1>
+          <p class="hero-copy">{denialCopy} <em>{signedIn ? 'Nothing is wrong with your account — it simply does not reach this far.' : 'Sign in with your league account and you will land straight back here.'}</em></p>
+        </section>
 
-  <script is:inline>
-    (function () {
-      const button = document.getElementById('logout-button');
-      if (!button) return;
-      button.addEventListener('click', async () => {
-        try {
-          await fetch('/api/auth/logout', { method: 'POST' });
-        } catch (error) {
-          console.error('Logout failed:', error);
-        } finally {
-          try {
-            sessionStorage.removeItem('eb_permissions');
-          } catch (error) {
-            console.error('Failed to clear permission cache:', error);
-          }
-          window.location.href = '/admin/login';
-        }
-      });
-    })();
-  </script>
-</Layout>
+        <section class="details-grid" aria-label="Access details">
+          <article class="detail-card"><p class="card-label">{signedIn ? 'Signed in as' : 'Session'}</p>{signedIn ? <><div class="identity"><span class="avatar">{initials}</span><div><strong>{displayName}</strong><small>{displayEmail}</small></div></div><span class="role-chip">{roleLabel}</span><p class="card-note">Your access is determined by your active role and team assignment.</p></> : <p class="signed-out-note">No active session on this browser. This page is behind the league sign-in.</p>}</article>
+          <article class="detail-card"><p class="card-label">This page requires</p><div class="requirement"><span class="lock" aria-hidden="true">⌑</span><strong>{requiredPermission}</strong></div><div class="held-by"><span>Held by</span><b>Admin</b>{requiredPermission !== 'Administrator access' && <b>League Staff</b>}</div><code>{pagePath}</code></article>
+        </section>
+
+        <div class="actions"><a class="button button-primary" href={primaryHref}>{primaryLabel}<span aria-hidden="true">→</span></a>{user && <a class="button button-outline" href="/contacts">Request access</a>}<a class="button button-outline" href={user ? '#' : '/'} id={user ? 'logout-link' : undefined}>{user ? 'Use another account' : 'Back to the site'}</a></div>
+
+        <section class="reach-section"><p class="section-kicker">{signedIn ? 'What your account does reach' : 'Public pages you can read without signing in'}</p><div class="reach-grid"><a href="/fixtures" class="reach-card"><span>{signedIn ? 'Fixtures' : 'Standings'}</span><b>→</b><small>{signedIn ? 'View public match schedules' : 'Live league table'}</small></a><a href="/results" class="reach-card"><span>{signedIn ? 'Results' : 'Fixtures'}</span><b>→</b><small>{signedIn ? 'Browse published results' : 'Upcoming matches'}</small></a><a href="/" class="reach-card"><span>{signedIn ? 'Public site' : 'Results'}</span><b>→</b><small>{signedIn ? 'Return to the main site' : 'Final scores'}</small></a><a href="/" class="reach-card"><span>{signedIn ? 'Home' : 'News'}</span><b>→</b><small>{signedIn ? 'League home' : 'Latest stories'}</small></a></div></section>
+      </main>
+      <footer class="access-footer"><span>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · Identity &amp; access</span><span>Ref 403 · HTTP 403</span></footer>
+    </div>
+  </body>
+</html>
+
+<script is:inline>
+  const logoutButton = document.getElementById('logout-link');
+  logoutButton?.addEventListener('click', async (event) => {
+    event.preventDefault();
+    logoutButton.setAttribute('aria-busy', 'true');
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); }
+    finally { try { sessionStorage.removeItem('eb_permissions'); } catch { /* storage may be unavailable */ } window.location.href = '/login'; }
+  });
+</script>
+
+<style>
+  :global(html), :global(body) { margin: 0; min-height: 100%; background: #0c0b0a; }
+  :global(body) { color: #f3efe9; font-family: 'Archivo', Arial, sans-serif; }
+  :global(*) { box-sizing: border-box; }
+  .access-page { min-height: 100vh; overflow: hidden; background: #0c0b0a; }
+  .access-header { height: 76px; border-bottom: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(20px, 5vw, 72px); }
+  .brand, .home-button, .button, .reach-card { text-decoration: none; color: inherit; }
+  .brand { display: flex; align-items: center; gap: 11px; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .brand-chip { display: inline-flex; align-items: center; height: 48px; padding: 7px 14px; border-radius: 8px; background: #fff; }
+  .brand-chip img { display: block; width: auto; height: 34px; max-width: 190px; object-fit: contain; }
+  .header-actions { display: flex; align-items: center; gap: 14px; }
+  .account-chip { color: #b8afa6; font: 11px 'Space Mono', monospace; }
+  .status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #ff2d43; }
+  .home-button { padding: 10px 15px; border: 1px solid rgba(255,255,255,.18); border-radius: 3px; font-size: 12px; font-weight: 700; }
+  .access-main { position: relative; max-width: none; margin: auto; padding: 56px 32px 40px; background: radial-gradient(90% 90% at 50% 26%, rgba(228,0,43,.16), transparent 62%); }
+  .access-main::before { content: ''; position: absolute; z-index: 0; top: 52px; left: 50%; width: 420px; height: 420px; transform: translateX(-50%); border: 1px solid rgba(228,0,43,.14); border-radius: 50%; pointer-events: none; }
+  .hero, .details-grid, .actions, .reach-section { position: relative; z-index: 1; width: 100%; max-width: 880px; margin-left: auto; margin-right: auto; }
+  .hero { position: relative; text-align: center; padding: 8px 0 38px; }
+  .hero::before { content: ''; position: absolute; z-index: 0; top: -120px; left: 50%; width: 720px; height: 520px; transform: translateX(-50%); border-radius: 50%; background: transparent; pointer-events: none; }
+  .blocked-shot { position: relative; z-index: 1; width: 180px; height: 138px; margin: 0 auto 28px; }
+  .backboard { position: absolute; top: 7px; left: 15px; width: 150px; height: 92px; border: 3px solid #f3efe9; border-radius: 2px; background: rgba(255,255,255,.04); box-shadow: 0 0 0 1px rgba(255,255,255,.08); }
+  .target { position: absolute; left: 50%; bottom: -1px; width: 56px; height: 40px; transform: translateX(-50%); border: 3px solid #e4002b; border-bottom: 0; }
+  .rim, .rim-shadow, .block-bar { position: absolute; left: 50%; transform: translateX(-50%); }
+  .rim { top: 92px; width: 60px; height: 8px; border: 3px solid #ff2d43; border-radius: 50%; background: #0c0b0a; }
+  .rim-shadow { top: 101px; width: 48px; height: 18px; border-left: 2px solid #b8afa6; border-right: 2px solid #b8afa6; opacity: .65; }
+  .net { position: absolute; top: 99px; left: 50%; width: 43px; height: 30px; transform: translateX(-50%); border-bottom: 1px solid rgba(243,239,233,.6); border-left: 1px solid rgba(243,239,233,.4); border-right: 1px solid rgba(243,239,233,.4); clip-path: polygon(0 0,100% 0,75% 100%,25% 100%); }
+  .ball { position: absolute; z-index: 3; left: 50%; top: 102px; width: 30px; height: 30px; border-radius: 50%; background: #e4002b; box-shadow: 0 3px 16px rgba(228,0,43,.5); animation: swat 4.5s infinite cubic-bezier(.45,.05,.55,.95); }
+  .ball::before, .ball::after, .ball span, .ball i { content: ''; position: absolute; border: 1px solid rgba(12,11,10,.75); }
+  .ball::before { top: -2px; left: 10px; width: 9px; height: 32px; border-radius: 50%; }
+  .ball::after { top: 10px; left: -2px; width: 32px; height: 9px; border-radius: 50%; }
+  .ball span { top: 1px; left: 13px; height: 28px; transform: rotate(45deg); }
+  .ball i { top: 1px; left: 13px; height: 28px; transform: rotate(-45deg); }
+  .block-bar { z-index: 4; top: 78px; width: 78px; height: 10px; border-radius: 4px; background: #f3efe9; box-shadow: 0 0 0 2px #0c0b0a; animation: blockbar 4.5s infinite cubic-bezier(.45,.05,.55,.95); }
+  .eyebrow, .section-kicker, .card-label { color: #b8afa6; font: 10px 'Space Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
+  .eyebrow { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 13px; }
+  .eyebrow span { width: 38px; height: 1px; background: rgba(255,255,255,.25); }
+  h1 { position: relative; z-index: 1; margin: 14px 0 18px; color: #f3efe9; font-family: 'Anton', sans-serif; font-size: clamp(76px, 15vw, 150px); font-weight: 400; line-height: .82; letter-spacing: -.025em; }
+  h1 span { color: #e4002b; }
+  .hero-copy { position: relative; z-index: 1; max-width: 570px; margin: auto; color: #f3efe9; font-size: 15px; line-height: 1.6; }
+  .hero-copy em { color: #b8afa6; font-style: normal; }
+  .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .detail-card { min-height: 176px; padding: 20px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(255,255,255,.03); }
+  .card-label { margin: 0 0 16px; color: #8a817a; }
+  .identity { display: flex; align-items: center; gap: 12px; }
+  .avatar { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #e4002b; color: #fff; font: 13px 'Space Mono', monospace; }
+  .identity strong, .identity small { display: block; }
+  .identity strong { font-size: 15px; }
+  .signed-out-note { max-width: 350px; margin: 28px 0 0; color: #b8afa6; font-size: 13.5px; line-height: 1.6; }
+  .identity small, .card-note { color: #b8afa6; font-size: 12px; }
+  .identity small { margin-top: 4px; }
+  .role-chip, .held-by b { display: inline-block; margin-top: 14px; padding: 5px 8px; border: 1px solid rgba(255,255,255,.15); border-radius: 6px; background: rgba(255,255,255,.04); color: #b8afa6; font: 10px 'Space Mono', monospace; text-transform: uppercase; }
+  .held-by { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px; color: #8a817a; font: 10px 'Space Mono', monospace; text-transform: uppercase; }
+  .held-by b { margin-top: 0; }
+  .card-note { margin: 17px 0 0; line-height: 1.5; }
+  .requirement { display: flex; align-items: center; gap: 12px; margin-top: 2px; font-size: 15px; }
+  .lock { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #ff2d43; color: #ff2d43; font-size: 20px; }
+  code { display: block; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); color: #8a817a; font: 11px 'Space Mono', monospace; word-break: break-all; }
+  .actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 24px 0 48px; }
+  .button { display: inline-flex; align-items: center; gap: 14px; min-height: 48px; padding: 0 25px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; transition: .2s ease; }
+  .button-primary { background: #e4002b; color: #fff; }
+  .button-primary:hover { background: #ff2d43; }
+  .button-outline, .button-quiet { border-color: rgba(255,255,255,.2); color: #f3efe9; background: transparent; }
+  .button-outline:hover, .button-quiet:hover, .home-button:hover { border-color: #ff2d43; color: #ff5a72; }
+  .button-quiet { cursor: pointer; font-family: inherit; }
+  .section-kicker { margin: 0 0 13px; }
+  .reach-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .reach-card { display: grid; grid-template-columns: 1fr auto; gap: 7px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: rgba(255,255,255,.025); }
+  .reach-card span { font-size: 13px; font-weight: 700; }
+  .reach-card b { color: #ff2d43; }
+  .reach-card small { grid-column: 1 / -1; color: #b8afa6; font-size: 11px; }
+  .reach-card:hover { border-color: rgba(228,0,43,.7); }
+  .access-footer { display: flex; justify-content: space-between; padding: 20px clamp(20px, 5vw, 72px); border-top: 1px solid rgba(255,255,255,.08); color: #746d66; font: 10px 'Space Mono', monospace; text-transform: uppercase; }
+  @keyframes swat { 0%{transform:translate(-50%,10px) scale(1) rotate(0);opacity:1} 38%{transform:translate(-50%,-58px) scale(1.02) rotate(-12deg);opacity:1} 46%{transform:translate(-38%,-62px) scale(.94) rotate(10deg);opacity:1} 72%{transform:translate(78%,-6px) scale(.9) rotate(140deg);opacity:.35} 73%,100%{transform:translate(-50%,10px) scale(1) rotate(0);opacity:0} }
+  @keyframes blockbar { 0%,30%{transform:translateX(-50%) rotate(-16deg) translateY(4px)} 44%{transform:translateX(-50%) rotate(-8deg) translateY(-3px)} 60%,100%{transform:translateX(-50%) rotate(-16deg) translateY(4px)} }
+  @media (prefers-reduced-motion: reduce) { .ball, .block-bar { animation: none; } }
+  @media (max-width: 760px) { .reach-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 650px) { .access-header { height: auto; min-height: 68px; gap: 12px; } .brand-chip img { height: 28px; } .account-chip { display: none; } .access-main { padding: 35px 20px 32px; } .details-grid, .reach-grid { grid-template-columns: 1fr; } .actions { align-items: stretch; flex-direction: column; } .button { justify-content: center; } .access-footer { gap: 10px; flex-direction: column; } }
+</style>
