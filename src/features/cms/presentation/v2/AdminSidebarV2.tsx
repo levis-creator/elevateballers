@@ -82,6 +82,7 @@ export default function AdminSidebarV2() {
                   <a
                     key={item.href}
                     href={item.href}
+                    data-astro-prefetch="hover"
                     aria-current={active ? 'page' : undefined}
                     onClick={() => isMobile && setSidebarOpen(false)}
                     className={`mb-0.5 flex items-center gap-[11px] rounded-[9px] px-[11px] py-[9px] font-['Archivo'] text-[13px] no-underline transition-colors ${

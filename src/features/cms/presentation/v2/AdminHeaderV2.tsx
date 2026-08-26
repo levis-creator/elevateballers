@@ -82,6 +82,7 @@ export default function AdminHeaderV2() {
       <div className="ml-auto flex items-center gap-2.5">
         <a
           href="/admin"
+          data-astro-prefetch="hover"
           className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--brand)] px-3.5 py-2 font-['Archivo'] text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)] no-underline hover:bg-[var(--brandlt)]"
         >
           <Plus className="h-[14px] w-[14px]" />
@@ -126,6 +127,7 @@ export default function AdminHeaderV2() {
               </div>
               <a
                 href="/admin"
+                data-astro-prefetch="hover"
                 className="block px-3.5 py-2.5 font-['Archivo'] text-[12.5px] font-semibold text-[var(--tx)] no-underline hover:bg-[var(--hov)]"
               >
                 Dashboard

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
-import { getNewsArticles, getAllNewsArticles, getFeaturedNewsArticles, getArticleCommentCount } from '../../../features/cms/lib/queries';
+import { getNewsArticles, getFeaturedNewsArticles } from '../../../features/cms/lib/queries';
+import { getAdminNewsPage } from '../../../features/cms/lib/queries/news';
 import { createNewsArticle, generateSlug } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap, type NewsArticleDTO } from '../../../features/cms/types';
@@ -23,7 +24,20 @@ export const GET: APIRoute = async ({ request }) => {
     // Admin access requires authentication and returns all articles (including unpublished)
     if (admin) {
       await requirePermission(request, 'news_articles:create');
-      articles = await getAllNewsArticles(true);
+      const page = Math.max(1, Number.parseInt(url.searchParams.get('page') || '1', 10) || 1);
+      const limit = Math.min(50, Math.max(1, Number.parseInt(url.searchParams.get('limit') || '8', 10) || 8));
+      const result = await getAdminNewsPage({
+        page,
+        limit,
+        query: url.searchParams.get('q') || undefined,
+        status: url.searchParams.get('status') || undefined,
+        category: url.searchParams.get('category') || undefined,
+        authorId: url.searchParams.get('authorId') || undefined,
+        sort: url.searchParams.get('sort') || undefined,
+      });
+      return new Response(JSON.stringify(result), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      });
     }
     // Featured articles endpoint - public access, only returns published featured articles
     else if (featured) {

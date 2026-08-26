@@ -58,6 +58,73 @@ export async function getAllNewsArticles(includeUnpublished = false): Promise<Ne
   }
 }
 
+/** Bounded admin list query. Keep article content out of list responses. */
+export async function getAdminNewsPage(options: {
+  page: number;
+  limit: number;
+  query?: string;
+  status?: string;
+  category?: string;
+  authorId?: string;
+  sort?: string;
+}) {
+  const { page, limit, query, status, category, authorId, sort } = options;
+  const where: any = {};
+  const trimmedQuery = query?.trim();
+  if (trimmedQuery) {
+    where.AND = [{ OR: [
+      { title: { contains: trimmedQuery } },
+      { slug: { contains: trimmedQuery } },
+      { author: { name: { contains: trimmedQuery } } },
+    ] }];
+  }
+  if (category && category !== 'all') where.category = category;
+  if (authorId && authorId !== 'all') where.authorId = authorId;
+  if (status === 'published') where.published = true;
+  if (status === 'draft') where.published = false;
+  if (status === 'scheduled') {
+    where.published = false;
+    where.publishedAt = { gt: new Date() };
+  }
+
+  const orderBy = sort === 'title' ? { title: 'asc' as const } : { createdAt: sort === 'oldest' ? 'asc' as const : 'desc' as const };
+  const [rows, total, categories, authors, counts] = await Promise.all([
+    prisma.newsArticle.findMany({
+      where,
+      select: {
+        id: true, title: true, slug: true, excerpt: true, category: true, image: true,
+        published: true, publishedAt: true, createdAt: true, updatedAt: true, feature: true,
+        author: { select: { id: true, name: true, email: true } },
+      },
+      orderBy,
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.newsArticle.count({ where }),
+    prisma.newsArticle.findMany({ distinct: ['category'], select: { category: true }, orderBy: { category: 'asc' } }),
+    prisma.user.findMany({ where: { newsArticles: { some: {} } }, distinct: ['id'], select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    Promise.all([
+      prisma.newsArticle.count({ where: { ...where, published: true } }),
+      prisma.newsArticle.count({ where: { ...where, published: false, publishedAt: null } }),
+      prisma.newsArticle.count({ where: { ...where, published: false, publishedAt: { gt: new Date() } } }),
+    ]),
+  ]);
+
+  const ids = rows.map((row) => row.id);
+  const commentRows = ids.length ? await prisma.comment.groupBy({ by: ['articleId'], _count: { id: true }, where: { articleId: { in: ids }, approved: true } }) : [];
+  const commentCounts = new Map(commentRows.map((row) => [row.articleId, row._count.id]));
+  return {
+    items: rows.map((row) => ({ ...row, commentsCount: commentCounts.get(row.id) || 0 })),
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    page,
+    limit,
+    categories: categories.map((row) => row.category),
+    authors,
+    counts: { published: counts[0], draft: counts[1], scheduled: counts[2] },
+  };
+}
+
 export async function getNewsArticleById(id: string): Promise<NewsArticleWithAuthor | null> {
   const article = await prisma.newsArticle.findUnique({
     where: { id },
