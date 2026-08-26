@@ -42,7 +42,9 @@ export default function LeagueLeaders({ leaderData, tabs, heading = "League Lead
 								<span className="w-[26px] font-display text-[20px]" style={{ color: first ? "var(--brand)" : "var(--muted2,#b3a99c)" }}>
 								{i + 1}
 							</span>
-							<div className="h-10 w-10 flex-shrink-0 rounded-full bg-[#ddd7cd]" />
+							<div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-[#ddd7cd]">
+								<img src={p.image || "/images/default-player.png"} alt={`${p.name} profile photo`} className="h-full w-full object-cover" loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/images/default-player.png"; }} />
+							</div>
 							<div className="flex-1">
 								<div className="font-body text-[15px] font-bold text-ink2">{p.name}</div>
 								<div className="font-mono text-[11px] text-muted2">{p.team}</div>
