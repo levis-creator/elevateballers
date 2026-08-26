@@ -81,16 +81,33 @@ function toFixture(m: any): FixtureMatch {
 
 export async function fetchFixturesData(): Promise<FixturesData | null> {
 	try {
-		const [upcoming, completed, competitions, memberships] = await Promise.all([
+		const [upcoming, completed, competitions] = await Promise.all([
 			getUpcomingMatches(),
 			getCompletedMatches(),
 			getPublicCompetitions(),
-			prisma.seasonTeam.findMany({
-				where: { conferenceId: { not: null } },
-				select: { leagueSeasonId: true, teamId: true, conferenceId: true },
-			}),
 		]);
-		const raw = [...upcoming, ...completed];
+		const competitionIds = new Set(competitions.map((competition) => competition.id));
+		const memberships = competitionIds.size
+			? await prisma.seasonTeam.findMany({
+				where: { leagueSeasonId: { in: [...competitionIds] } },
+				select: { leagueSeasonId: true, teamId: true, conferenceId: true },
+			})
+			: [];
+		const teamsByCompetition = new Map<string, Set<string>>();
+		for (const membership of memberships) {
+			const teams = teamsByCompetition.get(membership.leagueSeasonId) ?? new Set<string>();
+			teams.add(membership.teamId);
+			teamsByCompetition.set(membership.leagueSeasonId, teams);
+		}
+		// Public results must belong to a real public competition and use teams
+		// registered in that competition. This prevents old/demo/unscoped rows
+		// from leaking onto the public calendar.
+		const isPublicCompetitionMatch = (match: any) => {
+			if (!match.leagueSeasonId || !competitionIds.has(match.leagueSeasonId)) return false;
+			const teams = teamsByCompetition.get(match.leagueSeasonId);
+			return Boolean(teams && match.team1Id && match.team2Id && teams.has(match.team1Id) && teams.has(match.team2Id));
+		};
+		const raw = [...upcoming, ...completed].filter(isPublicCompetitionMatch);
 		const matches = raw.map(toFixture);
 		const completedIds = completed.map((match: any) => match.id);
 		if (completedIds.length) {

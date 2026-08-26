@@ -80,12 +80,13 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 	const activeConferenceId = showConferences && selected.conferences.some((item) => item.id === conferenceId) ? conferenceId : "";
 
 	const isResults = settings.viewTabs && view === "results";
+	const now = Date.now();
 	const horizonEnd = Date.now() + settings.horizon * 24 * 60 * 60 * 1000;
 	const filtered = matches
 		.filter((m) => isOverall ? activeCompetitionIds.has(m.leagueSeasonId ?? "") : m.leagueSeasonId === selectedLeague?.id)
 		.filter((m) => !activeConferenceId || m.conferenceIds.includes(activeConferenceId))
 		.filter((m) => (isResults ? m.status === "done" : m.status !== "done"))
-		.filter((m) => isResults || m.status === "live" || m.ts <= horizonEnd)
+		.filter((m) => isResults || m.status === "live" || (m.ts >= now && m.ts <= horizonEnd))
 		.sort((a, b) => (isResults ? b.ts - a.ts : a.ts - b.ts));
 
 	// Group by match-day, preserving the sorted order.
