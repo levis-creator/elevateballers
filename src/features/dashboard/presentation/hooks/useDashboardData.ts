@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePermissions } from "@/features/rbac/usePermissions";
 
-/** Normalise the various admin list responses (`[]`, `{data:[]}`, `{total}`) to a count. */
-async function countOf(url: string, allowed: boolean): Promise<number> {
-	if (!allowed) return 0;
+/** Keep the list returned for the dashboard so it is not fetched a second time. */
+async function countOf(url: string, allowed: boolean): Promise<{ count: number; items: any[] }> {
+	if (!allowed) return { count: 0, items: [] };
 	try {
 		const r = await fetch(url);
-		if (!r.ok) return 0;
+		if (!r.ok) return { count: 0, items: [] };
 		const d = await r.json();
-		if (Array.isArray(d)) return d.length;
-		if (Array.isArray(d?.data)) return d.data.length;
-		if (typeof d?.total === "number") return d.total;
-		return 0;
+		if (Array.isArray(d)) return { count: d.length, items: d };
+		if (Array.isArray(d?.data)) return { count: typeof d.total === "number" ? d.total : d.data.length, items: d.data };
+		if (typeof d?.total === "number") return { count: d.total, items: [] };
+		return { count: 0, items: [] };
 	} catch {
-		return 0;
+		return { count: 0, items: [] };
 	}
 }
 
@@ -106,7 +106,7 @@ function deriveSeason(seasons: any[], matches: any[]): SeasonPulse {
 	let week = 1;
 	let weeks = 1;
 	let gamesThisWeek = 0;
-	let name = active?.name || `Season ${new Date().getFullYear()}`;
+	const name = active?.name || `Season ${new Date().getFullYear()}`;
 
 	if (active?.startDate && active?.endDate) {
 		const start = new Date(active.startDate).getTime();
@@ -168,7 +168,7 @@ export function useDashboardData() {
 
 		(async () => {
 			setLoading(true);
-			const [teams, players, matchesCount, media, articles, sponsors] = await Promise.all([
+			const [teams, players, matches, media, articles, sponsors] = await Promise.all([
 				countOf("/api/teams", can("teams:read")),
 				countOf("/api/players", can("players:read")),
 				countOf("/api/matches", can("matches:read")),
@@ -180,20 +180,21 @@ export function useDashboardData() {
 
 			setKpis(
 				[
-					{ key: "teams", label: "Teams", value: teams, href: "/admin/teams", tint: "#e4002b", allow: can("teams:read") },
-					{ key: "players", label: "Players", value: players, href: "/admin/players", tint: "#1f8a5b", allow: can("players:read") },
-					{ key: "matches", label: "Matches", value: matchesCount, href: "/admin/matches", tint: "#2a6fdb", allow: can("matches:read") },
-					{ key: "media", label: "Media", value: media, href: "/admin/media", tint: "#d98324", allow: can("media:read") },
-					{ key: "articles", label: "Articles", value: articles, href: "/admin/news", tint: "#7c5cff", allow: can("news_articles:read") },
-					{ key: "sponsors", label: "Sponsors", value: sponsors, href: "/admin/highlights/sponsors", tint: "#c026a6", allow: can("sponsors:read") },
+					{ key: "teams", label: "Teams", value: teams.count, href: "/admin/teams", tint: "#e4002b", allow: can("teams:read") },
+					{ key: "players", label: "Players", value: players.count, href: "/admin/players", tint: "#1f8a5b", allow: can("players:read") },
+					{ key: "matches", label: "Matches", value: matches.count, href: "/admin/matches", tint: "#2a6fdb", allow: can("matches:read") },
+					{ key: "media", label: "Media", value: media.count, href: "/admin/media", tint: "#d98324", allow: can("media:read") },
+					{ key: "articles", label: "Articles", value: articles.count, href: "/admin/news", tint: "#7c5cff", allow: can("news_articles:read") },
+					{ key: "sponsors", label: "Sponsors", value: sponsors.count, href: "/admin/highlights/sponsors", tint: "#c026a6", allow: can("sponsors:read") },
 				]
 					.filter((k) => k.allow)
-					.map(({ allow, ...k }) => k),
+					.map((k) => k),
 			);
 
 			// Season pulse + fixtures from matches + seasons.
-			const [matchList, seasonList] = await Promise.all([listOf("/api/matches", can("matches:read")), listOf("/api/seasons", can("seasons:read") || can("matches:read"))]);
+			const [seasonList] = await Promise.all([listOf("/api/seasons", can("seasons:read") || can("matches:read"))]);
 			if (cancelled) return;
+			const matchList = matches.items;
 			setSeason(deriveSeason(seasonList, matchList));
 			setFixtures(
 				matchList
@@ -204,16 +205,14 @@ export function useDashboardData() {
 			);
 
 			// Media storage from real file sizes.
-			const mediaList = await listOf("/api/media", can("media:read"));
-			if (cancelled) return;
+			const mediaList = media.items;
 			const bytes = mediaList.reduce((sum, m) => sum + (Number(m.size) || 0), 0);
 			const usedGb = bytes / 1_000_000_000;
 			const cap = Math.max(1, Math.ceil(usedGb)); // fill within the current GB (no fabricated quota)
-			setStorage({ usedGb: Math.round(usedGb * 100) / 100, items: mediaList.length || media, pct: Math.min(100, Math.round((usedGb / cap) * 100)) });
+			setStorage({ usedGb: Math.round(usedGb * 100) / 100, items: mediaList.length || media.count, pct: Math.min(100, Math.round((usedGb / cap) * 100)) });
 
 			// Content pipeline from news.
-			const news = await listOf("/api/news?admin=true", can("news_articles:read"));
-			if (cancelled) return;
+			const news = articles.items;
 			const statusOf = (a: any) => String(a.status || (a.published ? "PUBLISHED" : "DRAFT")).toUpperCase();
 			setPipeline({
 				published: news.filter((a) => statusOf(a) === "PUBLISHED").length,
