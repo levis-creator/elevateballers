@@ -109,7 +109,9 @@ export async function fetchFixturesData(): Promise<FixturesData | null> {
 		};
 		const raw = [...upcoming, ...completed].filter(isPublicCompetitionMatch);
 		const matches = raw.map(toFixture);
-		const completedIds = completed.map((match: any) => match.id);
+		const completedIds = raw
+			.filter((match: any) => match.status === "COMPLETED")
+			.map((match: any) => match.id);
 		if (completedIds.length) {
 			const statMatches = await prisma.match.findMany({
 				where: { id: { in: completedIds } },

@@ -211,9 +211,11 @@ const themeStyle = [
 		     Google Fonts request. Supabase serves most images. -->
 		<link rel="preconnect" href="https://zjnlvnyjsidnelgciqmz.supabase.co" crossorigin />
 
-		<!-- Brand favicon is managed in Site Settings → Brand & Theme. -->
-		<link rel="icon" href={brandSettings.favicon} />
-		<link rel="apple-touch-icon" href={brandSettings.favicon} />
+		<!-- Keep the primary favicon on the site origin so Google can always
+		     crawl it, even when the optional CMS media path is unavailable. -->
+		<link rel="icon" href="/images/Elevate_Icon-32x32.png" sizes="32x32" type="image/png" />
+		<link rel="icon" href="/images/Elevate_Icon-200x200.png" sizes="200x200" type="image/png" />
+		<link rel="apple-touch-icon" href="/images/Elevate_Icon-200x200.png" />
 	</head>
 	<!-- Paper and Ink are the document defaults; individual night sections
 	     override them through the same derived theme palette. -->
