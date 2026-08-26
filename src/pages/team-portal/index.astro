@@ -1,6 +1,13 @@
 ---
 export const prerender = false;
 
+import '@/styles/v2.css';
+import '@fontsource/anton';
+import '@fontsource/archivo/400.css';
+import '@fontsource/archivo/600.css';
+import '@fontsource/archivo/700.css';
+import '@fontsource/space-mono/400.css';
+
 import { getCurrentUser } from '@/features/cms/lib/auth';
 import { getTeamPortalAccess, requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
 import TeamPortalShell from '@/features/team-portal/presentation/TeamPortalShell';
@@ -21,10 +28,29 @@ if (access.status !== 'allowed') {
 const requestedTeam = Astro.url.searchParams.get('team');
 const selectedTeam = (await requireActiveTeamContext(user.id, requestedTeam)).team;
 const requestedView = Astro.url.searchParams.get('view');
-const view = requestedView === 'roster' || requestedView === 'fixtures' ? requestedView : 'overview';
+const view = requestedView === 'register' || requestedView === 'roster' || requestedView === 'lineup' || requestedView === 'stats' || requestedView === 'fixtures' ? requestedView : 'overview';
 ---
 
 <html lang="en">
-  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="robots" content="noindex, nofollow" /><title>Team Portal</title></head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Team Portal</title>
+    <script is:inline>
+      (() => {
+        try {
+          const raw = localStorage.getItem('team-portal-theme');
+          const preference = raw === 'light' || raw === 'dark' || raw === 'system' ? raw : JSON.parse(raw || '{}').state?.theme;
+          const theme = preference === 'light' || preference === 'dark'
+            ? preference
+            : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          document.documentElement.dataset.teamPortalTheme = theme;
+        } catch {
+          // The portal defaults to dark until the client store is ready.
+        }
+      })();
+    </script>
+  </head>
   <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} /></body>
 </html>
