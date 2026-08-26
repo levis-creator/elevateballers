@@ -52,7 +52,10 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
                 user: decodeURIComponent(url.username),
                 password: decodeURIComponent(url.password),
                 database: url.pathname.slice(1),
-                connectionLimit: 3, // Lower limit for serverless
+                // The database user is limited to 30 connections on cPanel.
+                // Vercel can run several function instances at once, so a
+                // pool of 3 per instance can exhaust that limit quickly.
+                connectionLimit: 1,
                 idleTimeout: 10000,
                 connectTimeout: 30000,
                 acquireTimeout: 30000,
