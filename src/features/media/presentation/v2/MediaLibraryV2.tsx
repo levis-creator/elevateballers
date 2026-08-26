@@ -344,6 +344,7 @@ export default function MediaLibraryV2() {
   return (
     <div
       className="eb-root min-h-[calc(100vh-57px)] font-archivo text-txd"
+      data-media-theme="dark"
       aria-label="Media Library"
     >
       <div className="eb-scroll flex-1 overflow-y-auto px-6 py-6 max-[600px]:px-4">

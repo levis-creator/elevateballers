@@ -833,6 +833,117 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+/* Keep the media workspace dark when the admin shell is in dark mode. These
+   explicit variables win over the light-mode compatibility palette below and
+   also cover components that use the generic Tailwind surface utilities. */
+#eb-admin-root.dark .eb-root {
+  --bg: var(--night, #0c0b0a);
+  --surf: var(--night2, #111010);
+  --surf2: rgba(255, 255, 255, 0.03);
+  --surf3: rgba(0, 0, 0, 0.3);
+  --bord: rgba(255, 255, 255, 0.08);
+  --bord2: rgba(255, 255, 255, 0.06);
+  --tx: var(--cream, #f3efe9);
+  --txd: var(--creamdim, #b8afa6);
+  --txm: var(--muted2, #8a817a);
+  --faint: rgb(var(--site-cream-dim-rgb, 95 87 78) / 0.55);
+  --hov: rgba(255, 255, 255, 0.06);
+  --chip: rgba(255, 255, 255, 0.08);
+  --track: rgba(255, 255, 255, 0.08);
+}
+
+#eb-admin-root.dark .eb-root .media-btn.secondary,
+#eb-admin-root.dark .eb-root .media-input,
+#eb-admin-root.dark .eb-root select.media-input,
+#eb-admin-root.dark .eb-root .view-btn,
+#eb-admin-root.dark .eb-root .modal-card {
+  background: var(--surf2);
+  border-color: var(--bord);
+  color: var(--txd);
+}
+
+#eb-admin-root.dark .eb-root .folder-row {
+  color: var(--txm);
+}
+
+#eb-admin-root.dark .eb-root .folder-row:hover,
+#eb-admin-root.dark .eb-root .folder-row.active {
+  background: var(--hov);
+  color: var(--brand);
+}
+
+#eb-admin-root.dark .eb-root .storage-pill.r2 {
+  background: rgba(31, 157, 85, 0.16);
+  color: #73d39a;
+}
+
+#eb-admin-root.dark .eb-root .storage-pill.supabase {
+  background: rgba(217, 131, 36, 0.16);
+  color: #f0b56c;
+}
+
+/* The media library is currently designed for the dark admin workspace. Keep
+   its own surface tokens authoritative even if a parent theme class is stale
+   during an Astro view transition. */
+#eb-admin-root .eb-root[data-media-theme='dark'] {
+  --bg: rgb(var(--site-night-rgb, 12 11 10));
+  --surf: rgb(var(--site-night-raised-rgb, 17 16 16));
+  --surf2: rgb(var(--site-night-soft-rgb, 22 21 20));
+  --surf3: rgb(var(--site-night-rgb, 12 11 10) / 0.82);
+  --bord: rgb(var(--site-night-border-rgb, 36 35 34));
+  --bord2: rgb(var(--site-night-border-rgb, 36 35 34) / 0.72);
+  --tx: rgb(var(--site-cream-rgb, 243 239 233));
+  --txd: rgb(var(--site-cream-dim-rgb, 184 175 166));
+  --txm: rgb(var(--site-cream-dim-rgb, 184 175 166) / 0.76);
+  --faint: rgb(var(--site-cream-dim-rgb, 184 175 166) / 0.52);
+  --hov: rgba(255, 255, 255, 0.06);
+  --chip: rgba(255, 255, 255, 0.08);
+  --track: rgba(255, 255, 255, 0.08);
+}
+
+/* Final surface guard: Tailwind utility classes may be emitted after this
+   component stylesheet, so pin the dark workspace surfaces directly. */
+#eb-admin-root .eb-root[data-media-theme='dark'] .bg-surf,
+#eb-admin-root .eb-root[data-media-theme='dark'] .kpi-card {
+  background-color: rgb(var(--site-night-raised-rgb, 17 16 16)) !important;
+}
+
+#eb-admin-root .eb-root[data-media-theme='dark'] .bg-surf2,
+#eb-admin-root .eb-root[data-media-theme='dark'] .media-toolbar,
+#eb-admin-root .eb-root[data-media-theme='dark'] .asset-card-foot {
+  background-color: rgb(var(--site-night-soft-rgb, 22 21 20)) !important;
+}
+
+#eb-admin-root .eb-root[data-media-theme='dark'] .text-tx,
+#eb-admin-root .eb-root[data-media-theme='dark'] .asset-title {
+  color: rgb(var(--site-cream-rgb, 243 239 233)) !important;
+}
+
+#eb-admin-root .eb-root[data-media-theme='dark'] .text-txd,
+#eb-admin-root .eb-root[data-media-theme='dark'] .text-txm,
+#eb-admin-root .eb-root[data-media-theme='dark'] .asset-meta {
+  color: rgb(var(--site-cream-dim-rgb, 184 175 166) / 0.76) !important;
+}
+
+/* Use the same low-contrast charcoal borders as the admin shell. */
+#eb-admin-root .eb-root[data-media-theme='dark'] .border-bord,
+#eb-admin-root .eb-root[data-media-theme='dark'] .border-bord2,
+#eb-admin-root .eb-root[data-media-theme='dark'] .kpi-card,
+#eb-admin-root .eb-root[data-media-theme='dark'] section.rounded-2xl,
+#eb-admin-root .eb-root[data-media-theme='dark'] article,
+#eb-admin-root .eb-root[data-media-theme='dark'] table,
+#eb-admin-root .eb-root[data-media-theme='dark'] tr,
+#eb-admin-root .eb-root[data-media-theme='dark'] .media-toolbar,
+#eb-admin-root .eb-root[data-media-theme='dark'] .media-pagination {
+  border-color: rgb(var(--site-night-border-rgb, 36 35 34) / 0.72) !important;
+}
+
+#eb-admin-root .eb-root[data-media-theme='dark'] .asset-card-foot,
+#eb-admin-root .eb-root[data-media-theme='dark'] .border-t,
+#eb-admin-root .eb-root[data-media-theme='dark'] .border-b {
+  border-color: rgb(var(--site-night-border-rgb, 36 35 34) / 0.58) !important;
+}
 .eb-root .media-empty-clear:hover,
 .eb-root .media-pagination button:hover:not(:disabled) {
   border-color: var(--brand);
