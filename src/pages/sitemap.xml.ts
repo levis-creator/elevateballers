@@ -18,14 +18,14 @@ export const GET: APIRoute = async ({ site }) => {
         const baseUrl = seoSettings.canonicalBase || site.toString().replace(/\/$/, '');
         const isIncluded = (path: string) =>
             !seoSettings.noindexPaths.some(({ path: pattern }) => matchesSeoPath(path || '/', pattern || ''));
-        // Fetch dynamic data
-        const [articles, teams, players, matches, staff] = await Promise.all([
-            getNewsArticles(),
-            getTeams(false), // Approved only
-            getPlayers(undefined, false), // Approved only
-            getMatches(),
-            getPublicStaff(),
-        ]);
+        // Fetch dynamic data sequentially. The Vercel MariaDB adapter uses a
+        // small pool (currently three connections); running all five queries
+        // at once exhausts it and causes the sitemap request to time out.
+        const articles = await getNewsArticles();
+        const teams = await getTeams(false); // Approved only
+        const players = await getPlayers(undefined, false); // Approved only
+        const matches = await getMatches();
+        const staff = await getPublicStaff();
 
         const now = new Date().toISOString();
         const staticPages = [
