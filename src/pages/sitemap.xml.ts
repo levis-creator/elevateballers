@@ -2,6 +2,10 @@ import type { APIRoute } from 'astro';
 import { getNewsArticles, getTeams, getPlayers, getMatches, getPublicStaff } from '../features/cms/lib/queries';
 import { prisma } from '../lib/prisma';
 import { matchesSeoPath, resolvePublicSeoSettings, siteSettingsService } from '../features/settings';
+import { cacheGet, cacheSet } from '../lib/cache';
+
+const SITEMAP_CACHE_KEY = 'public:sitemap:v2';
+const SITEMAP_CACHE_TTL_SECONDS = 3600;
 
 export const prerender = false;
 
@@ -16,6 +20,15 @@ export const GET: APIRoute = async ({ site }) => {
             return new Response('Sitemap disabled', { status: 404 });
         }
         const baseUrl = seoSettings.canonicalBase || site.toString().replace(/\/$/, '');
+        const cachedXml = await cacheGet<string>(SITEMAP_CACHE_KEY);
+        if (cachedXml) {
+            return new Response(cachedXml, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+                },
+            });
+        }
         const isIncluded = (path: string) =>
             !seoSettings.noindexPaths.some(({ path: pattern }) => matchesSeoPath(path || '/', pattern || ''));
         // Fetch dynamic data sequentially. The Vercel MariaDB adapter uses a
@@ -157,10 +170,11 @@ export const GET: APIRoute = async ({ site }) => {
                 .join('')}
 </urlset>`;
 
+        await cacheSet(SITEMAP_CACHE_KEY, xml, SITEMAP_CACHE_TTL_SECONDS);
         return new Response(xml, {
             headers: {
                 'Content-Type': 'application/xml',
-                'Cache-Control': 'public, max-age=3600',
+                'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
             },
         });
     } catch (error) {

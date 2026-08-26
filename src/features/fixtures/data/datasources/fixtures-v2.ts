@@ -11,6 +11,10 @@ import type { FixtureMatch, FixtureStatus, FixturesData } from "@/features/fixtu
 import { prisma } from "@/lib/prisma";
 import { getPublicCompetitions } from "@/features/seasons/data/public-competitions";
 import { calculatePlayerMatchStats } from "@/features/player/domain/usecases/playerStats";
+import { cacheGet, cacheSet } from "@/lib/cache";
+
+const FIXTURES_CACHE_KEY = "public:fixtures:v2";
+const FIXTURES_CACHE_TTL_SECONDS = 60;
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -80,6 +84,9 @@ function toFixture(m: any): FixtureMatch {
 }
 
 export async function fetchFixturesData(): Promise<FixturesData | null> {
+	const cached = await cacheGet<FixturesData>(FIXTURES_CACHE_KEY);
+	if (cached) return cached;
+
 	try {
 		const [upcoming, completed, competitions] = await Promise.all([
 			getUpcomingMatches(),
@@ -171,7 +178,7 @@ export async function fetchFixturesData(): Promise<FixturesData | null> {
 		const seasons = (realByRecency.length ? realByRecency : byRecency).map(([s]) => s);
 		const defaultSeason = seasons[0] ?? "";
 
-		return {
+		const data: FixturesData = {
 			matches,
 			competitions,
 			seasons,
@@ -181,6 +188,8 @@ export async function fetchFixturesData(): Promise<FixturesData | null> {
 				?? competitions[0]?.id
 				?? "",
 		};
+		await cacheSet(FIXTURES_CACHE_KEY, data, FIXTURES_CACHE_TTL_SECONDS);
+		return data;
 	} catch {
 		return null;
 	}

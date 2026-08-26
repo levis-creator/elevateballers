@@ -14,8 +14,15 @@ import {
   resolvePublicFooterSettings,
   resolvePublicHeaderSettings,
 } from '@/features/settings';
+import { cacheGet, cacheSet } from '@/lib/cache';
+
+const FOOTER_CACHE_KEY = 'public:footer:v2';
+const FOOTER_CACHE_TTL_SECONDS = 300;
 
 export async function getFooterData(): Promise<FooterData> {
+  const cached = await cacheGet<FooterData>(FOOTER_CACHE_KEY);
+  if (cached) return cached;
+
   try {
     const [settings, sponsorRecords] = await Promise.all([
       getAllSiteSettings(),
@@ -32,7 +39,7 @@ export async function getFooterData(): Promise<FooterData> {
       brandSettings.tagline
     );
 
-    return {
+    const footer: FooterData = {
       contact: {
         address: contactSettings.address,
         hours: contactSettings.hours,
@@ -50,6 +57,8 @@ export async function getFooterData(): Promise<FooterData> {
         link: sponsor.link ? String(sponsor.link) : null,
       })),
     };
+    await cacheSet(FOOTER_CACHE_KEY, footer, FOOTER_CACHE_TTL_SECONDS);
+    return footer;
   } catch {
     return DEFAULT_FOOTER;
   }
