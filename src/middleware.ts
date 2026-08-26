@@ -1,22 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
-import { syncPermissions } from './lib/syncPermissions';
-
-// Runs once per server process — all concurrent first requests
-// await the same promise so the sync never executes more than once.
-let syncPromise: Promise<void> | null = null;
-let permissionsSynced = false;
-let nextPermissionSyncAt = 0;
 
 export const onRequest = defineMiddleware(async (_context, next) => {
-  // Permission syncing is maintenance work. It must never hold up page
-  // rendering while the production database is unavailable.
-  if (!permissionsSynced && !syncPromise && Date.now() >= nextPermissionSyncAt) {
-    nextPermissionSyncAt = Date.now() + 60_000;
-    syncPromise = syncPermissions().catch((err) => {
-      console.error('[permissions] Auto-sync failed:', err);
-    }).then(() => { permissionsSynced = true; }).finally(() => { syncPromise = null; });
-  }
-
   const response = await next();
   // Mutate Astro's response in place. Re-wrapping a streaming response with
   // `new Response(response.body, ...)` can make Astro attempt to write to a
