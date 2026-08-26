@@ -74,12 +74,12 @@ const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
 				el.parentNode && el.parentNode.removeChild(el);
 				return;
 			}
-			sessionStorage.setItem("eb-splashed", "1");
 		} catch (e) {}
 		var done = false;
 		var shown = false;
 		var showTimer = setTimeout(function () {
 			shown = true;
+			try { sessionStorage.setItem("eb-splashed", "1"); } catch (e) {}
 			el.style.display = "";
 		}, splashThreshold);
 		var hide = function () {
