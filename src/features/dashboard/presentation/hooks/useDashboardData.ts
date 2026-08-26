@@ -168,6 +168,34 @@ export function useDashboardData() {
 
 		(async () => {
 			setLoading(true);
+			try {
+				const dashboardResponse = await fetch('/api/admin/dashboard');
+				if (dashboardResponse.ok) {
+					const dashboard = await dashboardResponse.json();
+					if (cancelled) return;
+					setKpis(dashboard.kpis || []);
+					setSeason(dashboard.season);
+					setFixtures(dashboard.fixtures || []);
+					setPipeline(dashboard.pipeline || { published: 0, draft: 0, scheduled: 0, recent: [] });
+					setStorage(dashboard.storage || { usedGb: 0, items: 0, pct: 0 });
+					setApprovals(dashboard.approvals || []);
+					setActivity(dashboard.activity || []);
+					if (can("players:read") || can("matches:read")) {
+						try {
+							const res = await fetch("/api/stats/leaders?stat=Points&limit=5");
+							const data = res.ok ? await res.json() : { leaders: [] };
+							if (!cancelled) setLeaders(Array.isArray(data?.leaders) ? data.leaders : []);
+						} catch {
+							if (!cancelled) setLeaders([]);
+						}
+					}
+					if (!cancelled) setLoading(false);
+					return;
+				}
+			} catch {
+				// Keep the existing request flow as a compatibility fallback while
+				// deployments roll out the aggregate endpoint.
+			}
 			const [teams, players, matches, media, articles, sponsors] = await Promise.all([
 				countOf("/api/teams", can("teams:read")),
 				countOf("/api/players", can("players:read")),
