@@ -5,6 +5,8 @@ interface MediaItem {
 	id: string;
 	title: string;
 	url: string;
+	thumbnail?: string | null;
+	thumbUrl?: string | null;
 	type?: string;
 }
 
@@ -33,6 +35,8 @@ export default function MediaPickerV2({
 }: Props) {
 	const [tab, setTab] = useState<Tab>("Library");
 	const [items, setItems] = useState<MediaItem[]>([]);
+	const [page, setPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [selected, setSelected] = useState<string | null>(null);
@@ -40,14 +44,16 @@ export default function MediaPickerV2({
 	const [uploaded, setUploaded] = useState<{ name: string; url: string } | null>(null);
 	const fileRef = useRef<HTMLInputElement>(null);
 
-	const load = useCallback(async () => {
+	const load = useCallback(async (requestedPage = 1) => {
 		setLoading(true);
 		setError("");
 		try {
-			const res = await fetch("/api/media?type=IMAGE");
+			const res = await fetch(`/api/media?type=IMAGE&page=${requestedPage}&limit=32`);
 			if (!res.ok) throw new Error("failed");
 			const data = await res.json();
-			setItems(Array.isArray(data) ? data : (data?.data ?? []));
+			setItems(Array.isArray(data) ? data : (data?.items ?? data?.data ?? []));
+			setPage(Array.isArray(data) ? requestedPage : data?.page ?? requestedPage);
+			setTotalPages(Array.isArray(data) ? 1 : Math.max(1, data?.totalPages ?? 1));
 		} catch {
 			setError("Could not load your media library.");
 		} finally {
@@ -96,7 +102,7 @@ export default function MediaPickerV2({
 
 			setUploaded({ name: file.name, url: first.url });
 			setSelected(first.url);
-			await load();
+			await load(1);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Upload failed");
 		} finally {
@@ -193,7 +199,7 @@ export default function MediaPickerV2({
 												onClick={() => setSelected(item.url)}
 												className="group relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf2)]"
 											>
-												<img src={item.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+										<img src={item.thumbUrl || item.thumbnail || item.url} alt="" className="h-full w-full object-cover" loading="lazy" />
 												{on && (
 													<>
 														<span
@@ -212,6 +218,15 @@ export default function MediaPickerV2({
 								<p className="mt-3 font-['Space_Mono'] text-[11px] text-[var(--txm)]">
 									{items.length} item{items.length === 1 ? "" : "s"} in library
 								</p>
+								{totalPages > 1 && (
+									<div className="mt-3 flex items-center justify-between font-['Space_Mono'] text-[11px] text-[var(--txm)]">
+										<span>Page {page} / {totalPages}</span>
+										<div className="flex gap-2">
+											<button type="button" disabled={page <= 1} onClick={() => void load(page - 1)} className="rounded border border-[var(--bord)] px-2 py-1 disabled:opacity-40">Previous</button>
+											<button type="button" disabled={page >= totalPages} onClick={() => void load(page + 1)} className="rounded border border-[var(--bord)] px-2 py-1 disabled:opacity-40">Next</button>
+										</div>
+									</div>
+								)}
 							</>
 						))}
 

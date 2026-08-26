@@ -28,24 +28,30 @@ export function MediaLibraryPicker({
   const [items, setItems] = React.useState<MediaWithFolderAndUploader[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
   const [selectedUrl, setSelectedUrl] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
-    if (open) {
-      fetchMedia();
-    }
-  }, [open]);
+    if (!open) return;
+    const timer = window.setTimeout(() => void fetchMedia(1, searchTerm), searchTerm ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [open, searchTerm]);
 
-  const fetchMedia = async () => {
+  const fetchMedia = async (requestedPage = 1, query = searchTerm) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/media?type=IMAGE');
+      const params = new URLSearchParams({ type: 'IMAGE', page: String(requestedPage), limit: '32' });
+      if (query.trim()) params.set('q', query.trim());
+      const response = await fetch(`/api/media?${params}`);
       if (!response.ok) throw new Error('Failed to fetch media');
       const data = await response.json();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : data.items || []);
+      setPage(Array.isArray(data) ? requestedPage : data.page || requestedPage);
+      setTotalPages(Array.isArray(data) ? 1 : Math.max(1, data.totalPages || 1));
     } catch (err) {
       console.error('Error fetching media:', err);
     } finally {
@@ -101,7 +107,7 @@ export function MediaLibraryPicker({
         ? data.results.find((r: { url?: string; error?: string }) => r.url && !r.error)
         : null;
 
-      await fetchMedia();
+      await fetchMedia(1, searchTerm);
 
       if (firstSuccess?.url) {
         setSelectedUrl(firstSuccess.url);
@@ -118,19 +124,19 @@ export function MediaLibraryPicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col border-white/10 bg-[#111010] text-[#f3efe9] shadow-[0_24px_80px_rgba(0,0,0,0.6)]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="flex gap-2 my-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8a817a]" />
             <Input
               placeholder="Search images..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="border-white/10 bg-[#181616] text-[#f3efe9] placeholder:text-[#8a817a] pl-10 focus-visible:ring-[#e4002b] focus-visible:ring-offset-0"
             />
           </div>
           <input
@@ -141,7 +147,7 @@ export function MediaLibraryPicker({
             className="hidden"
             onChange={handleFilesSelected}
           />
-          <Button variant="outline" onClick={handleUploadClick} disabled={uploading}>
+          <Button variant="outline" className="border-white/10 bg-[#181616] text-[#b8afa6] hover:bg-white/10 hover:text-[#f3efe9]" onClick={handleUploadClick} disabled={uploading}>
             {uploading ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -153,19 +159,19 @@ export function MediaLibraryPicker({
           </Button>
         </div>
 
-        {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
+        {uploadError && <p className="text-sm text-[#ff6b81] mt-1">{uploadError}</p>}
 
         <div className="flex-1 overflow-y-auto pr-4">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">Loading library...</p>
+              <p className="text-[#8a817a]">Loading library...</p>
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
-              <ImageIcon className="h-12 w-12 text-muted-foreground mb-2" />
+              <ImageIcon className="h-12 w-12 text-[#8a817a] mb-2" />
               <p className="text-lg font-semibold">No images found</p>
-              <p className="text-muted-foreground">
+              <p className="text-[#8a817a]">
                 Try a different search term or upload new media.
               </p>
             </div>
@@ -175,14 +181,19 @@ export function MediaLibraryPicker({
                 <div
                   key={item.id}
                   className={cn(
-                    'relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all hover:scale-105',
+                    'group relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer transition-all hover:scale-105 bg-[#181616]',
                     selectedUrl === item.url
                       ? 'border-primary ring-2 ring-primary ring-offset-2'
-                      : 'border-transparent hover:border-muted-foreground/50'
+                      : 'border-white/10 hover:border-[#8a817a]'
                   )}
                   onClick={() => setSelectedUrl(item.url)}
                 >
-                  <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
+                  <img
+                    src={item.thumbnail || item.url}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
                   {selectedUrl === item.url && (
                     <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                       <div className="bg-primary text-primary-foreground rounded-full p-1 shadow-lg">
@@ -201,8 +212,22 @@ export function MediaLibraryPicker({
           )}
         </div>
 
-        <DialogFooter className="border-t pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-white/10 pt-3 text-sm text-[#8a817a]">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="border-white/10 bg-[#181616] text-[#b8afa6] hover:bg-white/10 hover:text-[#f3efe9]" disabled={page <= 1} onClick={() => void fetchMedia(page - 1, searchTerm)}>
+                Previous
+              </Button>
+              <Button variant="outline" size="sm" className="border-white/10 bg-[#181616] text-[#b8afa6] hover:bg-white/10 hover:text-[#f3efe9]" disabled={page >= totalPages} onClick={() => void fetchMedia(page + 1, searchTerm)}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="border-t border-white/10 pt-4">
+          <Button variant="outline" className="border-white/10 bg-[#181616] text-[#b8afa6] hover:bg-white/10 hover:text-[#f3efe9]" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={handleSelect} disabled={!selectedUrl}>

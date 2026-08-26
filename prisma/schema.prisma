@@ -242,6 +242,8 @@ model NewsArticle {
   @@index([feature])
   @@index([authorId])
   @@index([leagueSeasonId])
+  @@index([published, publishedAt], map: "news_published_feed_idx")
+  @@index([feature, publishedAt], map: "news_featured_feed_idx")
   @@map("news_articles")
 }
 
@@ -476,12 +478,16 @@ model Match {
   @@index([date])
   @@index([status])
   @@index([resultPublishedAt])
+  @@index([status, date], map: "matches_status_date_idx")
+  @@index([status, resultPublishedAt, date], map: "matches_results_feed_idx")
   @@index([stage])
   @@index([team1Id])
   @@index([team2Id])
   @@index([leagueId])
   @@index([seasonId])
   @@index([leagueSeasonId])
+  @@index([leagueSeasonId, date], map: "matches_league_season_date_idx")
+  @@index([seasonId, date], map: "matches_season_date_idx")
   @@index([gameRulesId])
   @@index([possessionTeamId])
   @@index([winnerId])
@@ -537,6 +543,7 @@ model Team {
   @@index([name])
   @@index([slug])
   @@index([approved])
+  @@index([approved, name], map: "teams_public_directory_idx")
   @@map("teams")
 }
 
@@ -619,18 +626,18 @@ model TeamOwnershipClaim {
 }
 
 model TeamOwnership {
-  id         String    @id @default(cuid())
-  teamId     String    @map("team_id")
-  userId     String?   @map("user_id")
-  email      String
-  role       String    @default("OWNER")
-  verifiedAt DateTime  @map("verified_at")
-  effectiveFrom DateTime @default(now()) @map("effective_from")
-  effectiveTo DateTime? @map("effective_to")
-  revokedAt  DateTime? @map("revoked_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id            String    @id @default(cuid())
+  teamId        String    @map("team_id")
+  userId        String?   @map("user_id")
+  email         String
+  role          String    @default("OWNER")
+  verifiedAt    DateTime  @map("verified_at")
+  effectiveFrom DateTime  @default(now()) @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+  revokedAt     DateTime? @map("revoked_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  team          Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([teamId, revokedAt, effectiveFrom, effectiveTo], map: "team_ownership_scope_idx")
   @@index([email])
@@ -827,6 +834,7 @@ model Player {
   @@index([slug])
   @@index([approved])
   @@index([archived])
+  @@index([approved, archived, lastName, firstName], map: "players_public_directory_idx")
   @@map("players")
 }
 
@@ -887,6 +895,9 @@ model Media {
   @@index([featured])
   @@index([filePath])
   @@index([uploadedBy], map: "media_uploaded_by_fkey")
+  @@index([type, createdAt], map: "media_type_created_idx")
+  @@index([folderId, createdAt], map: "media_folder_created_idx")
+  @@index([featured, isPrivate, createdAt], map: "media_featured_visibility_idx")
   @@map("media")
 }
 

@@ -1,0 +1,11 @@
+CREATE INDEX `news_published_feed_idx` ON `news_articles`(`published`, `published_at`);
+CREATE INDEX `news_featured_feed_idx` ON `news_articles`(`feature`, `published_at`);
+CREATE INDEX `matches_status_date_idx` ON `matches`(`status`, `date`);
+CREATE INDEX `matches_results_feed_idx` ON `matches`(`status`, `result_published_at`, `date`);
+CREATE INDEX `matches_league_season_date_idx` ON `matches`(`league_season_id`, `date`);
+CREATE INDEX `matches_season_date_idx` ON `matches`(`season_id`, `date`);
+CREATE INDEX `teams_public_directory_idx` ON `teams`(`approved`, `name`);
+CREATE INDEX `players_public_directory_idx` ON `players`(`approved`, `archived`, `last_name`, `first_name`);
+CREATE INDEX `media_type_created_idx` ON `media`(`type`, `created_at`);
+CREATE INDEX `media_folder_created_idx` ON `media`(`folder_id`, `created_at`);
+CREATE INDEX `media_featured_visibility_idx` ON `media`(`featured`, `is_private`, `created_at`);
