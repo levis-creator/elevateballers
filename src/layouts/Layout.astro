@@ -683,6 +683,10 @@ const googleFonts = [
 			href="/images/Elevate_Icon-200x200.png"
 			sizes="192x192"
 		/>
+		<!-- Keep the document canvas on-brand before legacy styles finish loading. -->
+		<style is:inline>
+			html, body { margin: 0; min-height: 100%; background: #ffffff; }
+		</style>
 		<link rel="apple-touch-icon" href="/images/Elevate_Icon-200x200.png" />
 		<meta
 			name="msapplication-TileImage"
