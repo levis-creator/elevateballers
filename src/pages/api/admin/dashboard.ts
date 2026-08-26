@@ -21,15 +21,22 @@ export const GET: APIRoute = async ({ request }) => {
     const canAudit = can('audit_logs:read') || can('audit_logs:manage');
     const now = new Date();
 
-    const teams = can('teams:read') ? await prisma.team.count() : 0;
-    const players = can('players:read') ? await prisma.player.count() : 0;
-    const matches = can('matches:read') ? await prisma.match.count() : 0;
-    const media = can('media:read') ? await prisma.media.count() : 0;
-    const articles = can('news_articles:read') ? await prisma.newsArticle.count() : 0;
-    const sponsors = can('sponsors:read') ? await prisma.sponsor.count() : 0;
+    // Run independent work in bounded batches: cPanel accounts commonly cap
+    // the MariaDB pool at three connections, so one unbounded Promise.all can
+    // turn a faster dashboard into pool timeouts.
+    const [teams, players, matches] = await Promise.all([
+      can('teams:read') ? prisma.team.count() : Promise.resolve(0),
+      can('players:read') ? prisma.player.count() : Promise.resolve(0),
+      can('matches:read') ? prisma.match.count() : Promise.resolve(0),
+    ]);
+    const [media, articles, sponsors] = await Promise.all([
+      can('media:read') ? prisma.media.count() : Promise.resolve(0),
+      can('news_articles:read') ? prisma.newsArticle.count() : Promise.resolve(0),
+      can('sponsors:read') ? prisma.sponsor.count() : Promise.resolve(0),
+    ]);
 
-    const matchList = can('matches:read')
-      ? await prisma.match.findMany({
+    const matchListPromise = can('matches:read')
+      ? prisma.match.findMany({
           where: { date: { gte: now }, status: { not: 'COMPLETED' } },
           select: {
             id: true,
@@ -43,20 +50,21 @@ export const GET: APIRoute = async ({ request }) => {
           orderBy: { date: 'asc' },
           take: 6,
         })
-      : [];
+      : Promise.resolve([]);
 
     const totalMatches = can('matches:read') ? matches : 0;
-    const completedMatches = can('matches:read')
-      ? await prisma.match.count({ where: { status: 'COMPLETED' } })
-      : 0;
-    const seasons = can('seasons:read') || can('matches:read')
-      ? await prisma.season.findMany({
+    const completedMatchesPromise = can('matches:read')
+      ? prisma.match.count({ where: { status: 'COMPLETED' } })
+      : Promise.resolve(0);
+    const seasonsPromise = can('seasons:read') || can('matches:read')
+      ? prisma.season.findMany({
           where: { active: true },
           select: { name: true, startDate: true, endDate: true },
           orderBy: { startDate: 'desc' },
           take: 1,
         })
-      : [];
+      : Promise.resolve([]);
+    const [matchList, completedMatches, seasons] = await Promise.all([matchListPromise, completedMatchesPromise, seasonsPromise]);
     const activeSeason = seasons[0];
     const start = activeSeason?.startDate?.getTime() ?? now.getTime();
     const end = activeSeason?.endDate?.getTime() ?? start + DAY;
@@ -69,20 +77,22 @@ export const GET: APIRoute = async ({ request }) => {
       return time >= weekStart && time < weekEnd;
     }).length;
 
-    let mediaBytes = 0;
-    if (can('media:read')) {
-      const mediaSize = await prisma.media.aggregate({ _sum: { size: true } });
-      mediaBytes = Number(mediaSize._sum.size || 0);
-    }
+    const mediaSizePromise = can('media:read')
+      ? prisma.media.aggregate({ _sum: { size: true } })
+      : Promise.resolve({ _sum: { size: null } });
 
     let pipeline = { published: 0, draft: 0, scheduled: 0, recent: [] as Array<{ title: string; status: string }> };
-    if (can('news_articles:read')) {
-      const news = await prisma.newsArticle.findMany({
+    const newsPromise = can('news_articles:read')
+      ? prisma.newsArticle.findMany({
         select: { title: true, published: true, publishedAt: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
         take: 100,
-      });
-      const statusOf = (article: typeof news[number]) =>
+      })
+      : Promise.resolve([]);
+    const [mediaSize, news] = await Promise.all([mediaSizePromise, newsPromise]);
+    const mediaBytes = Number(mediaSize._sum.size || 0);
+    if (can('news_articles:read')) {
+      const statusOf = (article: { published: boolean; publishedAt: Date | null }) =>
         article.published ? 'PUBLISHED' : article.publishedAt && article.publishedAt > now ? 'SCHEDULED' : 'DRAFT';
       pipeline = {
         published: news.filter((article) => statusOf(article) === 'PUBLISHED').length,
@@ -92,8 +102,8 @@ export const GET: APIRoute = async ({ request }) => {
       };
     }
 
-    const notifications = can('notifications:read')
-      ? await prisma.registrationNotification.findMany({
+    const notificationsPromise = can('notifications:read')
+      ? prisma.registrationNotification.findMany({
           where: { read: false },
           include: {
             team: { select: { id: true, name: true, slug: true } },
@@ -102,7 +112,8 @@ export const GET: APIRoute = async ({ request }) => {
           orderBy: { createdAt: 'desc' },
           take: 10,
         })
-      : [];
+      : Promise.resolve([]);
+    const notifications = await notificationsPromise;
 
     const logs = canAudit
       ? await prisma.userAuditLog.findMany({
