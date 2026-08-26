@@ -11,6 +11,7 @@ import {
   siteSettingsService,
 } from '@/features/settings';
 import ManagedFavicon from '@/features/settings/presentation/components/ManagedFavicon.astro';
+import { cacheGet, cacheSet } from '@/lib/cache';
 import '../../../styles/admin.css';
 import '../presentation/v2/admin-v2.css';
 import '@fontsource/anton';
@@ -18,6 +19,7 @@ import '@fontsource/archivo/400.css';
 import '@fontsource/archivo/600.css';
 import '@fontsource/archivo/700.css';
 import '@fontsource/space-mono/400.css';
+
 
 interface Props {
   title?: string;
@@ -54,9 +56,16 @@ if (!user) {
 // The redesigned dashboard lives at /admin; every other admin page keeps its v1
 // content on a light surface inside the v2 chrome until individually redesigned.
 const useV2 = usePublicAdminV2;
-const adminBrandSettings = useV2
-  ? resolvePublicBrandSettings(await siteSettingsService.list('brand').catch(() => []))
+const adminBrandCacheKey = 'admin:brand-settings:v2';
+const cachedAdminBrandSettings = useV2
+  ? await cacheGet<ReturnType<typeof resolvePublicBrandSettings>>(adminBrandCacheKey)
   : null;
+const adminBrandSettings = useV2
+  ? cachedAdminBrandSettings ?? resolvePublicBrandSettings(await siteSettingsService.list('brand').catch(() => []))
+  : null;
+if (useV2 && !cachedAdminBrandSettings) {
+  await cacheSet(adminBrandCacheKey, adminBrandSettings, 300);
+}
 const adminPalette = adminBrandSettings ? buildThemeColorPalette(adminBrandSettings) : null;
 
 const adminBrandStyle = adminBrandSettings
@@ -139,12 +148,15 @@ const isStaffDetail =
       })();
     </script>
 
-    <!-- Fonts -->
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600"
-    />
+    {!useV2 && (
+      <>
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600"
+        />
+      </>
+    )}
 
     <style>
       :root {
