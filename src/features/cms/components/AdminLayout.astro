@@ -159,15 +159,15 @@ const isStaffDetail =
       })();
     </script>
 
-    {!useV2 && (
-      <>
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600"
-        />
-      </>
-    )}
+    <!-- Rubik/Teko are still used by shared and legacy admin surfaces. Keep
+         them available in the redesigned shell as well, where those surfaces
+         can be rendered inside the v2 chrome. -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Rubik:regular,bold|Teko:regular,700,300,400,500,600&display=swap"
+    />
 
     <style>
       #admin-navigation-progress {
