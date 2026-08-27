@@ -42,6 +42,7 @@ export const GET: APIRoute = async ({ request }) => {
               status: true,
               jerseyNumber: true,
               position: true,
+              proposalNote: true,
               player: {
                 select: {
                   id: true,
@@ -51,6 +52,8 @@ export const GET: APIRoute = async ({ request }) => {
                   position: true,
                   jerseyNumber: true,
                   email: true,
+                  dateOfBirth: true,
+                  phone: true,
                 },
               },
             },
@@ -113,6 +116,10 @@ export const POST: APIRoute = async ({ request }) => {
       .trim()
       .toLowerCase();
     const position = String(body?.position ?? '').trim() || null;
+    const phone = String(body?.phone ?? '').trim() || null;
+    const note = String(body?.note ?? '').trim() || null;
+    const dateOfBirthValue = String(body?.dateOfBirth ?? '').trim();
+    const dateOfBirth = dateOfBirthValue ? new Date(`${dateOfBirthValue}T00:00:00.000Z`) : null;
     const jerseyNumber =
       body?.jerseyNumber === '' || body?.jerseyNumber == null ? null : Number(body.jerseyNumber);
 
@@ -124,6 +131,14 @@ export const POST: APIRoute = async ({ request }) => {
     }
     if (!body?.rosterId && !/^\S+@\S+\.\S+$/.test(email)) {
       return new Response(JSON.stringify({ error: 'Enter a valid player email address.' }), {
+        status: 400,
+      });
+    }
+    if (
+      !body?.rosterId &&
+      (!dateOfBirthValue || !dateOfBirth || Number.isNaN(dateOfBirth.getTime()))
+    ) {
+      return new Response(JSON.stringify({ error: 'A valid date of birth is required.' }), {
         status: 400,
       });
     }
@@ -164,7 +179,7 @@ export const POST: APIRoute = async ({ request }) => {
         if (!current) throw new Error('Roster entry not found for the active season.');
         const roster = await tx.seasonTeamPlayer.update({
           where: { id: current.id },
-          data: { status: 'PENDING', leftAt: null, jerseyNumber, position },
+          data: { status: 'PENDING', leftAt: null, jerseyNumber, position, proposalNote: note },
         });
         await tx.seasonRosterHistory.create({
           data: {
@@ -173,6 +188,7 @@ export const POST: APIRoute = async ({ request }) => {
             seasonTeamId: seasonTeam.id,
             rosterId: roster.id,
             action: 'ROSTER_EDIT_PROPOSED',
+            reason: note,
             changedById: user.id,
           },
         });
@@ -188,12 +204,21 @@ export const POST: APIRoute = async ({ request }) => {
       const player =
         existing ??
         (await tx.player.create({
-          data: { firstName, lastName, email, position, jerseyNumber, approved: false },
+          data: {
+            firstName,
+            lastName,
+            email,
+            phone,
+            dateOfBirth,
+            position,
+            jerseyNumber,
+            approved: false,
+          },
           select: { id: true, firstName: true, lastName: true },
         }));
       const roster = await tx.seasonTeamPlayer.upsert({
         where: { seasonTeamId_playerId: { seasonTeamId: seasonTeam.id, playerId: player.id } },
-        update: { status: 'PENDING', leftAt: null, jerseyNumber, position },
+        update: { status: 'PENDING', leftAt: null, jerseyNumber, position, proposalNote: note },
         create: {
           leagueSeasonId: seasonTeam.leagueSeasonId,
           seasonTeamId: seasonTeam.id,
@@ -202,6 +227,7 @@ export const POST: APIRoute = async ({ request }) => {
           jerseyNumber,
           position,
           status: 'PENDING',
+          proposalNote: note,
         },
       });
       await tx.seasonRosterHistory.create({
@@ -211,6 +237,7 @@ export const POST: APIRoute = async ({ request }) => {
           seasonTeamId: seasonTeam.id,
           rosterId: roster.id,
           action: 'ROSTER_PROPOSED',
+          reason: note,
           changedById: user.id,
         },
       });

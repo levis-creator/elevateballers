@@ -671,6 +671,7 @@ model SeasonTeamPlayer {
   status         SeasonRosterStatus     @default(PENDING)
   jerseyNumber   Int?                   @map("jersey_number")
   position       String?
+  proposalNote   String?                @map("proposal_note") @db.Text
   joinedAt       DateTime               @default(now()) @map("joined_at")
   leftAt         DateTime?              @map("left_at")
   createdAt      DateTime               @default(now()) @map("created_at")

@@ -7,6 +7,7 @@ type Player = {
   stats: { gp: number; ppg: number; reb: number; ast: number } | null;
   jerseyNumber: number | null;
   position: string | null;
+  proposalNote: string | null;
   player: {
     id: string;
     firstName: string | null;
@@ -15,6 +16,8 @@ type Player = {
     position: string | null;
     jerseyNumber: number | null;
     email: string | null;
+    dateOfBirth: string | null;
+    phone: string | null;
   };
 };
 type RosterData = {
@@ -49,6 +52,9 @@ export default function TeamPortalRoster({
     email: '',
     jerseyNumber: '',
     position: '',
+    dateOfBirth: '',
+    phone: '',
+    note: '',
   });
   const loadRoster = useCallback(() => {
     setLoading(true);
@@ -75,6 +81,9 @@ export default function TeamPortalRoster({
       email: entry.player.email || '',
       jerseyNumber: String(entry.jerseyNumber ?? entry.player.jerseyNumber ?? ''),
       position: entry.position || entry.player.position || '',
+      dateOfBirth: entry.player.dateOfBirth ? entry.player.dateOfBirth.slice(0, 10) : '',
+      phone: entry.player.phone || '',
+      note: entry.proposalNote || '',
     });
     setProposalError(null);
     setProposalMessage(null);
@@ -103,7 +112,16 @@ export default function TeamPortalRoster({
             ? 'Roster edit sent for admin approval.'
             : 'Player proposal sent for admin approval.')
       );
-      setForm({ firstName: '', lastName: '', email: '', jerseyNumber: '', position: '' });
+      setForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        jerseyNumber: '',
+        position: '',
+        dateOfBirth: '',
+        phone: '',
+        note: '',
+      });
       setEditingEntry(null);
       await loadRoster();
     } catch (cause) {
@@ -156,7 +174,16 @@ export default function TeamPortalRoster({
               type="button"
               onClick={() => {
                 setEditingEntry(null);
-                setForm({ firstName: '', lastName: '', email: '', jerseyNumber: '', position: '' });
+                setForm({
+                  firstName: '',
+                  lastName: '',
+                  email: '',
+                  jerseyNumber: '',
+                  position: '',
+                  dateOfBirth: '',
+                  phone: '',
+                  note: '',
+                });
                 setProposalOpen(true);
                 setProposalError(null);
                 setProposalMessage(null);
@@ -177,7 +204,7 @@ export default function TeamPortalRoster({
             >
               <form
                 onSubmit={submitProposal}
-                className="portal-roster-card w-full max-w-[520px] rounded-2xl border p-5 shadow-2xl"
+                className="portal-roster-card w-full max-w-[620px] rounded-2xl border p-5 shadow-2xl"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="propose-player-title"
@@ -216,12 +243,20 @@ export default function TeamPortalRoster({
                       ['email', 'Email address'],
                       ['jerseyNumber', 'Jersey number'],
                       ['position', 'Position'],
+                      ['dateOfBirth', 'Date of birth'],
+                      ['phone', 'Phone'],
+                      ['note', 'Note to the league office'],
                     ] as const
                   ).map(([key, label]) => (
-                    <label key={key} className={key === 'email' ? 'sm:col-span-2' : ''}>
+                    <label
+                      key={key}
+                      className={key === 'email' || key === 'note' ? 'sm:col-span-2' : ''}
+                    >
                       <span className="mb-1.5 block font-mono text-[9px] uppercase tracking-[0.1em] text-[#8a817a]">
                         {label}
-                        {key !== 'jerseyNumber' && key !== 'position' ? ' *' : ''}
+                        {['firstName', 'lastName', 'email', 'dateOfBirth'].includes(key)
+                          ? ' *'
+                          : ''}
                       </span>
                       {key === 'position' ? (
                         <select
@@ -238,14 +273,34 @@ export default function TeamPortalRoster({
                           <option value="PF">PF · Power forward</option>
                           <option value="C">C · Center</option>
                         </select>
+                      ) : key === 'note' ? (
+                        <textarea
+                          rows={3}
+                          value={form.note}
+                          onChange={(event) =>
+                            setForm((current) => ({ ...current, note: event.target.value }))
+                          }
+                          placeholder="Add context for the league office"
+                          className="w-full resize-y rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[13px] text-cream outline-none focus:border-brand"
+                        />
                       ) : (
                         <input
-                          required={!editingEntry && key !== 'jerseyNumber'}
+                          required={
+                            !editingEntry &&
+                            ['firstName', 'lastName', 'email', 'dateOfBirth'].includes(key)
+                          }
                           disabled={Boolean(
-                            editingEntry && ['firstName', 'lastName', 'email'].includes(key)
+                            editingEntry &&
+                            ['firstName', 'lastName', 'email', 'dateOfBirth'].includes(key)
                           )}
                           type={
-                            key === 'email' ? 'email' : key === 'jerseyNumber' ? 'number' : 'text'
+                            key === 'email'
+                              ? 'email'
+                              : key === 'jerseyNumber'
+                                ? 'number'
+                                : key === 'dateOfBirth'
+                                  ? 'date'
+                                  : 'tel'
                           }
                           min={key === 'jerseyNumber' ? 0 : undefined}
                           max={key === 'jerseyNumber' ? 99 : undefined}
