@@ -42,12 +42,15 @@ export const GET: APIRoute = async ({ request }) => {
               status: true,
               jerseyNumber: true,
               position: true,
-              removalRequestedAt: true,
               history: {
-                where: { action: { in: ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED'] } },
+                where: {
+                  action: {
+                    in: ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED', 'ROSTER_REMOVAL_PROPOSED'],
+                  },
+                },
                 orderBy: { createdAt: 'desc' },
-                take: 1,
-                select: { reason: true },
+                take: 20,
+                select: { action: true, reason: true, createdAt: true },
               },
               player: {
                 select: {
@@ -101,7 +104,15 @@ export const GET: APIRoute = async ({ request }) => {
         players: players.map((entry) => ({
           ...(() => {
             const { history, ...rosterEntry } = entry;
-            return { ...rosterEntry, proposalNote: history[0]?.reason ?? null };
+            const proposal = history.find((item) =>
+              ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED'].includes(item.action)
+            );
+            const removal = history.find((item) => item.action === 'ROSTER_REMOVAL_PROPOSED');
+            return {
+              ...rosterEntry,
+              proposalNote: proposal?.reason ?? null,
+              removalRequestedAt: removal?.createdAt ?? null,
+            };
           })(),
           stats: entry.status === 'APPROVED' ? statsByPlayer.get(entry.player.id) : null,
         })),
@@ -297,18 +308,38 @@ export const DELETE: APIRoute = async ({ request }) => {
         status: 'APPROVED',
         leftAt: null,
       },
-      select: { id: true, playerId: true },
+      select: {
+        id: true,
+        playerId: true,
+        history: {
+          where: {
+            action: {
+              in: [
+                'ROSTER_REMOVAL_PROPOSED',
+                'ROSTER_REMOVAL_APPROVED',
+                'ROSTER_REMOVAL_REJECTED',
+              ],
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { action: true },
+        },
+      },
     });
     if (!roster)
       return new Response(
         JSON.stringify({ error: 'Only an approved active player can be requested for removal.' }),
         { status: 409 }
       );
+    if (roster.history[0]?.action === 'ROSTER_REMOVAL_PROPOSED')
+      return new Response(
+        JSON.stringify({ error: 'A removal request is already awaiting review.' }),
+        {
+          status: 409,
+        }
+      );
     await prisma.$transaction(async (tx) => {
-      await tx.seasonTeamPlayer.update({
-        where: { id: roster.id },
-        data: { removalRequestedAt: new Date(), removalRequestedById: user.id },
-      });
       await tx.seasonRosterHistory.create({
         data: {
           leagueSeasonId: seasonTeam.leagueSeasonId,
