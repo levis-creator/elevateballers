@@ -73,7 +73,7 @@ export async function getRegistrationReviewQueue(input: {
             team: true,
             leagueSeason: { include: { season: true, league: true } },
             history: {
-              where: { action: 'ROSTER_PROPOSED' },
+              where: { action: { in: ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED'] } },
               orderBy: { createdAt: 'desc' },
               take: 1,
             },
