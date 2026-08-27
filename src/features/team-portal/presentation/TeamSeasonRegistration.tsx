@@ -50,6 +50,7 @@ export default function TeamSeasonRegistration({
   const [windowOpensAt, setWindowOpensAt] = useState<string | null>(null);
   const [windowClosesAt, setWindowClosesAt] = useState<string | null>(null);
   const [registrationClosed, setRegistrationClosed] = useState(false);
+  const [approvalRequired, setApprovalRequired] = useState(true);
   const [closedMessage, setClosedMessage] = useState<string | null>(null);
   const [editionId, setEditionId] = useState('');
   const [notes, setNotes] = useState('');
@@ -76,7 +77,12 @@ export default function TeamSeasonRegistration({
         const nextOptions = Array.isArray(data.options) ? data.options : [];
         const nextHistory: HistoryRow[] = Array.isArray(data.history) ? data.history : [];
         const pendingEntry = nextHistory.find(
-          (row) => row.status === 'PENDING' || row.status === 'OWNERSHIP_VERIFICATION'
+          (row) =>
+            row.seasonName === data.activeSeason?.name &&
+            (row.status === 'PENDING' || row.status === 'OWNERSHIP_VERIFICATION')
+        );
+        const activeEntry = nextHistory.find(
+          (row) => row.seasonName === data.activeSeason?.name && row.status === 'APPROVED'
         );
         setOptions(nextOptions);
         setHistory(nextHistory);
@@ -85,13 +91,15 @@ export default function TeamSeasonRegistration({
         setWindowOpensAt(data.registrationWindow?.opensAt ?? null);
         setWindowClosesAt(data.registrationWindow?.closesAt ?? null);
         setRegistrationClosed(data.registrationClosed);
+        setApprovalRequired(data.approvalRequired !== false);
         setClosedMessage(data.closedMessage);
-        if (pendingEntry) {
+        if (pendingEntry || activeEntry) {
+          const entry = pendingEntry || activeEntry;
           setSubmitted({
-            id: pendingEntry.id,
-            status: pendingEntry.status,
-            seasonName: pendingEntry.seasonName,
-            leagueName: pendingEntry.leagueName,
+            id: entry.id,
+            status: entry.status,
+            seasonName: entry.seasonName,
+            leagueName: entry.leagueName,
           });
         }
       })
@@ -143,12 +151,20 @@ export default function TeamSeasonRegistration({
       <div className="grid gap-4">
         <style>{registrationStyles}</style>
         <StatusBand
-          title="Awaiting admin approval"
-          eyebrow="Entry sent"
-          body={`${teamName} was sent for ${submitted.seasonName} · ${submitted.leagueName}. Nothing is confirmed until a System Admin approves the entry.`}
+          title={
+            submitted.status === 'PENDING'
+              ? 'Entry sent — awaiting approval'
+              : `You’re in ${submitted.seasonName}`
+          }
+          eyebrow={submitted.status === 'PENDING' ? 'With the league office' : 'Slot confirmed'}
+          body={
+            submitted.status === 'PENDING'
+              ? `${teamName} was sent for ${submitted.seasonName} · ${submitted.leagueName}. Nothing is confirmed until a System Admin approves the entry.`
+              : `${teamName} is registered for ${submitted.seasonName} · ${submitted.leagueName}.`
+          }
           icon={<Check size={20} />}
           tone="success"
-          statusLabel="Under review"
+          statusLabel={submitted.status === 'PENDING' ? 'Under review' : 'Approved'}
         />
         <div className="grid items-start gap-4 min-[980px]:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
           <div className="grid gap-4">
@@ -162,7 +178,7 @@ export default function TeamSeasonRegistration({
               closesAt={windowClosesAt}
               closed={false}
             />
-            <Requirements teamName={teamName} closed={false} />
+            <Requirements teamName={teamName} closed={false} approvalRequired={approvalRequired} />
           </div>
         </div>
       </div>
@@ -213,6 +229,7 @@ export default function TeamSeasonRegistration({
                   setNotes={setNotes}
                   onSubmit={submit}
                   submitting={submitting}
+                  approvalRequired={approvalRequired}
                 />
               )}
               {!isOpen && registrationClosed && (
@@ -233,7 +250,11 @@ export default function TeamSeasonRegistration({
                 closesAt={windowClosesAt}
                 closed={registrationClosed}
               />
-              <Requirements teamName={teamName} closed={registrationClosed} />
+              <Requirements
+                teamName={teamName}
+                closed={registrationClosed}
+                approvalRequired={approvalRequired}
+              />
             </div>
           </div>
         )}
@@ -326,12 +347,13 @@ function SubmittedSummary({
         />
         <SubmittedRow
           label="Status"
-          value={submitted.status === 'PENDING' ? 'Awaiting admin approval' : submitted.status}
+          value={submitted.status === 'PENDING' ? 'Awaiting admin approval' : 'Approved'}
         />
       </div>
       <div className="border-t border-white/[0.06] px-5 py-4 text-[11.5px] leading-relaxed text-[#8a817a]">
-        Your entry is with the league office. It will not become active until a System Admin reviews
-        it.
+        {submitted.status === 'PENDING'
+          ? 'Your entry is with the league office. It will not become active until a System Admin reviews it.'
+          : 'Your entry is active for this season and has been added to the team schedule queue.'}
       </div>
     </section>
   );
@@ -356,6 +378,7 @@ function EntryForm({
   setNotes,
   onSubmit,
   submitting,
+  approvalRequired,
 }: {
   editionId: string;
   options: Option[];
@@ -364,13 +387,16 @@ function EntryForm({
   setNotes: (value: string) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   submitting: boolean;
+  approvalRequired: boolean;
 }) {
   return (
     <section className="portal-registration-card overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
       <div className="border-b border-white/[0.06] px-5 py-4">
         <h3 className="font-display text-[17px] uppercase leading-none text-cream">Season entry</h3>
         <p className="mt-1 text-[12px] text-[#8a817a]">
-          Sent to the league office for approval. Nothing is confirmed until your team is approved.
+          {approvalRequired
+            ? 'Sent to the league office for approval. Nothing is confirmed until your team is approved.'
+            : 'Registration is enabled for this season. Your team will be entered immediately.'}
         </p>
       </div>
       <form onSubmit={onSubmit} className="grid gap-4 px-5 py-5">
@@ -420,7 +446,9 @@ function EntryForm({
         </label>
         <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
           <span className="min-w-[180px] flex-1 text-[11.5px] text-[#8a817a]">
-            This is a proposal. An admin approves it before your team enters the draw.
+            {approvalRequired
+              ? 'This is a proposal. An admin approves it before your team enters the draw.'
+              : 'Your team will be entered into the active season immediately after submission.'}
           </span>
           <button
             type="submit"
@@ -428,7 +456,7 @@ function EntryForm({
             className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-3 text-[11px] font-bold uppercase tracking-[0.05em] text-white disabled:opacity-60"
           >
             <Send size={14} />
-            {submitting ? 'Sending…' : 'Send for approval'}
+            {submitting ? 'Sending…' : approvalRequired ? 'Send for approval' : 'Register team'}
           </button>
         </div>
       </form>
@@ -535,7 +563,15 @@ function EntryWindow({
   );
 }
 
-function Requirements({ teamName, closed }: { teamName: string; closed: boolean }) {
+function Requirements({
+  teamName,
+  closed,
+  approvalRequired,
+}: {
+  teamName: string;
+  closed: boolean;
+  approvalRequired: boolean;
+}) {
   return (
     <section className="portal-registration-card overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
       <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
@@ -563,9 +599,13 @@ function Requirements({ teamName, closed }: { teamName: string; closed: boolean 
             ✓
           </span>
           <div>
-            <div className="text-[12.5px] font-bold text-cream">Admin approval required</div>
+            <div className="text-[12.5px] font-bold text-cream">
+              {approvalRequired ? 'Admin approval required' : 'Registration ready'}
+            </div>
             <div className="mt-0.5 text-[11.5px] text-[#8a817a]">
-              Nothing becomes active until reviewed.
+              {approvalRequired
+                ? 'Nothing becomes active until reviewed.'
+                : 'Your team will be entered immediately.'}
             </div>
           </div>
         </div>

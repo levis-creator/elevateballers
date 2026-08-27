@@ -61,6 +61,7 @@ export async function listTeamSeasonRegistrationOptions(teamId: string) {
       closedMessage: registrationSettings.closedBody,
       activeSeason: activeSeason ? { id: activeSeason.id, name: activeSeason.name } : null,
       registrationWindow: registrationWindowDisplay,
+      approvalRequired: registrationSettings.approval,
       history: await getTeamRegistrationHistory(teamId),
     };
   if (!activeSeason)
@@ -70,6 +71,7 @@ export async function listTeamSeasonRegistrationOptions(teamId: string) {
       closedMessage: null,
       activeSeason: null,
       registrationWindow: registrationWindowDisplay,
+      approvalRequired: registrationSettings.approval,
       history: await getTeamRegistrationHistory(teamId),
     };
   const [editions, existingTeams, pendingApplications] = await Promise.all([
@@ -96,7 +98,7 @@ export async function listTeamSeasonRegistrationOptions(teamId: string) {
     }),
     prisma.seasonTeam.findMany({ where: { teamId }, select: { leagueSeasonId: true } }),
     prisma.seasonRegistrationApplication.findMany({
-      where: { teamId, status: { in: ['PENDING', 'OWNERSHIP_VERIFICATION'] } },
+      where: { teamId, status: { in: ['PENDING', 'OWNERSHIP_VERIFICATION', 'APPROVED'] } },
       select: { leagueSeasonId: true },
     }),
   ]);
@@ -137,6 +139,7 @@ export async function listTeamSeasonRegistrationOptions(teamId: string) {
     registrationClosed: options.length === 0 && closedOptions.length > 0,
     closedMessage: firstClosedStatus ? registrationClosedMessage(firstClosedStatus) : null,
     registrationWindow: registrationWindowDisplay,
+    approvalRequired: registrationSettings.approval,
     history: await getTeamRegistrationHistory(teamId),
   };
 }
@@ -262,16 +265,30 @@ export async function submitTeamSeasonRegistration(input: {
     throw new Error('This team already has a registration awaiting review for that season.');
 
   const { application } = await prisma.$transaction(async (tx) => {
+    const seasonTeam = registrationSettings.approval
+      ? null
+      : await tx.seasonTeam.upsert({
+          where: { leagueSeasonId_teamId: { leagueSeasonId: edition.id, teamId: input.teamId } },
+          update: {},
+          create: {
+            leagueSeasonId: edition.id,
+            leagueId: edition.leagueId,
+            seasonId: edition.seasonId,
+            teamId: input.teamId,
+          },
+        });
     const application = await tx.seasonRegistrationApplication.create({
       data: {
         leagueSeasonId: edition.id,
         teamId: input.teamId,
         requestedTeamName: input.teamName,
         type: 'RETURNING_TEAM',
-        status: 'PENDING',
+        status: registrationSettings.approval ? 'PENDING' : 'APPROVED',
         applicantName: input.applicantName,
         applicantEmail: input.applicantEmail,
         notes: input.notes,
+        seasonTeamId: seasonTeam?.id,
+        ...(registrationSettings.approval ? {} : { reviewedAt: new Date() }),
       },
     });
     await tx.registrationNotification.create({
