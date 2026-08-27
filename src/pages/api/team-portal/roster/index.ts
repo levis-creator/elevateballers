@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/features/cms/lib/auth';
 import { requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
 import { handleApiError } from '@/lib/apiError';
+import { calculatePlayerStatistics } from '@/features/player/lib/playerStats';
 
 export const prerender = false;
 
@@ -21,38 +22,77 @@ export const GET: APIRoute = async ({ request }) => {
     const seasonTeam = season
       ? await prisma.seasonTeam.findFirst({
           where: { teamId: team.id, seasonId: season.id },
-          select: { id: true, leagueSeason: { select: { league: { select: { name: true } } } } },
-        })
-      : null;
-    const players = seasonTeam
-      ? await prisma.seasonTeamPlayer.findMany({
-          where: { seasonTeamId: seasonTeam.id, status: 'APPROVED', leftAt: null },
           select: {
             id: true,
-            jerseyNumber: true,
-            position: true,
-            player: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                image: true,
-                position: true,
-                jerseyNumber: true,
-                email: true,
+            leagueSeasonId: true,
+            leagueSeason: { select: { league: { select: { name: true } } } },
+          },
+        })
+      : null;
+    const [players, matches] = seasonTeam
+      ? await Promise.all([
+          prisma.seasonTeamPlayer.findMany({
+            where: {
+              seasonTeamId: seasonTeam.id,
+              status: { in: ['APPROVED', 'PENDING'] },
+              leftAt: null,
+            },
+            select: {
+              id: true,
+              status: true,
+              jerseyNumber: true,
+              position: true,
+              player: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  image: true,
+                  position: true,
+                  jerseyNumber: true,
+                  email: true,
+                },
               },
             },
+            orderBy: [{ jerseyNumber: 'asc' }, { createdAt: 'asc' }],
+          }),
+          prisma.match.findMany({
+            where: { leagueSeasonId: seasonTeam.leagueSeasonId, status: 'COMPLETED' },
+            select: {
+              id: true,
+              status: true,
+              events: {
+                where: { isUndone: false },
+                select: { eventType: true, playerId: true, assistPlayerId: true, isUndone: true },
+              },
+            },
+          }),
+        ])
+      : [[], []];
+    const statsByPlayer = new Map(
+      players.map((entry) => {
+        const stats = calculatePlayerStatistics(matches as any, entry.player.id);
+        return [
+          entry.player.id,
+          {
+            gp: stats.totalMatches,
+            ppg: stats.pointsPerGame,
+            reb: stats.reboundsPerGame,
+            ast: stats.assistsPerGame,
           },
-          orderBy: [{ jerseyNumber: 'asc' }, { createdAt: 'asc' }],
-        })
-      : [];
+        ];
+      })
+    );
     return new Response(
       JSON.stringify({
         team: { id: team.id, name: team.name },
         season,
         seasonTeamId: seasonTeam?.id ?? null,
         leagueName: seasonTeam?.leagueSeason.league.name ?? null,
-        players,
+        players: players.map((entry) => ({
+          ...entry,
+          stats: entry.status === 'APPROVED' ? statsByPlayer.get(entry.player.id) : null,
+        })),
       }),
       { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
     );
@@ -76,13 +116,13 @@ export const POST: APIRoute = async ({ request }) => {
     const jerseyNumber =
       body?.jerseyNumber === '' || body?.jerseyNumber == null ? null : Number(body.jerseyNumber);
 
-    if (!firstName || !lastName || !email) {
+    if (!body?.rosterId && (!firstName || !lastName || !email)) {
       return new Response(
         JSON.stringify({ error: 'First name, last name, and email are required.' }),
         { status: 400 }
       );
     }
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
+    if (!body?.rosterId && !/^\S+@\S+\.\S+$/.test(email)) {
       return new Response(JSON.stringify({ error: 'Enter a valid player email address.' }), {
         status: 400,
       });
@@ -116,8 +156,33 @@ export const POST: APIRoute = async ({ request }) => {
       );
 
     const result = await prisma.$transaction(async (tx) => {
+      if (body?.rosterId) {
+        const current = await tx.seasonTeamPlayer.findFirst({
+          where: { id: String(body.rosterId), seasonTeamId: seasonTeam.id },
+          select: { id: true, playerId: true },
+        });
+        if (!current) throw new Error('Roster entry not found for the active season.');
+        const roster = await tx.seasonTeamPlayer.update({
+          where: { id: current.id },
+          data: { status: 'PENDING', leftAt: null, jerseyNumber, position },
+        });
+        await tx.seasonRosterHistory.create({
+          data: {
+            leagueSeasonId: seasonTeam.leagueSeasonId,
+            playerId: current.playerId,
+            seasonTeamId: seasonTeam.id,
+            rosterId: roster.id,
+            action: 'ROSTER_EDIT_PROPOSED',
+            changedById: user.id,
+          },
+        });
+        return { player: null, roster };
+      }
       const existing = await tx.player.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' } },
+        // The MySQL database collation handles email comparisons
+        // case-insensitively; Prisma's `mode` filter is not supported by this
+        // provider.
+        where: { email },
         select: { id: true, firstName: true, lastName: true },
       });
       const player =
