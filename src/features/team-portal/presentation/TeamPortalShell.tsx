@@ -49,6 +49,13 @@ export default function TeamPortalShell({ name, teams, selectedTeamId, view }: {
     url.searchParams.set('team', next);
     window.location.assign(url.toString());
   };
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } finally {
+      window.location.replace('/login?returnTo=%2Fteam-portal');
+    }
+  };
   const go = (next: PortalView) => `/team-portal?team=${encodeURIComponent(teamId)}&view=${next}`;
   const initials = activeTeam?.name.slice(0, 2).toUpperCase() || 'TM';
 
@@ -61,11 +68,11 @@ export default function TeamPortalShell({ name, teams, selectedTeamId, view }: {
         </div>
         <nav className="flex-1 px-3 py-4" aria-label="Team Portal navigation">
           <div className="mb-2 px-3 font-mono text-[9px] uppercase tracking-[0.18em] text-[#5f574e]">My team</div>
-          {navigation.map(([route, label, Icon]) => <a key={route} href={go(route)} aria-current={view === route ? 'page' : undefined} className={`portal-nav-item ${view === route ? 'portal-nav-active' : ''}`}><span className="flex w-[17px] items-center justify-center"><Icon size={16} strokeWidth={1.8} /></span><span className="flex-1 text-left">{label}</span>{route !== 'overview' && <span className="rounded-full bg-brand px-1.5 py-0.5 font-mono text-[9px] font-bold leading-none text-white">Soon</span>}</a>)}
+          {navigation.map(([route, label, Icon]) => <a key={route} href={go(route)} aria-current={view === route ? 'page' : undefined} className={`portal-nav-item ${view === route ? 'portal-nav-active' : ''}`}><span className="flex w-[17px] items-center justify-center"><Icon size={16} strokeWidth={1.8} /></span><span className="flex-1 text-left">{label}</span>{route !== 'overview' && route !== 'register' && <span className="rounded-full bg-brand px-1.5 py-0.5 font-mono text-[9px] font-bold leading-none text-white">Soon</span>}</a>)}
         </nav>
         <div className="border-t border-white/[0.06] px-3 py-3.5">
           <a href="/admin/profile" className="mb-2 block rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 no-underline transition hover:border-brand/50 hover:bg-brand/[0.08]"><span className="block font-mono text-[9px] uppercase tracking-[0.16em] text-[#5f574e]">Signed in as</span><span className="mt-1 block text-[12.5px] font-bold text-cream">{name}</span><span className="block font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#8a817a]">Team Coach</span></a>
-          <a href="/api/auth/logout" className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/40 bg-brand/[0.12] py-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-brand no-underline hover:bg-brand/[0.2]"><LogOut size={14} strokeWidth={1.8} />Log out</a>
+          <button type="button" onClick={() => void handleLogout()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/40 bg-brand/[0.12] py-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-brand hover:bg-brand/[0.2]"><LogOut size={14} strokeWidth={1.8} />Log out</button>
         </div>
       </aside>
 
@@ -75,7 +82,7 @@ export default function TeamPortalShell({ name, teams, selectedTeamId, view }: {
             <span className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] font-display text-[15px] text-brand">{initials}</span>
             <div className="min-w-0 flex-1"><div className="truncate font-display text-[16px] uppercase leading-none tracking-[0.03em] text-cream min-[900px]:text-[19px]">{activeTeam?.name || 'Team'}</div>{teams.length > 1 && <label className="mt-1.5 flex w-fit max-w-full items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] py-1.5 pl-2.5 pr-2"><span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand"></span><select value={teamId} onChange={(event) => selectTeam(event.target.value)} aria-label="Active team" className="max-w-[220px] truncate rounded-lg bg-transparent font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#b8afa6] outline-none"><option className="bg-[#111010]" value={teamId}>{activeTeam?.name} · Active assignment</option>{teams.filter((team) => team.id !== teamId).map((team) => <option className="bg-[#111010]" value={team.id} key={team.id}>{team.name}</option>)}</select><span className="scope-switch"><ArrowLeftRight size={11} strokeWidth={1.8} />Switch</span></label>}</div>
             <button type="button" aria-label="Toggle light or dark mode" aria-pressed={lightMode} onClick={toggleTheme} className="hidden h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-[#b8afa6] min-[900px]:flex">{lightMode ? <Moon size={15} strokeWidth={1.8} /> : <Sun size={15} strokeWidth={1.8} />}</button>
-            <div className="relative min-[900px]:hidden"><button type="button" aria-label="Open account menu" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)} className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 text-[#b8afa6]"><UserRound size={15} strokeWidth={1.8} /><ChevronDown size={13} strokeWidth={1.8} /></button>{accountMenuOpen && <div className="portal-account-dropdown absolute right-0 top-11 z-50 min-w-[150px] rounded-xl border border-white/[0.1] bg-[#171514] p-1.5 shadow-xl"><a href="/admin/profile" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-semibold text-[#b8afa6] no-underline hover:bg-white/[0.08] hover:text-cream"><UserRound size={14} strokeWidth={1.8} />View profile</a><a href="/api/auth/logout" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-semibold text-brand no-underline hover:bg-brand/[0.12]"><LogOut size={14} strokeWidth={1.8} />Log out</a></div>}</div>
+            <div className="relative min-[900px]:hidden"><button type="button" aria-label="Open account menu" aria-expanded={accountMenuOpen} onClick={() => setAccountMenuOpen((open) => !open)} className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2.5 text-[#b8afa6]"><UserRound size={15} strokeWidth={1.8} /><ChevronDown size={13} strokeWidth={1.8} /></button>{accountMenuOpen && <div className="portal-account-dropdown absolute right-0 top-11 z-50 min-w-[150px] rounded-xl border border-white/[0.1] bg-[#171514] p-1.5 shadow-xl"><a href="/admin/profile" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-semibold text-[#b8afa6] no-underline hover:bg-white/[0.08] hover:text-cream"><UserRound size={14} strokeWidth={1.8} />View profile</a><button type="button" onClick={() => void handleLogout()} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-semibold text-brand hover:bg-brand/[0.12]"><LogOut size={14} strokeWidth={1.8} />Log out</button></div>}</div>
           </div>
         </header>
 
