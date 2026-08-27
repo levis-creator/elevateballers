@@ -56,9 +56,12 @@ export default function TeamSeasonRegistration({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState<{ seasonName: string; leagueName: string } | null>(
-    null
-  );
+  const [submitted, setSubmitted] = useState<{
+    id: string;
+    status: string;
+    seasonName: string;
+    leagueName: string;
+  } | null>(null);
   const [waitlisted, setWaitlisted] = useState(false);
   useEffect(() => {
     fetch(`/api/team-portal/registration?teamId=${encodeURIComponent(teamId)}`, {
@@ -70,14 +73,27 @@ export default function TeamSeasonRegistration({
         return data;
       })
       .then((data) => {
-        setOptions(data.options);
-        setHistory(data.history);
-        setEditionId(data.options[0]?.id ?? '');
+        const nextOptions = Array.isArray(data.options) ? data.options : [];
+        const nextHistory: HistoryRow[] = Array.isArray(data.history) ? data.history : [];
+        const pendingEntry = nextHistory.find(
+          (row) => row.status === 'PENDING' || row.status === 'OWNERSHIP_VERIFICATION'
+        );
+        setOptions(nextOptions);
+        setHistory(nextHistory);
+        setEditionId(nextOptions[0]?.id ?? '');
         setActiveSeasonName(data.activeSeason?.name ?? '');
         setWindowOpensAt(data.registrationWindow?.opensAt ?? null);
         setWindowClosesAt(data.registrationWindow?.closesAt ?? null);
         setRegistrationClosed(data.registrationClosed);
         setClosedMessage(data.closedMessage);
+        if (pendingEntry) {
+          setSubmitted({
+            id: pendingEntry.id,
+            status: pendingEntry.status,
+            seasonName: pendingEntry.seasonName,
+            leagueName: pendingEntry.leagueName,
+          });
+        }
       })
       .catch((cause) =>
         setError(cause instanceof Error ? cause.message : 'Unable to load registration options.')
@@ -86,7 +102,10 @@ export default function TeamSeasonRegistration({
   }, [teamId]);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editionId) return;
+    if (!editionId) {
+      setError('There is no active season registration option available for this team.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -102,6 +121,16 @@ export default function TeamSeasonRegistration({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to submit registration.');
       setSubmitted(data);
+      setHistory((current) => [
+        {
+          id: data.id,
+          seasonName: data.seasonName,
+          leagueName: data.leagueName,
+          status: data.status,
+          date: new Date().toISOString(),
+        },
+        ...current,
+      ]);
       setNotes('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to submit registration.');
@@ -119,8 +148,23 @@ export default function TeamSeasonRegistration({
           body={`${teamName} was sent for ${submitted.seasonName} · ${submitted.leagueName}. Nothing is confirmed until a System Admin approves the entry.`}
           icon={<Check size={20} />}
           tone="success"
+          statusLabel="Under review"
         />
-        <History history={history} />
+        <div className="grid items-start gap-4 min-[980px]:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+          <div className="grid gap-4">
+            <SubmittedSummary teamName={teamName} submitted={submitted} />
+            <History history={history} />
+          </div>
+          <div className="grid gap-4">
+            <EntryWindow
+              activeSeasonName={submitted.seasonName}
+              opensAt={windowOpensAt}
+              closesAt={windowClosesAt}
+              closed={false}
+            />
+            <Requirements teamName={teamName} closed={false} />
+          </div>
+        </div>
       </div>
     );
   const selectedOption = options.find((option) => option.id === editionId) ?? options[0];
@@ -205,6 +249,7 @@ function StatusBand({
   icon,
   tone,
   option,
+  statusLabel,
 }: {
   title: string;
   eyebrow: string;
@@ -212,6 +257,7 @@ function StatusBand({
   icon: React.ReactNode;
   tone: 'success' | 'brand';
   option?: Option;
+  statusLabel?: string;
 }) {
   return (
     <section
@@ -231,7 +277,7 @@ function StatusBand({
               {eyebrow}
             </span>
             <span className="rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.08em] text-[#8a817a]">
-              {tone === 'brand' ? 'Missed' : 'Ready'}
+              {statusLabel || (tone === 'brand' ? 'Missed' : 'Ready')}
             </span>
           </div>
           <h2 className="font-display text-[23px] uppercase leading-[1.05] text-cream">{title}</h2>
@@ -252,6 +298,53 @@ function StatusBand({
         )}
       </div>
     </section>
+  );
+}
+
+function SubmittedSummary({
+  teamName,
+  submitted,
+}: {
+  teamName: string;
+  submitted: { status: string; seasonName: string; leagueName: string };
+}) {
+  return (
+    <section className="portal-registration-card overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+      <div className="border-b border-white/[0.06] px-5 py-4">
+        <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[#5f574e]">
+          What you sent
+        </div>
+        <h3 className="mt-1 font-display text-[19px] uppercase leading-none text-cream">
+          Entry submitted
+        </h3>
+      </div>
+      <div className="grid gap-0 px-5 py-2">
+        <SubmittedRow label="Team" value={teamName} />
+        <SubmittedRow
+          label="League edition"
+          value={`${submitted.leagueName} · ${submitted.seasonName}`}
+        />
+        <SubmittedRow
+          label="Status"
+          value={submitted.status === 'PENDING' ? 'Awaiting admin approval' : submitted.status}
+        />
+      </div>
+      <div className="border-t border-white/[0.06] px-5 py-4 text-[11.5px] leading-relaxed text-[#8a817a]">
+        Your entry is with the league office. It will not become active until a System Admin reviews
+        it.
+      </div>
+    </section>
+  );
+}
+
+function SubmittedRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] py-3 last:border-b-0">
+      <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-[#5f574e]">
+        {label}
+      </span>
+      <span className="text-right text-[12.5px] font-semibold text-cream">{value}</span>
+    </div>
   );
 }
 

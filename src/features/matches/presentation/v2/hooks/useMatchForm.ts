@@ -5,7 +5,10 @@ import {
   matchChecklist,
   type MatchFormData,
 } from '../../../domain/usecases/match-form';
-import { parseLocalDateTimeToUTC, formatUTCToLocalInput } from '../../../domain/usecases/match-datetime';
+import {
+  parseLocalDateTimeToUTC,
+  formatUTCToLocalInput,
+} from '../../../domain/usecases/match-datetime';
 
 export interface TeamOption {
   id: string;
@@ -44,7 +47,7 @@ const EMPTY: MatchFormData = {
 };
 
 async function getJson<T = any>(url: string): Promise<T[]> {
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
   if (!res.ok) return [];
   const d = await res.json();
   if (Array.isArray(d)) return d;
@@ -58,7 +61,15 @@ async function getJson<T = any>(url: string): Promise<T[]> {
  * (POST create / PUT edit, plus "save & add another"). The component is pure
  * presentation over this.
  */
-export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?: string; seasonId?: string; draftRoster?: DraftRosterPlayer[] }) {
+export function useMatchForm({
+  matchId,
+  seasonId,
+  draftRoster = [],
+}: {
+  matchId?: string;
+  seasonId?: string;
+  draftRoster?: DraftRosterPlayer[];
+}) {
   const editing = Boolean(matchId);
 
   const [form, setForm] = useState<MatchFormData>({ ...EMPTY, seasonId: seasonId || '' });
@@ -72,28 +83,36 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
   const [savedCount, setSavedCount] = useState(0);
   const addAnother = useRef(false);
 
-  const setField = useCallback(<K extends keyof MatchFormData>(key: K, value: MatchFormData[K]) => {
-    setForm((prev) => {
-      if (key === 'leagueId') {
-        return { ...prev, leagueId: String(value), seasonId: '', leagueSeasonId: '' };
-      }
-      if (key === 'seasonId') {
-        const selected = seasons.find((season) => season.id === value);
-        return {
-          ...prev,
-          seasonId: String(value),
-          leagueSeasonId: selected?.leagueSeasonId ?? '',
-        };
-      }
-      return { ...prev, [key]: value };
-    });
-  }, [seasons]);
+  const setField = useCallback(
+    <K extends keyof MatchFormData>(key: K, value: MatchFormData[K]) => {
+      setForm((prev) => {
+        if (key === 'leagueId') {
+          return { ...prev, leagueId: String(value), seasonId: '', leagueSeasonId: '' };
+        }
+        if (key === 'seasonId') {
+          const selected = seasons.find((season) => season.id === value);
+          return {
+            ...prev,
+            seasonId: String(value),
+            leagueSeasonId: selected?.leagueSeasonId ?? '',
+          };
+        }
+        return { ...prev, [key]: value };
+      });
+    },
+    [seasons]
+  );
 
   // Option lists ------------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
     const query = matchId ? `?matchId=${encodeURIComponent(matchId)}` : '';
-    fetch(`/api/admin/match-form${query}`)
+    setLoading(Boolean(matchId));
+    setError('');
+    fetch(`/api/admin/match-form${query}`, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error('Failed to load match form data');
         return response.json();
@@ -105,12 +124,18 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
         if (data.match) {
           const m = data.match;
           setForm({
-            team1Id: m.team1Id || '', team1Name: m.team1Name || '',
-            team2Id: m.team2Id || '', team2Name: m.team2Name || '',
-            leagueId: m.leagueId || '', seasonId: m.seasonId || '',
-            leagueSeasonId: m.leagueSeasonId || '', date: m.date ? formatUTCToLocalInput(m.date) : '',
-            status: m.status, stage: m.stage || 'REGULAR_SEASON',
-            team1Score: m.team1Score?.toString() || '', team2Score: m.team2Score?.toString() || '',
+            team1Id: m.team1Id || '',
+            team1Name: m.team1Name || '',
+            team2Id: m.team2Id || '',
+            team2Name: m.team2Name || '',
+            leagueId: m.leagueId || '',
+            seasonId: m.seasonId || '',
+            leagueSeasonId: m.leagueSeasonId || '',
+            date: m.date ? formatUTCToLocalInput(m.date) : '',
+            status: m.status,
+            stage: m.stage || 'REGULAR_SEASON',
+            team1Score: m.team1Score?.toString() || '',
+            team2Score: m.team2Score?.toString() || '',
             duration: m.duration?.toString() || '',
           });
         }
@@ -121,7 +146,9 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [matchId]);
 
   // Fixture eligibility comes from the selected competition roster.
@@ -132,7 +159,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
     }
     let cancelled = false;
     getJson<TeamOption>(
-      `/api/seasons/${form.seasonId}/teams?leagueSeasonId=${encodeURIComponent(form.leagueSeasonId)}`,
+      `/api/seasons/${form.seasonId}/teams?leagueSeasonId=${encodeURIComponent(form.leagueSeasonId)}`
     ).then((list) => {
       if (!cancelled) {
         setTeams(list.map((team) => ({ id: team.id, name: team.name, logo: team.logo ?? null })));
@@ -153,7 +180,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
     }
     let cancelled = false;
     getJson<NamedOption & { leagueSeasons?: { id: string; leagueId: string }[] }>(
-      `/api/seasons?leagueId=${leagueId}&compact=true`,
+      `/api/seasons?leagueId=${leagueId}&compact=true`
     ).then((list) => {
       if (!cancelled) {
         setSeasons(
@@ -162,7 +189,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
             return competition?.id
               ? [{ id: season.id, name: season.name, leagueSeasonId: competition.id }]
               : [];
-          }),
+          })
         );
       }
     });
@@ -227,6 +254,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
         const res = await fetch(matchId ? `/api/matches/${matchId}` : '/api/matches', {
           method: matchId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify(buildPayload()),
         });
         if (!res.ok) {
@@ -242,8 +270,9 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(player),
               });
-              if (!rosterResponse.ok) throw new Error('Match saved, but its roster could not be saved');
-            }),
+              if (!rosterResponse.ok)
+                throw new Error('Match saved, but its roster could not be saved');
+            })
           );
         }
         if (!matchId && mode === 'again') {
@@ -268,7 +297,7 @@ export function useMatchForm({ matchId, seasonId, draftRoster = [] }: { matchId?
         setSaving(false);
       }
     },
-    [form, matchId, draftRoster],
+    [form, matchId, draftRoster]
   );
 
   return {
