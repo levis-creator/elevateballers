@@ -130,7 +130,7 @@ const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPa
   .requirement { display: flex; align-items: center; gap: 12px; margin-top: 2px; font-size: 15px; }
   .lock { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #ff2d43; color: #ff2d43; font-size: 20px; }
   code { display: block; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); color: #8a817a; font: 11px 'Space Mono', monospace; word-break: break-all; }
-  .actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 24px 0 48px; }
+  .actions { display: flex; width: fit-content; max-width: 100%; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 24px auto 48px; }
   .button { display: inline-flex; align-items: center; gap: 14px; min-height: 48px; padding: 0 25px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; transition: .2s ease; }
   .button-primary { background: #e4002b; color: #fff; }
   .button-primary:hover { background: #ff2d43; }
