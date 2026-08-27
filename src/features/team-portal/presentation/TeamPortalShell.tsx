@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeftRight, CalendarDays, ChartNoAxesCombined, Circle, ClipboardList, Home, ListChecks, LogOut, Moon, Sun, Users } from 'lucide-react';
+import { ArrowLeftRight, CalendarDays, ChartNoAxesCombined, Circle, ClipboardList, Home, ListChecks, LogOut, Moon, Sun, UserRound, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTeamPortalThemeStore } from './stores/useTeamPortalThemeStore';
 
@@ -62,7 +62,7 @@ export default function TeamPortalShell({ name, teams, selectedTeamId, view }: {
           {navigation.map(([route, label, Icon]) => <a key={route} href={go(route)} aria-current={view === route ? 'page' : undefined} className={`portal-nav-item ${view === route ? 'portal-nav-active' : ''}`}><span className="flex w-[17px] items-center justify-center"><Icon size={16} strokeWidth={1.8} /></span><span className="flex-1 text-left">{label}</span>{route !== 'overview' && <span className="rounded-full bg-brand px-1.5 py-0.5 font-mono text-[9px] font-bold leading-none text-white">Soon</span>}</a>)}
         </nav>
         <div className="border-t border-white/[0.06] px-3 py-3.5">
-          <div className="mb-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5"><span className="block font-mono text-[9px] uppercase tracking-[0.16em] text-[#5f574e]">Signed in as</span><span className="mt-1 block text-[12.5px] font-bold text-cream">{name}</span><span className="block font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#8a817a]">Team Coach</span></div>
+          <div className="mb-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5"><span className="block font-mono text-[9px] uppercase tracking-[0.16em] text-[#5f574e]">Signed in as</span><span className="mt-1 block text-[12.5px] font-bold text-cream">{name}</span><span className="block font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#8a817a]">Team Coach</span><a href="/admin/profile" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2 py-1.5 font-mono text-[9px] uppercase tracking-[0.08em] text-[#b8afa6] no-underline hover:border-brand/50 hover:text-brand"><UserRound size={12} strokeWidth={1.8} />Profile</a></div>
           <a href="/api/auth/logout" className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/40 bg-brand/[0.12] py-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-brand no-underline hover:bg-brand/[0.2]"><LogOut size={14} strokeWidth={1.8} />Log out</a>
         </div>
       </aside>
