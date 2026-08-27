@@ -614,6 +614,15 @@ export default function RegistrationFormV2({
                     </span>
                   </div>
                 )}
+              {!registrationBlocked && settings.approval && (
+                <div className="col-span-full flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand/[0.06] px-4 py-3 text-[13.5px] text-ink2">
+                  <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" aria-hidden />
+                  <p className="m-0 font-medium">
+                    Admin approval is required. Your registration will remain pending until it is
+                    reviewed.
+                  </p>
+                </div>
+              )}
 
               <div className="col-span-full">
                 <TurnstileWidget
