@@ -44,7 +44,10 @@ export async function getRegistrationReviewQueue(input: {
   if (input.status === 'PENDING' || !input.status) {
     rosterWhere.AND = [
       {
-        OR: [{ status: 'PENDING' }, { status: 'APPROVED', removalRequestedAt: { not: null } }],
+        OR: [
+          { status: 'PENDING' },
+          { status: 'APPROVED', history: { some: { action: 'ROSTER_REMOVAL_PROPOSED' } } },
+        ],
       },
     ];
   } else {
@@ -162,7 +165,10 @@ export async function bulkReviewRosterProposals(input: {
     const rows = await tx.seasonTeamPlayer.findMany({
       where: {
         id: { in: input.ids },
-        OR: [{ status: 'PENDING' }, { status: 'APPROVED', removalRequestedAt: { not: null } }],
+        OR: [
+          { status: 'PENDING' },
+          { status: 'APPROVED', history: { some: { action: 'ROSTER_REMOVAL_PROPOSED' } } },
+        ],
       },
       select: {
         id: true,
@@ -171,14 +177,24 @@ export async function bulkReviewRosterProposals(input: {
         teamId: true,
         playerId: true,
         status: true,
-        removalRequestedAt: true,
+        history: {
+          where: {
+            action: {
+              in: ['ROSTER_REMOVAL_PROPOSED', 'ROSTER_REMOVAL_APPROVED', 'ROSTER_REMOVAL_REJECTED'],
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { action: true },
+        },
       },
     });
     if (!rows.length) return { count: 0 };
     const status = input.action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
     await Promise.all(
       rows.map((row: any) => {
-        const isRemoval = row.status === 'APPROVED' && row.removalRequestedAt;
+        const isRemoval =
+          row.status === 'APPROVED' && row.history[0]?.action === 'ROSTER_REMOVAL_PROPOSED';
         return tx.seasonTeamPlayer.update({
           where: { id: row.id },
           data: isRemoval
@@ -186,10 +202,8 @@ export async function bulkReviewRosterProposals(input: {
               ? {
                   status: 'WITHDRAWN',
                   leftAt: new Date(),
-                  removalRequestedAt: null,
-                  removalRequestedById: null,
                 }
-              : { removalRequestedAt: null, removalRequestedById: null }
+              : {}
             : { status, ...(status === 'REJECTED' ? { leftAt: new Date() } : {}) },
         });
       })
@@ -201,7 +215,7 @@ export async function bulkReviewRosterProposals(input: {
         seasonTeamId: row.seasonTeamId,
         rosterId: row.id,
         action:
-          row.status === 'APPROVED' && row.removalRequestedAt
+          row.status === 'APPROVED' && row.history[0]?.action === 'ROSTER_REMOVAL_PROPOSED'
             ? input.action === 'APPROVE'
               ? 'ROSTER_REMOVAL_APPROVED'
               : 'ROSTER_REMOVAL_REJECTED'

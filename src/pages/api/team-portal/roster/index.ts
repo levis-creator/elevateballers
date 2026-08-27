@@ -314,11 +314,7 @@ export const DELETE: APIRoute = async ({ request }) => {
         history: {
           where: {
             action: {
-              in: [
-                'ROSTER_REMOVAL_PROPOSED',
-                'ROSTER_REMOVAL_APPROVED',
-                'ROSTER_REMOVAL_REJECTED',
-              ],
+              in: ['ROSTER_REMOVAL_PROPOSED', 'ROSTER_REMOVAL_APPROVED', 'ROSTER_REMOVAL_REJECTED'],
             },
           },
           orderBy: { createdAt: 'desc' },
