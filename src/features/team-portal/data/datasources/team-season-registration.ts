@@ -261,29 +261,32 @@ export async function submitTeamSeasonRegistration(input: {
   if (pending)
     throw new Error('This team already has a registration awaiting review for that season.');
 
-  const application = await prisma.seasonRegistrationApplication.create({
-    data: {
-      leagueSeasonId: edition.id,
-      teamId: input.teamId,
-      requestedTeamName: input.teamName,
-      type: 'RETURNING_TEAM',
-      status: 'PENDING',
-      applicantName: input.applicantName,
-      applicantEmail: input.applicantEmail,
-      notes: input.notes,
-    },
-  });
-  await prisma.registrationNotification.create({
-    data: {
-      type: 'TEAM_REGISTERED',
-      teamId: input.teamId,
-      message: `${input.teamName} requested registration for ${edition.season.name} · ${edition.league.name}`,
-      metadata: {
-        applicationId: application.id,
+  const { application } = await prisma.$transaction(async (tx) => {
+    const application = await tx.seasonRegistrationApplication.create({
+      data: {
         leagueSeasonId: edition.id,
+        teamId: input.teamId,
+        requestedTeamName: input.teamName,
         type: 'RETURNING_TEAM',
+        status: 'PENDING',
+        applicantName: input.applicantName,
+        applicantEmail: input.applicantEmail,
+        notes: input.notes,
       },
-    },
+    });
+    await tx.registrationNotification.create({
+      data: {
+        type: 'TEAM_REGISTERED',
+        teamId: input.teamId,
+        message: `${input.teamName} requested registration for ${edition.season.name} · ${edition.league.name}`,
+        metadata: {
+          applicationId: application.id,
+          leagueSeasonId: edition.id,
+          type: 'RETURNING_TEAM',
+        },
+      },
+    });
+    return { application };
   });
   return {
     id: application.id,

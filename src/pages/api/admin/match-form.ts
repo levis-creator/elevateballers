@@ -28,17 +28,40 @@ export const GET: APIRoute = async ({ request, url }) => {
       orderBy: { name: 'asc' },
     });
     const match = matchId
-      ? await prisma.match.findUnique({
-          where: { id: matchId },
+      ? await prisma.match.findFirst({
+          where: { OR: [{ id: matchId }, { slug: matchId }] },
           select: {
-            id: true, team1Id: true, team1Name: true, team2Id: true, team2Name: true,
-            leagueId: true, seasonId: true, leagueSeasonId: true, date: true,
-            team1Score: true, team2Score: true, status: true, stage: true, duration: true,
+            id: true,
+            team1Id: true,
+            team1Name: true,
+            team2Id: true,
+            team2Name: true,
+            leagueId: true,
+            seasonId: true,
+            leagueSeasonId: true,
+            date: true,
+            team1Score: true,
+            team2Score: true,
+            status: true,
+            stage: true,
+            duration: true,
+            team1: { select: { name: true } },
+            team2: { select: { name: true } },
           },
         })
       : null;
 
-    return Response.json({ teams, leagues, match });
+    return Response.json({
+      teams,
+      leagues,
+      match: match
+        ? {
+            ...match,
+            team1Name: match.team1Name || match.team1?.name || '',
+            team2Name: match.team2Name || match.team2?.name || '',
+          }
+        : null,
+    });
   } catch (error) {
     return handleApiError(error, 'fetch match form bootstrap', request);
   }
