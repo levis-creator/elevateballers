@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   logAudit: vi.fn(),
   teamFindUnique: vi.fn(),
   leagueFindUnique: vi.fn(),
+  leagueSeasonFindFirst: vi.fn(),
   staffFindFirst: vi.fn(),
   playerFindMany: vi.fn(),
   playerFindFirst: vi.fn(),
@@ -26,27 +27,83 @@ const mocks = vi.hoisted(() => ({
   siteSettingFindMany: vi.fn(),
 }));
 
-vi.mock('../../../../lib/rateLimit', () => ({ checkRateLimit: mocks.checkRateLimit, resetRateLimit: mocks.resetRateLimit }));
+vi.mock('../../../../lib/rateLimit', () => ({
+  checkRateLimit: mocks.checkRateLimit,
+  resetRateLimit: mocks.resetRateLimit,
+}));
 vi.mock('../../../../lib/turnstile', () => ({ verifyTurnstile: mocks.verifyTurnstile }));
-vi.mock('../../../../lib/registrationGate', () => ({ checkRegistrationOpen: mocks.checkRegistrationOpen }));
-vi.mock('../../../../features/cms/lib/mutations', () => ({ createTeam: mocks.createTeam, createStaff: mocks.createStaff, assignStaffToTeam: mocks.assignStaffToTeam, createPlayer: mocks.createPlayer }));
+vi.mock('../../../../lib/registrationGate', () => ({
+  checkRegistrationOpen: mocks.checkRegistrationOpen,
+}));
+vi.mock('../../../../features/cms/lib/mutations', () => ({
+  createTeam: mocks.createTeam,
+  createStaff: mocks.createStaff,
+  assignStaffToTeam: mocks.assignStaffToTeam,
+  createPlayer: mocks.createPlayer,
+}));
 vi.mock('../../../../features/cms/lib/audit', () => ({ logAudit: mocks.logAudit }));
-vi.mock('../../../../lib/email', () => ({ sendTeamRegistrationAutoReply: mocks.sendTeamRegistrationAutoReply, sendPlayerRegistrationAutoReply: mocks.sendPlayerRegistrationAutoReply, sendAdminNotificationEmail: mocks.sendAdminNotificationEmail }));
-vi.mock('../../../../lib/apiError', () => ({ handleApiError: vi.fn(() => new Response(JSON.stringify({ error: 'unexpected' }), { status: 500 })) }));
+vi.mock('../../../../lib/email', () => ({
+  sendTeamRegistrationAutoReply: mocks.sendTeamRegistrationAutoReply,
+  sendPlayerRegistrationAutoReply: mocks.sendPlayerRegistrationAutoReply,
+  sendAdminNotificationEmail: mocks.sendAdminNotificationEmail,
+}));
+vi.mock('../../../../lib/apiError', () => ({
+  handleApiError: vi.fn(
+    () => new Response(JSON.stringify({ error: 'unexpected' }), { status: 500 })
+  ),
+}));
 vi.mock('../../../../lib/qstash', () => ({ publishToJob: mocks.publishToJob }));
-vi.mock('../../../../features/registration/application/process-registration-email-job', () => ({ processRegistrationEmailJob: vi.fn() }));
-vi.mock('../../../../features/registration/data/datasources/public-submission', () => ({ findSubmission: mocks.findSubmission, submitTeamRegistration: mocks.submitTeamRegistration, submitPlayerRegistration: mocks.submitPlayerRegistration }));
-vi.mock('../../../../lib/prisma', () => ({ prisma: { siteSetting: { findMany: mocks.siteSettingFindMany }, team: { findUnique: mocks.teamFindUnique }, league: { findUnique: mocks.leagueFindUnique }, staff: { findFirst: mocks.staffFindFirst }, player: { findMany: mocks.playerFindMany, findFirst: mocks.playerFindFirst }, registrationNotification: { create: mocks.notificationCreate } } }));
+vi.mock('../../../../features/registration/application/process-registration-email-job', () => ({
+  processRegistrationEmailJob: vi.fn(),
+}));
+vi.mock('../../../../features/registration/data/datasources/public-submission', () => ({
+  findSubmission: mocks.findSubmission,
+  submitTeamRegistration: mocks.submitTeamRegistration,
+  submitPlayerRegistration: mocks.submitPlayerRegistration,
+}));
+vi.mock('../../../../lib/prisma', () => ({
+  prisma: {
+    siteSetting: { findMany: mocks.siteSettingFindMany },
+    team: { findUnique: mocks.teamFindUnique },
+    league: { findUnique: mocks.leagueFindUnique },
+    leagueSeason: { findFirst: mocks.leagueSeasonFindFirst },
+    staff: { findFirst: mocks.staffFindFirst },
+    player: { findMany: mocks.playerFindMany, findFirst: mocks.playerFindFirst },
+    registrationNotification: { create: mocks.notificationCreate },
+  },
+}));
 
 import { POST as postTeam } from '../team';
 import { POST as postPlayer } from '../player';
 
-function request(body: Record<string, unknown>, ip = '203.0.113.10', key = 'test-idempotency-key'): Request {
-  return new Request('https://example.test/api/registration', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip, 'idempotency-key': key }, body: JSON.stringify(body) });
+function request(
+  body: Record<string, unknown>,
+  ip = '203.0.113.10',
+  key = 'test-idempotency-key'
+): Request {
+  return new Request('https://example.test/api/registration', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip, 'idempotency-key': key },
+    body: JSON.stringify(body),
+  });
 }
 
-const teamPayload = { name: '  Mavs   Basketball ', coachName: '  Jane   Doe ', contactEmail: ' JANE@EXAMPLE.COM ', contactPhone: ' (+254) 700-000-000 ', 'cf-turnstile-token': 'token' };
-const playerPayload = { firstName: '  Asha ', lastName: ' Wanjiku ', email: ' ASHA@EXAMPLE.COM ', phone: ' (+254) 700-000-000 ', position: ' PG ', 'cf-turnstile-token': 'token' };
+const teamPayload = {
+  name: '  Mavs   Basketball ',
+  coachName: '  Jane   Doe ',
+  contactEmail: ' JANE@EXAMPLE.COM ',
+  contactPhone: ' (+254) 700-000-000 ',
+  leagueId: 'league-1',
+  'cf-turnstile-token': 'token',
+};
+const playerPayload = {
+  firstName: '  Asha ',
+  lastName: ' Wanjiku ',
+  email: ' ASHA@EXAMPLE.COM ',
+  phone: ' (+254) 700-000-000 ',
+  position: ' PG ',
+  'cf-turnstile-token': 'token',
+};
 
 describe('public registration endpoints', () => {
   beforeEach(() => {
@@ -61,16 +118,41 @@ describe('public registration endpoints', () => {
     mocks.createTeam.mockResolvedValue({ id: 'team-1', name: 'Mavs Basketball' });
     mocks.createStaff.mockResolvedValue({ id: 'staff-1' });
     mocks.assignStaffToTeam.mockResolvedValue(undefined);
-    mocks.createPlayer.mockResolvedValue({ id: 'player-1', firstName: 'Asha', lastName: 'Wanjiku' });
+    mocks.createPlayer.mockResolvedValue({
+      id: 'player-1',
+      firstName: 'Asha',
+      lastName: 'Wanjiku',
+    });
     mocks.teamFindUnique.mockResolvedValue(null);
     mocks.leagueFindUnique.mockResolvedValue(null);
+    mocks.leagueSeasonFindFirst.mockResolvedValue({
+      id: 'league-season-1',
+      leagueId: 'league-1',
+      seasonId: 'season-1',
+    });
     mocks.staffFindFirst.mockResolvedValue(null);
     mocks.playerFindMany.mockResolvedValue([]);
     mocks.playerFindFirst.mockResolvedValue(null);
     mocks.notificationCreate.mockResolvedValue(undefined);
     mocks.findSubmission.mockResolvedValue(null);
-    mocks.submitTeamRegistration.mockResolvedValue({ response: { success: true, message: 'Team registration submitted successfully', entityId: 'team-1' }, jobIds: ['job-team'], teamId: 'team-1' });
-    mocks.submitPlayerRegistration.mockResolvedValue({ response: { success: true, message: 'Player registration submitted successfully', entityId: 'player-1' }, jobIds: ['job-player'], playerId: 'player-1' });
+    mocks.submitTeamRegistration.mockResolvedValue({
+      response: {
+        success: true,
+        message: 'Team registration submitted successfully',
+        entityId: 'team-1',
+      },
+      jobIds: ['job-team'],
+      teamId: 'team-1',
+    });
+    mocks.submitPlayerRegistration.mockResolvedValue({
+      response: {
+        success: true,
+        message: 'Player registration submitted successfully',
+        entityId: 'player-1',
+      },
+      jobIds: ['job-player'],
+      playerId: 'player-1',
+    });
     mocks.publishToJob.mockResolvedValue(true);
     mocks.siteSettingFindMany.mockResolvedValue([
       { key: 'registration_open', value: 'true' },
@@ -81,7 +163,9 @@ describe('public registration endpoints', () => {
   });
 
   it('rejects honeypot submissions before security verification', async () => {
-    const response = await postTeam({ request: request({ ...teamPayload, website: 'bot' }) } as any);
+    const response = await postTeam({
+      request: request({ ...teamPayload, website: 'bot' }),
+    } as any);
     expect(response.status).toBe(400);
     expect(mocks.verifyTurnstile).not.toHaveBeenCalled();
     expect(mocks.createTeam).not.toHaveBeenCalled();
@@ -91,7 +175,9 @@ describe('public registration endpoints', () => {
     mocks.checkRateLimit.mockResolvedValueOnce(false);
     const response = await postPlayer({ request: request(playerPayload) } as any);
     expect(response.status).toBe(429);
-    expect(await response.json()).toEqual(expect.objectContaining({ error: expect.stringContaining('could not process') }));
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ error: expect.stringContaining('could not process') })
+    );
     expect(mocks.verifyTurnstile).not.toHaveBeenCalled();
   });
 
@@ -99,14 +185,31 @@ describe('public registration endpoints', () => {
     mocks.verifyTurnstile.mockResolvedValue(false);
     const response = await postPlayer({ request: request(playerPayload) } as any);
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'Security check failed. Please refresh and try again.' });
+    expect(await response.json()).toEqual({
+      error: 'Security check failed. Please refresh and try again.',
+    });
   });
 
   it('normalizes the team payload before persistence', async () => {
     const response = await postTeam({ request: request(teamPayload) } as any);
     expect(response.status).toBe(201);
-    expect(mocks.checkRegistrationOpen).toHaveBeenCalledWith(undefined, undefined, undefined, { siteMasterOpen: true });
-    expect(mocks.submitTeamRegistration).toHaveBeenCalledWith(expect.objectContaining({ name: 'Mavs Basketball', contactEmail: 'jane@example.com', contactPhone: '+254700000000', idempotencyKey: 'test-idempotency-key' }));
+    expect(mocks.checkRegistrationOpen).toHaveBeenCalledWith(
+      'league-1',
+      'season-1',
+      'league-season-1',
+      { siteMasterOpen: true }
+    );
+    expect(mocks.submitTeamRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Mavs Basketball',
+        contactEmail: 'jane@example.com',
+        contactPhone: '+254700000000',
+        leagueId: 'league-1',
+        seasonId: 'season-1',
+        leagueSeasonId: 'league-season-1',
+        idempotencyKey: 'test-idempotency-key',
+      })
+    );
   });
 
   it('releases consumed limits when team persistence fails', async () => {
@@ -120,7 +223,9 @@ describe('public registration endpoints', () => {
     mocks.playerFindFirst.mockResolvedValueOnce({ id: 'existing-player' });
     const response = await postPlayer({ request: request(playerPayload) } as any);
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual(expect.objectContaining({ error: expect.stringContaining('could not process') }));
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ error: expect.stringContaining('could not process') })
+    );
     expect(mocks.createPlayer).not.toHaveBeenCalled();
   });
 });

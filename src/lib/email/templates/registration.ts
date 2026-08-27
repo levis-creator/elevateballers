@@ -2,7 +2,13 @@ import crypto from 'node:crypto';
 import { logAuditSystem } from '../../../features/cms/lib/audit';
 import { C, SITE_URL, BREVO_FROM, BREVO_SENDER_NAME } from '../config';
 import { getBrevoClient, hashValue, hashRecipients } from '../providers';
-import { emailWrapper, btn, sendTransactionalEmail, getAdminRecipientEmails, getBrevoCredential } from '../core';
+import {
+  emailWrapper,
+  btn,
+  sendTransactionalEmail,
+  getAdminRecipientEmails,
+  getBrevoCredential,
+} from '../core';
 import { configuredEmailTemplate } from '../runtime-settings';
 
 export async function sendTeamRegistrationAutoReply(data: {
@@ -11,8 +17,15 @@ export async function sendTeamRegistrationAutoReply(data: {
   teamName: string;
   leagueName?: string | null;
 }): Promise<void> {
-  const configured = await configuredEmailTemplate('registration', { name: data.coachName, firstName: data.coachName.split(/\s+/)[0], email: data.email, team: data.teamName, league: data.leagueName || 'Elevate Ballers', season: 'current', applicationId: 'your application' });
-  if (!configured) return;
+  const configured = await configuredEmailTemplate('registration', {
+    name: data.coachName,
+    firstName: data.coachName.split(/\s+/)[0],
+    email: data.email,
+    team: data.teamName,
+    league: data.leagueName || 'Elevate Ballers',
+    season: 'current',
+    applicationId: 'your application',
+  });
   const leagueLine = data.leagueName
     ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">League: <strong>${data.leagueName}</strong></p>`
     : '';
@@ -35,7 +48,7 @@ export async function sendTeamRegistrationAutoReply(data: {
 
   await sendTransactionalEmail({
     to: data.email,
-    subject: configured.subject,
+    subject: configured?.subject || 'Team registration received',
     html: configured ? emailWrapper(configured.html) : html,
     audit: { template: 'team_registration_auto_reply' },
   });
@@ -120,8 +133,15 @@ export async function sendPlayerRegistrationAutoReply(data: {
   email: string;
   teamName?: string | null;
 }): Promise<void> {
-  const configured = await configuredEmailTemplate('registration', { name: data.name, firstName: data.name.split(/\s+/)[0], email: data.email, team: data.teamName || 'your player registration', league: 'Elevate Ballers', season: 'current', applicationId: 'your application' });
-  if (!configured) return;
+  const configured = await configuredEmailTemplate('registration', {
+    name: data.name,
+    firstName: data.name.split(/\s+/)[0],
+    email: data.email,
+    team: data.teamName || 'your player registration',
+    league: 'Elevate Ballers',
+    season: 'current',
+    applicationId: 'your application',
+  });
   const teamLine = data.teamName
     ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Team preference: <strong>${data.teamName}</strong></p>`
     : '';
@@ -144,7 +164,7 @@ export async function sendPlayerRegistrationAutoReply(data: {
 
   await sendTransactionalEmail({
     to: data.email,
-    subject: configured.subject,
+    subject: configured?.subject || 'Player registration received',
     html: configured ? emailWrapper(configured.html) : html,
     audit: { template: 'player_registration_auto_reply' },
   });
@@ -228,7 +248,17 @@ export async function sendTeamApprovedEmail(data: {
   email: string;
   teamName: string;
 }): Promise<void> {
-  const configured = await configuredEmailTemplate('approved', { name: data.coachName, firstName: data.coachName.split(/\s+/)[0], email: data.email, team: data.teamName, league: 'Elevate Ballers', season: 'current', status: 'approved', applicationId: 'your application', amount: 'the applicable entry fee' });
+  const configured = await configuredEmailTemplate('approved', {
+    name: data.coachName,
+    firstName: data.coachName.split(/\s+/)[0],
+    email: data.email,
+    team: data.teamName,
+    league: 'Elevate Ballers',
+    season: 'current',
+    status: 'approved',
+    applicationId: 'your application',
+    amount: 'the applicable entry fee',
+  });
   if (!configured) return;
   const html = emailWrapper(`
     <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">Team Approved!</h2>
@@ -259,7 +289,17 @@ export async function sendPlayerApprovedEmail(data: {
   email: string;
   teamName?: string | null;
 }): Promise<void> {
-  const configured = await configuredEmailTemplate('approved', { name: data.name, firstName: data.name.split(/\s+/)[0], email: data.email, team: data.teamName || 'your player registration', league: 'Elevate Ballers', season: 'current', status: 'approved', applicationId: 'your application', amount: 'the applicable entry fee' });
+  const configured = await configuredEmailTemplate('approved', {
+    name: data.name,
+    firstName: data.name.split(/\s+/)[0],
+    email: data.email,
+    team: data.teamName || 'your player registration',
+    league: 'Elevate Ballers',
+    season: 'current',
+    status: 'approved',
+    applicationId: 'your application',
+    amount: 'the applicable entry fee',
+  });
   if (!configured) return;
   const teamLine = data.teamName
     ? `<p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Team: <strong>${data.teamName}</strong></p>`
@@ -315,8 +355,30 @@ function registrationVariables(data: RegistrationDecisionEmail) {
   };
 }
 
-export async function sendRegistrationRejectedEmail(data: RegistrationDecisionEmail): Promise<void> {
-  const configured = await configuredEmailTemplate('rejected', registrationVariables({ ...data, status: data.status || 'rejected' }));
+export async function sendRegistrationApprovedEmail(
+  data: RegistrationDecisionEmail
+): Promise<void> {
+  const configured = await configuredEmailTemplate(
+    'approved',
+    registrationVariables({ ...data, status: data.status || 'approved' })
+  );
+  if (!configured) return;
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: configured.subject,
+    html: emailWrapper(configured.html),
+    dedupeKey: `registration-approved:${data.applicationId || data.teamName}:${data.email}`,
+    audit: { template: 'registration_approved' },
+  });
+}
+
+export async function sendRegistrationRejectedEmail(
+  data: RegistrationDecisionEmail
+): Promise<void> {
+  const configured = await configuredEmailTemplate(
+    'rejected',
+    registrationVariables({ ...data, status: data.status || 'rejected' })
+  );
   if (!configured) return;
   await sendTransactionalEmail({
     to: data.email,
@@ -327,8 +389,13 @@ export async function sendRegistrationRejectedEmail(data: RegistrationDecisionEm
   });
 }
 
-export async function sendRegistrationPaymentEmail(data: RegistrationDecisionEmail & { amount: string }): Promise<void> {
-  const configured = await configuredEmailTemplate('payment', registrationVariables({ ...data, status: data.status || 'paid' }));
+export async function sendRegistrationPaymentEmail(
+  data: RegistrationDecisionEmail & { amount: string }
+): Promise<void> {
+  const configured = await configuredEmailTemplate(
+    'payment',
+    registrationVariables({ ...data, status: data.status || 'paid' })
+  );
   if (!configured) return;
   await sendTransactionalEmail({
     to: data.email,
