@@ -42,7 +42,13 @@ export const GET: APIRoute = async ({ request }) => {
               status: true,
               jerseyNumber: true,
               position: true,
-              proposalNote: true,
+              removalRequestedAt: true,
+              history: {
+                where: { action: { in: ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED'] } },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+                select: { reason: true },
+              },
               player: {
                 select: {
                   id: true,
@@ -93,7 +99,10 @@ export const GET: APIRoute = async ({ request }) => {
         seasonTeamId: seasonTeam?.id ?? null,
         leagueName: seasonTeam?.leagueSeason.league.name ?? null,
         players: players.map((entry) => ({
-          ...entry,
+          ...(() => {
+            const { history, ...rosterEntry } = entry;
+            return { ...rosterEntry, proposalNote: history[0]?.reason ?? null };
+          })(),
           stats: entry.status === 'APPROVED' ? statsByPlayer.get(entry.player.id) : null,
         })),
       }),
@@ -179,7 +188,7 @@ export const POST: APIRoute = async ({ request }) => {
         if (!current) throw new Error('Roster entry not found for the active season.');
         const roster = await tx.seasonTeamPlayer.update({
           where: { id: current.id },
-          data: { status: 'PENDING', leftAt: null, jerseyNumber, position, proposalNote: note },
+          data: { status: 'PENDING', leftAt: null, jerseyNumber, position },
         });
         await tx.seasonRosterHistory.create({
           data: {
@@ -218,7 +227,7 @@ export const POST: APIRoute = async ({ request }) => {
         }));
       const roster = await tx.seasonTeamPlayer.upsert({
         where: { seasonTeamId_playerId: { seasonTeamId: seasonTeam.id, playerId: player.id } },
-        update: { status: 'PENDING', leftAt: null, jerseyNumber, position, proposalNote: note },
+        update: { status: 'PENDING', leftAt: null, jerseyNumber, position },
         create: {
           leagueSeasonId: seasonTeam.leagueSeasonId,
           seasonTeamId: seasonTeam.id,
@@ -227,7 +236,6 @@ export const POST: APIRoute = async ({ request }) => {
           jerseyNumber,
           position,
           status: 'PENDING',
-          proposalNote: note,
         },
       });
       await tx.seasonRosterHistory.create({
@@ -257,5 +265,67 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     return handleApiError(error, 'propose Team Portal roster player', request);
+  }
+};
+
+export const DELETE: APIRoute = async ({ request }) => {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) return new Response(JSON.stringify({ error: 'Sign-in required.' }), { status: 401 });
+    const body = await request.json().catch(() => ({}));
+    const { team } = await requireActiveTeamContext(user.id, body?.teamId);
+    const season = await prisma.season.findFirst({
+      where: { active: true },
+      orderBy: { startDate: 'desc' },
+      select: { id: true },
+    });
+    const seasonTeam = season
+      ? await prisma.seasonTeam.findFirst({
+          where: { teamId: team.id, seasonId: season.id },
+          select: { id: true, leagueSeasonId: true },
+        })
+      : null;
+    if (!seasonTeam)
+      return new Response(
+        JSON.stringify({ error: 'This team is not registered for the active season.' }),
+        { status: 409 }
+      );
+    const roster = await prisma.seasonTeamPlayer.findFirst({
+      where: {
+        id: String(body?.rosterId || ''),
+        seasonTeamId: seasonTeam.id,
+        status: 'APPROVED',
+        leftAt: null,
+      },
+      select: { id: true, playerId: true },
+    });
+    if (!roster)
+      return new Response(
+        JSON.stringify({ error: 'Only an approved active player can be requested for removal.' }),
+        { status: 409 }
+      );
+    await prisma.$transaction(async (tx) => {
+      await tx.seasonTeamPlayer.update({
+        where: { id: roster.id },
+        data: { removalRequestedAt: new Date(), removalRequestedById: user.id },
+      });
+      await tx.seasonRosterHistory.create({
+        data: {
+          leagueSeasonId: seasonTeam.leagueSeasonId,
+          playerId: roster.playerId,
+          seasonTeamId: seasonTeam.id,
+          rosterId: roster.id,
+          action: 'ROSTER_REMOVAL_PROPOSED',
+          changedById: user.id,
+          reason: String(body?.reason ?? '').trim() || null,
+        },
+      });
+    });
+    return new Response(JSON.stringify({ message: 'Removal request sent for admin approval.' }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
+  } catch (error) {
+    return handleApiError(error, 'request Team Portal roster removal', request);
   }
 };
