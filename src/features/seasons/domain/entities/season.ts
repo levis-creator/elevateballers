@@ -33,6 +33,20 @@ export type SeasonTally = Pick<AdminSeason, "matches" | "completed">;
 
 export type SeasonStatus = "Live" | "Upcoming" | "Completed";
 
+export class ActiveSeasonConflictError extends Error {
+	constructor() {
+		super("Only one active season is allowed. Complete the current active season before activating another.");
+		this.name = "ActiveSeasonConflictError";
+	}
+}
+
+/** Enforces the product invariant that at most one season is active. */
+export function assertSingleActiveSeason(activeSeasonCount: number, activating: boolean): void {
+	if (activating && activeSeasonCount > 0) {
+		throw new ActiveSeasonConflictError();
+	}
+}
+
 /**
  * The dates decide the lifecycle; `active` is the admin's override for ending a
  * season early ("Mark completed"). There is no status column, so:

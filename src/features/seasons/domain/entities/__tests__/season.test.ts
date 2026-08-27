@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	type AdminSeason,
+	assertSingleActiveSeason,
 	SEASON_FILTERS,
 	computeStats,
 	countByFilter,
@@ -12,6 +13,20 @@ import {
 } from '../season';
 
 const NOW = new Date('2026-07-12T12:00:00Z');
+
+describe('assertSingleActiveSeason', () => {
+	it('allows activation when no other season is active', () => {
+		expect(() => assertSingleActiveSeason(0, true)).not.toThrow();
+	});
+
+	it('rejects activation when another season is active', () => {
+		expect(() => assertSingleActiveSeason(1, true)).toThrow(/Only one active season is allowed/);
+	});
+
+	it('allows completing a season even when another active season exists', () => {
+		expect(() => assertSingleActiveSeason(1, false)).not.toThrow();
+	});
+});
 
 function season(overrides: Partial<AdminSeason> = {}): AdminSeason {
 	return {
