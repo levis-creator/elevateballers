@@ -50,6 +50,9 @@ export function handleApiError(error: unknown, context: string, request?: Reques
   if (error instanceof Error && error.name === 'ActiveSeasonConflictError') {
     return json({ error: msg }, 409);
   }
+  if (error instanceof Error && error.name === 'RegistrationConflictError') {
+    return json({ error: msg }, 409);
+  }
 
   // Validation errors thrown by parseBody() / schema.parse()
   if (error instanceof ZodError) {
