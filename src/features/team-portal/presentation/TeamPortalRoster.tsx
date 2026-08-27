@@ -7,6 +7,7 @@ type Player = {
   stats: { gp: number; ppg: number; reb: number; ast: number } | null;
   jerseyNumber: number | null;
   position: string | null;
+  removalRequestedAt: string | null;
   proposalNote: string | null;
   player: {
     id: string;
@@ -28,14 +29,16 @@ type RosterData = {
   players: Player[];
 };
 
-const rosterStyles = `.portal-roster-card{background:var(--portal-surface,#111010);border-color:var(--portal-border,rgba(255,255,255,.08))}.portal-roster-toolbar{background:var(--portal-surface,#111010);border-color:var(--portal-border,rgba(255,255,255,.08))}.portal-roster-row{border-color:var(--portal-border-muted,rgba(255,255,255,.06))}.portal-roster-number,.portal-roster-edit{border-color:var(--portal-border,rgba(255,255,255,.08));background:var(--portal-surface-muted,rgba(255,255,255,.03))}.portal-roster-action{cursor:pointer}.portal-roster-filter{flex-shrink:0;min-height:40px;padding:9px 14px;border-radius:999px!important;font-family:'Space Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}.portal-roster-filter:not(.roster-filter-active){border-color:var(--portal-border);background:var(--portal-surface-muted);color:var(--portal-muted,#8a817a)}.portal-roster-filter.roster-filter-active{border-color:#e4002b;background:rgba(228,0,43,.14);color:#ff5a72}.portal-roster-edit{min-height:44px;padding:11px 16px;border-radius:9px!important;font-family:Archivo,sans-serif;font-size:12px;font-weight:700;white-space:nowrap;color:var(--portal-text-muted,#b8afa6)}.portal-roster-primary{border-color:#e4002b;background:#e4002b;color:#fff}.portal-roster-edit:hover{border-color:#e4002b;color:#e4002b}.portal-roster-primary:hover{background:#ff2d43;color:#fff}.portal-light .portal-roster-card,.portal-light .portal-roster-toolbar{--portal-surface:#fff;--portal-border:#e6e1d8;--portal-border-muted:#ece7df;--portal-surface-muted:#f4f1ea;--portal-muted:#6f665c;--portal-text-muted:#4a443d}.portal-light .portal-roster-card .text-cream{color:#141009!important}.portal-light .portal-roster-card .text-\[\#8a817a\]{color:#6f665c!important}.portal-light .portal-roster-card .text-\[\#5f574e\]{color:#9a9084!important}`;
+const rosterStyles = `.portal-roster-card{background:var(--portal-surface,#111010);border-color:var(--portal-border,rgba(255,255,255,.08))}.portal-roster-toolbar{background:var(--portal-surface,#111010);border-color:var(--portal-border,rgba(255,255,255,.08))}.portal-roster-row{border-color:var(--portal-border-muted,rgba(255,255,255,.06))}.portal-roster-number,.portal-roster-edit{border-color:var(--portal-border,rgba(255,255,255,.08));background:var(--portal-surface-muted,rgba(255,255,255,.03))}.portal-roster-action{cursor:pointer}.portal-roster-filter{flex-shrink:0;min-height:40px;padding:9px 14px;border-radius:999px!important;font-family:'Space Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}.portal-roster-filter:not(.roster-filter-active){border-color:var(--portal-border);background:var(--portal-surface-muted);color:var(--portal-muted,#8a817a)}.portal-roster-filter.roster-filter-active{border-color:#e4002b;background:rgba(228,0,43,.14);color:#ff5a72}.portal-roster-edit{min-height:44px;padding:11px 16px;border-radius:9px!important;font-family:Archivo,sans-serif;font-size:12px;font-weight:700;white-space:nowrap;color:var(--portal-text-muted,#b8afa6)}.portal-roster-input{width:100%;border:1px solid var(--portal-border);border-radius:9px;background:var(--portal-surface-muted);padding:11px 12px;font-family:Archivo,sans-serif;font-size:13px;color:var(--portal-text,#f3efe9);outline:none}.portal-roster-input:focus{border-color:#e4002b;box-shadow:0 0 0 3px rgba(228,0,43,.14)}.portal-roster-input::placeholder{color:var(--portal-muted,#8a817a)}.portal-roster-primary{border-color:#e4002b;background:#e4002b;color:#fff}.portal-roster-edit:hover{border-color:#e4002b;color:#e4002b}.portal-roster-primary:hover{background:#ff2d43;color:#fff}.portal-light .portal-roster-card,.portal-light .portal-roster-toolbar{--portal-surface:#fff;--portal-border:#e6e1d8;--portal-border-muted:#ece7df;--portal-surface-muted:#f4f1ea;--portal-muted:#6f665c;--portal-text:#141009;--portal-text-muted:#4a443d}.portal-light .portal-roster-card .text-cream{color:#141009!important}.portal-light .portal-roster-card .text-\[\#8a817a\]{color:#6f665c!important}.portal-light .portal-roster-card .text-\[\#5f574e\]{color:#9a9084!important}`;
 
 export default function TeamPortalRoster({
   teamId,
   teamName,
+  onOpenPlayer,
 }: {
   teamId: string;
   teamName: string;
+  onOpenPlayer: (playerId: string) => string;
 }) {
   const [data, setData] = useState<RosterData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +133,22 @@ export default function TeamPortalRoster({
       setSubmitting(false);
     }
   };
+  const requestRemoval = async (entry: Player) => {
+    const name = `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim();
+    if (!window.confirm(`Request removal of ${name || 'this player'} from the active roster?`))
+      return;
+    const response = await fetch('/api/team-portal/roster', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamId, rosterId: entry.id }),
+    });
+    const value = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(value.error || 'Unable to request player removal.');
+      return;
+    }
+    await loadRoster();
+  };
   const players = data?.players ?? [];
   const visiblePlayers = players.filter((entry) => {
     if (filter === 'cleared') return entry.status === 'APPROVED';
@@ -204,12 +223,12 @@ export default function TeamPortalRoster({
             >
               <form
                 onSubmit={submitProposal}
-                className="portal-roster-card w-full max-w-[620px] rounded-2xl border p-5 shadow-2xl"
+                className="portal-roster-card flex max-h-[calc(100vh-2rem)] w-full max-w-[620px] flex-col overflow-y-auto rounded-2xl border shadow-2xl"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="propose-player-title"
               >
-                <div className="mb-5 flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-4">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-brandsoft">
                       Roster proposal
@@ -235,7 +254,7 @@ export default function TeamPortalRoster({
                     <X size={16} />
                   </button>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-x-4 gap-y-4 px-5 py-5 sm:grid-cols-2">
                   {(
                     [
                       ['firstName', 'First name'],
@@ -264,7 +283,7 @@ export default function TeamPortalRoster({
                           onChange={(event) =>
                             setForm((current) => ({ ...current, position: event.target.value }))
                           }
-                          className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[13px] text-cream outline-none focus:border-brand"
+                          className="portal-roster-input"
                         >
                           <option value="">Select position</option>
                           <option value="PG">PG · Point guard</option>
@@ -281,7 +300,7 @@ export default function TeamPortalRoster({
                             setForm((current) => ({ ...current, note: event.target.value }))
                           }
                           placeholder="Add context for the league office"
-                          className="w-full resize-y rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[13px] text-cream outline-none focus:border-brand"
+                          className="portal-roster-input resize-y"
                         />
                       ) : (
                         <input
@@ -308,7 +327,7 @@ export default function TeamPortalRoster({
                           onChange={(event) =>
                             setForm((current) => ({ ...current, [key]: event.target.value }))
                           }
-                          className="w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[13px] text-cream outline-none focus:border-brand"
+                          className="portal-roster-input"
                         />
                       )}
                     </label>
@@ -323,7 +342,7 @@ export default function TeamPortalRoster({
                     {proposalError || proposalMessage}
                   </div>
                 )}
-                <div className="mt-5 flex justify-end gap-2">
+                <div className="flex justify-end gap-2 border-t border-white/[0.08] px-5 py-4">
                   <button
                     type="button"
                     onClick={() => setProposalOpen(false)}
@@ -349,7 +368,13 @@ export default function TeamPortalRoster({
             {visiblePlayers.length ? (
               <div className="grid gap-0">
                 {visiblePlayers.map((entry) => (
-                  <PlayerRow key={entry.id} entry={entry} onEdit={() => openEdit(entry)} />
+                  <PlayerRow
+                    key={entry.id}
+                    entry={entry}
+                    onEdit={() => openEdit(entry)}
+                    onOpenPlayer={onOpenPlayer}
+                    onRequestRemoval={() => void requestRemoval(entry)}
+                  />
                 ))}
               </div>
             ) : (
@@ -370,13 +395,38 @@ export default function TeamPortalRoster({
   );
 }
 
-function PlayerRow({ entry, onEdit }: { entry: Player; onEdit: () => void }) {
+function PlayerRow({
+  entry,
+  onEdit,
+  onOpenPlayer,
+  onRequestRemoval,
+}: {
+  entry: Player;
+  onEdit: () => void;
+  onOpenPlayer: (playerId: string) => string;
+  onRequestRemoval: () => void;
+}) {
   const name =
     `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim() || 'Unnamed player';
   const number = entry.jerseyNumber ?? entry.player.jerseyNumber;
   const position = entry.position || entry.player.position || 'Position not set';
+  const openPlayer = () => {
+    window.location.assign(onOpenPlayer(entry.player.id));
+  };
   return (
-    <div className="portal-roster-row border-b px-5 py-4 last:border-b-0">
+    <div
+      className="portal-roster-row cursor-pointer border-b px-5 py-4 last:border-b-0"
+      role="link"
+      tabIndex={0}
+      onClick={openPlayer}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openPlayer();
+        }
+      }}
+      aria-label={`Open ${name} player page`}
+    >
       <div className="flex flex-wrap items-center gap-4">
         <div className="portal-roster-number flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-lg border font-display text-[15px] leading-none text-[#b8afa6]">
           {number ?? '—'}
@@ -410,12 +460,27 @@ function PlayerRow({ entry, onEdit }: { entry: Player; onEdit: () => void }) {
           )}
           <button
             type="button"
-            onClick={onEdit}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit();
+            }}
             aria-label={`Propose an edit for ${name}`}
             className="portal-roster-action portal-roster-edit border disabled:opacity-50"
           >
             Propose edit
           </button>
+          {entry.status === 'APPROVED' && !entry.removalRequestedAt && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRequestRemoval();
+              }}
+              className="portal-roster-action portal-roster-remove border border-brand/30 bg-brand/[0.08] px-3 py-2.5 font-body text-[11.5px] font-bold text-brand hover:bg-brand/[0.16]"
+            >
+              Request removal
+            </button>
+          )}
         </div>
       </div>
     </div>

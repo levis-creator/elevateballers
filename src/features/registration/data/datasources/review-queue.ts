@@ -30,7 +30,6 @@ export async function getRegistrationReviewQueue(input: {
   const includeTeams = !input.kind || input.kind === 'TEAM';
   const includeRoster = !input.kind || input.kind === 'ROSTER';
   const rosterWhere: any = {
-    status: input.status || 'PENDING',
     ...(input.search
       ? {
           OR: [
@@ -42,6 +41,15 @@ export async function getRegistrationReviewQueue(input: {
         }
       : {}),
   };
+  if (input.status === 'PENDING' || !input.status) {
+    rosterWhere.AND = [
+      {
+        OR: [{ status: 'PENDING' }, { status: 'APPROVED', removalRequestedAt: { not: null } }],
+      },
+    ];
+  } else {
+    rosterWhere.status = input.status;
+  }
   const [players, teams, playerTotal, teamTotal, rosterProposals, rosterTotal] = await Promise.all([
     includePlayers
       ? db.player.findMany({
@@ -73,7 +81,11 @@ export async function getRegistrationReviewQueue(input: {
             team: true,
             leagueSeason: { include: { season: true, league: true } },
             history: {
-              where: { action: { in: ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED'] } },
+              where: {
+                action: {
+                  in: ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED', 'ROSTER_REMOVAL_PROPOSED'],
+                },
+              },
               orderBy: { createdAt: 'desc' },
               take: 1,
             },
@@ -148,22 +160,54 @@ export async function bulkReviewRosterProposals(input: {
   const db = prisma as any;
   return db.$transaction(async (tx: any) => {
     const rows = await tx.seasonTeamPlayer.findMany({
-      where: { id: { in: input.ids }, status: 'PENDING' },
-      select: { id: true, leagueSeasonId: true, seasonTeamId: true, teamId: true, playerId: true },
+      where: {
+        id: { in: input.ids },
+        OR: [{ status: 'PENDING' }, { status: 'APPROVED', removalRequestedAt: { not: null } }],
+      },
+      select: {
+        id: true,
+        leagueSeasonId: true,
+        seasonTeamId: true,
+        teamId: true,
+        playerId: true,
+        status: true,
+        removalRequestedAt: true,
+      },
     });
     if (!rows.length) return { count: 0 };
     const status = input.action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
-    await tx.seasonTeamPlayer.updateMany({
-      where: { id: { in: rows.map((row: any) => row.id) } },
-      data: { status, ...(status === 'REJECTED' ? { leftAt: new Date() } : {}) },
-    });
+    await Promise.all(
+      rows.map((row: any) => {
+        const isRemoval = row.status === 'APPROVED' && row.removalRequestedAt;
+        return tx.seasonTeamPlayer.update({
+          where: { id: row.id },
+          data: isRemoval
+            ? input.action === 'APPROVE'
+              ? {
+                  status: 'WITHDRAWN',
+                  leftAt: new Date(),
+                  removalRequestedAt: null,
+                  removalRequestedById: null,
+                }
+              : { removalRequestedAt: null, removalRequestedById: null }
+            : { status, ...(status === 'REJECTED' ? { leftAt: new Date() } : {}) },
+        });
+      })
+    );
     await tx.seasonRosterHistory.createMany({
       data: rows.map((row: any) => ({
         leagueSeasonId: row.leagueSeasonId,
         playerId: row.playerId,
         seasonTeamId: row.seasonTeamId,
         rosterId: row.id,
-        action: input.action === 'APPROVE' ? 'ROSTER_APPROVED' : 'ROSTER_REJECTED',
+        action:
+          row.status === 'APPROVED' && row.removalRequestedAt
+            ? input.action === 'APPROVE'
+              ? 'ROSTER_REMOVAL_APPROVED'
+              : 'ROSTER_REMOVAL_REJECTED'
+            : input.action === 'APPROVE'
+              ? 'ROSTER_APPROVED'
+              : 'ROSTER_REJECTED',
         changedById: input.reviewerId,
       })),
     });

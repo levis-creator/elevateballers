@@ -18,9 +18,10 @@ import type { LucideIcon } from 'lucide-react';
 import { useTeamPortalThemeStore } from './stores/useTeamPortalThemeStore';
 import TeamSeasonRegistration from './TeamSeasonRegistration';
 import TeamPortalRoster from './TeamPortalRoster';
+import TeamPortalPlayer from './TeamPortalPlayer';
 
 type Team = { id: string; name: string };
-type PortalView = 'overview' | 'register' | 'roster' | 'lineup' | 'stats' | 'fixtures';
+type PortalView = 'overview' | 'register' | 'roster' | 'player' | 'lineup' | 'stats' | 'fixtures';
 
 const navigation: Array<[PortalView, string, LucideIcon]> = [
   ['overview', 'Home', Home],
@@ -36,11 +37,13 @@ export default function TeamPortalShell({
   teams,
   selectedTeamId,
   view,
+  playerId,
 }: {
   name: string;
   teams: Team[];
   selectedTeamId: string;
   view: PortalView;
+  playerId?: string | null;
 }) {
   const [teamId, setTeamId] = useState(selectedTeamId);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -82,6 +85,8 @@ export default function TeamPortalShell({
     }
   };
   const go = (next: PortalView) => `/team-portal?team=${encodeURIComponent(teamId)}&view=${next}`;
+  const goPlayer = (id: string) =>
+    `/team-portal?team=${encodeURIComponent(teamId)}&view=player&player=${encodeURIComponent(id)}`;
   const initials = activeTeam?.name.slice(0, 2).toUpperCase() || 'TM';
 
   return (
@@ -237,7 +242,17 @@ export default function TeamPortalShell({
             {view === 'register' ? (
               <TeamSeasonRegistration teamId={teamId} teamName={activeTeam?.name || 'Team'} />
             ) : view === 'roster' ? (
-              <TeamPortalRoster teamId={teamId} teamName={activeTeam?.name || 'Team'} />
+              <TeamPortalRoster
+                teamId={teamId}
+                teamName={activeTeam?.name || 'Team'}
+                onOpenPlayer={goPlayer}
+              />
+            ) : view === 'player' && playerId ? (
+              <TeamPortalPlayer
+                teamId={teamId}
+                playerId={playerId}
+                teamName={activeTeam?.name || 'Team'}
+              />
             ) : (
               <div className="mx-auto max-w-[1180px]">
                 <div className="mb-6 flex flex-wrap items-end justify-between gap-4">

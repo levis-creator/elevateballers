@@ -28,7 +28,8 @@ if (access.status !== 'allowed') {
 const requestedTeam = Astro.url.searchParams.get('team');
 const selectedTeam = (await requireActiveTeamContext(user.id, requestedTeam)).team;
 const requestedView = Astro.url.searchParams.get('view');
-const view = requestedView === 'register' || requestedView === 'roster' || requestedView === 'lineup' || requestedView === 'stats' || requestedView === 'fixtures' ? requestedView : 'overview';
+const view = requestedView === 'register' || requestedView === 'roster' || requestedView === 'player' || requestedView === 'lineup' || requestedView === 'stats' || requestedView === 'fixtures' ? requestedView : 'overview';
+const playerId = Astro.url.searchParams.get('player');
 ---
 
 <html lang="en">
@@ -52,5 +53,5 @@ const view = requestedView === 'register' || requestedView === 'roster' || reque
       })();
     </script>
   </head>
-  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} /></body>
+  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} playerId={playerId} /></body>
 </html>
