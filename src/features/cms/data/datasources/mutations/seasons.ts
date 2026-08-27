@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../../../../lib/prisma';
 import type { CreateSeasonInput, UpdateSeasonInput, Season } from '../../../types';
 import { DEFAULT_PUBLIC_REGISTRATION_SETTINGS, resolvePublicRegistrationSettings } from '../../../../settings/application/registrationSettings';
+import { assertSingleActiveSeason } from '../../../../seasons/domain/entities/season';
 
 type ConferenceInput = { id?: string; name: string; teamIds?: string[] };
 type LeagueSeasonInput = NonNullable<CreateSeasonInput['leagueSeasons']>[number];
@@ -220,6 +221,9 @@ export async function createSeason(data: CreateSeasonInput): Promise<Season> {
     ...rest
   } = data;
   const registrationDefaults = await newEditionRegistrationDefaults();
+  if (data.active !== false) {
+    assertSingleActiveSeason(await prisma.season.count({ where: { active: true } }), true);
+  }
   const seededLeagueSeasons = leagueSeasons?.map((row) => ({
     ...row,
     registrationOpensAt: row.registrationOpensAt || registrationDefaults.opens,
@@ -311,6 +315,9 @@ export async function updateSeason(id: string, data: UpdateSeasonInput): Promise
     // Conferences reconcile by id (rename-safe) and, on single-league seasons,
     // roster+assign any selected teams. `undefined` = leave untouched; `[]` = clear.
     return await prisma.$transaction(async (tx) => {
+      if (fields.active === true && !existing.active) {
+        assertSingleActiveSeason(await tx.season.count({ where: { active: true, id: { not: id } } }), true);
+      }
       if (leagueSeasons) {
         await reconcileLeagueSeasons(tx, id, leagueSeasons);
       } else if (leagueIds) {
