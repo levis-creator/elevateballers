@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     const matchId = url.searchParams.get('matchId');
     const teams = await prisma.team.findMany({
-      where: { approved: true, archived: false },
+      where: { approved: true },
       select: { id: true, name: true, logo: true },
       orderBy: { name: 'asc' },
     });
