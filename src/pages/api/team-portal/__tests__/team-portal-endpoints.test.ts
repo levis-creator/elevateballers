@@ -402,6 +402,34 @@ describe('Match detail', () => {
     expect(body.lineupEditable).toBe(false);
   });
 
+  it('marks only active-season roster players as linkable', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(awayFinal());
+    mocks.prisma.seasonTeamPlayer.findMany.mockResolvedValue([{ playerId: 'p1' }]);
+    const body = await (await load()).json();
+    expect(mocks.prisma.seasonTeamPlayer.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          seasonTeamId: 'st-1',
+          status: { in: ['APPROVED', 'PENDING'] },
+          leftAt: null,
+          playerId: { in: ['p2', 'p1'] },
+        },
+      })
+    );
+    expect(body.players.map((p: any) => [p.playerId, p.onRoster])).toEqual([
+      ['p1', true],
+      ['p2', false],
+    ]);
+  });
+
+  it('treats every player as former when the team is not registered this season', async () => {
+    mocks.getActiveSeasonTeam.mockResolvedValue({ season: SEASON, seasonTeam: null });
+    mocks.prisma.match.findFirst.mockResolvedValue(awayFinal());
+    const body = await (await load()).json();
+    expect(body.players.every((p: any) => p.onRoster === false)).toBe(true);
+    expect(mocks.prisma.seasonTeamPlayer.findMany).not.toHaveBeenCalled();
+  });
+
   it('hides the score and stats of an unpublished final', async () => {
     mocks.prisma.match.findFirst.mockResolvedValue(awayFinal({ resultPublishedAt: null }));
     const body = await (await load()).json();

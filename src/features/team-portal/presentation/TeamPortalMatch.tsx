@@ -7,6 +7,7 @@ type BoxRow = {
   jerseyNumber: number | null;
   started: boolean;
   minutes: number | null;
+  onRoster: boolean;
   pts?: number;
   reb?: number;
   ast?: number;
@@ -286,38 +287,49 @@ export default function TeamPortalMatch({
                   </tr>
                 </thead>
                 <tbody>
-                  {data.players.map((row) => (
-                    <tr
-                      key={row.playerId}
-                      className="portal-match-row cursor-pointer border-b hover:bg-white/[0.03]"
-                      role="link"
-                      tabIndex={0}
-                      onClick={() => window.location.assign(onOpenPlayer(row.playerId))}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') window.location.assign(onOpenPlayer(row.playerId));
-                      }}
-                    >
-                      <td className="px-5 py-3">
-                        <span className="text-[13px] font-bold text-cream">{row.name}</span>
-                        <span className="ml-2 font-mono text-[9.5px] uppercase tracking-[0.08em] text-[#8a817a]">
-                          {row.jerseyNumber != null ? `#${row.jerseyNumber}` : ''}
-                          {row.started ? ' · Starter' : ''}
-                        </span>
-                      </td>
-                      <td className="px-2 py-3 text-right font-display text-[14px] text-[#8a817a]">
-                        {row.minutes ?? '—'}
-                      </td>
-                      {data.showStats &&
-                        statColumns.map(([key]) => (
-                          <td
-                            key={key}
-                            className={`px-2 py-3 text-right font-display text-[14px] ${key === 'pts' ? 'text-cream' : 'text-[#b8afa6]'}`}
-                          >
-                            {row[key] ?? '—'}
-                          </td>
-                        ))}
-                    </tr>
-                  ))}
+                  {data.players.map((row) => {
+                    // Former players have no portal page, so their rows stay plain.
+                    const open = row.onRoster
+                      ? () => window.location.assign(onOpenPlayer(row.playerId))
+                      : undefined;
+                    return (
+                      <tr
+                        key={row.playerId}
+                        className={`portal-match-row border-b ${open ? 'cursor-pointer hover:bg-white/[0.03]' : ''}`}
+                        role={open ? 'link' : undefined}
+                        tabIndex={open ? 0 : undefined}
+                        onClick={open}
+                        onKeyDown={
+                          open
+                            ? (event) => {
+                                if (event.key === 'Enter') open();
+                              }
+                            : undefined
+                        }
+                      >
+                        <td className="px-5 py-3">
+                          <span className="text-[13px] font-bold text-cream">{row.name}</span>
+                          <span className="ml-2 font-mono text-[9.5px] uppercase tracking-[0.08em] text-[#8a817a]">
+                            {row.jerseyNumber != null ? `#${row.jerseyNumber}` : ''}
+                            {row.started ? ' · Starter' : ''}
+                            {row.onRoster ? '' : ' · Former player'}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-right font-display text-[14px] text-[#8a817a]">
+                          {row.minutes ?? '—'}
+                        </td>
+                        {data.showStats &&
+                          statColumns.map(([key]) => (
+                            <td
+                              key={key}
+                              className={`px-2 py-3 text-right font-display text-[14px] ${key === 'pts' ? 'text-cream' : 'text-[#b8afa6]'}`}
+                            >
+                              {row[key] ?? '—'}
+                            </td>
+                          ))}
+                      </tr>
+                    );
+                  })}
                   {data.totals && (
                     <tr>
                       <td className="px-5 py-3 font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#8a817a]">
