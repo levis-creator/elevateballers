@@ -41,7 +41,9 @@ export default function TeamPortalOverview({
   teamId: string;
   teamName: string;
   roleLabel: string;
-  hrefFor: (target: NeedsYouTarget | { view: 'fixtures' | 'stats' }) => string;
+  hrefFor: (
+    target: NeedsYouTarget | { view: 'fixtures' | 'stats' } | { view: 'match'; matchId: string }
+  ) => string;
 }) {
   const [data, setData] = useState<OverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +143,9 @@ export default function TeamPortalOverview({
                       {next.lineup?.players ? 'Edit lineup' : 'Set lineup'}
                     </a>
                   )}
+                  <a href={hrefFor({ view: 'match', matchId: next.id })} className="portal-overview-link">
+                    Match details
+                  </a>
                   <a href={hrefFor({ view: 'fixtures' })} className="portal-overview-link">
                     All fixtures
                   </a>

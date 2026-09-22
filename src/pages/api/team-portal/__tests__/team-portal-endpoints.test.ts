@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => {
   const prisma: any = {
     match: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn() },
     matchPlayer: { findMany: vi.fn(), deleteMany: vi.fn(), upsert: vi.fn() },
+    matchPeriod: { findMany: vi.fn() },
     seasonTeamPlayer: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn() },
     seasonRosterHistory: { findMany: vi.fn() },
     seasonRegistrationApplication: { findFirst: vi.fn() },
@@ -39,6 +40,7 @@ import { GET as getStats } from '../stats';
 import { GET as getOverview } from '../overview';
 import { GET as getRoster } from '../roster/index';
 import { GET as getPlayer } from '../player';
+import { GET as getMatch } from '../match';
 
 const TEAM = { id: 'team-1', name: 'Queens' };
 const SEASON_TEAM = { id: 'st-1', leagueSeasonId: 'ls-1', leagueName: 'EWBL' };
@@ -94,6 +96,7 @@ beforeEach(() => {
   mocks.prisma.matchPlayer.findMany.mockResolvedValue([]);
   mocks.prisma.matchPlayer.deleteMany.mockResolvedValue({ count: 0 });
   mocks.prisma.matchPlayer.upsert.mockResolvedValue({});
+  mocks.prisma.matchPeriod.findMany.mockResolvedValue([]);
   mocks.prisma.seasonTeamPlayer.findMany.mockResolvedValue(ROSTER);
   mocks.prisma.seasonTeamPlayer.findFirst.mockResolvedValue(null);
   mocks.prisma.seasonTeamPlayer.count.mockResolvedValue(0);
@@ -110,6 +113,7 @@ describe('Team Portal endpoints: auth and team scoping', () => {
     ['overview', () => getOverview(get('/api/team-portal/overview?teamId=team-1'))],
     ['roster', () => getRoster(get('/api/team-portal/roster?teamId=team-1'))],
     ['player', () => getPlayer(get('/api/team-portal/player?teamId=team-1&playerId=p1'))],
+    ['match', () => getMatch(get('/api/team-portal/match?teamId=team-1&matchId=m1'))],
   ] as const;
 
   it.each(reads)('%s returns 401 when signed out', async (_name, call) => {
@@ -334,5 +338,86 @@ describe('Lineup', () => {
         starters: { added: ['p1'], removed: ['p6'] },
       })
     );
+  });
+});
+
+describe('Match detail', () => {
+  const awayFinal = (overrides: Record<string, unknown> = {}) =>
+    match({
+      status: 'COMPLETED',
+      resultPublishedAt: new Date('2026-07-06T00:00:00Z'),
+      team1Id: 'team-2',
+      team2Id: TEAM.id,
+      team1: { id: 'team-2', name: 'City Hawks', logo: null },
+      team2: { id: TEAM.id, name: 'Queens', logo: null },
+      team1Score: 31,
+      team2Score: 33,
+      events: [
+        { eventType: 'THREE_POINT_MADE', playerId: 'p1', assistPlayerId: null, isUndone: false },
+        { eventType: 'TWO_POINT_MISSED', playerId: 'p1', assistPlayerId: null, isUndone: false },
+        { eventType: 'REBOUND_DEFENSIVE', playerId: 'p2', assistPlayerId: null, isUndone: false },
+        { eventType: 'FOUL_PERSONAL', playerId: 'p2', assistPlayerId: null, isUndone: false },
+      ],
+      matchPlayers: [
+        { playerId: 'p2', started: false, jerseyNumber: 2, minutesPlayed: 12, player: { firstName: 'B', lastName: 'Bench' } },
+        { playerId: 'p1', started: true, jerseyNumber: 1, minutesPlayed: 30, player: { firstName: 'A', lastName: 'Starter' } },
+      ],
+      ...overrides,
+    });
+  const load = () => getMatch(get('/api/team-portal/match?teamId=team-1&matchId=m1'));
+
+  it('only loads matches the team plays in', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(null);
+    const response = await load();
+    expect(response.status).toBe(404);
+    expect(mocks.prisma.match.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'm1', OR: [{ team1Id: TEAM.id }, { team2Id: TEAM.id }] },
+      })
+    );
+  });
+
+  it('returns 400 without a match id', async () => {
+    expect((await getMatch(get('/api/team-portal/match?teamId=team-1'))).status).toBe(400);
+  });
+
+  it('builds the box score and quarters from the team’s point of view', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(awayFinal());
+    mocks.prisma.matchPeriod.findMany.mockResolvedValue([
+      { periodNumber: 1, team1Score: 20, team2Score: 10 },
+      { periodNumber: 5, team1Score: 11, team2Score: 23 },
+    ]);
+    const body = await (await load()).json();
+    expect(body.match).toMatchObject({ isHome: false, teamScore: 33, oppScore: 31, result: 'win' });
+    expect(body.quarters).toEqual([
+      { label: 'Q1', team: 10, opp: 20 },
+      { label: 'OT1', team: 23, opp: 11 },
+    ]);
+    expect(body.players.map((p: any) => [p.playerId, p.started, p.pts, p.reb, p.pf, p.fg, p.tp])).toEqual([
+      ['p1', true, 3, 0, 0, '1/2', '1/1'],
+      ['p2', false, 0, 1, 1, '0/0', '0/0'],
+    ]);
+    expect(body.totals).toMatchObject({ pts: 3, reb: 1, pf: 1 });
+    expect(body.hasPlayByPlay).toBe(true);
+    expect(body.lineupEditable).toBe(false);
+  });
+
+  it('hides the score and stats of an unpublished final', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(awayFinal({ resultPublishedAt: null }));
+    const body = await (await load()).json();
+    expect(body).toMatchObject({ resultPending: true, showStats: false, totals: null, quarters: [] });
+    expect(body.match).toMatchObject({ teamScore: null, oppScore: null, result: null });
+    expect(body.players[0]).not.toHaveProperty('pts');
+    expect(mocks.prisma.matchPeriod.findMany).not.toHaveBeenCalled();
+  });
+
+  it('allows lineup edits only for upcoming matches in the active season', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(match({ events: [], matchPlayers: [] }));
+    expect((await (await load()).json()).lineupEditable).toBe(true);
+
+    mocks.prisma.match.findFirst.mockResolvedValue(
+      match({ leagueSeasonId: 'old-season', events: [], matchPlayers: [] })
+    );
+    expect((await (await load()).json()).lineupEditable).toBe(false);
   });
 });

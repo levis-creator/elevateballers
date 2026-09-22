@@ -36,10 +36,12 @@ export default function TeamPortalFixtures({
   teamId,
   teamName,
   lineupHref,
+  matchHref,
 }: {
   teamId: string;
   teamName: string;
   lineupHref: (matchId: string) => string;
+  matchHref: (matchId: string) => string;
 }) {
   const [data, setData] = useState<FixturesData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +124,12 @@ export default function TeamPortalFixtures({
           >
             {rows.length ? (
               rows.map((fixture) => (
-                <FixtureRow key={fixture.id} fixture={fixture} lineupHref={lineupHref} />
+                <FixtureRow
+                  key={fixture.id}
+                  fixture={fixture}
+                  lineupHref={lineupHref}
+                  matchHref={matchHref}
+                />
               ))
             ) : (
               <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
@@ -147,9 +154,11 @@ export default function TeamPortalFixtures({
 function FixtureRow({
   fixture,
   lineupHref,
+  matchHref,
 }: {
   fixture: Fixture;
   lineupHref: (matchId: string) => string;
+  matchHref: (matchId: string) => string;
 }) {
   const badge = fixture.result ? resultBadge[fixture.result] : null;
   const lineup = fixture.lineup;
@@ -164,7 +173,7 @@ function FixtureRow({
           </span>
         )}
       </div>
-      <a href={fixture.href} className="min-w-[180px] flex-1 no-underline">
+      <a href={matchHref(fixture.id)} className="min-w-[180px] flex-1 no-underline">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#8a817a]">
             {fixture.isHome ? 'vs' : '@'}

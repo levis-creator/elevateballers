@@ -22,9 +22,18 @@ import TeamPortalFixtures from './TeamPortalFixtures';
 import TeamPortalStats from './TeamPortalStats';
 import TeamPortalLineup from './TeamPortalLineup';
 import TeamPortalOverview from './TeamPortalOverview';
+import TeamPortalMatch from './TeamPortalMatch';
 
 type Team = { id: string; name: string };
-type PortalView = 'overview' | 'register' | 'roster' | 'player' | 'lineup' | 'stats' | 'fixtures';
+type PortalView =
+  | 'overview'
+  | 'register'
+  | 'roster'
+  | 'player'
+  | 'lineup'
+  | 'stats'
+  | 'fixtures'
+  | 'match';
 
 // [view, sidebar label, icon, short label for the mobile tab bar]
 const navigation: Array<[PortalView, string, LucideIcon, string]> = [
@@ -96,6 +105,9 @@ export default function TeamPortalShell({
   const goPlayer = (id: string) =>
     `/team-portal?team=${encodeURIComponent(teamId)}&view=player&player=${encodeURIComponent(id)}`;
   const goLineup = (id: string) => `${go('lineup')}&match=${encodeURIComponent(id)}`;
+  const goMatch = (id: string) => `${go('match')}&match=${encodeURIComponent(id)}`;
+  // Detail views highlight the section they belong to.
+  const navView: PortalView = view === 'match' ? 'fixtures' : view === 'player' ? 'roster' : view;
   const initials = activeTeam?.name.slice(0, 2).toUpperCase() || 'TM';
 
   return (
@@ -124,8 +136,8 @@ export default function TeamPortalShell({
               <a
                 key={route}
                 href={go(route)}
-                aria-current={view === route ? 'page' : undefined}
-                className={`portal-nav-item ${view === route ? 'portal-nav-active' : ''}`}
+                aria-current={navView === route ? 'page' : undefined}
+                className={`portal-nav-item ${navView === route ? 'portal-nav-active' : ''}`}
               >
                 <span className="flex w-[17px] items-center justify-center">
                   <Icon size={16} strokeWidth={1.8} />
@@ -256,6 +268,16 @@ export default function TeamPortalShell({
                 teamId={teamId}
                 teamName={activeTeam?.name || 'Team'}
                 lineupHref={goLineup}
+                matchHref={goMatch}
+              />
+            ) : view === 'match' && matchId ? (
+              <TeamPortalMatch
+                teamId={teamId}
+                teamName={activeTeam?.name || 'Team'}
+                matchId={matchId}
+                fixturesHref={go('fixtures')}
+                lineupHref={goLineup}
+                onOpenPlayer={goPlayer}
               />
             ) : view === 'lineup' ? (
               <TeamPortalLineup
@@ -282,8 +304,10 @@ export default function TeamPortalShell({
                 teamName={activeTeam?.name || 'Team'}
                 roleLabel={roleLabel}
                 hrefFor={(target) =>
-                  target.view === 'lineup' && 'matchId' in target && target.matchId
-                    ? goLineup(target.matchId)
+                  'matchId' in target && target.matchId
+                    ? target.view === 'match'
+                      ? goMatch(target.matchId)
+                      : goLineup(target.matchId)
                     : go(target.view)
                 }
               />
@@ -299,8 +323,8 @@ export default function TeamPortalShell({
           <a
             key={route}
             href={go(route)}
-            aria-current={view === route ? 'page' : undefined}
-            className={`mobile-nav-item ${view === route ? 'mobile-nav-active' : ''}`}
+            aria-current={navView === route ? 'page' : undefined}
+            className={`mobile-nav-item ${navView === route ? 'mobile-nav-active' : ''}`}
           >
             <Icon size={17} strokeWidth={1.8} />
             <span>{shortLabel}</span>
