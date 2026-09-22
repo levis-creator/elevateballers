@@ -21,6 +21,7 @@ import TeamPortalRoster from './TeamPortalRoster';
 import TeamPortalPlayer from './TeamPortalPlayer';
 import TeamPortalFixtures from './TeamPortalFixtures';
 import TeamPortalStats from './TeamPortalStats';
+import TeamPortalLineup from './TeamPortalLineup';
 
 type Team = { id: string; name: string };
 type PortalView = 'overview' | 'register' | 'roster' | 'player' | 'lineup' | 'stats' | 'fixtures';
@@ -40,12 +41,14 @@ export default function TeamPortalShell({
   selectedTeamId,
   view,
   playerId,
+  matchId,
 }: {
   name: string;
   teams: Team[];
   selectedTeamId: string;
   view: PortalView;
   playerId?: string | null;
+  matchId?: string | null;
 }) {
   const [teamId, setTeamId] = useState(selectedTeamId);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -89,6 +92,7 @@ export default function TeamPortalShell({
   const go = (next: PortalView) => `/team-portal?team=${encodeURIComponent(teamId)}&view=${next}`;
   const goPlayer = (id: string) =>
     `/team-portal?team=${encodeURIComponent(teamId)}&view=player&player=${encodeURIComponent(id)}`;
+  const goLineup = (id: string) => `${go('lineup')}&match=${encodeURIComponent(id)}`;
   const initials = activeTeam?.name.slice(0, 2).toUpperCase() || 'TM';
 
   return (
@@ -253,7 +257,14 @@ export default function TeamPortalShell({
               <TeamPortalFixtures
                 teamId={teamId}
                 teamName={activeTeam?.name || 'Team'}
-                lineupHref={(matchId) => `${go('lineup')}&match=${encodeURIComponent(matchId)}`}
+                lineupHref={goLineup}
+              />
+            ) : view === 'lineup' ? (
+              <TeamPortalLineup
+                teamId={teamId}
+                teamName={activeTeam?.name || 'Team'}
+                matchId={matchId}
+                lineupHref={goLineup}
               />
             ) : view === 'stats' ? (
               <TeamPortalStats
