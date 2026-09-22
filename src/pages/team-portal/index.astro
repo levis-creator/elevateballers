@@ -11,6 +11,7 @@ import '@fontsource/space-mono/400.css';
 import { getCurrentUser } from '@/features/cms/lib/auth';
 import { getTeamPortalAccess, requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
 import TeamPortalShell from '@/features/team-portal/presentation/TeamPortalShell';
+import { COACH_ROLE_NAME } from '@/features/users/domain/entities/user-directory';
 
 const user = await getCurrentUser(Astro.request);
 if (!user) return Astro.redirect(`/login?returnTo=${encodeURIComponent('/team-portal')}`, 302);
@@ -54,5 +55,5 @@ const matchId = Astro.url.searchParams.get('match');
       })();
     </script>
   </head>
-  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} playerId={playerId} matchId={matchId} /></body>
+  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} playerId={playerId} matchId={matchId} roleLabel={COACH_ROLE_NAME} /></body>
 </html>
