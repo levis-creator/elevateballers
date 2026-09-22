@@ -80,7 +80,12 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
     await assertFixtureSchedule(scope.leagueSeasonId, data.date);
     assertCompetitionTeamSlots(data.team1Id, data.team2Id, data.team1Name, data.team2Name);
     await assertTeamsParticipate(scope.leagueSeasonId, [data.team1Id, data.team2Id]);
-    Object.assign(matchData, scope);
+    // Use the relation input for the competition edition. This keeps match
+    // creation compatible with generated Prisma clients where the mapped
+    // leagueSeasonId scalar is not exposed in MatchCreateInput.
+    matchData.seasonId = scope.seasonId;
+    matchData.leagueId = scope.leagueId;
+    matchData.leagueSeason = { connect: { id: scope.leagueSeasonId } };
     matchData.leagueName = null;
   } else if (data.leagueId) {
     matchData.league = { connect: { id: data.leagueId } };
