@@ -80,11 +80,12 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
     await assertFixtureSchedule(scope.leagueSeasonId, data.date);
     assertCompetitionTeamSlots(data.team1Id, data.team2Id, data.team1Name, data.team2Name);
     await assertTeamsParticipate(scope.leagueSeasonId, [data.team1Id, data.team2Id]);
-    // Use the relation input for the competition edition. This keeps match
-    // creation compatible with generated Prisma clients where the mapped
-    // leagueSeasonId scalar is not exposed in MatchCreateInput.
-    matchData.seasonId = scope.seasonId;
-    matchData.leagueId = scope.leagueId;
+    // Use relation inputs for the competition edition. Since team1/team2 are
+    // also passed as nested connects below, Prisma resolves this call against
+    // MatchCreateInput (the "checked", relations-only shape), which has no
+    // seasonId/leagueId/leagueSeasonId scalar keys — only season/league/leagueSeason.
+    matchData.season = { connect: { id: scope.seasonId } };
+    matchData.league = { connect: { id: scope.leagueId } };
     matchData.leagueSeason = { connect: { id: scope.leagueSeasonId } };
     matchData.leagueName = null;
   } else if (data.leagueId) {
@@ -107,8 +108,12 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
     matchData.team2Logo = data.team2Logo || '';
   }
 
-  if (data.nextWinnerMatchId !== undefined) matchData.nextWinnerMatchId = data.nextWinnerMatchId;
-  if (data.nextLoserMatchId !== undefined) matchData.nextLoserMatchId = data.nextLoserMatchId;
+  if (data.nextWinnerMatchId) {
+    matchData.nextWinnerMatch = { connect: { id: data.nextWinnerMatchId } };
+  }
+  if (data.nextLoserMatchId) {
+    matchData.nextLoserMatch = { connect: { id: data.nextLoserMatchId } };
+  }
   if (data.bracketPosition !== undefined) matchData.bracketPosition = data.bracketPosition;
   if (data.bracketRound !== undefined) matchData.bracketRound = data.bracketRound;
   if (data.bracketType !== undefined) matchData.bracketType = data.bracketType;
