@@ -92,6 +92,24 @@ export const GET: APIRoute = async ({ request }) => {
       getActiveSeasonTeam(team.id),
     ]);
 
+    // The portal player page only opens active-season roster players (the same
+    // rule as /api/team-portal/player), so only those rows are linkable.
+    const onRoster = new Set(
+      seasonTeam && listed
+        ? (
+            await prisma.seasonTeamPlayer.findMany({
+              where: {
+                seasonTeamId: seasonTeam.id,
+                status: { in: ['APPROVED', 'PENDING'] },
+                leftAt: null,
+                playerId: { in: match.matchPlayers.map((row) => row.playerId) },
+              },
+              select: { playerId: true },
+            })
+          ).map((row) => row.playerId)
+        : []
+    );
+
     const players = match.matchPlayers
       .map((row) => {
         const stats = calculatePlayerMatchStats(row.playerId, match.events);
@@ -101,6 +119,7 @@ export const GET: APIRoute = async ({ request }) => {
           jerseyNumber: row.jerseyNumber,
           started: row.started,
           minutes: row.minutesPlayed,
+          onRoster: onRoster.has(row.playerId),
           ...(showStats
             ? {
                 pts: stats.points,
