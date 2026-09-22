@@ -6,8 +6,22 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { prisma } from '../../../lib/prisma';
 import { notifyPlayerRegistrationDecision } from '../../../features/registration/application/send-registration-decision';
+import { diffFields } from '../../../lib/auditDiff';
 
 export const prerender = false;
+
+const PLAYER_AUDIT_FIELDS = [
+  'firstName',
+  'lastName',
+  'jerseyNumber',
+  'position',
+  'teamId',
+  'dateOfBirth',
+  'heightCm',
+  'weightKg',
+  'approved',
+  'stats',
+] as const;
 
 const ALLOWED_STAT_KEYS = new Set([
   'ppg',
@@ -62,11 +76,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    await logAudit(request, 'PLAYER_UPDATED', {
-      playerId: player.id,
-      name: `${player.firstName} ${player.lastName}`.trim(),
-    });
-
     return new Response(JSON.stringify(player), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -79,9 +88,21 @@ export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requirePlayerScopedPermission(request, params.id!, 'players:update');
     const data = await request.json();
-    const previousApproval = data.approved !== undefined
-      ? await prisma.player.findUnique({ where: { id: params.id! }, select: { approved: true } })
-      : null;
+    const existingPlayer = await prisma.player.findUnique({
+      where: { id: params.id! },
+      select: {
+        firstName: true,
+        lastName: true,
+        jerseyNumber: true,
+        position: true,
+        teamId: true,
+        dateOfBirth: true,
+        heightCm: true,
+        weightKg: true,
+        approved: true,
+        stats: true,
+      },
+    });
 
     // Convert jerseyNumber to number if provided. Guard null/empty explicitly —
     // a truthy check would turn a valid jersey 0 into null.
@@ -124,10 +145,22 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    if (previousApproval && previousApproval.approved !== Boolean(data.approved)) {
+    if (
+      data.approved !== undefined &&
+      existingPlayer &&
+      existingPlayer.approved !== Boolean(data.approved)
+    ) {
       void notifyPlayerRegistrationDecision(player.id, Boolean(data.approved))
         .catch((error) => console.error('[email] Failed to send player decision email:', error));
     }
+
+    const changes = diffFields(existingPlayer, player, PLAYER_AUDIT_FIELDS);
+
+    await logAudit(request, 'PLAYER_UPDATED', {
+      playerId: player.id,
+      name: `${player.firstName} ${player.lastName}`.trim(),
+      changes,
+    });
 
     return new Response(JSON.stringify(player), {
       headers: { 'Content-Type': 'application/json' },
@@ -140,6 +173,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requirePlayerScopedPermission(request, params.id!, 'players:update');
+    const existingPlayer = await prisma.player.findUnique({
+      where: { id: params.id! },
+      select: { firstName: true, lastName: true, teamId: true, jerseyNumber: true, position: true },
+    });
     const success = await deletePlayer(params.id!);
 
     if (!success) {
@@ -151,6 +188,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
     await logAudit(request, 'PLAYER_DELETED', {
       playerId: params.id,
+      deletedPlayer: existingPlayer ?? undefined,
     });
 
     return new Response(null, { status: 204 });

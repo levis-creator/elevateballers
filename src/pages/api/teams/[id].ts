@@ -10,6 +10,24 @@ import { approvePendingSeasonRegistrations } from '../../../features/registratio
 import { notifyTeamRegistrationDecision } from '../../../features/registration/application/send-registration-decision';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
+import { diffFields } from '../../../lib/auditDiff';
+
+const TEAM_AUDIT_FIELDS = [
+  'name',
+  'nickname',
+  'shortName',
+  'abbreviation',
+  'slug',
+  'logo',
+  'description',
+  'venue',
+  'city',
+  'founded',
+  'contactEmail',
+  'primaryColor',
+  'secondaryColor',
+  'approved',
+] as const;
 
 export const GET: APIRoute = async ({ params, request }) => {
   try {
@@ -45,9 +63,25 @@ export const PUT: APIRoute = async ({ params, request }) => {
   try {
     await requireTeamScopedPermission(request, params.id!, 'teams:update');
     const data = await request.json();
-    const previousApproval = data.approved !== undefined
-      ? await prisma.team.findUnique({ where: { id: params.id! }, select: { approved: true } })
-      : null;
+    const existingTeam = await prisma.team.findUnique({
+      where: { id: params.id! },
+      select: {
+        name: true,
+        nickname: true,
+        shortName: true,
+        abbreviation: true,
+        slug: true,
+        logo: true,
+        description: true,
+        venue: true,
+        city: true,
+        founded: true,
+        contactEmail: true,
+        primaryColor: true,
+        secondaryColor: true,
+        approved: true,
+      },
+    });
 
     const founded = data.founded === undefined || data.founded === '' || data.founded === null
       ? null
@@ -113,14 +147,17 @@ export const PUT: APIRoute = async ({ params, request }) => {
     }
 
     if (data.approved === true) await approvePendingSeasonRegistrations([team.id]);
-    if (previousApproval && previousApproval.approved !== Boolean(data.approved)) {
+    if (data.approved !== undefined && existingTeam && existingTeam.approved !== Boolean(data.approved)) {
       void notifyTeamRegistrationDecision(team.id, Boolean(data.approved))
         .catch((error) => console.error('[email] Failed to send team decision email:', error));
     }
 
+    const changes = diffFields(existingTeam, team, TEAM_AUDIT_FIELDS);
+
     await logAudit(request, 'TEAM_UPDATED', {
       teamId: team.id,
       name: team.name,
+      changes,
     });
 
     return new Response(JSON.stringify(team), {
@@ -134,6 +171,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requireTeamScopedPermission(request, params.id!, 'teams:update');
+    const existingTeam = await prisma.team.findUnique({
+      where: { id: params.id! },
+      select: { name: true, abbreviation: true, city: true, approved: true },
+    });
     const success = await deleteTeam(params.id!);
 
     if (!success) {
@@ -145,6 +186,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
     await logAudit(request, 'TEAM_DELETED', {
       teamId: params.id,
+      deletedTeam: existingTeam ?? undefined,
     });
 
     return new Response(null, { status: 204 });

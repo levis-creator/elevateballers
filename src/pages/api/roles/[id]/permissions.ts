@@ -6,6 +6,7 @@ import { getUserIdFromRequest, writeAuditLog } from '../../../../features/cms/li
 import { json, handleApiError } from '../../../../lib/apiError';
 import { parseBody } from '../../../../lib/validateBody';
 import { SetRolePermissionsSchema } from '../../../../features/roles/domain/entities/role-editor';
+import { diffIdSets } from '../../../../lib/auditDiff';
 
 export const prerender = false;
 
@@ -83,9 +84,11 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     const { permissionIds } = await parseBody(request, SetRolePermissionsSchema);
 
-    // Check if role exists
+    // Check if role exists — include its current permissions so we can log
+    // what actually changed (added/removed) rather than just the new full list.
     const role = await prisma.role.findUnique({
       where: { id },
+      include: { permissions: { select: { permissionId: true } } },
     });
 
     if (!role) {
@@ -94,6 +97,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    const beforePermissionIds = role.permissions.map((p) => p.permissionId);
 
     // Verify all permission IDs exist
     const permissions = await prisma.permission.findMany({
@@ -151,10 +156,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
       invalidatePermissionCache(userId);
     }
 
+    const changes = diffIdSets(beforePermissionIds, permissionIds);
+
     const adminId = getUserIdFromRequest(request) ?? 'unknown';
     await writeAuditLog(adminId, 'ROLE_PERMISSIONS_UPDATED', adminId, {
       roleId: id,
       permissionIds,
+      changes,
     }).catch(() => {});
 
     return new Response(

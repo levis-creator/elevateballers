@@ -60,9 +60,12 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
   email: string;
   teamName: string;
   leagueName?: string | null;
+  teamId?: string;
 }): Promise<void> {
   const brevo = getBrevoClient(await getBrevoCredential());
   if (!brevo) return;
+
+  const teamAdminSubject = `New team created (admin): ${data.teamName}`;
 
   const recipients = await getAdminRecipientEmails('team_registered');
   if (recipients.length === 0) {
@@ -99,15 +102,17 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
     await brevo.transactionalEmails.sendTransacEmail({
       sender: { name: BREVO_SENDER_NAME, email: senderEmail },
       to: recipients.map((recipient) => ({ email: recipient })),
-      subject: `New team created (admin): ${data.teamName}`,
+      subject: teamAdminSubject,
       htmlContent: html,
     });
     const durationMs = Date.now() - startedAt;
     await logAuditSystem('EMAIL_SENT', {
       provider: 'brevo',
       template: 'team_registration_admin_notify',
+      subject: teamAdminSubject,
+      context: data.teamId ? { teamId: data.teamId } : undefined,
       toHash: hashRecipients(recipients),
-      subjectHash: hashValue(`New team created (admin): ${data.teamName}`),
+      subjectHash: hashValue(teamAdminSubject),
       eventId,
       traceId,
       durationMs,
@@ -117,8 +122,10 @@ export async function sendTeamRegistrationAutoReplyBrevo(data: {
     await logAuditSystem('EMAIL_FAILED', {
       provider: 'brevo',
       template: 'team_registration_admin_notify',
+      subject: teamAdminSubject,
+      context: data.teamId ? { teamId: data.teamId } : undefined,
       toHash: hashRecipients(recipients),
-      subjectHash: hashValue(`New team created (admin): ${data.teamName}`),
+      subjectHash: hashValue(teamAdminSubject),
       eventId,
       traceId,
       durationMs: Date.now() - startedAt,
@@ -175,9 +182,12 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
   name: string;
   email: string;
   teamName?: string | null;
+  playerId?: string;
 }): Promise<void> {
   const brevo = getBrevoClient(await getBrevoCredential());
   if (!brevo) return;
+
+  const playerAdminSubject = `New player created (admin): ${data.name}`;
 
   const recipients = await getAdminRecipientEmails('player_registered');
   if (recipients.length === 0) {
@@ -214,15 +224,17 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
     await brevo.transactionalEmails.sendTransacEmail({
       sender: { name: BREVO_SENDER_NAME, email: senderEmail },
       to: recipients.map((recipient) => ({ email: recipient })),
-      subject: `New player created (admin): ${data.name}`,
+      subject: playerAdminSubject,
       htmlContent: html,
     });
     const durationMs = Date.now() - startedAt;
     await logAuditSystem('EMAIL_SENT', {
       provider: 'brevo',
       template: 'player_registration_admin_notify',
+      subject: playerAdminSubject,
+      context: data.playerId ? { playerId: data.playerId } : undefined,
       toHash: hashRecipients(recipients),
-      subjectHash: hashValue(`New player created (admin): ${data.name}`),
+      subjectHash: hashValue(playerAdminSubject),
       eventId,
       traceId,
       durationMs,
@@ -232,8 +244,10 @@ export async function sendPlayerRegistrationAutoReplyBrevo(data: {
     await logAuditSystem('EMAIL_FAILED', {
       provider: 'brevo',
       template: 'player_registration_admin_notify',
+      subject: playerAdminSubject,
+      context: data.playerId ? { playerId: data.playerId } : undefined,
       toHash: hashRecipients(recipients),
-      subjectHash: hashValue(`New player created (admin): ${data.name}`),
+      subjectHash: hashValue(playerAdminSubject),
       eventId,
       traceId,
       durationMs: Date.now() - startedAt,
@@ -247,6 +261,7 @@ export async function sendTeamApprovedEmail(data: {
   coachName: string;
   email: string;
   teamName: string;
+  teamId?: string;
 }): Promise<void> {
   const configured = await configuredEmailTemplate('approved', {
     name: data.coachName,
@@ -279,7 +294,7 @@ export async function sendTeamApprovedEmail(data: {
     to: data.email,
     subject: configured.subject,
     html: configured ? emailWrapper(configured.html) : html,
-    audit: { template: 'team_approved' },
+    audit: { template: 'team_approved', context: data.teamId ? { teamId: data.teamId } : undefined },
   });
   console.log(`[email] Team approved email sent to ${data.email}`);
 }
@@ -288,6 +303,7 @@ export async function sendPlayerApprovedEmail(data: {
   name: string;
   email: string;
   teamName?: string | null;
+  playerId?: string;
 }): Promise<void> {
   const configured = await configuredEmailTemplate('approved', {
     name: data.name,
@@ -325,7 +341,7 @@ export async function sendPlayerApprovedEmail(data: {
     to: data.email,
     subject: configured.subject,
     html: configured ? emailWrapper(configured.html) : html,
-    audit: { template: 'player_approved' },
+    audit: { template: 'player_approved', context: data.playerId ? { playerId: data.playerId } : undefined },
   });
   console.log(`[email] Player approved email sent to ${data.email}`);
 }
@@ -339,7 +355,17 @@ type RegistrationDecisionEmail = {
   applicationId?: string | null;
   status?: string;
   amount?: string | null;
+  teamId?: string;
+  playerId?: string;
 };
+
+function decisionContext(data: RegistrationDecisionEmail): Record<string, unknown> | undefined {
+  const context: Record<string, unknown> = {};
+  if (data.teamId) context.teamId = data.teamId;
+  if (data.playerId) context.playerId = data.playerId;
+  if (data.applicationId) context.applicationId = data.applicationId;
+  return Object.keys(context).length ? context : undefined;
+}
 
 function registrationVariables(data: RegistrationDecisionEmail) {
   return {
@@ -368,7 +394,7 @@ export async function sendRegistrationApprovedEmail(
     subject: configured.subject,
     html: emailWrapper(configured.html),
     dedupeKey: `registration-approved:${data.applicationId || data.teamName}:${data.email}`,
-    audit: { template: 'registration_approved' },
+    audit: { template: 'registration_approved', context: decisionContext(data) },
   });
 }
 
@@ -385,7 +411,7 @@ export async function sendRegistrationRejectedEmail(
     subject: configured.subject,
     html: emailWrapper(configured.html),
     dedupeKey: `registration-rejected:${data.applicationId || data.teamName}:${data.email}`,
-    audit: { template: 'registration_rejected' },
+    audit: { template: 'registration_rejected', context: decisionContext(data) },
   });
 }
 
@@ -402,7 +428,7 @@ export async function sendRegistrationPaymentEmail(
     subject: configured.subject,
     html: emailWrapper(configured.html),
     dedupeKey: `registration-payment:${data.applicationId || data.teamName}:${data.amount}:${data.email}`,
-    audit: { template: 'registration_payment_received' },
+    audit: { template: 'registration_payment_received', context: decisionContext(data) },
   });
 }
 
@@ -426,6 +452,6 @@ export async function sendMatchReminderEmail(data: {
     subject: configured.subject,
     html: emailWrapper(configured.html),
     dedupeKey: `match-reminder:${data.matchId}:${data.matchDate}:${data.email}`,
-    audit: { template: 'match_reminder' },
+    audit: { template: 'match_reminder', context: { matchId: data.matchId } },
   });
 }
