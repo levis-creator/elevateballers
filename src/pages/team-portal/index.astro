@@ -30,6 +30,7 @@ const selectedTeam = (await requireActiveTeamContext(user.id, requestedTeam)).te
 const requestedView = Astro.url.searchParams.get('view');
 const view = requestedView === 'register' || requestedView === 'roster' || requestedView === 'player' || requestedView === 'lineup' || requestedView === 'stats' || requestedView === 'fixtures' ? requestedView : 'overview';
 const playerId = Astro.url.searchParams.get('player');
+const matchId = Astro.url.searchParams.get('match');
 ---
 
 <html lang="en">
@@ -53,5 +54,5 @@ const playerId = Astro.url.searchParams.get('player');
       })();
     </script>
   </head>
-  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} playerId={playerId} /></body>
+  <body class="m-0"><TeamPortalShell client:load name={user.name} teams={access.teams} selectedTeamId={selectedTeam.id} view={view} playerId={playerId} matchId={matchId} /></body>
 </html>
