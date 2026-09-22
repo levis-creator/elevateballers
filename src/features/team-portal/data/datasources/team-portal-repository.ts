@@ -1,6 +1,31 @@
 import { COACH_ROLE_NAME } from '@/features/users/domain/entities/user-directory';
 import { prisma } from '@/lib/prisma';
 
+/**
+ * Resolves the active season and this team's participation in it. `seasonTeam`
+ * is null when the team is not registered for the active season.
+ */
+export async function getActiveSeasonTeam(teamId: string) {
+  const season = await prisma.season.findFirst({
+    where: { active: true },
+    orderBy: { startDate: 'desc' },
+    select: { id: true, name: true },
+  });
+  if (!season) return { season: null, seasonTeam: null };
+  const row = await prisma.seasonTeam.findFirst({
+    where: { teamId, seasonId: season.id },
+    select: {
+      id: true,
+      leagueSeasonId: true,
+      leagueSeason: { select: { league: { select: { name: true } } } },
+    },
+  });
+  const seasonTeam = row
+    ? { id: row.id, leagueSeasonId: row.leagueSeasonId, leagueName: row.leagueSeason.league.name }
+    : null;
+  return { season, seasonTeam };
+}
+
 export async function getTeamPortalUserContext(userId: string) {
   const now = new Date();
   const expiredAssignments = await prisma.teamOwnership.findMany({
