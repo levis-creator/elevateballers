@@ -19,6 +19,7 @@ import { useTeamPortalThemeStore } from './stores/useTeamPortalThemeStore';
 import TeamSeasonRegistration from './TeamSeasonRegistration';
 import TeamPortalRoster from './TeamPortalRoster';
 import TeamPortalPlayer from './TeamPortalPlayer';
+import TeamPortalFixtures from './TeamPortalFixtures';
 
 type Team = { id: string; name: string };
 type PortalView = 'overview' | 'register' | 'roster' | 'player' | 'lineup' | 'stats' | 'fixtures';
@@ -246,6 +247,12 @@ export default function TeamPortalShell({
                 teamId={teamId}
                 teamName={activeTeam?.name || 'Team'}
                 onOpenPlayer={goPlayer}
+              />
+            ) : view === 'fixtures' ? (
+              <TeamPortalFixtures
+                teamId={teamId}
+                teamName={activeTeam?.name || 'Team'}
+                lineupHref={(matchId) => `${go('lineup')}&match=${encodeURIComponent(matchId)}`}
               />
             ) : view === 'player' && playerId ? (
               <TeamPortalPlayer
