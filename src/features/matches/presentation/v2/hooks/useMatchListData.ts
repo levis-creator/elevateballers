@@ -150,18 +150,21 @@ export function useMatchListData() {
       try {
         const res = await fetch(`/api/matches/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Failed to delete match');
+        // Remove locally rather than refetching: GET /api/matches is served with
+        // a CDN s-maxage, so an immediate refetch can return the stale,
+        // pre-delete list for up to 30s.
+        setMatches((prev) => prev.filter((m) => m.id !== id));
         setSelected((prev) => {
           const next = new Set(prev);
           next.delete(id);
           return next;
         });
-        fetchMatches();
       } catch (err: any) {
         setError(err?.message || 'Failed to delete match');
         setTimeout(() => setError(''), 5000);
       }
     },
-    [fetchMatches],
+    [],
   );
 
   const deleteSelected = useCallback(async () => {
@@ -179,15 +182,16 @@ export function useMatchListData() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error || 'Failed to delete matches');
       }
+      const deletedIds = new Set(ids);
+      setMatches((prev) => prev.filter((m) => !deletedIds.has(m.id)));
       clearSelection();
-      fetchMatches();
     } catch (err: any) {
       setError(err?.message || 'Failed to delete matches');
       setTimeout(() => setError(''), 5000);
     } finally {
       setBulkBusy(false);
     }
-  }, [selected, clearSelection, fetchMatches]);
+  }, [selected, clearSelection]);
 
   return {
     // data
