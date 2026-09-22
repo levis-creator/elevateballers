@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCurrentUser } from '@/features/cms/lib/auth';
 import { requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
+import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import { calculatePlayerStatistics } from '@/features/player/lib/playerStats';
 import { prisma } from '@/lib/prisma';
 import { handleApiError } from '@/lib/apiError';
@@ -16,17 +17,7 @@ export const GET: APIRoute = async ({ request }) => {
     if (!playerId)
       return new Response(JSON.stringify({ error: 'Player is required.' }), { status: 400 });
     const team = (await requireActiveTeamContext(user.id, params.get('teamId'))).team;
-    const season = await prisma.season.findFirst({
-      where: { active: true },
-      orderBy: { startDate: 'desc' },
-      select: { id: true, name: true },
-    });
-    const seasonTeam = season
-      ? await prisma.seasonTeam.findFirst({
-          where: { teamId: team.id, seasonId: season.id },
-          select: { id: true, leagueSeasonId: true },
-        })
-      : null;
+    const { season, seasonTeam } = await getActiveSeasonTeam(team.id);
     const roster = seasonTeam
       ? await prisma.seasonTeamPlayer.findFirst({
           where: {
