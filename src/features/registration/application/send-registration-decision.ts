@@ -50,8 +50,9 @@ export async function notifyTeamRegistrationDecision(
             seasonName: application.leagueSeason?.season?.name,
             applicationId: application.id,
             status: 'approved',
+            teamId,
           })
-        : sendTeamApprovedEmail({ coachName: name, email, teamName: team.name })
+        : sendTeamApprovedEmail({ coachName: name, email, teamName: team.name, teamId })
       : sendRegistrationRejectedEmail({
           name,
           email,
@@ -60,6 +61,7 @@ export async function notifyTeamRegistrationDecision(
           seasonName: application?.leagueSeason?.season?.name,
           applicationId: application?.id,
           status: 'rejected',
+          teamId,
         })
   );
   const results = await Promise.allSettled(tasks);
@@ -84,7 +86,7 @@ export async function notifyPlayerRegistrationDecision(
   if (!player?.email) return;
   const name = `${player.firstName} ${player.lastName}`.trim();
   if (approved) {
-    await sendPlayerApprovedEmail({ name, email: player.email, teamName: player.team?.name });
+    await sendPlayerApprovedEmail({ name, email: player.email, teamName: player.team?.name, playerId });
     return;
   }
   await sendRegistrationRejectedEmail({
@@ -93,5 +95,6 @@ export async function notifyPlayerRegistrationDecision(
     teamName: player.team?.name || 'your player registration',
     applicationId: player.id,
     status: 'rejected',
+    playerId,
   });
 }

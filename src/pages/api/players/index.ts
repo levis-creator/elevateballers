@@ -122,6 +122,7 @@ export const POST: APIRoute = async ({ request }) => {
         name: `${data.firstName} ${data.lastName}`.trim(),
         email: data.email,
         teamName: data.teamName || null,
+        playerId: player.id,
       }).catch((err) => {
         console.error('Failed to send player admin-create auto-reply (Brevo):', err);
       });

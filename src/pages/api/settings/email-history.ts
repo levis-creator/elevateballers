@@ -28,6 +28,7 @@ export const GET: APIRoute = async ({ request }) => {
         createdAt: log.createdAt,
         template: String(metadata.template || 'transactional_email'),
         provider: String(metadata.provider || ''),
+        subject: typeof metadata.subject === 'string' ? metadata.subject : null,
         recipient: metadata.toHash ? `•••• ${String(metadata.toHash).slice(-8)}` : 'Recipient protected',
         status: statusFor(log.action),
       };

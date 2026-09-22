@@ -14,6 +14,8 @@ export async function sendArticleNotification(data: {
 
   const articleUrl = `${SITE_URL}/news/${data.article.slug}`;
   const senderEmail = BREVO_FROM?.match(/<(.+)>/)?.[1] || BREVO_FROM || 'info@elevateballers.com';
+  const articleSubject = `New Article: ${data.article.title}`;
+  const articleContext = { articleSlug: data.article.slug };
 
   let sent = 0, failed = 0;
 
@@ -42,7 +44,7 @@ export async function sendArticleNotification(data: {
       await brevo.transactionalEmails.sendTransacEmail({
         sender: { name: BREVO_SENDER_NAME, email: senderEmail },
         to: [{ email: subscriber.email, name: subscriber.name || undefined }],
-        subject: `New Article: ${data.article.title}`,
+        subject: articleSubject,
         htmlContent: html,
       });
       sent++;
@@ -51,8 +53,10 @@ export async function sendArticleNotification(data: {
       await logAuditSystem('EMAIL_FAILED', {
         provider: 'brevo',
         template: 'article_notification',
+        subject: articleSubject,
+        context: articleContext,
         toHash: hashRecipients([subscriber.email]),
-        subjectHash: hashValue(`New Article: ${data.article.title}`),
+        subjectHash: hashValue(articleSubject),
         traceId,
         error: err?.message || String(err),
       });
@@ -64,7 +68,9 @@ export async function sendArticleNotification(data: {
   await logAuditSystem('EMAIL_BULK_SENT', {
     provider: 'brevo',
     template: 'article_notification',
-    subjectHash: hashValue(`New Article: ${data.article.title}`),
+    subject: articleSubject,
+    context: articleContext,
+    subjectHash: hashValue(articleSubject),
     traceId,
     durationMs,
     sent,

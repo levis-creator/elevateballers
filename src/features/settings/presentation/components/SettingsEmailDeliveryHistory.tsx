@@ -5,6 +5,7 @@ type DeliveryRow = {
   createdAt: string;
   template: string;
   provider: string;
+  subject: string | null;
   recipient: string;
   status: string;
 };
@@ -50,7 +51,7 @@ export default function SettingsEmailDeliveryHistory({ values }: { values: Recor
           <div className="eb-email-history-row" key={row.id}>
             <time>{formatTime(row.createdAt)}</time>
             <div>
-              <strong>{formatTemplate(row.template || 'Transactional email')}</strong>
+              <strong>{row.subject || formatTemplate(row.template || 'Transactional email')}</strong>
               <small>{row.provider ? `via ${row.provider}` : 'Provider not recorded'}</small>
             </div>
             <span className="eb-email-history-recipient">{row.recipient || 'Recipient protected'}</span>

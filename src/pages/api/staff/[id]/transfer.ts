@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     const assignment = await transferStaff(params.id!, data, actor.id);
     const staff = await prisma.staff.findUnique({ where: { id: params.id! }, select: { firstName: true, lastName: true, email: true } });
     if (staff?.email) {
-      void sendStaffTransferNotification({ email: staff.email, name: `${staff.firstName} ${staff.lastName}`.trim(), fromTeam: assignment.fromTeam.name, toTeam: assignment.toTeam.name, effectiveFrom: assignment.effectiveFrom }).catch((error) => console.error('[staff] transfer notification failed', error));
+      void sendStaffTransferNotification({ email: staff.email, name: `${staff.firstName} ${staff.lastName}`.trim(), fromTeam: assignment.fromTeam.name, toTeam: assignment.toTeam.name, effectiveFrom: assignment.effectiveFrom, staffId: params.id! }).catch((error) => console.error('[staff] transfer notification failed', error));
     }
     await logAudit(request, "STAFF_TRANSFERRED", { staffId: params.id, fromTeamStaffId: data.fromTeamStaffId, toTeamId: data.toTeamId, effectiveFrom: assignment.effectiveFrom, transferReason: data.transferReason || undefined });
     return new Response(JSON.stringify(assignment), { status: 201, headers: { "Content-Type": "application/json" } });

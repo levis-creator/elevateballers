@@ -104,6 +104,7 @@ export const POST: APIRoute = async ({ request }) => {
         email: data.contactEmail,
         teamName: team.name,
         leagueName: data.leagueName || null,
+        teamId: team.id,
       }).catch((err) => {
         console.error('Failed to send team admin-create auto-reply (Brevo):', err);
       });

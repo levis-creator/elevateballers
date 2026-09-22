@@ -8,8 +8,10 @@ export async function sendStaffTransferNotification(data: {
   fromTeam: string;
   toTeam: string;
   effectiveFrom: Date;
+  staffId?: string;
 }): Promise<void> {
   const effectiveDate = data.effectiveFrom.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const context = data.staffId ? { staffId: data.staffId } : undefined;
   const configured = await configuredEmailTemplate('staffTransfer', {
     name: data.name,
     firstName: data.name.split(/\s+/)[0] || 'there',
@@ -19,7 +21,7 @@ export async function sendStaffTransferNotification(data: {
     effectiveDate,
   });
   if (configured) {
-    await sendTransactionalEmail({ to: data.email, subject: configured.subject, html: emailWrapper(configured.html), audit: { template: 'staff_transfer_notification' } });
+    await sendTransactionalEmail({ to: data.email, subject: configured.subject, html: emailWrapper(configured.html), audit: { template: 'staff_transfer_notification', context } });
     return;
   }
   const html = emailWrapper(`
@@ -28,5 +30,5 @@ export async function sendStaffTransferNotification(data: {
     <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Your ElevateBallers staff assignment is moving from <strong>${data.fromTeam}</strong> to <strong>${data.toTeam}</strong>.</p>
     <p style="margin:0;font-size:15px;color:${C.text};line-height:1.7;">Effective date: <strong>${effectiveDate}</strong>.</p>
   `);
-  await sendTransactionalEmail({ to: data.email, subject: `Your team assignment is moving to ${data.toTeam}`, html, audit: { template: 'staff_transfer_notification' } });
+  await sendTransactionalEmail({ to: data.email, subject: `Your team assignment is moving to ${data.toTeam}`, html, audit: { template: 'staff_transfer_notification', context } });
 }

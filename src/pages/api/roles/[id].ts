@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 
 import { handleApiError } from '../../../lib/apiError';
+import { diffFields } from '../../../lib/auditDiff';
 
 export const prerender = false;
 
@@ -145,11 +146,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
       data: updateData,
     });
 
+    const changes = diffFields(existingRole, role, ['name', 'description']);
+
     const adminId = getUserIdFromRequest(request) ?? 'unknown';
     await writeAuditLog(adminId, 'ROLE_UPDATED', adminId, {
       roleId: role.id,
       name: role.name,
       description: role.description,
+      changes,
     }).catch(() => {});
 
     return new Response(
@@ -240,6 +244,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     await writeAuditLog(adminId, 'ROLE_DELETED', adminId, {
       roleId: role.id,
       name: role.name,
+      deletedRole: { name: role.name, description: role.description, isSystem: role.isSystem },
     }).catch(() => {});
 
     return new Response(

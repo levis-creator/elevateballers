@@ -74,7 +74,14 @@ type TransactionalEmailInput = {
   from?: string;
   purpose?: EmailPurpose;
   dedupeKey?: string;
-  audit?: { type?: string; template?: string };
+  /**
+   * `context` carries the business ids (matchId, teamId, playerId, ...) that
+   * triggered this send, and `userId` the recipient's account id when known —
+   * both go straight into the audit row so "who/what caused this email" is
+   * answerable without re-deriving it from the hash. Never put email body
+   * content or tokens here; see EMAIL_SENT logging below for what's excluded.
+   */
+  audit?: { type?: string; template?: string; context?: Record<string, unknown>; userId?: string };
 };
 
 const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -227,9 +234,10 @@ export async function sendTransactionalEmail(data: TransactionalEmailInput): Pro
         await incrementCache(`email:sent:${new Date().toISOString().slice(0, 10)}`, 172_800);
         if (delivery.history) logAuditSystem(data.audit?.type || 'EMAIL_SENT', {
           provider: providerName(provider), template: data.audit?.template ?? null,
+          subject: data.subject, context: data.audit?.context ?? undefined,
           toHash: hashRecipients(recipients), subjectHash: hashValue(data.subject), eventId, traceId,
           durationMs: Date.now() - startedAt, responseId, attempt,
-        });
+        }, data.audit?.userId);
         if (delivery.dedupe && gate.dedupeKey) await cacheSet(gate.dedupeKey, true, delivery.dedupeWindow * 60);
         if (failedProviders.length) {
           logAuditSystem('EMAIL_PROVIDER_FAILOVER', { eventId, traceId, failedProviders, selectedProvider: providerName(provider) });
@@ -246,9 +254,10 @@ export async function sendTransactionalEmail(data: TransactionalEmailInput): Pro
     await cacheSet(cooldownKey, true, outbound.failoverCooldown * 60);
     if (delivery.logErrors) logAuditSystem(isHardBounce(lastError) ? 'EMAIL_BOUNCED' : 'EMAIL_FAILED', {
       provider: providerName(provider), template: data.audit?.template ?? null,
+      subject: data.subject, context: data.audit?.context ?? undefined,
       toHash: hashRecipients(recipients), subjectHash: hashValue(data.subject), eventId, traceId,
       error: lastError instanceof Error ? lastError.message : String(lastError),
-    });
+    }, data.audit?.userId);
   }
   throw lastError;
 }

@@ -9,6 +9,22 @@ import { resolveLeagueSeasonById } from '../../../features/seasons/data/league-s
 import { getCurrentUser } from '../../../features/cms/lib/auth';
 import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from '../../../features/settings';
 import { notifyMatchParticipants } from '../../../features/settings/application/notificationMaintenance';
+import { diffFields } from '../../../lib/auditDiff';
+
+const MATCH_AUDIT_FIELDS = [
+  'status',
+  'date',
+  'team1Score',
+  'team2Score',
+  'stage',
+  'team1Id',
+  'team2Id',
+  'leagueSeasonId',
+  'seasonId',
+  'leagueId',
+  'resultPublishedAt',
+  'duration',
+] as const;
 
 export const prerender = false;
 
@@ -131,11 +147,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const match = await updateMatch(params.id!, data);
     if (!match) return json({ error: 'Match not found' }, 404);
 
+    const changes = diffFields(existingMatch, match, MATCH_AUDIT_FIELDS);
+
     await logAudit(request, 'MATCH_UPDATED', {
       matchId: match.id,
       leagueId: match.leagueId,
       date: match.date,
       status: match.status,
+      changes,
     });
 
     const scheduleChanged = Boolean(existingMatch) && (
@@ -157,11 +176,32 @@ export const PUT: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requireMatchScopedPermission(request, params.id!, 'matches:update');
+    // Snapshot before deleting — once the row is gone this is the only record
+    // of what the match looked like.
+    const existingMatch = await getMatchById(params.id!);
     const success = await deleteMatch(params.id!);
 
     if (!success) return json({ error: 'Failed to delete match' }, 500);
 
-    await logAudit(request, 'MATCH_DELETED', { matchId: params.id });
+    await logAudit(request, 'MATCH_DELETED', {
+      matchId: params.id,
+      deletedMatch: existingMatch
+        ? {
+            date: existingMatch.date,
+            status: existingMatch.status,
+            stage: existingMatch.stage,
+            team1Id: existingMatch.team1Id,
+            team1Name: existingMatch.team1?.name ?? existingMatch.team1Name,
+            team2Id: existingMatch.team2Id,
+            team2Name: existingMatch.team2?.name ?? existingMatch.team2Name,
+            team1Score: existingMatch.team1Score,
+            team2Score: existingMatch.team2Score,
+            leagueId: existingMatch.leagueId,
+            seasonId: existingMatch.seasonId,
+            leagueSeasonId: existingMatch.leagueSeasonId,
+          }
+        : undefined,
+    });
 
     return new Response(null, { status: 204 });
   } catch (error) {
