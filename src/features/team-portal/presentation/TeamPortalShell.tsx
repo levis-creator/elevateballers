@@ -26,13 +26,14 @@ import TeamPortalOverview from './TeamPortalOverview';
 type Team = { id: string; name: string };
 type PortalView = 'overview' | 'register' | 'roster' | 'player' | 'lineup' | 'stats' | 'fixtures';
 
-const navigation: Array<[PortalView, string, LucideIcon]> = [
-  ['overview', 'Home', Home],
-  ['register', 'Registration', ClipboardList],
-  ['roster', 'Roster', Users],
-  ['lineup', 'Lineup', ListChecks],
-  ['stats', 'Team stats', ChartNoAxesCombined],
-  ['fixtures', 'Fixtures', CalendarDays],
+// [view, sidebar label, icon, short label for the mobile tab bar]
+const navigation: Array<[PortalView, string, LucideIcon, string]> = [
+  ['overview', 'Home', Home, 'Home'],
+  ['register', 'Registration', ClipboardList, 'Register'],
+  ['roster', 'Roster', Users, 'Roster'],
+  ['lineup', 'Lineup', ListChecks, 'Lineup'],
+  ['stats', 'Team stats', ChartNoAxesCombined, 'Stats'],
+  ['fixtures', 'Fixtures', CalendarDays, 'Fixtures'],
 ];
 
 export default function TeamPortalShell({
@@ -42,8 +43,10 @@ export default function TeamPortalShell({
   view,
   playerId,
   matchId,
+  roleLabel,
 }: {
   name: string;
+  roleLabel: string;
   teams: Team[];
   selectedTeamId: string;
   view: PortalView;
@@ -128,11 +131,6 @@ export default function TeamPortalShell({
                   <Icon size={16} strokeWidth={1.8} />
                 </span>
                 <span className="flex-1 text-left">{label}</span>
-                {route !== 'overview' && route !== 'register' && (
-                  <span className="rounded-full bg-brand px-1.5 py-0.5 font-mono text-[9px] font-bold leading-none text-white">
-                    Soon
-                  </span>
-                )}
               </a>
             ))}
           </nav>
@@ -146,7 +144,7 @@ export default function TeamPortalShell({
               </span>
               <span className="mt-1 block text-[12.5px] font-bold text-cream">{name}</span>
               <span className="block font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#8a817a]">
-                Team Coach
+                {roleLabel}
               </span>
             </a>
             <button
@@ -171,13 +169,13 @@ export default function TeamPortalShell({
                   {activeTeam?.name || 'Team'}
                 </div>
                 {teams.length > 1 && (
-                  <label className="mt-1.5 flex w-fit max-w-full items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] py-1.5 pl-2.5 pr-2">
+                  <label className="mt-1.5 flex w-fit max-w-full min-w-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] py-1.5 pl-2.5 pr-2">
                     <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand"></span>
                     <select
                       value={teamId}
                       onChange={(event) => selectTeam(event.target.value)}
                       aria-label="Active team"
-                      className="max-w-[220px] truncate rounded-lg bg-transparent font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#b8afa6] outline-none"
+                      className="min-w-0 max-w-[220px] truncate rounded-lg bg-transparent font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#b8afa6] outline-none"
                     >
                       <option className="bg-[#111010]" value={teamId}>
                         {activeTeam?.name} · Active assignment
@@ -192,7 +190,7 @@ export default function TeamPortalShell({
                     </select>
                     <span className="scope-switch">
                       <ArrowLeftRight size={11} strokeWidth={1.8} />
-                      Switch
+                      <span className="max-[479px]:hidden">Switch</span>
                     </span>
                   </label>
                 )}
@@ -202,7 +200,7 @@ export default function TeamPortalShell({
                 aria-label="Toggle light or dark mode"
                 aria-pressed={lightMode}
                 onClick={toggleTheme}
-                className="hidden h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-[#b8afa6] min-[900px]:flex"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-[#b8afa6]"
               >
                 {lightMode ? (
                   <Moon size={15} strokeWidth={1.8} />
@@ -282,7 +280,7 @@ export default function TeamPortalShell({
               <TeamPortalOverview
                 teamId={teamId}
                 teamName={activeTeam?.name || 'Team'}
-                roleLabel="Team Coach"
+                roleLabel={roleLabel}
                 hrefFor={(target) =>
                   target.view === 'lineup' && 'matchId' in target && target.matchId
                     ? goLineup(target.matchId)
@@ -297,7 +295,7 @@ export default function TeamPortalShell({
         className="fixed bottom-0 left-0 right-0 z-40 flex h-[78px] items-center justify-around border-t border-white/[0.08] bg-[#0a0908] px-2 min-[900px]:hidden"
         aria-label="Mobile Team Portal navigation"
       >
-        {navigation.slice(0, 5).map(([route, label, Icon]) => (
+        {navigation.map(([route, , Icon, shortLabel]) => (
           <a
             key={route}
             href={go(route)}
@@ -305,11 +303,11 @@ export default function TeamPortalShell({
             className={`mobile-nav-item ${view === route ? 'mobile-nav-active' : ''}`}
           >
             <Icon size={17} strokeWidth={1.8} />
-            <span>{label === 'Fixtures & results' ? 'Fixtures' : label}</span>
+            <span>{shortLabel}</span>
           </a>
         ))}
       </nav>
-      <style>{` .team-portal-root{--portal-border:rgba(255,255,255,.08)} .team-portal-root button,.team-portal-root select{border-radius:10px}.team-portal-root header>div>span{border-radius:12px}.team-portal-root aside>div:last-child>div:first-child{border-radius:12px}.portal-team-role,.needs-clear,.team-scoped-badge{border-radius:12px}.scope-switch{display:inline-flex;align-items:center;gap:4px;border-radius:7px;background:rgba(255,255,255,.08);padding:4px 6px;color:#8a817a;font-family:'Space Mono',monospace;font-size:8.5px;text-transform:uppercase;white-space:nowrap}.portal-nav-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border-radius:10px;color:#8a817a;text-decoration:none;font-family:Archivo,sans-serif;font-size:12.5px;font-weight:700}.portal-nav-item:hover{background:rgba(255,255,255,.06);color:#f3efe9}.portal-nav-active{background:rgba(228,0,43,.12);color:#ff5a72}.portal-module-card{min-height:148px;padding:18px 20px;border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);border-radius:12px;text-decoration:none}.portal-module-card:hover{background:rgba(255,255,255,.04)}.mobile-nav-item{display:flex;min-width:62px;height:60px;align-items:center;justify-content:center;gap:3px;flex-direction:column;color:#8a817a;text-decoration:none;font-family:Space Mono,monospace;font-size:8px;text-transform:uppercase}.mobile-nav-active{color:#ff5a72}.portal-panel{box-shadow:0 14px 40px rgba(0,0,0,.14)}.portal-account-dropdown{background:#171514}.portal-light{background:#f5f3ef!important;color:#141009!important}.portal-light aside,.portal-light nav{background:#fff!important;border-color:#e6e1d8!important}.portal-light header,.portal-light .portal-panel{background:#fff!important;border-color:#e6e1d8!important}.portal-light [class*="border-white"]{border-color:#e6e1d8!important}.portal-light main{background:#f5f3ef!important}.portal-light .text-cream,.portal-light .text-tx{color:#141009!important}.portal-light .text-cream\/80,.portal-light .text-\[\#b8afa6\],.portal-light .text-\[\#8a817a\]{color:#6f665c!important}.portal-light .bg-white\/\[0\.03\],.portal-light .bg-white\/\[0\.04\]{background:#f4f1ea!important}.portal-light .border-white\/\[0\.08\],.portal-light .border-white\/\[0\.06\]{border-color:#e6e1d8!important}.portal-light .portal-nav-active,.portal-light .portal-nav-item.portal-nav-active{background:#fbe7eb!important;color:#e4002b!important}.portal-light .portal-nav-active svg{color:#e4002b!important}.portal-light .portal-nav-item:hover{background:#f0ece5!important;color:#141009!important}.portal-light .portal-nav-active:hover,.portal-light .portal-nav-item.portal-nav-active:hover{background:#fbe7eb!important;color:#e4002b!important}.portal-light .portal-module-card:hover{background:#f0ece5!important}.portal-light .portal-team-role,.portal-light .needs-clear{background:#fff!important;border-color:#d6d0c5!important;color:#4a443d!important}.portal-light div.team-portal-root.portal-light span.team-scoped-badge{background-color:#eceae3!important;border-color:#d6d0c5!important;color:#4a443d!important}.portal-light .scope-switch{background:#eceae3;color:#6f665c}.portal-light .portal-account-dropdown{background:#fff!important;border-color:#d6d0c5!important}.portal-light select{color:#4a443d!important}.portal-light .portal-panel{box-shadow:0 14px 40px rgba(20,16,9,.08)} `}</style>
+      <style>{` .team-portal-root{--portal-border:rgba(255,255,255,.08)} .team-portal-root button,.team-portal-root select{border-radius:10px}.team-portal-root header>div>span{border-radius:12px}.team-portal-root aside>div:last-child>div:first-child{border-radius:12px}.portal-team-role,.needs-clear,.team-scoped-badge{border-radius:12px}.scope-switch{display:inline-flex;align-items:center;gap:4px;border-radius:7px;background:rgba(255,255,255,.08);padding:4px 6px;color:#8a817a;font-family:'Space Mono',monospace;font-size:8.5px;text-transform:uppercase;white-space:nowrap}.portal-nav-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border-radius:10px;color:#8a817a;text-decoration:none;font-family:Archivo,sans-serif;font-size:12.5px;font-weight:700}.portal-nav-item:hover{background:rgba(255,255,255,.06);color:#f3efe9}.portal-nav-active{background:rgba(228,0,43,.12);color:#ff5a72}.portal-module-card{min-height:148px;padding:18px 20px;border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);border-radius:12px;text-decoration:none}.portal-module-card:hover{background:rgba(255,255,255,.04)}.mobile-nav-item{display:flex;flex:1 1 0;min-width:52px;height:60px;align-items:center;justify-content:center;gap:3px;flex-direction:column;color:#8a817a;text-decoration:none;font-family:Space Mono,monospace;font-size:8px;text-transform:uppercase}.mobile-nav-active{color:#ff5a72}.portal-panel{box-shadow:0 14px 40px rgba(0,0,0,.14)}.portal-account-dropdown{background:#171514}.portal-light{background:#f5f3ef!important;color:#141009!important}.portal-light aside,.portal-light nav{background:#fff!important;border-color:#e6e1d8!important}.portal-light header,.portal-light .portal-panel{background:#fff!important;border-color:#e6e1d8!important}.portal-light [class*="border-white"]{border-color:#e6e1d8!important}.portal-light main{background:#f5f3ef!important}.portal-light .text-cream,.portal-light .text-tx{color:#141009!important}.portal-light .text-cream\/80,.portal-light .text-\[\#b8afa6\],.portal-light .text-\[\#8a817a\]{color:#6f665c!important}.portal-light .bg-white\/\[0\.03\],.portal-light .bg-white\/\[0\.04\]{background:#f4f1ea!important}.portal-light .border-white\/\[0\.08\],.portal-light .border-white\/\[0\.06\]{border-color:#e6e1d8!important}.portal-light .portal-nav-active,.portal-light .portal-nav-item.portal-nav-active{background:#fbe7eb!important;color:#e4002b!important}.portal-light .portal-nav-active svg{color:#e4002b!important}.portal-light .portal-nav-item:hover{background:#f0ece5!important;color:#141009!important}.portal-light .portal-nav-active:hover,.portal-light .portal-nav-item.portal-nav-active:hover{background:#fbe7eb!important;color:#e4002b!important}.portal-light .portal-module-card:hover{background:#f0ece5!important}.portal-light .portal-team-role,.portal-light .needs-clear{background:#fff!important;border-color:#d6d0c5!important;color:#4a443d!important}.portal-light div.team-portal-root.portal-light span.team-scoped-badge{background-color:#eceae3!important;border-color:#d6d0c5!important;color:#4a443d!important}.portal-light .scope-switch{background:#eceae3;color:#6f665c}.portal-light .portal-account-dropdown{background:#fff!important;border-color:#d6d0c5!important}.portal-light select{color:#4a443d!important}.portal-light .portal-panel{box-shadow:0 14px 40px rgba(20,16,9,.08)} `}</style>
     </div>
   );
 }
