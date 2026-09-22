@@ -54,6 +54,15 @@ export function handleApiError(error: unknown, context: string, request?: Reques
     return json({ error: msg }, 409);
   }
 
+  // Resource-lookup guards (e.g. requireMatchScopedPermission, requirePlayerScopedPermission)
+  // throw a plain `new Error('X not found')` when the id in the URL doesn't exist —
+  // an expected client condition, not a server fault. Map it to 404 instead of
+  // falling through to the generic 500 branch below.
+  if (/ not found$/i.test(msg)) {
+    console.warn(`[api:${context}] Not found`, buildLogMeta(msg, clientIp));
+    return json({ error: msg }, 404);
+  }
+
   // Validation errors thrown by parseBody() / schema.parse()
   if (error instanceof ZodError) {
     return json({ error: 'Validation failed', issues: error.flatten().fieldErrors }, 400);
