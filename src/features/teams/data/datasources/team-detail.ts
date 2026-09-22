@@ -8,7 +8,15 @@ import { prisma } from "@/lib/prisma";
 import { getTeamBySlug, getStaffByTeam } from "@/features/cms/lib/queries";
 import { getTeamPlayerStats } from "@/features/player/lib/queries";
 import { getFilteredMatches } from "@/features/matches/lib/queries";
-import { getZonedDateParts, formatMatchTime } from "@/features/matches/domain/usecases/utils";
+import {
+	fmtDate,
+	fmtWhen,
+	homeName,
+	awayName,
+	homeNickname,
+	awayNickname,
+	leagueOf,
+} from "@/features/teams/domain/usecases/match-format";
 import { calculateTeamStatistics } from "@/features/team/lib/teamStats";
 import { getTeamCoachingStaff } from "@/features/staff/data/datasources/team-coaching-staff-v2";
 import { getDisplayImageUrl } from "@/lib/asset-url";
@@ -23,29 +31,12 @@ import type {
 	HeroStat,
 } from "@/features/teams/domain/entities/team-detail";
 
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-// Render match dates/times in the league timezone (Africa/Nairobi, UTC+3), not
-// the server's — otherwise fixtures show ~3h early in UTC.
-const fmtDate = (v: any) => {
-	const p = getZonedDateParts(v);
-	return `${MON[p.month - 1]} ${p.day}, ${p.year}`;
-};
-const fmtWhen = (v: any) => {
-	const p = getZonedDateParts(v);
-	return `${MON[p.month - 1]} ${p.day} · ${formatMatchTime(v)}`;
-};
 const initialsOf = (name: string) =>
 	name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 const abbrOf = (name: string) =>
 	name.split(/\s+/).filter(Boolean).slice(0, 4).map((w) => w[0]).join("").toUpperCase() || "—";
 const formatRole = (role: string) =>
 	role.split("_").map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(" ");
-
-const homeName = (m: any) => m.team1?.name || m.team1Name || "TBD";
-const awayName = (m: any) => m.team2?.name || m.team2Name || "TBD";
-const homeNickname = (m: any) => m.team1?.nickname ?? null;
-const awayNickname = (m: any) => m.team2?.nickname ?? null;
-const leagueOf = (m: any) => m.league?.name || m.leagueName || "";
 
 export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> {
 	const team = await getTeamBySlug(slug);
