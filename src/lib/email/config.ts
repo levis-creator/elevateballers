@@ -8,6 +8,11 @@ export const ADMIN_TO = process.env.ADMIN_EMAIL || 'info@elevateballers.com';
 export const BREVO_FROM = process.env.BREVO_FROM || process.env.RESEND_FROM || 'ElevateBallers <info@elevateballers.com>';
 export const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'ElevateBallers';
 export const SITE_URL = process.env.SITE_URL || 'https://elevateballers.com';
+// Shared secret for HMAC-keyed values derived from recipient/subject data
+// (audit-log hashes, open-tracking tokens) — keeps them unguessable without
+// the key, unlike a bare hash of a low-entropy value like an email address.
+export const EMAIL_HASH_SECRET =
+  process.env.EMAIL_TRACKING_SECRET || process.env.AUTH_SECRET || process.env.JWT_SECRET;
 // Full wordmark logo (black "ELEVATE" + red mark) — shown on a light chip in the
 // email header so it stays legible on the dark header band.
 export const LOGO_URL = `${SITE_URL}/logo/Elevate_Logo.png`;
