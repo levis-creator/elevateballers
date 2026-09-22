@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { prisma } from '../prisma';
 import { logAuditSystem } from '../../features/cms/lib/audit';
-import { SMTP_FROM, SITE_URL, LOGO_URL, C, FONT_DISPLAY, FONT_BODY, FONT_MONO, type AdminNotificationType } from './config';
+import { SMTP_FROM, SITE_URL, LOGO_URL, C, FONT_DISPLAY, FONT_BODY, FONT_MONO, EMAIL_HASH_SECRET, type AdminNotificationType } from './config';
 import { getResend, getSmtpTransport, hashValue, hashRecipients, parseSmtpCredential, sendBrevoEmail, sendMailgunEmail, type ProviderMessage } from './providers';
 import { cacheGet, cacheSet } from '../cache';
 import {
@@ -145,9 +145,8 @@ async function sendWithProvider(provider: RuntimeProvider, message: ProviderMess
 }
 
 function trackingToken(eventId: string): string | null {
-  const secret = process.env.EMAIL_TRACKING_SECRET || process.env.AUTH_SECRET || process.env.JWT_SECRET;
-  if (!secret) return null;
-  return crypto.createHmac('sha256', secret).update(eventId).digest('base64url');
+  if (!EMAIL_HASH_SECRET) return null;
+  return crypto.createHmac('sha256', EMAIL_HASH_SECRET).update(eventId).digest('base64url');
 }
 
 export function verifyEmailTrackingToken(eventId: string, token: string): boolean {

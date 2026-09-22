@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 import crypto from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { BrevoClient } from '@getbrevo/brevo';
-import { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } from './config';
+import { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_HASH_SECRET } from './config';
 
 export function getResend(apiKeyOverride?: string) {
   const apiKey = apiKeyOverride || process.env.RESEND_API_KEY;
@@ -133,8 +133,24 @@ export async function sendBrevoEmail(credential: string | undefined, message: Pr
   return { id: String((result as { messageId?: string }).messageId || '') || null };
 }
 
+let warnedMissingHashSecret = false;
+
+/**
+ * HMAC-keyed rather than a bare hash: emails are low-entropy, so an unkeyed
+ * SHA-256 can be reversed by anyone with a candidate address to check
+ * (hash it, compare) — no cracking required. Keying it with a server secret
+ * closes that off. Falls back to a plain hash (with a one-time warning) only
+ * when no secret is configured at all, so audit logging still works.
+ */
 export function hashValue(value: string): string {
-  return crypto.createHash('sha256').update(value).digest('hex');
+  if (!EMAIL_HASH_SECRET) {
+    if (!warnedMissingHashSecret) {
+      warnedMissingHashSecret = true;
+      console.warn('[email] No EMAIL_TRACKING_SECRET/AUTH_SECRET configured — audit-log hashes fall back to plain SHA-256, which is reversible for low-entropy values like email addresses.');
+    }
+    return crypto.createHash('sha256').update(value).digest('hex');
+  }
+  return crypto.createHmac('sha256', EMAIL_HASH_SECRET).update(value).digest('hex');
 }
 
 export function hashRecipients(recipients: string[]): string[] {
