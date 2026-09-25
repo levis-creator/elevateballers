@@ -61,9 +61,9 @@ function DashboardContent() {
 	const d = useDashboardData();
 	const [tab, setTab] = useState<Approval["tab"]>("Players");
 
-	const tabs: Approval["tab"][] = ["Players", "Teams", "Messages"];
+	const tabs: Approval["tab"][] = ["Players", "Teams", "Roster", "Messages"];
 	const countByTab = useMemo(() => {
-		const c: Record<string, number> = { Players: 0, Teams: 0, Messages: 0 };
+		const c: Record<string, number> = { Players: 0, Teams: 0, Roster: 0, Messages: 0 };
 		d.approvals.forEach((a) => (c[a.tab] = (c[a.tab] || 0) + 1));
 		return c;
 	}, [d.approvals]);
@@ -169,7 +169,7 @@ function DashboardContent() {
 						<div className="flex flex-col">
 							{visible.map((a) => {
 								const busy = d.processing.has(a.id);
-								const canApprove = a.tab === "Players" ? d.can("players:approve") : a.tab === "Teams" ? d.can("teams:approve") : false;
+								const canApprove = a.tab === "Players" ? d.can("players:approve") : a.tab === "Teams" ? d.can("teams:approve") : a.tab === "Roster" ? d.can("players:update") || d.can("teams:update") : false;
 								return (
 									<div key={a.id} className="flex items-center gap-3.5 border-b border-[var(--bord2)] px-5 py-3.5 max-[560px]:flex-col max-[560px]:items-start">
 										<div className="min-w-0 flex-1"><div className="font-['Archivo'] text-[13.5px] font-bold leading-snug text-[var(--tx)]">{a.title}</div><div className="mt-0.5 font-['Space_Mono'] text-[11px] text-[var(--txm)]">{a.meta}</div></div>
@@ -181,7 +181,7 @@ function DashboardContent() {
 												<button type="button" disabled={busy} onClick={() => d.resolve(a, false)} className="rounded-md border border-[var(--bord)] px-3 py-2 font-['Archivo'] text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--txm)] hover:border-[var(--brand)]/50 hover:text-[var(--brand)] disabled:opacity-50">Reject</button>
 											</div>
 										) : (
-											<a href={a.tab === "Players" ? "/admin/players" : "/admin/teams"} className="rounded-md border border-[var(--bord)] px-3 py-2 font-['Archivo'] text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--txm)] no-underline hover:border-[var(--brand)]/50">Review</a>
+											<a href={a.tab === "Players" ? "/admin/players" : a.tab === "Roster" ? "/admin/registrations?kind=ROSTER" : "/admin/teams"} className="rounded-md border border-[var(--bord)] px-3 py-2 font-['Archivo'] text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--txm)] no-underline hover:border-[var(--brand)]/50">Review</a>
 										)}
 									</div>
 								);
@@ -190,7 +190,7 @@ function DashboardContent() {
 								<div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
 									<span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surf2)] text-[#1f9d55]"><Check className="h-5 w-5" /></span>
 									<div className="font-['Anton'] text-[18px] uppercase text-[var(--tx)]">Queue clear</div>
-									<p className="max-w-[300px] font-['Archivo'] text-[13px] text-[var(--txm)]">No pending {tab.toLowerCase()} to review. Nice work.</p>
+									<p className="max-w-[300px] font-['Archivo'] text-[13px] text-[var(--txm)]">No pending {tab === "Roster" ? "roster requests" : tab.toLowerCase()} to review. Nice work.</p>
 								</div>
 							)}
 						</div>

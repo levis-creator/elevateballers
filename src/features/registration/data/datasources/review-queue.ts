@@ -38,6 +38,60 @@ function rosterRequestType(row: any, pendingRemovals: ReadonlySet<string>) {
   return 'NEW';
 }
 
+export type RosterRequest = {
+  id: string;
+  requestType: 'NEW' | 'EDIT' | 'REMOVAL';
+  playerName: string;
+  teamName: string | null;
+  jerseyNumber: number | null;
+  position: string | null;
+  note: string | null;
+};
+
+/** Coach roster requests still awaiting a decision, newest first, for the admin dashboard. */
+export async function getPendingRosterRequests(
+  limit: number
+): Promise<{ total: number; items: RosterRequest[] }> {
+  const db = prisma as any;
+  const pendingRemovals = await pendingRemovalRosterIds(db);
+  const where = { OR: [{ status: 'PENDING', leftAt: null }, { id: { in: pendingRemovals } }] };
+  const [rows, total] = await Promise.all([
+    db.seasonTeamPlayer.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        status: true,
+        jerseyNumber: true,
+        position: true,
+        player: { select: { firstName: true, lastName: true } },
+        team: { select: { name: true } },
+        history: {
+          where: { action: { in: PROPOSAL_ACTIONS } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { action: true, reason: true, createdAt: true },
+        },
+      },
+    }),
+    db.seasonTeamPlayer.count({ where }),
+  ]);
+  const removals = new Set(pendingRemovals);
+  return {
+    total,
+    items: rows.map((row: any) => ({
+      id: row.id,
+      requestType: rosterRequestType(row, removals),
+      playerName: `${row.player?.firstName ?? ''} ${row.player?.lastName ?? ''}`.trim() || 'Unnamed player',
+      teamName: row.team?.name ?? null,
+      jerseyNumber: row.jerseyNumber,
+      position: row.position,
+      note: row.history[0]?.reason ?? null,
+    })),
+  };
+}
+
 export async function getRegistrationReviewQueue(input: {
   page: number;
   limit: number;
