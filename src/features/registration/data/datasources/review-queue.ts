@@ -245,7 +245,7 @@ export async function bulkReviewRosterProposals(input: {
   ids: string[];
   action: 'APPROVE' | 'REJECT';
   reviewerId: string;
-}) {
+}): Promise<{ count: number; decisions: RosterDecision[] }> {
   const db = prisma as any;
   const approve = input.action === 'APPROVE';
   return db.$transaction(async (tx: any) => {
@@ -313,6 +313,8 @@ export async function bulkReviewRosterProposals(input: {
     return {
       count: rows.length,
       decisions: decisions.map(({ row, type }: any): RosterDecision => ({
+        rosterId: row.id,
+        playerId: row.playerId,
         type,
         approved: approve,
         playerName: `${row.player?.firstName ?? ''} ${row.player?.lastName ?? ''}`.trim() || 'A player',

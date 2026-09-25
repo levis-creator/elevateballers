@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { markContactNotificationsRead } from '@/features/cms/lib/notificationCleanup';
+import { logAudit } from '@/features/cms/lib/audit';
 import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '@/lib/apiError';
 import { prisma } from '@/lib/prisma';
@@ -76,6 +77,8 @@ export const POST: APIRoute = async ({ request, params }) => {
     });
 
     await markContactNotificationsRead([id]);
+    // The reply text stays on the message row; the log records who replied and when.
+    logAudit(request, 'CONTACT_MESSAGE_REPLIED', { contactMessageId: id });
 
     return json({ ok: true, message: updated }, 200);
   } catch (error) {

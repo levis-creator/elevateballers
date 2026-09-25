@@ -5,6 +5,8 @@ import { invalidatePermissionCache } from '../../../../features/rbac/permissions
 import { prisma } from '../../../../lib/prisma';
 import { json, handleApiError } from '../../../../lib/apiError';
 import { ADMIN_ROLE_NAME, COACH_ROLE_NAME } from '../../../../features/users/domain/entities/user-directory';
+import { logAudit } from '../../../../features/cms/lib/audit';
+import { diffIdSets } from '../../../../lib/auditDiff';
 
 export const prerender = false;
 
@@ -85,6 +87,11 @@ export const PUT: APIRoute = async ({ params, request }) => {
       }
     }
 
+    const previousRoles = await prisma.userRole.findMany({
+      where: { userId },
+      select: { role: { select: { name: true } } },
+    });
+
     // Remove all existing roles for this user
     await prisma.userRole.deleteMany({
       where: { userId },
@@ -108,6 +115,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     // Expire the cached permission set so the change takes effect immediately
     invalidatePermissionCache(userId);
+
+    logAudit(
+      request,
+      'USER_ROLES_CHANGED',
+      { roles: diffIdSets(previousRoles.map((r) => r.role.name), [...nextRoleNames]) },
+      userId
+    );
 
     // Fetch updated user with roles
     const updatedUser = await prisma.user.findUnique({

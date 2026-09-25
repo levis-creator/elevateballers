@@ -63,6 +63,8 @@ export async function notifyAdminsOfRosterRequest(alert: RosterRequestAlert) {
 }
 
 export type RosterDecision = {
+  rosterId: string;
+  playerId: string;
   type: 'NEW' | 'EDIT' | 'REMOVAL';
   approved: boolean;
   playerName: string;

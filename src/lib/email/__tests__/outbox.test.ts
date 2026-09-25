@@ -29,6 +29,7 @@ beforeEach(() => {
   mocks.prisma.emailOutbox.findMany.mockResolvedValue([row()]);
   mocks.prisma.emailOutbox.updateMany.mockResolvedValue({ count: 1 });
   mocks.prisma.emailOutbox.deleteMany.mockResolvedValue({ count: 0 });
+  mocks.prisma.emailOutbox.create.mockResolvedValue({ id: 'o9' });
 });
 
 describe('enqueueFailedEmail', () => {
@@ -42,6 +43,13 @@ describe('enqueueFailedEmail', () => {
         lastError: 'smtp down',
         nextAttemptAt: new Date(NOW.getTime() + HOUR),
       },
+      select: { id: true },
+    });
+    expect(mocks.logAuditSystem).toHaveBeenCalledWith('EMAIL_QUEUED_FOR_RETRY', {
+      outboxId: 'o9',
+      source: 'inline',
+      jobType: 'roster_decision',
+      error: 'smtp down',
     });
     vi.useRealTimers();
   });

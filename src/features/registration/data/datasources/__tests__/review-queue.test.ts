@@ -52,7 +52,16 @@ describe('bulkReviewRosterProposals', () => {
     queue([], [row('r1', 'PENDING', 'ROSTER_PROPOSED')]);
     const result = await bulkReviewRosterProposals({ ids: ['r1'], action: 'APPROVE', reviewerId: 'admin' });
     expect(result.decisions).toEqual([
-      { type: 'NEW', approved: true, playerName: 'Ann r1', teamId: 'team-1', teamName: 'Queens', coachId: 'coach-1' },
+      {
+        rosterId: 'r1',
+        playerId: 'player-r1',
+        type: 'NEW',
+        approved: true,
+        playerName: 'Ann r1',
+        teamId: 'team-1',
+        teamName: 'Queens',
+        coachId: 'coach-1',
+      },
     ]);
   });
 

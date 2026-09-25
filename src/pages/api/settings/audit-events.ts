@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request }) => {
       pageSize: PAGE_SIZE,
       total,
       totalPages: Math.ceil(total / PAGE_SIZE),
-    });
+    }, 200);
   } catch (error) {
     return handleApiError(error, 'list security audit events', request);
   }

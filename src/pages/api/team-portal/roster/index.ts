@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/features/cms/lib/auth';
 import { requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
 import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import { handleApiError } from '@/lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 import { calculatePlayerStatistics } from '@/features/player/lib/playerStats';
 import { notifyAdminsOfRosterRequest } from '@/features/registration/application/roster-request-emails';
 
@@ -213,7 +214,7 @@ export const POST: APIRoute = async ({ request }) => {
             changedById: user.id,
           },
         });
-        return { player: null, roster, edited: true };
+        return { player: null, roster, edited: true, before: current, existing: true };
       }
       const existing = await tx.player.findFirst({
         // The MySQL database collation handles email comparisons
@@ -261,8 +262,24 @@ export const POST: APIRoute = async ({ request }) => {
           changedById: user.id,
         },
       });
-      return { player, roster, edited: false };
+      return { player, roster, edited: false, before: null, existing: Boolean(existing) };
     });
+
+    if (result.edited && result.before)
+      logAudit(request, 'TEAM_PORTAL_ROSTER_PLAYER_EDITED', {
+        teamId: team.id,
+        rosterId: result.roster.id,
+        playerId: result.before.playerId,
+        jerseyNumber: { from: result.before.jerseyNumber, to: jerseyNumber },
+        position: { from: result.before.position, to: position },
+      });
+    else
+      logAudit(request, 'TEAM_PORTAL_ROSTER_PLAYER_PROPOSED', {
+        teamId: team.id,
+        rosterId: result.roster.id,
+        playerId: result.roster.playerId,
+        newPlayer: !result.existing,
+      });
 
     if (!result.edited && result.player)
       await notifyAdminsOfRosterRequest({
@@ -362,6 +379,11 @@ export const DELETE: APIRoute = async ({ request }) => {
       });
     });
     const reason = String(body?.reason ?? '').trim() || null;
+    logAudit(request, 'TEAM_PORTAL_ROSTER_REMOVAL_REQUESTED', {
+      teamId: team.id,
+      rosterId: roster.id,
+      playerId: roster.playerId,
+    });
     await notifyAdminsOfRosterRequest({
       kind: 'REMOVAL',
       playerName:
