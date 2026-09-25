@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import ActionDialog from '../../../cms/presentation/v2/ActionDialog';
 
 type Entry = {
   id: string;
@@ -31,6 +32,7 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
   const [type, setType] = useState<'SUSPENSION' | 'INJURY'>('SUSPENSION');
   const [matchCount, setMatchCount] = useState('1');
   const [reason, setReason] = useState('');
+  const [resolving, setResolving] = useState<Entry | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/players/${playerId}/availability`, { cache: 'no-store' })
@@ -92,10 +94,7 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
           <button
             className="eb-pd-small-button"
             disabled={busy}
-            onClick={() => {
-              const what = entry.type === 'SUSPENSION' ? 'Lift this suspension early?' : 'Mark this player fit?';
-              if (window.confirm(what)) void send('PATCH', { id: entry.id });
-            }}
+            onClick={() => setResolving(entry)}
           >
             {entry.type === 'SUSPENSION' ? 'Lift' : 'Mark fit'}
           </button>
@@ -133,6 +132,24 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
       </form>
       {error && <div className="eb-pd-record" style={{ color: 'var(--pd-brandsoft)' }}>{error}</div>}
       <RosterDropouts playerId={playerId} />
+      {resolving && (
+        <ActionDialog
+          eyebrow="Availability"
+          title={resolving.type === 'SUSPENSION' ? 'Lift this suspension early?' : 'Mark this player fit?'}
+          body={
+            resolving.type === 'SUSPENSION'
+              ? `${resolving.label}. Lifting it lets the player be picked again straight away.`
+              : 'They can be picked in lineups again straight away.'
+          }
+          confirmLabel={resolving.type === 'SUSPENSION' ? 'Lift suspension' : 'Mark fit'}
+          busy={busy}
+          onCancel={() => setResolving(null)}
+          onConfirm={async () => {
+            await send('PATCH', { id: resolving.id });
+            setResolving(null);
+          }}
+        />
+      )}
       {past.length > 0 && (
         <>
           <div className="eb-pd-eyebrow" style={{ marginTop: 18 }}>History</div>
@@ -175,20 +192,9 @@ function RosterDropouts({ playerId }: { playerId: string }) {
   }, [playerId]);
   useEffect(load, [load]);
 
-  const act = async (row: RosterEntry) => {
-    let reason: string | undefined;
-    if (row.droppedOut) {
-      if (!window.confirm(`Reinstate this player on ${row.teamName}?`)) return;
-    } else {
-      const answer = window.prompt(
-        `Mark this player as dropped out of ${row.teamName}? They come off the roster, freeing the spot, and leave upcoming lineups.
+  const [confirming, setConfirming] = useState<RosterEntry | null>(null);
 
-Reason (optional, admins only):`,
-        ''
-      );
-      if (answer === null) return;
-      reason = answer.trim() || undefined;
-    }
+  const act = async (row: RosterEntry, reason?: string) => {
     setBusy(true);
     setError('');
     const response = await fetch(`/api/players/${playerId}/dropout`, {
@@ -198,6 +204,7 @@ Reason (optional, admins only):`,
     });
     const value = await response.json().catch(() => ({}));
     setBusy(false);
+    setConfirming(null);
     if (!response.ok) setError(value.error || 'Unable to save.');
     load();
   };
@@ -217,12 +224,36 @@ Reason (optional, admins only):`,
             {row.reason && <><br />{row.reason}</>}
             {row.dropoutRequested && <><br /><small>Coach reported a dropout — see Registrations review</small></>}
           </span>
-          <button className="eb-pd-small-button" disabled={busy} onClick={() => void act(row)}>
+          <button className="eb-pd-small-button" disabled={busy} onClick={() => setConfirming(row)}>
             {row.droppedOut ? 'Reinstate' : 'Drop out'}
           </button>
         </div>
       ))}
       {error && <div className="eb-pd-record" style={{ color: 'var(--pd-brandsoft)' }}>{error}</div>}
+      {confirming &&
+        (confirming.droppedOut ? (
+          <ActionDialog
+            eyebrow="League participation"
+            title={`Reinstate on ${confirming.teamName}?`}
+            body="The player goes back on this roster. This fails if they have since joined another roster this season."
+            confirmLabel="Reinstate"
+            busy={busy}
+            onCancel={() => setConfirming(null)}
+            onConfirm={() => void act(confirming)}
+          />
+        ) : (
+          <ActionDialog
+            eyebrow="League participation"
+            title="Mark as dropped out?"
+            body={`The player comes off ${confirming.teamName}, which frees the spot, and leaves upcoming lineups. Their stats stay on record and you can reinstate them later.`}
+            reasonLabel="Reason (optional, admins only)"
+            reasonPlaceholder="e.g. Relocated, personal reasons"
+            confirmLabel="Mark dropped out"
+            busy={busy}
+            onCancel={() => setConfirming(null)}
+            onConfirm={(reason) => void act(confirming, reason || undefined)}
+          />
+        ))}
     </>
   );
 }
