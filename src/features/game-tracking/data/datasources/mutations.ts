@@ -8,6 +8,7 @@ import { getEnvBoolean } from '../../../../lib/env';
 import { cacheDel } from '../../../../lib/cache';
 import { getNextSequenceNumber } from '../../domain/usecases/utils';
 import { assertSquadLimits, squadLimitError, SquadLimitError } from '../../domain/squad-limits';
+import { assertPlayersAvailable } from '../../../player/data/datasources/availability-repository';
 import type {
   CreateGameRulesInput,
   UpdateGameRulesInput,
@@ -560,8 +561,10 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
         },
         select: { id: true },
       });
-      if (!playerInListed)
+      if (!playerInListed) {
         await assertSquadLimits(tx, data.matchId, data.teamId, { playerId: data.playerInId, started: false }, 'join');
+        await assertPlayersAvailable(tx, data.matchId, [data.playerInId]);
+      }
 
       // Update or create playerIn: set active AND start new playing time session
       const playerInMatchPlayer = await tx.matchPlayer.upsert({
@@ -774,12 +777,15 @@ export async function createBulkSubstitutions(
         where: { matchId: data.matchId, teamId: data.teamId },
         select: { playerId: true, started: true },
       });
+      const listedBefore = new Set(squad.map((row) => row.playerId));
       for (const pair of data.pairs) {
         if (squad.some((row) => row.playerId === pair.playerInId)) continue;
         const limit = squadLimitError(squad, { playerId: pair.playerInId, started: false }, 'join');
         if (limit) throw new SquadLimitError(limit);
         squad.push({ playerId: pair.playerInId, started: false });
       }
+      const joining = data.pairs.map((pair) => pair.playerInId).filter((id) => !listedBefore.has(id));
+      await assertPlayersAvailable(tx, data.matchId, joining);
 
       for (const pair of data.pairs) {
         const pIn = playerById.get(pair.playerInId);

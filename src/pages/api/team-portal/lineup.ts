@@ -17,6 +17,8 @@ import { getDisplayImageUrl } from '@/lib/asset-url';
 import { diffIdSets } from '@/lib/auditDiff';
 import { handleApiError } from '@/lib/apiError';
 import { notifyAdminsOfLineup } from '@/features/team-portal/application/lineup-emails';
+import { getBlockedPlayers } from '@/features/player/data/datasources/availability-repository';
+import { unavailableMessage } from '@/features/player/domain/availability';
 
 export const prerender = false;
 
@@ -96,6 +98,13 @@ export const GET: APIRoute = async ({ request }) => {
           }),
         ])
       : [[], []];
+    const blocked = match
+      ? await getBlockedPlayers(
+          prisma,
+          match.id,
+          roster.map((entry) => entry.player.id)
+        )
+      : new Map();
 
     const summarize = (m: (typeof matches)[number]) => {
       const isHome = m.team1Id === team.id;
@@ -125,6 +134,8 @@ export const GET: APIRoute = async ({ request }) => {
         image: getDisplayImageUrl(player.image),
         jerseyNumber: jerseyNumber ?? player.jerseyNumber,
         position: position || player.position,
+        // Suspended for this match, or injured and not yet marked fit.
+        unavailable: blocked.get(player.id)?.type ?? null,
       })),
       lineup: lineup.map((row) => ({
         playerId: row.playerId,
@@ -185,6 +196,17 @@ export const PUT: APIRoute = async ({ request }) => {
     const rosterById = new Map(roster.map((entry) => [entry.player.id, entry]));
     const invalid = validateLineup(players, new Set(rosterById.keys()));
     if (invalid) return json({ error: invalid }, 400);
+    const blocked = await getBlockedPlayers(
+      prisma,
+      matchId,
+      players.map((p) => p.playerId)
+    );
+    const [firstBlocked] = blocked.values();
+    if (firstBlocked) {
+      const { player } = rosterById.get(firstBlocked.playerId)!;
+      const name = `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim() || 'A player';
+      return json({ error: unavailableMessage(name, firstBlocked) }, 409);
+    }
 
     const jerseyFor = (entry: (typeof players)[number]) => {
       const rosterEntry = rosterById.get(entry.playerId)!;

@@ -7,6 +7,7 @@ import { handleApiError } from '@/lib/apiError';
 import { logAudit } from '@/features/cms/lib/audit';
 import { calculatePlayerStatistics } from '@/features/player/lib/playerStats';
 import { notifyAdminsOfRosterRequest } from '@/features/registration/application/roster-request-emails';
+import { getActiveAvailability } from '@/features/player/data/datasources/availability-repository';
 
 export const prerender = false;
 
@@ -70,6 +71,7 @@ export const GET: APIRoute = async ({ request }) => {
           }),
         ])
       : [[], []];
+    const availability = await getActiveAvailability(players.map((entry) => entry.player.id));
     const statsByPlayer = new Map(
       players.map((entry) => {
         const stats = calculatePlayerStatistics(matches as any, entry.player.id);
@@ -104,6 +106,7 @@ export const GET: APIRoute = async ({ request }) => {
             };
           })(),
           stats: entry.status === 'APPROVED' ? statsByPlayer.get(entry.player.id) : null,
+          availability: availability.get(entry.player.id) ?? [],
         })),
       }),
       { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }

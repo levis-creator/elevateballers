@@ -8,15 +8,18 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import type { PlayerView } from "@/features/player/domain/entities/player-detail-v2";
 import { resolvePublicPlayerPageSettings, siteSettingsService } from "@/features/settings";
+import { getActiveAvailability } from "@/features/player/data/datasources/availability-repository";
 
 interface Props {
 	view: PlayerView;
 }
 const { view } = Astro.props;
-const [footer, settingRecords] = await Promise.all([
+const [footer, settingRecords, availability] = await Promise.all([
 	getFooterData(),
 	siteSettingsService.list("player").catch(() => []),
+	getActiveAvailability([view.id]).catch(() => new Map()),
 ]);
+const unavailable = availability.get(view.id) ?? [];
 const settings = resolvePublicPlayerPageSettings(settingRecords);
 
 const normalizeLabel = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -61,6 +64,13 @@ const RING_CIRC = 326.73;
 			<div>
 				{settings.teamChip && <div class="mb-4 inline-flex items-center gap-2 rounded bg-white/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-creamdim">
 					{view.hero.team}{view.hero.league ? ` · ${view.hero.league}` : ""}
+				</div>}
+				{unavailable.length > 0 && <div class="mb-4 flex flex-wrap gap-2">
+					{unavailable.map((item) => (
+						<div class="inline-flex items-center gap-2 rounded border border-brand/40 bg-brand/15 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-brandsoft">
+							{item.label}{item.reason ? <span class="normal-case tracking-normal text-creamdim">· {item.reason}</span> : null}
+						</div>
+					))}
 				</div>}
 				<h1 class="font-display text-[clamp(46px,7vw,96px)] uppercase leading-[0.86]">{view.hero.first}{view.hero.last ? <><br /><span class="text-brand">{view.hero.last}</span></> : ""}</h1>
 				<div class="mt-6 flex flex-wrap gap-x-9 gap-y-4">

@@ -9,6 +9,7 @@ type Player = {
   position: string | null;
   removalRequestedAt: string | null;
   proposalNote: string | null;
+  availability?: { id: string; type: 'SUSPENSION' | 'INJURY'; reason: string | null; label: string }[];
   player: {
     id: string;
     firstName: string | null;
@@ -147,6 +148,31 @@ export default function TeamPortalRoster({
     const value = await response.json().catch(() => ({}));
     if (!response.ok) {
       setError(value.error || 'Unable to request player removal.');
+      return;
+    }
+    await loadRoster();
+  };
+  const setInjured = async (entry: Player, injured: boolean) => {
+    const name = `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim() || 'this player';
+    let note: string | undefined;
+    if (injured) {
+      const answer = window.prompt(
+        `Mark ${name} as injured? They can't be picked in a lineup until you mark them fit.
+
+Injury note (optional, shown publicly):`,
+        ''
+      );
+      if (answer === null) return;
+      note = answer.trim() || undefined;
+    } else if (!window.confirm(`Mark ${name} as fit to play again?`)) return;
+    const response = await fetch('/api/team-portal/roster/availability', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamId, playerId: entry.player.id, injured, note }),
+    });
+    const value = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(value.error || 'Unable to update player availability.');
       return;
     }
     await loadRoster();
@@ -385,6 +411,7 @@ export default function TeamPortalRoster({
                     onEdit={() => openEdit(entry)}
                     onOpenPlayer={onOpenPlayer}
                     onRequestRemoval={() => void requestRemoval(entry)}
+                    onSetInjured={(injured) => void setInjured(entry, injured)}
                   />
                 ))}
               </div>
@@ -411,12 +438,16 @@ function PlayerRow({
   onEdit,
   onOpenPlayer,
   onRequestRemoval,
+  onSetInjured,
 }: {
   entry: Player;
   onEdit: () => void;
   onOpenPlayer: (playerId: string) => string;
   onRequestRemoval: () => void;
+  onSetInjured: (injured: boolean) => void;
 }) {
+  const availability = entry.availability ?? [];
+  const injured = availability.some((item) => item.type === 'INJURY');
   const name =
     `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim() || 'Unnamed player';
   const number = entry.jerseyNumber ?? entry.player.jerseyNumber;
@@ -450,6 +481,15 @@ function PlayerRow({
             >
               {entry.status === 'PENDING' ? 'Pending approval' : 'Cleared'}
             </span>
+            {availability.map((item) => (
+              <span
+                key={item.id}
+                title={item.reason ?? undefined}
+                className="rounded-md border border-brand/30 bg-brand/[0.1] px-2 py-1 font-mono text-[8.5px] uppercase tracking-[0.08em] text-brandsoft"
+              >
+                {item.label}
+              </span>
+            ))}
           </div>
           <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-[#8a817a]">
             {position}
@@ -480,6 +520,18 @@ function PlayerRow({
           >
             Edit
           </button>
+          {entry.status === 'APPROVED' && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onSetInjured(!injured);
+              }}
+              className="portal-roster-action portal-roster-edit border"
+            >
+              {injured ? 'Mark fit' : 'Mark injured'}
+            </button>
+          )}
           {entry.status === 'APPROVED' && !entry.removalRequestedAt && (
             <button
               type="button"

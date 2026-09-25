@@ -62,6 +62,8 @@ export interface SquadPlayer {
 	ft: string;
 	tp: string;
 	ppgColor: string;
+	/** "Injured" or "Suspended" while the player is out; absent otherwise. */
+	status?: string | null;
 }
 
 export interface StaffMember {

@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => {
     seasonTeamPlayer: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), update: vi.fn() },
     seasonRosterHistory: { findMany: vi.fn(), create: vi.fn() },
     seasonRegistrationApplication: { findFirst: vi.fn() },
-    player: { findMany: vi.fn() },
+    player: { findMany: vi.fn(), findUnique: vi.fn() },
+    playerAvailability: { findMany: vi.fn() },
   };
   prisma.$transaction = vi.fn((fn: (tx: any) => unknown) => fn(prisma));
   return {
@@ -74,6 +75,19 @@ const match = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const availability = (overrides: Record<string, unknown> = {}) => ({
+  id: `a-${Math.random()}`,
+  playerId: 'p1',
+  teamId: TEAM.id,
+  type: 'SUSPENSION',
+  reason: null,
+  matchCount: 1,
+  startsAfter: new Date('2026-09-10T00:00:00Z'),
+  sourceMatchId: null,
+  resolvedAt: null,
+  ...overrides,
+});
+
 const get = (path: string) => ({ request: new Request(`https://example.test${path}`) }) as any;
 const put = (body: unknown) =>
   ({
@@ -110,6 +124,7 @@ beforeEach(() => {
   mocks.prisma.seasonRosterHistory.findMany.mockResolvedValue([]);
   mocks.prisma.seasonRegistrationApplication.findFirst.mockResolvedValue(null);
   mocks.prisma.player.findMany.mockResolvedValue([]);
+  mocks.prisma.playerAvailability.findMany.mockResolvedValue([]);
 });
 
 describe('Team Portal endpoints: auth and team scoping', () => {
@@ -286,6 +301,48 @@ describe('Lineup', () => {
     expect(body.match).toMatchObject({ id: 'm1', locked: false });
     expect(body.roster).toHaveLength(6);
     expect(body.lineup).toEqual([expect.objectContaining({ playerId: 'p1', started: true })]);
+  });
+
+  it('flags suspended and injured players for the match', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(match());
+    mocks.prisma.playerAvailability.findMany.mockResolvedValue([
+      availability({ playerId: 'p2', type: 'INJURY', matchCount: null }),
+      availability({ playerId: 'p3' }),
+    ]);
+    mocks.prisma.match.findMany.mockImplementation(async (args: any) =>
+      args?.where?.date ? [match()] : []
+    );
+    const body = await (await getLineup(get('/api/team-portal/lineup?teamId=team-1&matchId=m1'))).json();
+    const status = Object.fromEntries(body.roster.map((p: any) => [p.playerId, p.unavailable]));
+    expect(status).toMatchObject({ p1: null, p2: 'INJURY', p3: 'SUSPENSION' });
+  });
+
+  it('rejects an injured player until they are marked fit', async () => {
+    mocks.prisma.playerAvailability.findMany.mockResolvedValue([
+      availability({ playerId: 'p2', type: 'INJURY', matchCount: null }),
+    ]);
+    const response = await putLineup(put(lineupBody([{ playerId: 'p2', started: true }])));
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatch(/injured/);
+    expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a player suspended for the team's next match", async () => {
+    mocks.prisma.playerAvailability.findMany.mockResolvedValue([availability({ playerId: 'p3' })]);
+    mocks.prisma.match.findMany.mockResolvedValue([match()]);
+    const response = await putLineup(put(lineupBody([{ playerId: 'p3', started: false }])));
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatch(/suspended/);
+  });
+
+  it('allows a suspended player once the suspension covers other matches', async () => {
+    mocks.prisma.playerAvailability.findMany.mockResolvedValue([availability({ playerId: 'p3' })]);
+    mocks.prisma.match.findMany.mockResolvedValue([
+      match({ id: 'm0', date: new Date('2026-09-20T09:30:00Z'), status: 'COMPLETED' }),
+      match(),
+    ]);
+    const response = await putLineup(put(lineupBody([{ playerId: 'p3', started: false }])));
+    expect(response.status).toBe(200);
   });
 
   it('returns 404 for a match outside the team’s season', async () => {
