@@ -219,15 +219,49 @@ describe('Overview', () => {
   });
 
   it('counts only removal requests whose latest decision is still proposed', async () => {
-    mocks.prisma.seasonRosterHistory.findMany.mockResolvedValue([
-      { rosterId: 'r1', action: 'ROSTER_REMOVAL_PROPOSED' },
-      { rosterId: 'r2', action: 'ROSTER_REMOVAL_REJECTED' },
-      { rosterId: 'r2', action: 'ROSTER_REMOVAL_PROPOSED' },
-    ]);
+    mocks.prisma.seasonRosterHistory.findMany.mockImplementation(async ({ where }: any) =>
+      where.createdAt
+        ? []
+        : [
+            { rosterId: 'r1', action: 'ROSTER_REMOVAL_PROPOSED' },
+            { rosterId: 'r2', action: 'ROSTER_REMOVAL_REJECTED' },
+            { rosterId: 'r2', action: 'ROSTER_REMOVAL_PROPOSED' },
+          ]
+    );
     const body = await (await getOverview(get('/api/team-portal/overview?teamId=team-1'))).json();
     expect(body.needsYou).toEqual([
       expect.objectContaining({ key: 'roster-pending', detail: '1 removal request pending approval.' }),
     ]);
+  });
+});
+
+describe('Overview roster decisions', () => {
+  it('lists recent league-office decisions for the coach', async () => {
+    mocks.prisma.seasonRosterHistory.findMany.mockImplementation(async ({ where }: any) =>
+      where.createdAt
+        ? [
+            {
+              id: 'h1',
+              action: 'ROSTER_APPROVED',
+              createdAt: new Date('2026-09-24T10:00:00Z'),
+              player: { firstName: 'Ann', lastName: 'Otieno' },
+            },
+          ]
+        : []
+    );
+    const body = await (await getOverview(get('/api/team-portal/overview?teamId=team-1'))).json();
+    expect(body.needsYou).toEqual([
+      expect.objectContaining({
+        key: 'roster-decision-h1',
+        kind: 'info',
+        title: 'Ann Otieno approved',
+        target: { view: 'roster' },
+      }),
+    ]);
+    const decisionQuery = mocks.prisma.seasonRosterHistory.findMany.mock.calls.find(
+      ([args]: any) => args.where.createdAt
+    )[0];
+    expect(decisionQuery.where).toMatchObject({ seasonTeamId: 'st-1' });
   });
 });
 
