@@ -1151,6 +1151,27 @@ model PublicRegistrationSubmission {
   @@map("public_registration_submissions")
 }
 
+/// Emails whose send failed after every immediate retry (and QStash's, when
+/// queued). The hourly maintenance job resends them with backoff.
+model EmailOutbox {
+  id            String   @id @default(cuid())
+  /// The job body /api/jobs/send-email accepts: { jobType, data } or a direct send.
+  payload       Json
+  /// Where the failure happened: "inline" (no queue) or "qstash" (retries exhausted).
+  source        String
+  status        String   @default("PENDING")
+  attempts      Int      @default(0)
+  lastError     String?  @map("last_error") @db.Text
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at")
+  lockedUntil   DateTime? @map("locked_until")
+  sentAt        DateTime? @map("sent_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([status, nextAttemptAt])
+  @@map("email_outbox")
+}
+
 model PublicRegistrationEmailJob {
   id            String                       @id @default(cuid())
   submissionKey String                       @map("submission_key")

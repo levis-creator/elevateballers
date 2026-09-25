@@ -5,11 +5,13 @@ const mocks = vi.hoisted(() => ({
   publishToJob: vi.fn(),
   sendAdminNotificationEmail: vi.fn(),
   sendTransactionalEmail: vi.fn(),
+  enqueueFailedEmail: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: mocks.prisma }));
 vi.mock('@/lib/qstash', () => ({ publishToJob: mocks.publishToJob }));
 vi.mock('@/lib/email', () => ({ sendAdminNotificationEmail: mocks.sendAdminNotificationEmail }));
+vi.mock('@/lib/email/outbox', () => ({ enqueueFailedEmail: mocks.enqueueFailedEmail }));
 vi.mock('@/lib/email/config', () => ({ C: {}, SITE_URL: 'https://site.test' }));
 vi.mock('@/lib/email/core', () => ({
   btn: (text: string, url: string) => `[${text}](${url})`,
@@ -37,6 +39,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.SITE_URL;
   mocks.publishToJob.mockResolvedValue(false);
+  mocks.sendAdminNotificationEmail.mockResolvedValue(undefined);
+  mocks.sendTransactionalEmail.mockResolvedValue(undefined);
   mocks.prisma.user.findMany.mockResolvedValue([
     { id: 'coach-1', name: 'Coach Kim', email: 'kim@example.test', notificationSettings: null },
   ]);
@@ -74,12 +78,27 @@ describe('notifyAdminsOfRosterRequest', () => {
     expect(mocks.sendAdminNotificationEmail).not.toHaveBeenCalled();
   });
 
-  it('never throws when the email fails', async () => {
-    mocks.sendAdminNotificationEmail.mockRejectedValue(new Error('smtp down'));
+  it('never throws when the email fails, and saves it for the hourly resend', async () => {
+    const failure = new Error('smtp down');
+    mocks.sendAdminNotificationEmail.mockRejectedValue(failure);
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(
       notifyAdminsOfRosterRequest({ kind: 'NEW', playerName: 'Ann', teamName: 'Queens', coachName: null })
     ).resolves.toBeUndefined();
+    expect(mocks.enqueueFailedEmail).toHaveBeenCalledWith(
+      { jobType: 'admin_notification', data: expect.objectContaining({ type: 'roster_request' }) },
+      failure,
+      'inline'
+    );
+    error.mockRestore();
+  });
+
+  it('still sends directly when queueing throws', async () => {
+    mocks.publishToJob.mockRejectedValue(new Error('qstash down'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await notifyAdminsOfRosterRequest({ kind: 'NEW', playerName: 'Ann', teamName: 'Queens', coachName: null });
+    expect(mocks.sendAdminNotificationEmail).toHaveBeenCalled();
+    expect(mocks.enqueueFailedEmail).not.toHaveBeenCalled();
     error.mockRestore();
   });
 });

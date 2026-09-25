@@ -12,6 +12,15 @@ const token = getEnv('QSTASH_TOKEN');
 
 export const qstash: Client | null = token ? new Client({ token }) : null;
 
+/** Retries requested per job; QStash's own default when a plan rejects this. */
+export const QSTASH_RETRIES = 5;
+export const QSTASH_DEFAULT_RETRIES = 3;
+/**
+ * Stamped into each job body so the job endpoint knows which delivery is the
+ * last one (QStash sends the retries so far in `Upstash-Retried`).
+ */
+export const MAX_RETRIES_FIELD = '_qstashMaxRetries';
+
 /**
  * Publish a job to an internal API endpoint via QStash.
  *
@@ -31,14 +40,18 @@ export async function publishToJob(
     return false;
   }
 
+  const url = `${baseUrl.replace(/\/$/, '')}${path}`;
   try {
-    await qstash.publishJSON({
-      url: `${baseUrl.replace(/\/$/, '')}${path}`,
-      body,
-    });
+    await qstash.publishJSON({ url, body: { ...body, [MAX_RETRIES_FIELD]: QSTASH_RETRIES }, retries: QSTASH_RETRIES });
     return true;
   } catch (err) {
-    console.warn(`[qstash] Failed to publish to ${path}:`, err);
-    return false;
+    // A plan with a lower retry cap rejects the explicit count; fall back to the default.
+    try {
+      await qstash.publishJSON({ url, body: { ...body, [MAX_RETRIES_FIELD]: QSTASH_DEFAULT_RETRIES } });
+      return true;
+    } catch {
+      console.warn(`[qstash] Failed to publish to ${path}:`, err);
+      return false;
+    }
   }
 }
