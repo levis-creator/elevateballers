@@ -7,6 +7,7 @@ import { prisma } from '../../../../lib/prisma';
 import { getEnvBoolean } from '../../../../lib/env';
 import { cacheDel } from '../../../../lib/cache';
 import { getNextSequenceNumber } from '../../domain/usecases/utils';
+import { assertSquadLimits, squadLimitError, SquadLimitError } from '../../domain/squad-limits';
 import type {
   CreateGameRulesInput,
   UpdateGameRulesInput,
@@ -551,6 +552,17 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
         });
       }
 
+      // A player coming on who is not yet in the match squad joins it as a
+      // bench player, so the 12-player squad limit still applies.
+      const playerInListed = await tx.matchPlayer.findUnique({
+        where: {
+          matchId_playerId_teamId: { matchId: data.matchId, playerId: data.playerInId, teamId: data.teamId },
+        },
+        select: { id: true },
+      });
+      if (!playerInListed)
+        await assertSquadLimits(tx, data.matchId, data.teamId, { playerId: data.playerInId, started: false }, 'join');
+
       // Update or create playerIn: set active AND start new playing time session
       const playerInMatchPlayer = await tx.matchPlayer.upsert({
         where: {
@@ -755,6 +767,19 @@ export async function createBulkSubstitutions(
         playerId: string;
         description: string;
       }> = [];
+
+      // Players coming on who are not yet in the match squad join it as bench
+      // players, so check the 12-player squad limit before any writes.
+      const squad = await tx.matchPlayer.findMany({
+        where: { matchId: data.matchId, teamId: data.teamId },
+        select: { playerId: true, started: true },
+      });
+      for (const pair of data.pairs) {
+        if (squad.some((row) => row.playerId === pair.playerInId)) continue;
+        const limit = squadLimitError(squad, { playerId: pair.playerInId, started: false }, 'join');
+        if (limit) throw new SquadLimitError(limit);
+        squad.push({ playerId: pair.playerInId, started: false });
+      }
 
       for (const pair of data.pairs) {
         const pIn = playerById.get(pair.playerInId);

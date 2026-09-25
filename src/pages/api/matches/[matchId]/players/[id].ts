@@ -5,6 +5,8 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
+import { prisma } from '@/lib/prisma';
+import { assertSquadLimits } from '@/features/game-tracking/domain/squad-limits';
 export const GET: APIRoute = async ({ params, request }) => {
   const id = params.id;
   if (!id) {
@@ -53,6 +55,17 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
   try {
     const body = await request.json();
+    if (body?.started !== undefined) {
+      const current = await prisma.matchPlayer.findUnique({
+        where: { id },
+        select: { matchId: true, teamId: true, playerId: true },
+      });
+      if (current)
+        await assertSquadLimits(prisma, current.matchId, current.teamId, {
+          playerId: current.playerId,
+          started: Boolean(body.started),
+        });
+    }
     const matchPlayer = await updateMatchPlayer(id, body);
 
     if (!matchPlayer) {

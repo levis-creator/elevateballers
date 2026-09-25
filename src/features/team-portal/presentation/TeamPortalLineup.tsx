@@ -21,6 +21,7 @@ type LineupData = {
   season: { name: string } | null;
   registered: boolean;
   maxStarters?: number;
+  maxBench?: number;
   matches: MatchSummary[];
   match: (MatchSummary & { locked: boolean }) | null;
   roster?: RosterPlayer[];
@@ -76,10 +77,12 @@ export default function TeamPortalLineup({
   }, [load]);
 
   const maxStarters = data?.maxStarters ?? 5;
+  const maxBench = data?.maxBench ?? 7;
   const roster = data?.roster ?? [];
   const match = data?.match ?? null;
   const locked = match?.locked ?? false;
   const starters = Object.values(selection).filter((role) => role === 'starter').length;
+  const bench = Object.values(selection).filter((role) => role === 'bench').length;
   const listed = Object.keys(selection).length;
   const initial = useMemo(() => toSelection(data?.lineup), [data]);
   const dirty =
@@ -188,7 +191,8 @@ export default function TeamPortalLineup({
             </label>
             <div className="flex items-center gap-5">
               <Counter label="Starters" value={`${starters}/${maxStarters}`} warn={!locked && starters < maxStarters} />
-              <Counter label="Listed" value={String(listed)} />
+              <Counter label="Bench" value={`${bench}/${maxBench}`} />
+              <Counter label="Listed" value={`${listed}/${maxStarters + maxBench}`} />
             </div>
           </section>
 
@@ -201,8 +205,9 @@ export default function TeamPortalLineup({
             </div>
           ) : (
             <p className="text-[12.5px] text-[#8a817a]">
-              Mark who is available and pick up to {maxStarters} starters. The league office sees this
-              lineup in the Court Console at tip-off. Changes are allowed until the match goes live.
+              Pick up to {maxStarters} starters and {maxBench} on the bench ({maxStarters + maxBench} players
+              in total). The league office sees this lineup in the Court Console at tip-off. Changes are
+              allowed until the match goes live.
             </p>
           )}
           {offRoster.length > 0 && !locked && (
@@ -221,6 +226,7 @@ export default function TeamPortalLineup({
               roster.map((player) => {
                 const role = selection[player.playerId] ?? null;
                 const starterFull = starters >= maxStarters && role !== 'starter';
+                const benchFull = bench >= maxBench && role !== 'bench';
                 return (
                   <div
                     key={player.playerId}
@@ -252,11 +258,19 @@ export default function TeamPortalLineup({
                           type="button"
                           role="radio"
                           aria-checked={role === value}
-                          disabled={locked || (value === 'starter' && starterFull)}
+                          disabled={
+                            locked ||
+                            (value === 'starter' && starterFull) ||
+                            (value === 'bench' && benchFull)
+                          }
                           title={
-                            value === 'starter' && starterFull && !locked
-                              ? `Only ${maxStarters} starters allowed`
-                              : undefined
+                            locked
+                              ? undefined
+                              : value === 'starter' && starterFull
+                                ? `Only ${maxStarters} starters allowed`
+                                : value === 'bench' && benchFull
+                                  ? `Only ${maxBench} bench players allowed`
+                                  : undefined
                           }
                           onClick={() => setRole(player.playerId, value)}
                           className={role === value ? activeClass : ''}

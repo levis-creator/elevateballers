@@ -40,12 +40,19 @@ export interface Kpi {
 	href: string;
 	tint: string;
 }
+export interface LineupStatus {
+	players: number;
+	starters: number;
+	updatedAt: string | null;
+}
 export interface Fixture {
 	id: string;
 	home: string;
 	away: string;
 	date: string | null;
 	status: string;
+	/** Missing on the legacy fallback path, which has no lineup data. */
+	lineups?: { home: LineupStatus | null; away: LineupStatus | null };
 }
 export interface Approval {
 	id: string;
