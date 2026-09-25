@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Shield, Users, Calendar, Images, Newspaper, Handshake, Inbox, CalendarDays, Check, Trophy, Activity as ActivityIcon, Plus, HardDrive } from "lucide-react";
-import { useDashboardData, type Approval, type Fixture } from "./hooks/useDashboardData";
+import { useDashboardData, type Approval, type Fixture, type LineupStatus } from "./hooks/useDashboardData";
 
 const KPI_ICONS: Record<string, typeof Shield> = {
 	teams: Shield,
@@ -51,6 +51,21 @@ function timeAgo(iso: string): string {
 	const h = Math.floor(m / 60);
 	if (h < 24) return `${h}h ago`;
 	return `${Math.floor(h / 24)}d ago`;
+}
+
+const MAX_SQUAD = 12;
+
+/** One team's match-day lineup at a glance: listed/12 and starters, or not yet submitted. */
+function LineupChip({ status }: { status: LineupStatus | null | undefined }) {
+	if (status === undefined) return null;
+	if (!status || status.players === 0)
+		return <span className="mt-0.5 block font-['Space_Mono'] text-[10px] uppercase tracking-[0.06em] text-[var(--faint)]">No lineup yet</span>;
+	const updated = status.updatedAt ? new Date(status.updatedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null;
+	return (
+		<span className="mt-0.5 block font-['Space_Mono'] text-[10px] uppercase tracking-[0.06em] text-[#1f9d55]" title={updated ? `Last changed ${updated}` : undefined}>
+			Lineup {status.players}/{MAX_SQUAD} · {status.starters} starting
+		</span>
+	);
 }
 
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -208,9 +223,9 @@ function DashboardContent() {
 								return (
 									<div key={f.id} className="flex flex-1 items-center gap-3.5 border-b border-[var(--bord2)] px-5 py-3 last:border-b-0">
 										<span className="w-[104px] flex-shrink-0 font-['Space_Mono'] text-[11px] uppercase tracking-[0.06em] text-[var(--txm)]">{fixtureDate(f.date)}</span>
-										<span className="flex-1 truncate font-['Archivo'] text-[13px] font-bold text-[var(--tx)]">{f.home}</span>
+										<a href={`/admin/matches/${f.id}`} className="min-w-0 flex-1 no-underline"><span className="block truncate font-['Archivo'] text-[13px] font-bold text-[var(--tx)]">{f.home}</span><LineupChip status={f.lineups?.home} /></a>
 										<span className="font-['Anton'] text-[12px] text-[var(--faint)]">v</span>
-										<span className="flex-1 truncate font-['Archivo'] text-[13px] font-bold text-[var(--tx)]">{f.away}</span>
+										<a href={`/admin/matches/${f.id}`} className="min-w-0 flex-1 no-underline"><span className="block truncate font-['Archivo'] text-[13px] font-bold text-[var(--tx)]">{f.away}</span><LineupChip status={f.lineups?.away} /></a>
 										<span className="flex-shrink-0 rounded px-2.5 py-1 font-['Space_Mono'] text-[11px] font-bold" style={{ background: `${st.color}22`, color: st.color }}>{st.label}</span>
 									</div>
 								);

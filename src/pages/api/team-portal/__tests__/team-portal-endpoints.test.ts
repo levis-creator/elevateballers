@@ -21,12 +21,16 @@ const mocks = vi.hoisted(() => {
     getFilteredMatches: vi.fn(),
     getStandings: vi.fn(),
     logAudit: vi.fn(),
+    notifyAdminsOfLineup: vi.fn(),
   };
 });
 
 vi.mock('@/lib/prisma', () => ({ prisma: mocks.prisma }));
 vi.mock('@/features/cms/lib/auth', () => ({ getCurrentUser: mocks.getCurrentUser }));
 vi.mock('@/features/cms/lib/audit', () => ({ logAudit: mocks.logAudit }));
+vi.mock('@/features/team-portal/application/lineup-emails', () => ({
+  notifyAdminsOfLineup: mocks.notifyAdminsOfLineup,
+}));
 vi.mock('@/features/team-portal/application/team-portal-access', () => ({
   requireActiveTeamContext: mocks.requireActiveTeamContext,
 }));
@@ -348,6 +352,17 @@ describe('Lineup', () => {
     );
   });
 
+  it('returns 400 for more than 7 players on the bench', async () => {
+    mocks.prisma.seasonTeamPlayer.findMany.mockResolvedValue(
+      Array.from({ length: 8 }, (_, i) => rosterEntry(`b${i}`, i + 10))
+    );
+    const players = Array.from({ length: 8 }, (_, i) => ({ playerId: `b${i}`, started: false }));
+    const response = await putLineup(put(lineupBody(players)));
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/at most 7 players on the bench/);
+    expect(mocks.notifyAdminsOfLineup).not.toHaveBeenCalled();
+  });
+
   it('returns 400 naming the missing field for a malformed body', async () => {
     const response = await putLineup(put({ teamId: TEAM.id, players: [] }));
     expect(response.status).toBe(400);
@@ -384,6 +399,20 @@ describe('Lineup', () => {
       ],
       skipDuplicates: true,
     });
+    expect(mocks.notifyAdminsOfLineup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matchId: 'm1',
+        teamId: TEAM.id,
+        opponent: 'City Hawks',
+        isHome: true,
+        previous: [
+          { playerId: 'p1', started: false },
+          { playerId: 'p6', started: true },
+        ],
+        starters: [expect.objectContaining({ playerId: 'p1', name: 'Player p1', jerseyNumber: 1 })],
+        bench: [expect.objectContaining({ playerId: 'p2', jerseyNumber: 2 })],
+      })
+    );
     expect(mocks.logAudit).toHaveBeenCalledWith(
       expect.any(Request),
       'TEAM_PORTAL_LINEUP_SUBMITTED',

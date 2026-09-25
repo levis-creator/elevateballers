@@ -11,6 +11,33 @@ export const prerender = false;
 const DAY = 86_400_000;
 const ROSTER_REQUEST_LABEL = { NEW: 'Coach proposed player', EDIT: 'Coach edit', REMOVAL: 'Coach removal request' } as const;
 
+type LineupStatus = { players: number; starters: number; updatedAt: Date | null };
+
+/** Per match and team: how many players are listed, how many start, and when it last changed. */
+async function getLineupStatus(matchIds: string[]): Promise<Map<string, LineupStatus>> {
+  if (!matchIds.length) return new Map();
+  const [all, starters] = await Promise.all([
+    prisma.matchPlayer.groupBy({
+      by: ['matchId', 'teamId'],
+      where: { matchId: { in: matchIds } },
+      _count: { _all: true },
+      _max: { updatedAt: true },
+    }),
+    prisma.matchPlayer.groupBy({
+      by: ['matchId', 'teamId'],
+      where: { matchId: { in: matchIds }, started: true },
+      _count: { _all: true },
+    }),
+  ]);
+  const startersBy = new Map(starters.map((row) => [`${row.matchId}:${row.teamId}`, row._count._all]));
+  return new Map(
+    all.map((row) => {
+      const key = `${row.matchId}:${row.teamId}`;
+      return [key, { players: row._count._all, starters: startersBy.get(key) ?? 0, updatedAt: row._max.updatedAt }];
+    })
+  );
+}
+
 export const GET: APIRoute = async ({ request }) => {
   try {
     const currentUser = await getCurrentUser(request);
@@ -45,6 +72,8 @@ export const GET: APIRoute = async ({ request }) => {
             id: true,
             date: true,
             status: true,
+            team1Id: true,
+            team2Id: true,
             team1Name: true,
             team2Name: true,
             team1: { select: { name: true } },
@@ -116,6 +145,10 @@ export const GET: APIRoute = async ({ request }) => {
           take: 10,
         })
       : Promise.resolve([]);
+    const lineupByMatchTeam = await getLineupStatus(matchList.map((match) => match.id));
+    const lineupFor = (matchId: string, teamId: string | null) =>
+      (teamId && lineupByMatchTeam.get(`${matchId}:${teamId}`)) || null;
+
     const notifications = await withoutResolvedNotifications(await notificationsPromise);
     const canReviewRoster = can('players:update') || can('teams:update');
     const rosterRequests = canReviewRoster ? await getPendingRosterRequests(10) : { total: 0, items: [] };
@@ -162,6 +195,10 @@ export const GET: APIRoute = async ({ request }) => {
         away: match.team2?.name || match.team2Name || 'Team 2',
         date: match.date,
         status: match.status,
+        lineups: {
+          home: lineupFor(match.id, match.team1Id),
+          away: lineupFor(match.id, match.team2Id),
+        },
       })),
       pipeline,
       storage: { usedGb: Math.round(usedGb * 100) / 100, items: media, pct: Math.min(100, Math.round((usedGb / storageCap) * 100)) },

@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
 export const MAX_STARTERS = 5;
+/** Bench spots on top of the starters: a match-day squad is at most 12 players. */
+export const MAX_BENCH = 7;
+export const MAX_SQUAD = MAX_STARTERS + MAX_BENCH;
 
 export const lineupSubmissionSchema = z.object({
   teamId: z.string().min(1),
@@ -44,5 +47,7 @@ export function validateLineup(
     return 'Only approved players on your active roster can be listed.';
   if (players.filter((p) => p.started).length > MAX_STARTERS)
     return `A lineup can have at most ${MAX_STARTERS} starters.`;
+  if (players.filter((p) => !p.started).length > MAX_BENCH)
+    return `A lineup can have at most ${MAX_BENCH} players on the bench (${MAX_SQUAD} in total).`;
   return null;
 }

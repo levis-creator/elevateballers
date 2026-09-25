@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_BENCH,
   MAX_STARTERS,
   isLineupLocked,
   isTeamMatch,
@@ -7,7 +8,7 @@ import {
   validateLineup,
 } from './lineup';
 
-const roster = new Set(['p1', 'p2', 'p3', 'p4', 'p5', 'p6']);
+const roster = new Set(Array.from({ length: 14 }, (_, i) => `p${i + 1}`));
 const entry = (playerId: string, started = false) => ({ playerId, started });
 
 describe('lineup rules', () => {
@@ -23,6 +24,16 @@ describe('lineup rules', () => {
   it(`rejects more than ${MAX_STARTERS} starters`, () => {
     const players = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((id) => entry(id, true));
     expect(validateLineup(players, roster)).toMatch(/at most 5 starters/);
+  });
+
+  it('accepts a full 12-player squad: 5 starters and 7 on the bench', () => {
+    const players = Array.from({ length: 12 }, (_, i) => entry(`p${i + 1}`, i < 5));
+    expect(validateLineup(players, roster)).toBeNull();
+  });
+
+  it(`rejects more than ${MAX_BENCH} players on the bench`, () => {
+    const players = Array.from({ length: MAX_BENCH + 1 }, (_, i) => entry(`p${i + 1}`));
+    expect(validateLineup(players, roster)).toMatch(/at most 7 players on the bench \(12 in total\)/);
   });
 
   it('rejects players who are not on the approved roster', () => {

@@ -7,6 +7,7 @@ const EMAIL_PREF_OPTIONS = [
   { key: 'team_registered', label: 'Team Registrations', description: 'When a team registers.' },
   { key: 'player_registered', label: 'Player Registrations', description: 'When a player registers.' },
   { key: 'roster_request', label: 'Coach Roster Requests', description: 'When a coach proposes a player or asks to remove one.' },
+  { key: 'lineup_submitted', label: 'Lineup Submissions', description: 'When a coach submits or changes a match-day lineup.' },
 ];
 
 export default function NotificationSettingsCard() {

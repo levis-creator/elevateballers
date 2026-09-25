@@ -5,6 +5,8 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
+import { prisma } from '@/lib/prisma';
+import { assertSquadLimits } from '@/features/game-tracking/domain/squad-limits';
 export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
   if (!matchId) {
@@ -59,6 +61,11 @@ export const POST: APIRoute = async ({ params, request }) => {
 
   try {
     const body = await request.json();
+    if (body?.playerId && body?.teamId)
+      await assertSquadLimits(prisma, matchId, String(body.teamId), {
+        playerId: String(body.playerId),
+        started: Boolean(body.started),
+      });
     const result = await createMatchPlayer({
       ...body,
       matchId,

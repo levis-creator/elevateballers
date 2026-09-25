@@ -49,6 +49,10 @@ export function handleApiError(error: unknown, context: string, request?: Reques
   ) {
     return json({ error: msg }, 400);
   }
+  // Match-day squad rules (5 starters + 7 bench): a conflict with current state.
+  if (error instanceof Error && error.name === 'SquadLimitError') {
+    return json({ error: msg }, 409);
+  }
   if (error instanceof Error && error.name === 'ActiveSeasonConflictError') {
     return json({ error: msg }, 409);
   }

@@ -22,6 +22,7 @@ export type AdminNotificationType =
   | 'team_registered'
   | 'player_registered'
   | 'roster_request'
+  | 'lineup_submitted'
   | 'player_auto_linked'
   | 'security_settings_changed'
   | 'security_session_activity'

@@ -10,11 +10,13 @@ import {
   lineupSubmissionSchema,
   validateLineup,
   MAX_STARTERS,
+  MAX_BENCH,
 } from '@/features/team-portal/domain/entities/lineup';
 import { fmtWhen, homeName, awayName } from '@/features/teams/domain/usecases/match-format';
 import { getDisplayImageUrl } from '@/lib/asset-url';
 import { diffIdSets } from '@/lib/auditDiff';
 import { handleApiError } from '@/lib/apiError';
+import { notifyAdminsOfLineup } from '@/features/team-portal/application/lineup-emails';
 
 export const prerender = false;
 
@@ -114,6 +116,7 @@ export const GET: APIRoute = async ({ request }) => {
       season,
       registered: true,
       maxStarters: MAX_STARTERS,
+      maxBench: MAX_BENCH,
       matches: matches.map(summarize),
       match: match ? { ...summarize(match), locked: isLineupLocked(match) } : null,
       roster: roster.map(({ jerseyNumber, position, player }) => ({
@@ -152,7 +155,18 @@ export const PUT: APIRoute = async ({ request }) => {
 
     const match = await prisma.match.findUnique({
       where: { id: matchId },
-      select: { id: true, status: true, team1Id: true, team2Id: true, leagueSeasonId: true },
+      select: {
+        id: true,
+        status: true,
+        date: true,
+        team1Id: true,
+        team2Id: true,
+        leagueSeasonId: true,
+        team1Name: true,
+        team2Name: true,
+        team1: { select: { name: true } },
+        team2: { select: { name: true } },
+      },
     });
     if (!match || !isTeamMatch(match, team.id, seasonTeam.leagueSeasonId))
       return json({ error: 'Match not found for your team this season.' }, 404);
@@ -242,6 +256,28 @@ export const PUT: APIRoute = async ({ request }) => {
         before.filter((row) => row.started).map((row) => row.playerId),
         players.filter((p) => p.started).map((p) => p.playerId)
       ),
+    });
+
+    const isHome = match.team1Id === team.id;
+    const toEmailPlayer = (entry: (typeof players)[number]) => {
+      const { player } = rosterById.get(entry.playerId)!;
+      return {
+        playerId: entry.playerId,
+        name: `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim() || 'Unnamed player',
+        jerseyNumber: jerseyFor(entry),
+      };
+    };
+    await notifyAdminsOfLineup({
+      matchId,
+      teamId: team.id,
+      teamName: team.name,
+      coachName: user.name ?? user.email ?? null,
+      opponent: isHome ? awayName(match) : homeName(match),
+      isHome,
+      when: fmtWhen(match.date),
+      previous: before,
+      starters: players.filter((p) => p.started).map(toEmailPlayer),
+      bench: players.filter((p) => !p.started).map(toEmailPlayer),
     });
 
     return json({
