@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { markContactNotificationsRead } from '@/features/cms/lib/notificationCleanup';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendContactNotification, sendContactAutoReply, sendAdminNotificationEmail } from '../../../lib/email';
@@ -199,6 +200,8 @@ export const PATCH: APIRoute = async ({ request }) => {
       where: { id: data.id },
       data: updateData,
     });
+
+    if (message.read || message.trashedAt) await markContactNotificationsRead([message.id]);
 
     await logAudit(request, 'CONTACT_MESSAGE_UPDATED', {
       contactMessageId: message.id,

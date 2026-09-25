@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { markContactNotificationsRead } from '@/features/cms/lib/notificationCleanup';
 import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '@/lib/apiError';
 import { prisma } from '@/lib/prisma';
@@ -73,6 +74,8 @@ export const POST: APIRoute = async ({ request, params }) => {
       // Store the sent reply so it shows in the thread; clear any saved draft.
       data: { repliedAt: new Date(), repliedBy, replyBody: reply, read: true, draftReply: null },
     });
+
+    await markContactNotificationsRead([id]);
 
     return json({ ok: true, message: updated }, 200);
   } catch (error) {
