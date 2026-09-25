@@ -90,6 +90,26 @@ describe('buildNeedsYou', () => {
     expect(item!.detail).toBe('2 player proposals and 1 removal request pending approval.');
   });
 
+  it('tells the coach about transfers and dropouts made by the league office', () => {
+    const at = inDays(-1);
+    const items = buildNeedsYou({
+      ...base,
+      recentDecisions: [
+        { id: 'h1', action: 'TRANSFER_OUT', playerName: 'Ann Otieno', at, otherTeam: 'City Hawks' },
+        { id: 'h2', action: 'TRANSFER_IN', playerName: 'Bea Wanjiru', at, otherTeam: 'Queens' },
+        { id: 'h3', action: 'ROSTER_DROPPED_OUT', playerName: 'Cy Njoroge', at },
+      ],
+    });
+    expect(items.map((item) => item.title)).toEqual([
+      'Ann Otieno transferred out',
+      'Bea Wanjiru joined your roster',
+      'Cy Njoroge dropped out',
+    ]);
+    expect(items[0].detail).toContain('to City Hawks');
+    expect(items[1].detail).toContain('from Queens');
+    expect(items.every((item) => item.target?.view === 'roster')).toBe(true);
+  });
+
   it('orders the lineup reminder before registration and roster items', () => {
     const keys = buildNeedsYou({
       ...base,

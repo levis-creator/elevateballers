@@ -8,6 +8,10 @@ export const ROSTER_DECISION_ACTIONS = [
   'ROSTER_EDIT_REJECTED',
   'ROSTER_REMOVAL_APPROVED',
   'ROSTER_REMOVAL_REJECTED',
+  'ROSTER_DROPPED_OUT',
+  'ROSTER_REINSTATED',
+  'TRANSFER_OUT',
+  'TRANSFER_IN',
 ] as const;
 export type RosterDecisionAction = (typeof ROSTER_DECISION_ACTIONS)[number];
 
@@ -40,15 +44,19 @@ export type NeedsYouInput = {
   pendingPlayers: number;
   pendingRemovals: number;
   /** League-office decisions on this team's roster within ROSTER_DECISION_DAYS, newest first. */
-  recentDecisions?: { id: string; action: RosterDecisionAction; playerName: string; at: Date }[];
+  recentDecisions?: { id: string; action: RosterDecisionAction; playerName: string; at: Date; otherTeam?: string | null }[];
 };
 
-const DECISION_COPY: Record<RosterDecisionAction, (name: string) => { title: string; detail: string }> = {
+const DECISION_COPY: Record<RosterDecisionAction, (name: string, otherTeam: string) => { title: string; detail: string }> = {
   ROSTER_APPROVED: (name) => ({ title: `${name} approved`, detail: 'Cleared by the league office and can now be named in lineups.' }),
   ROSTER_REJECTED: (name) => ({ title: `${name} not approved`, detail: 'The league office declined this player proposal.' }),
   ROSTER_EDIT_REJECTED: (name) => ({ title: `Changes to ${name} declined`, detail: 'The player stays on the roster with their earlier details.' }),
   ROSTER_REMOVAL_APPROVED: (name) => ({ title: `${name} removed`, detail: 'The league office approved your removal request.' }),
   ROSTER_REMOVAL_REJECTED: (name) => ({ title: `Removal of ${name} declined`, detail: 'The player stays on your roster.' }),
+  ROSTER_DROPPED_OUT: (name) => ({ title: `${name} dropped out`, detail: 'Recorded as having left the league; their roster spot is free.' }),
+  ROSTER_REINSTATED: (name) => ({ title: `${name} reinstated`, detail: 'Back on your roster and can be named in lineups.' }),
+  TRANSFER_OUT: (name, otherTeam) => ({ title: `${name} transferred out`, detail: `Moved by the league office to ${otherTeam} and removed from your upcoming lineups.` }),
+  TRANSFER_IN: (name, otherTeam) => ({ title: `${name} joined your roster`, detail: `Transferred by the league office from ${otherTeam}; they can be named in lineups.` }),
 };
 
 const shortDate = (date: Date) => date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -118,7 +126,7 @@ export function buildNeedsYou(input: NeedsYouInput): NeedsYouItem[] {
   }
 
   for (const decision of input.recentDecisions ?? []) {
-    const copy = DECISION_COPY[decision.action](decision.playerName);
+    const copy = DECISION_COPY[decision.action](decision.playerName, decision.otherTeam || 'another team');
     items.push({
       key: `roster-decision-${decision.id}`,
       kind: 'info',

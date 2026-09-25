@@ -3,6 +3,7 @@ import { PLAYER_POSITIONS, getInitials, getMissingProfileFields, getPlayerName, 
 import { usePlayersDirectory } from './hooks/usePlayersDirectory';
 import ActionDialog from '../../../cms/presentation/v2/ActionDialog';
 import RowMenu from '../../../cms/presentation/v2/RowMenu';
+import TransferDialog from './TransferDialog';
 
 export default function PlayersPageV2() {
   const directory = usePlayersDirectory();
@@ -42,6 +43,7 @@ function PlayerRow({ player, directory }: { player: ReturnType<typeof usePlayers
     player.dropout
       ? { label: 'Reinstate player', onSelect: () => directory.setDropout([player.id], 'REINSTATE') }
       : { label: 'Mark as dropped out…', onSelect: () => directory.setDropout([player.id], 'DROP_OUT') },
+    ...(player.dropout ? [] : [{ label: 'Transfer to another team…', onSelect: () => directory.transfer(player.id) }]),
     { label: 'Delete player…', onSelect: () => directory.bulkDelete([player.id]), danger: true, separatorBefore: true },
   ]} /></div></td></tr>; }
 
@@ -49,6 +51,8 @@ function PlayersDialog(directory: ReturnType<typeof usePlayersDirectory>) {
   const { kind, ids } = directory.dialog!;
   const who = directory.describeIds(ids);
   const many = ids.length > 1;
+  if (kind === 'TRANSFER')
+    return <TransferDialog playerId={ids[0]} playerName={directory.nameOf(ids[0])} onCancel={() => directory.setDialog(null)} onDone={(text) => void directory.finishTransfer(text)} />;
   const common = { busy: directory.busy, onCancel: () => directory.setDialog(null), onConfirm: (reason: string) => void directory.confirmDialog(reason) };
   if (kind === 'DROP_OUT')
     return <ActionDialog {...common} eyebrow="League participation" title={`Mark ${who} as dropped out?`} body={`They come off every roster they are active on, which frees the spot${many ? 's' : ''}, and leave upcoming lineups. Their stats stay on record and you can reinstate them later.`} reasonLabel="Reason (optional, admins only)" reasonPlaceholder="e.g. Relocated, personal reasons" confirmLabel="Mark dropped out" />;
