@@ -311,3 +311,7 @@ a.eb-player-cell:hover strong { color:var(--brand); }
 .eb-dialog-field select:focus { border-color:var(--brand); }
 .eb-dialog-note { margin:0; padding:12px 20px 0; color:var(--muted); font:12px/1.5 "Archivo",sans-serif; }
 .eb-dialog-error { margin:0; padding:12px 20px 0; color:var(--brand); font:12.5px "Archivo",sans-serif; }
+
+/* The whole row opens the player's profile; controls inside it keep their own clicks. */
+.eb-player-row { cursor:pointer; }
+.eb-player-row td.check,.eb-player-row td.actions { cursor:default; }
