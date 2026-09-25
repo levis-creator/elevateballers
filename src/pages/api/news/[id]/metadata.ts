@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { prisma } from '../../../../lib/prisma';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { handleApiError } from '../../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -21,6 +22,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       create: { articleId: params.id!, ...data },
       update: data,
     });
+    logAudit(request, 'NEWS_ARTICLE_METADATA_UPDATED', { articleId: params.id, fields: Object.keys(data ?? {}) });
     return new Response(JSON.stringify(metadata), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) { return handleApiError(error, 'update article metadata', request); }
 };

@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { fileExists, getStorageTypeForUrl } from '../../../lib/file-storage';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -54,6 +55,7 @@ export const POST: APIRoute = async ({ request }) => {
         },
       });
       deletedCount = result.count;
+      logAudit(request, 'MEDIA_CLEANUP_RUN', { checked: mediaWithFiles.length, deleted: deletedCount, deletedIds: orphanedIds });
     }
 
     return new Response(

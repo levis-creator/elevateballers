@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { sendRegistrationPaymentEmail } from '../../../lib/email';
 import { publishToJob } from '../../../lib/qstash';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -24,6 +25,12 @@ export const POST: APIRoute = async ({ request }) => {
     };
     const queued = await publishToJob('/api/jobs/send-email', { jobType: 'registration_payment_received', data: payload });
     if (!queued) await sendRegistrationPaymentEmail(payload);
+    logAudit(request, 'REGISTRATION_PAYMENT_NOTIFIED', {
+      applicationId: payload.applicationId,
+      teamName: payload.teamName,
+      amount: payload.amount,
+      queued,
+    });
     return new Response(JSON.stringify({ success: true, queued }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     return handleApiError(error, 'send payment notification', request);

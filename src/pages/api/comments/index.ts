@@ -4,6 +4,7 @@ import { createComment } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
 import { resolvePublicArticlePageSettings, siteSettingsService } from '../../../features/settings';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -100,6 +101,12 @@ export const POST: APIRoute = async ({ request }) => {
       userId: data.userId, // Optional - for logged-in users
       parentId: data.parentId, // Optional - for replies
       approved: settings.moderation !== 'Hold every comment',
+    });
+    logAudit(request, 'COMMENT_SUBMITTED', {
+      commentId: (comment as any)?.id ?? null,
+      articleId: data.articleId,
+      parentId: data.parentId ?? null,
+      approved: (comment as any)?.approved ?? null,
     });
 
     return new Response(JSON.stringify(comment), {

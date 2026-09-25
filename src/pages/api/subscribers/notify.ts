@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { sendArticleNotification } from '../../../lib/email';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -51,6 +52,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const { sent, failed } = await sendArticleNotification({ subscribers, article });
+    logAudit(request, 'SUBSCRIBERS_NOTIFIED', { articleId, sent, failed, total: subscribers.length });
 
     return new Response(JSON.stringify({ ok: true, sent, failed, total: subscribers.length }), {
       status: 200,

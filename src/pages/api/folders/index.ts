@@ -5,6 +5,7 @@ import { createFolder } from '../../../features/cms/lib/mutations';
 import { initializeDefaultFolders } from '../../../lib/folder-init';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -69,6 +70,11 @@ export const POST: APIRoute = async ({ request }) => {
       },
       user.id
     );
+    logAudit(request, 'FOLDER_CREATED', {
+      folderId: (folder as any)?.id ?? null,
+      name: data.name,
+      isPrivate: Boolean(data.isPrivate),
+    });
 
     return new Response(JSON.stringify(folder), {
       status: 201,

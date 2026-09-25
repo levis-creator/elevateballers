@@ -9,7 +9,7 @@ import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const article = await getNewsArticleById(params.id!);
 

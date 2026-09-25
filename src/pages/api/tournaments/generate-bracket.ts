@@ -3,6 +3,7 @@ import { createBracketMatches, validateBracketOptions, type GeneratedMatch } fro
 import { calculateBracketStats } from '@/features/tournaments/lib/bracket-stats';
 import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '@/lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -51,6 +52,14 @@ export const POST: APIRoute = async ({ request }) => {
     const totalExpected = matchesToCreate ? matchesToCreate.length : calculateBracketStats(options.teamIds.length, options.bracketType).totalMatches;
     const hasErrors = result.errors.length > 0;
     const allCreated = result.created === totalExpected;
+    logAudit(request, 'TOURNAMENT_BRACKET_GENERATED', {
+      bracketType: options.bracketType,
+      teams: options.teamIds.length,
+      created: result.created,
+      expected: totalExpected,
+      matchIds: result.matchIds,
+      errors: result.errors.length,
+    });
 
     return new Response(
       JSON.stringify({

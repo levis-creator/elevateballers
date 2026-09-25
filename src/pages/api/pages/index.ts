@@ -3,6 +3,7 @@ import { getAllPageContents, getPageContentBySlug } from '../../../features/cms/
 import { createPageContent } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -77,6 +78,7 @@ export const POST: APIRoute = async ({ request }) => {
       metaDescription: data.metaDescription,
       published: data.published !== undefined ? data.published : true,
     });
+    logAudit(request, 'PAGE_CREATED', { pageId: (page as any)?.id ?? null, slug: data.slug, title: data.title });
 
     return new Response(JSON.stringify(page), {
       status: 201,

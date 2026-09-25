@@ -14,6 +14,7 @@ import { checkPermission } from '@/features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
 import { enforceRateLimit } from '../../../lib/rateLimit';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -237,6 +238,7 @@ export const POST: APIRoute = async ({ request }) => {
         },
       },
     });
+    logAudit(request, 'MEDIA_UPLOADED', { mediaId: media.id, folderId: folder.id, size: media.size });
 
     return new Response(
       JSON.stringify({

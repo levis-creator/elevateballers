@@ -4,6 +4,7 @@ import { requireAuth } from '../../../features/cms/lib/auth';
 import { getCurrentUser } from '../../../features/cms/lib/auth';
 
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
 /**
@@ -44,6 +45,13 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    logAudit(request, 'REPORT_GENERATED', {
+      reportGenerationId: result.reportGenerationId,
+      reportType,
+      format,
+      templateId: templateId ?? null,
+    });
 
     return new Response(
       JSON.stringify({

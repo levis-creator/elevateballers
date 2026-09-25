@@ -7,6 +7,7 @@ import { getFolderByName } from '../../../lib/folder-access';
 import { handleApiError } from '../../../lib/apiError';
 import { enforceRateLimit } from '../../../lib/rateLimit';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -252,6 +253,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     const successful = results.filter((result) => !result.error).length;
     const failed = results.length - successful;
+    logAudit(request, 'MEDIA_BATCH_UPLOADED', {
+      folderId: folder.id,
+      successful,
+      failed,
+      mediaIds: results.filter((result) => !result.error).map((result) => result.id),
+    });
 
     return new Response(
       JSON.stringify({

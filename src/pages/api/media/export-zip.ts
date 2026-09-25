@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { getFileUrl, fileExists } from '../../../lib/file-storage';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -38,6 +39,8 @@ export const POST: APIRoute = async ({ request }) => {
         console.error(`Error processing file ${filePath}:`, err);
       }
     }
+
+    logAudit(request, 'MEDIA_EXPORTED', { requested: filePaths.length, exported: files.length });
 
     // Return file information for client-side ZIP creation
     return new Response(

@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { getFolderById } from '../../../features/cms/lib/queries';
 import { updateFolder, deleteFolder } from '../../../features/cms/lib/mutations';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -39,6 +40,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const data = await request.json();
 
     const folder = await updateFolder(params.id!, data);
+    if (folder) logAudit(request, 'FOLDER_UPDATED', { folderId: params.id, fields: Object.keys(data ?? {}) });
 
     if (!folder) {
       return new Response(JSON.stringify({ error: 'Folder not found' }), {
@@ -64,6 +66,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'folders:update');
     const success = await deleteFolder(params.id!);
+    if (success) logAudit(request, 'FOLDER_DELETED', { folderId: params.id });
 
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to delete folder' }), {

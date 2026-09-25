@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { saveFile, readFile, getStorageTypeForUrl } from '../../../lib/file-storage';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -110,6 +111,7 @@ export const POST: APIRoute = async ({ request }) => {
         },
       },
     });
+    logAudit(request, 'MEDIA_DUPLICATED', { sourceMediaId: mediaId, mediaId: duplicateMedia.id });
 
     return new Response(
       JSON.stringify({

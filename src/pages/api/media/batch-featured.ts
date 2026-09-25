@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -72,6 +73,7 @@ export const PUT: APIRoute = async ({ request }) => {
     });
     
     const updateResult = await prisma.$executeRawUnsafe(updateSql, ...updateParams);
+    logAudit(request, 'MEDIA_BATCH_FEATURED', { count: Number(updateResult), mediaIds, featured });
     
     console.log('[BATCH-FEATURED] Update completed, affected rows:', updateResult);
     
