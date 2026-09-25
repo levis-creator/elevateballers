@@ -3,6 +3,7 @@ import { requireSeasonTeamScopedPermission } from '../../../features/rbac/middle
 import { createPrismaSeasonRegistrationRepository } from '../../../features/registration/data/datasources/season-registration';
 import { createSeasonRegistrationUseCases } from '../../../features/registration/domain/usecases/season-registration';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -22,16 +23,22 @@ export const GET: APIRoute = async ({ url, request }) => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
+    let actor;
     if (body.action === 'TRANSFER') {
-      await requireSeasonTeamScopedPermission(request, String(body.fromSeasonTeamId), 'teams:update');
+      actor = await requireSeasonTeamScopedPermission(request, String(body.fromSeasonTeamId), 'teams:update');
       await requireSeasonTeamScopedPermission(request, String(body.toSeasonTeamId), 'teams:update');
     } else {
-      await requireSeasonTeamScopedPermission(request, String(body.seasonTeamId), 'teams:update');
+      actor = await requireSeasonTeamScopedPermission(request, String(body.seasonTeamId), 'teams:update');
     }
     const useCases = createSeasonRegistrationUseCases(createPrismaSeasonRegistrationRepository());
     if (body.action === 'TRANSFER') {
-      return json(await useCases.requestTransfer({ playerId: String(body.playerId), fromSeasonTeamId: String(body.fromSeasonTeamId), toSeasonTeamId: String(body.toSeasonTeamId), reason: body.reason, requestedById: body.requestedById }), 201);
+      // The requester is the signed-in user, never a client-supplied id.
+      const transfer = await useCases.requestTransfer({ playerId: String(body.playerId), fromSeasonTeamId: String(body.fromSeasonTeamId), toSeasonTeamId: String(body.toSeasonTeamId), reason: body.reason, requestedById: actor.id });
+      logAudit(request, 'SEASON_TRANSFER_REQUESTED', { playerId: String(body.playerId), fromSeasonTeamId: String(body.fromSeasonTeamId), toSeasonTeamId: String(body.toSeasonTeamId) });
+      return json(transfer, 201);
     }
-    return json(await useCases.addRosterPlayer(String(body.seasonTeamId), String(body.playerId), body.jerseyNumber == null ? undefined : Number(body.jerseyNumber), body.position), 201);
+    const roster = await useCases.addRosterPlayer(String(body.seasonTeamId), String(body.playerId), body.jerseyNumber == null ? undefined : Number(body.jerseyNumber), body.position);
+    logAudit(request, 'SEASON_ROSTER_PLAYER_ADDED', { seasonTeamId: String(body.seasonTeamId), playerId: String(body.playerId), rosterId: (roster as any)?.id ?? null });
+    return json(roster, 201);
   } catch (error) { return handleApiError(error, 'create season roster change', request); }
 };
