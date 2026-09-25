@@ -20,7 +20,9 @@ const row = (id: string, status: string, latestProposal: string) => ({
   seasonTeamId: 'st-1',
   teamId: 'team-1',
   playerId: `player-${id}`,
-  history: [{ action: latestProposal }],
+  player: { firstName: 'Ann', lastName: id },
+  team: { name: 'Queens' },
+  history: [{ action: latestProposal, changedById: 'coach-1' }],
 });
 
 /** First findMany: pending-removal candidates. Second: the rows to review. */
@@ -44,6 +46,14 @@ describe('bulkReviewRosterProposals', () => {
       data: { status: 'APPROVED', leftAt: null },
     });
     expect(recorded()).toEqual([['r1', 'ROSTER_EDIT_REJECTED']]);
+  });
+
+  it('returns each decision with the coach who proposed it', async () => {
+    queue([], [row('r1', 'PENDING', 'ROSTER_PROPOSED')]);
+    const result = await bulkReviewRosterProposals({ ids: ['r1'], action: 'APPROVE', reviewerId: 'admin' });
+    expect(result.decisions).toEqual([
+      { type: 'NEW', approved: true, playerName: 'Ann r1', teamId: 'team-1', teamName: 'Queens', coachId: 'coach-1' },
+    ]);
   });
 
   it('rejecting a new player proposal removes them', async () => {
@@ -72,7 +82,7 @@ describe('bulkReviewRosterProposals', () => {
   it('ignores removal requests that were already decided', async () => {
     queue([{ id: 'r1', history: [{ action: 'ROSTER_REMOVAL_REJECTED' }] }], []);
     const result = await bulkReviewRosterProposals({ ids: ['r1'], action: 'APPROVE', reviewerId: 'admin' });
-    expect(result).toEqual({ count: 0 });
+    expect(result).toEqual({ count: 0, decisions: [] });
     expect(mocks.prisma.seasonTeamPlayer.findMany.mock.calls[1][0].where.OR).toEqual([
       { status: 'PENDING' },
       { id: { in: [] } },

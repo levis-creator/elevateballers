@@ -15,6 +15,7 @@ import { sendTransactionalEmail } from '../../../lib/email/core';
 import { sendContactNotification, sendContactAutoReply } from '../../../lib/email/templates/contact';
 import { sendAdminNotificationEmail, sendRegistrationPaymentEmail } from '../../../lib/email';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
+import { sendRosterDecisionEmail } from '../../../features/registration/application/roster-request-emails';
 
 export const prerender = false;
 
@@ -49,6 +50,9 @@ export const POST: APIRoute = async ({ request }) => {
           break;
         case 'admin_notification':
           await sendAdminNotificationEmail(body.data);
+          break;
+        case 'roster_decision':
+          await sendRosterDecisionEmail(body.data);
           break;
         case 'registration_payment_received':
           await sendRegistrationPaymentEmail(body.data);

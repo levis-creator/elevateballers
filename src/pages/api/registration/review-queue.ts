@@ -6,6 +6,7 @@ import {
   getRegistrationReviewQueue,
 } from '../../../features/registration/data/datasources/review-queue';
 import { handleApiError } from '../../../lib/apiError';
+import { notifyCoachesOfRosterDecisions } from '../../../features/registration/application/roster-request-emails';
 
 export const prerender = false;
 const json = (body: unknown, status = 200) =>
@@ -43,14 +44,15 @@ export const POST: APIRoute = async ({ request }) => {
       !['APPROVE', 'REJECT'].includes(body.action)
     )
       return json({ error: 'kind, ids, and action are required' }, 400);
-    if (body.kind === 'ROSTER')
-      return json(
-        await bulkReviewRosterProposals({
-          ids: body.ids.map(String),
-          action: body.action,
-          reviewerId: reviewer.id,
-        })
-      );
+    if (body.kind === 'ROSTER') {
+      const { count, decisions } = await bulkReviewRosterProposals({
+        ids: body.ids.map(String),
+        action: body.action,
+        reviewerId: reviewer.id,
+      });
+      await notifyCoachesOfRosterDecisions(decisions);
+      return json({ count });
+    }
     return json(
       await bulkReviewRegistrations({
         kind: body.kind,

@@ -21,6 +21,7 @@ export type AdminNotificationType =
   | 'contact_message'
   | 'team_registered'
   | 'player_registered'
+  | 'roster_request'
   | 'player_auto_linked'
   | 'security_settings_changed'
   | 'security_session_activity'
