@@ -6,6 +6,7 @@ const EMAIL_PREF_OPTIONS = [
   { key: 'contact_message', label: 'Contact Messages', description: 'When someone submits the contact form.' },
   { key: 'team_registered', label: 'Team Registrations', description: 'When a team registers.' },
   { key: 'player_registered', label: 'Player Registrations', description: 'When a player registers.' },
+  { key: 'roster_request', label: 'Coach Roster Requests', description: 'When a coach proposes a player or asks to remove one.' },
 ];
 
 export default function NotificationSettingsCard() {

@@ -1,4 +1,5 @@
 import { prisma } from '../../../../lib/prisma';
+import type { RosterDecision } from '../../application/roster-request-emails';
 
 const PROPOSAL_ACTIONS = ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED', 'ROSTER_REMOVAL_PROPOSED'];
 const REMOVAL_ACTIONS = ['ROSTER_REMOVAL_PROPOSED', 'ROSTER_REMOVAL_APPROVED', 'ROSTER_REMOVAL_REJECTED'];
@@ -261,20 +262,23 @@ export async function bulkReviewRosterProposals(input: {
         teamId: true,
         playerId: true,
         status: true,
+        player: { select: { firstName: true, lastName: true } },
+        team: { select: { name: true } },
         history: {
           where: { action: { in: PROPOSAL_ACTIONS } },
           orderBy: { createdAt: 'desc' },
           take: 1,
-          select: { action: true },
+          select: { action: true, changedById: true },
         },
       },
     });
-    if (!rows.length) return { count: 0 };
+    if (!rows.length) return { count: 0, decisions: [] as RosterDecision[] };
     const decisions = rows.map((row: any) => {
       const type = rosterRequestType(row, pendingRemovals);
       if (type === 'REMOVAL')
         return {
           row,
+          type,
           data: approve ? { status: 'WITHDRAWN', leftAt: new Date() } : null,
           action: approve ? 'ROSTER_REMOVAL_APPROVED' : 'ROSTER_REMOVAL_REJECTED',
         };
@@ -283,11 +287,13 @@ export async function bulkReviewRosterProposals(input: {
       if (type === 'EDIT')
         return {
           row,
+          type,
           data: { status: 'APPROVED', leftAt: null },
           action: approve ? 'ROSTER_APPROVED' : 'ROSTER_EDIT_REJECTED',
         };
       return {
         row,
+        type,
         data: approve ? { status: 'APPROVED' } : { status: 'REJECTED', leftAt: new Date() },
         action: approve ? 'ROSTER_APPROVED' : 'ROSTER_REJECTED',
       };
@@ -304,6 +310,16 @@ export async function bulkReviewRosterProposals(input: {
         changedById: input.reviewerId,
       })),
     });
-    return { count: rows.length };
+    return {
+      count: rows.length,
+      decisions: decisions.map(({ row, type }: any): RosterDecision => ({
+        type,
+        approved: approve,
+        playerName: `${row.player?.firstName ?? ''} ${row.player?.lastName ?? ''}`.trim() || 'A player',
+        teamId: row.teamId,
+        teamName: row.team?.name ?? 'your team',
+        coachId: row.history[0]?.changedById ?? null,
+      })),
+    };
   }, { maxWait: 10_000, timeout: 20_000 });
 }

@@ -5,6 +5,7 @@ import { requireActiveTeamContext } from '@/features/team-portal/application/tea
 import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import { handleApiError } from '@/lib/apiError';
 import { calculatePlayerStatistics } from '@/features/player/lib/playerStats';
+import { notifyAdminsOfRosterRequest } from '@/features/registration/application/roster-request-emails';
 
 export const prerender = false;
 
@@ -263,6 +264,17 @@ export const POST: APIRoute = async ({ request }) => {
       return { player, roster, edited: false };
     });
 
+    if (!result.edited && result.player)
+      await notifyAdminsOfRosterRequest({
+        kind: 'NEW',
+        playerName: `${result.player.firstName ?? ''} ${result.player.lastName ?? ''}`.trim() || email,
+        teamName: team.name,
+        coachName: user.name ?? user.email ?? null,
+        jerseyNumber,
+        position,
+        note,
+      });
+
     return new Response(
       JSON.stringify({
         message: result.edited ? 'Player details updated.' : 'Player proposal sent for admin approval.',
@@ -311,6 +323,7 @@ export const DELETE: APIRoute = async ({ request }) => {
       select: {
         id: true,
         playerId: true,
+        player: { select: { firstName: true, lastName: true } },
         history: {
           where: {
             action: {
@@ -347,6 +360,15 @@ export const DELETE: APIRoute = async ({ request }) => {
           reason: String(body?.reason ?? '').trim() || null,
         },
       });
+    });
+    const reason = String(body?.reason ?? '').trim() || null;
+    await notifyAdminsOfRosterRequest({
+      kind: 'REMOVAL',
+      playerName:
+        `${roster.player?.firstName ?? ''} ${roster.player?.lastName ?? ''}`.trim() || 'A player',
+      teamName: team.name,
+      coachName: user.name ?? user.email ?? null,
+      note: reason,
     });
     return new Response(JSON.stringify({ message: 'Removal request sent for admin approval.' }), {
       status: 201,
