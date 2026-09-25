@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
 
+type Kind = 'PLAYER' | 'TEAM' | 'ROSTER';
+const key = (kind: Kind, id: string) => `${kind}:${id}`;
+const REQUEST_LABEL: Record<string, string> = {
+  NEW: 'Add player',
+  EDIT: 'Edit player',
+  REMOVAL: 'Remove player',
+};
+
 type Queue = {
   players: any[];
   teams: any[];
@@ -24,6 +32,7 @@ export default function RegistrationReviewQueue() {
   const [status, setStatus] = useState('PENDING');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
+  const [message, setMessage] = useState<string | null>(null);
   const load = async (page = 1) => {
     const params = new URLSearchParams({
       page: String(page),
@@ -38,16 +47,35 @@ export default function RegistrationReviewQueue() {
   useEffect(() => {
     void load();
   }, [kind, status]);
-  const bulk = async (action: 'APPROVE' | 'REJECT') => {
-    if (!selected.length) return;
-    await fetch('/api/registration/review-queue', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind: kind || 'PLAYER', ids: selected, action }),
-    });
-    setSelected([]);
+  const toggle = (kind: Kind, id: string) =>
+    setSelected((v) => (v.includes(key(kind, id)) ? v.filter((k) => k !== key(kind, id)) : [...v, key(kind, id)]));
+  // Each row carries its own kind, so a mixed "All types" selection reaches the
+  // right table instead of being treated as players.
+  const review = async (keys: string[], action: 'APPROVE' | 'REJECT') => {
+    const byKind = new Map<Kind, string[]>();
+    for (const k of keys) {
+      const [kind, id] = k.split(':') as [Kind, string];
+      byKind.set(kind, [...(byKind.get(kind) ?? []), id]);
+    }
+    const results = await Promise.all(
+      [...byKind].map(([kind, ids]) =>
+        fetch('/api/registration/review-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind, ids, action }),
+        })
+      )
+    );
+    const failed = results.find((r) => !r.ok);
+    setMessage(
+      failed
+        ? ((await failed.json().catch(() => ({}))).error ?? 'Some items could not be updated.')
+        : `${keys.length} item${keys.length === 1 ? '' : 's'} ${action === 'APPROVE' ? 'approved' : 'rejected'}.`
+    );
+    setSelected((v) => v.filter((k) => !keys.includes(k)));
     void load(queue.page);
   };
+  const bulk = (action: 'APPROVE' | 'REJECT') => selected.length && void review(selected, action);
   const players = queue.players;
   const teams = queue.teams;
   return (
@@ -82,6 +110,11 @@ export default function RegistrationReviewQueue() {
         </select>
         <button onClick={() => void load(1)}>Filter</button>
       </div>
+      {message && (
+        <p role="status" style={{ marginBottom: 12 }}>
+          {message}
+        </p>
+      )}
       {selected.length > 0 && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <strong>{selected.length} selected</strong>
@@ -98,6 +131,8 @@ export default function RegistrationReviewQueue() {
             <th>Email</th>
             <th>Status</th>
             <th>Team / proposer</th>
+            <th>Request</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -106,12 +141,8 @@ export default function RegistrationReviewQueue() {
               <td>
                 <input
                   type="checkbox"
-                  checked={selected.includes(p.id)}
-                  onChange={() =>
-                    setSelected((v) =>
-                      v.includes(p.id) ? v.filter((id) => id !== p.id) : [...v, p.id]
-                    )
-                  }
+                  checked={selected.includes(key('PLAYER', p.id))}
+                  onChange={() => toggle('PLAYER', p.id)}
                 />
               </td>
               <td>Player</td>
@@ -119,6 +150,7 @@ export default function RegistrationReviewQueue() {
               <td>{p.email || '—'}</td>
               <td>{p.approved ? 'Approved' : 'Pending'}</td>
               <td>{p.team?.name || '—'}</td>
+              <td colSpan={2}></td>
             </tr>
           ))}
           {teams.map((t) => (
@@ -126,12 +158,8 @@ export default function RegistrationReviewQueue() {
               <td>
                 <input
                   type="checkbox"
-                  checked={selected.includes(t.id)}
-                  onChange={() =>
-                    setSelected((v) =>
-                      v.includes(t.id) ? v.filter((id) => id !== t.id) : [...v, t.id]
-                    )
-                  }
+                  checked={selected.includes(key('TEAM', t.id))}
+                  onChange={() => toggle('TEAM', t.id)}
                 />
               </td>
               <td>Team</td>
@@ -139,6 +167,7 @@ export default function RegistrationReviewQueue() {
               <td>{t.contactEmail || '—'}</td>
               <td>{t.approved ? 'Approved' : 'Pending'}</td>
               <td>{t.name}</td>
+              <td colSpan={2}></td>
             </tr>
           ))}
           {queue.rosterProposals.map((row) => (
@@ -146,15 +175,11 @@ export default function RegistrationReviewQueue() {
               <td>
                 <input
                   type="checkbox"
-                  checked={selected.includes(row.id)}
-                  onChange={() =>
-                    setSelected((v) =>
-                      v.includes(row.id) ? v.filter((id) => id !== row.id) : [...v, row.id]
-                    )
-                  }
+                  checked={selected.includes(key('ROSTER', row.id))}
+                  onChange={() => toggle('ROSTER', row.id)}
                 />
               </td>
-              <td>Coach proposal</td>
+              <td>Coach request</td>
               <td>
                 {`${row.player?.firstName || ''} ${row.player?.lastName || ''}`.trim() ||
                   'Unnamed player'}
@@ -165,6 +190,27 @@ export default function RegistrationReviewQueue() {
                 {row.team?.name || '—'} ·{' '}
                 {row.proposedBy?.name || row.proposedBy?.email || 'Unknown coach'} ·{' '}
                 {new Date(row.proposedAt).toLocaleString()}
+              </td>
+              <td>
+                <strong>{REQUEST_LABEL[row.requestType] ?? 'Roster change'}</strong>
+                {row.requestType !== 'REMOVAL' && (
+                  <div>
+                    #{row.jerseyNumber ?? '—'} · {row.position || 'No position'}
+                  </div>
+                )}
+                {row.note && <div>Note: {row.note}</div>}
+              </td>
+              <td style={{ whiteSpace: 'nowrap' }}>
+                {row.requestType === 'REMOVAL' || row.status === 'PENDING' ? (
+                  <>
+                    <button onClick={() => void review([key('ROSTER', row.id)], 'APPROVE')}>
+                      Approve
+                    </button>{' '}
+                    <button onClick={() => void review([key('ROSTER', row.id)], 'REJECT')}>
+                      Reject
+                    </button>
+                  </>
+                ) : null}
               </td>
             </tr>
           ))}

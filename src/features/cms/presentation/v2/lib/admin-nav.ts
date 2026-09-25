@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   FileText,
   Settings,
+  ClipboardCheck,
 } from 'lucide-react';
 
 /**
@@ -75,6 +76,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     label: 'Personnel',
     items: [
       { label: 'Players', href: '/admin/players', icon: Users, permission: 'players:read' },
+      {
+        label: 'Registrations',
+        href: '/admin/registrations',
+        icon: ClipboardCheck,
+        permission: 'players:read',
+      },
       { label: 'Staff', href: '/admin/staff', icon: Briefcase, permission: 'staff:read' },
       {
         label: 'League Staff',
