@@ -179,27 +179,40 @@ export const POST: APIRoute = async ({ request }) => {
 
     const result = await prisma.$transaction(async (tx) => {
       if (body?.rosterId) {
+        // Jersey number and position are the coach's call: they apply straight
+        // away and keep the player's roster status, so an approved player stays
+        // eligible for lineups.
         const current = await tx.seasonTeamPlayer.findFirst({
-          where: { id: String(body.rosterId), seasonTeamId: seasonTeam.id },
-          select: { id: true, playerId: true },
+          where: { id: String(body.rosterId), seasonTeamId: seasonTeam.id, leftAt: null },
+          select: { id: true, playerId: true, jerseyNumber: true, position: true },
         });
         if (!current) throw new Error('Roster entry not found for the active season.');
         const roster = await tx.seasonTeamPlayer.update({
           where: { id: current.id },
-          data: { status: 'PENDING', leftAt: null, jerseyNumber, position },
+          data: { jerseyNumber, position },
         });
+        // Keep lineups already named for upcoming games in step with the roster.
+        if (jerseyNumber !== current.jerseyNumber)
+          await tx.matchPlayer.updateMany({
+            where: {
+              playerId: current.playerId,
+              teamId: team.id,
+              match: { leagueSeasonId: seasonTeam.leagueSeasonId, status: 'UPCOMING' },
+            },
+            data: { jerseyNumber },
+          });
         await tx.seasonRosterHistory.create({
           data: {
             leagueSeasonId: seasonTeam.leagueSeasonId,
             playerId: current.playerId,
             seasonTeamId: seasonTeam.id,
             rosterId: roster.id,
-            action: 'ROSTER_EDIT_PROPOSED',
-            reason: note,
+            action: 'ROSTER_EDITED',
+            reason: `Jersey ${current.jerseyNumber ?? '—'} → ${jerseyNumber ?? '—'}, position ${current.position || '—'} → ${position || '—'}`,
             changedById: user.id,
           },
         });
-        return { player: null, roster };
+        return { player: null, roster, edited: true };
       }
       const existing = await tx.player.findFirst({
         // The MySQL database collation handles email comparisons
@@ -247,17 +260,17 @@ export const POST: APIRoute = async ({ request }) => {
           changedById: user.id,
         },
       });
-      return { player, roster };
+      return { player, roster, edited: false };
     });
 
     return new Response(
       JSON.stringify({
-        message: 'Player proposal sent for admin approval.',
+        message: result.edited ? 'Player details updated.' : 'Player proposal sent for admin approval.',
         player: result.player,
         rosterId: result.roster.id,
       }),
       {
-        status: 201,
+        status: result.edited ? 200 : 201,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
       }
     );
