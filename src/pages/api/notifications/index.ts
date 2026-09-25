@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { handleApiError } from '../../../lib/apiError';
+import { withoutResolvedNotifications } from '../../../features/cms/lib/notificationCleanup';
 
 export const prerender = false;
 
@@ -27,6 +28,7 @@ export const GET: APIRoute = async ({ request }) => {
             id: true,
             name: true,
             slug: true,
+            approved: true,
           },
         },
         player: {
@@ -34,6 +36,7 @@ export const GET: APIRoute = async ({ request }) => {
             id: true,
             firstName: true,
             lastName: true,
+            approved: true,
           },
         },
         staff: {
@@ -51,7 +54,9 @@ export const GET: APIRoute = async ({ request }) => {
       take: limit,
     });
 
-    return new Response(JSON.stringify(notifications), {
+    const visible = unreadOnly ? await withoutResolvedNotifications(notifications) : notifications;
+
+    return new Response(JSON.stringify(visible), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
