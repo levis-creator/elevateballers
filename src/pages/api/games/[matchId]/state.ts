@@ -11,7 +11,7 @@ export const prerender = false;
  * GET /api/games/[matchId]/state
  * Get current game state
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const matchId = params.matchId;
     if (!matchId) {
@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching game state:', error);
-    return handleApiError(error, "fetch game state");
+    return handleApiError(error, "fetch game state", request);
   }
 };
 
@@ -84,6 +84,6 @@ export const PUT: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error updating game state:', error);
-    return handleApiError(error, "update game state");
+    return handleApiError(error, "update game state", request);
   }
 };

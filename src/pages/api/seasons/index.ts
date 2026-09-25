@@ -8,7 +8,7 @@ import { handleApiError } from '../../../lib/apiError';
 import { cacheGet, cacheSet, cacheInvalidatePattern } from '../../../lib/cache';
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, request }) => {
   try {
     const activeOnly = url.searchParams.get('activeOnly') === 'true';
     const leagueId = url.searchParams.get('leagueId') || undefined;
@@ -27,7 +27,7 @@ export const GET: APIRoute = async ({ url }) => {
     });
   } catch (error) {
     console.error('Error fetching seasons:', error);
-    return handleApiError(error, "fetch seasons");
+    return handleApiError(error, "fetch seasons", request);
   }
 };
 

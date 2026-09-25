@@ -5,7 +5,7 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   const id = params.id;
   if (!id) {
     return new Response(JSON.stringify({ error: 'Player ID is required' }), {
@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match player:', error);
-    return handleApiError(error, "fetch match player");
+    return handleApiError(error, "fetch match player", request);
   }
 };
 
@@ -75,7 +75,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error updating match player:', error);
-    return handleApiError(error, "update match player");
+    return handleApiError(error, "update match player", request);
   }
 };
 
@@ -111,6 +111,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    return handleApiError(error, "delete match player");
+    return handleApiError(error, "delete match player", request);
   }
 };

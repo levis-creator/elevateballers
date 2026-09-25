@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ request }) => {
         });
     } catch (error: any) {
         console.error('Error fetching sponsors:', error);
-        return handleApiError(error, "fetch sponsors");
+        return handleApiError(error, "fetch sponsors", request);
     }
 };
 

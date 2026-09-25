@@ -75,7 +75,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating substitution:', error);
-    return handleApiError(error, "create substitution");
+    return handleApiError(error, "create substitution", request);
   }
 };
 
@@ -83,7 +83,7 @@ export const POST: APIRoute = async ({ params, request }) => {
  * GET /api/games/[matchId]/substitution
  * Get all substitutions for a match
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const matchId = params.matchId;
     if (!matchId) {
@@ -101,6 +101,6 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching substitutions:', error);
-    return handleApiError(error, "fetch substitutions");
+    return handleApiError(error, "fetch substitutions", request);
   }
 };

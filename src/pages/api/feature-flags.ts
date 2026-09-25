@@ -9,7 +9,7 @@ import { handleApiError } from '../../lib/apiError';
 import type { APIRoute } from 'astro';
 import { getFeatureFlags } from '../../lib/feature-flags';
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
   try {
     const flags = getFeatureFlags();
     
@@ -23,7 +23,7 @@ export const GET: APIRoute = async () => {
   } catch (error) {
     console.error('Error fetching feature flags:', error);
     
-    return handleApiError(error, "fetch feature flags");
+    return handleApiError(error, "fetch feature flags", request);
   }
 };
 

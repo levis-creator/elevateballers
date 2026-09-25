@@ -8,7 +8,7 @@ export const prerender = false;
  * GET /api/games/[matchId]/rules
  * Get game rules for a match
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const matchId = params.matchId;
     if (!matchId) {
@@ -32,6 +32,6 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching game rules:', error);
-    return handleApiError(error, "fetch game rules");
+    return handleApiError(error, "fetch game rules", request);
   }
 };

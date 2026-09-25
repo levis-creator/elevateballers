@@ -88,6 +88,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error sending email report:', error);
-    return handleApiError(error, "send email report");
+    return handleApiError(error, "send email report", request);
   }
 };

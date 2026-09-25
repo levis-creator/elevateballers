@@ -81,7 +81,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching timeouts:', error);
-    return handleApiError(error, "fetch timeouts");
+    return handleApiError(error, "fetch timeouts", request);
   }
 };
 
@@ -151,6 +151,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating timeout:', error);
-    return handleApiError(error, "create timeout");
+    return handleApiError(error, "create timeout", request);
   }
 };

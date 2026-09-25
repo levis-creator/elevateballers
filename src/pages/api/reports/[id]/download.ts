@@ -59,6 +59,6 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error downloading report:', error);
-    return handleApiError(error, "download report");
+    return handleApiError(error, "download report", request);
   }
 };

@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { auditPermissionDenied } from './permissionDeniedAudit';
 
 /**
  * Shared API error handling utilities.
@@ -39,6 +40,7 @@ export function handleApiError(error: unknown, context: string, request?: Reques
   }
   if (msg.startsWith('Forbidden')) {
     console.warn(`[api:${context}] Forbidden`, buildLogMeta(msg, clientIp));
+    if (request) auditPermissionDenied(request, msg, context, clientIp);
     return json({ error: 'Insufficient permissions' }, 403);
   }
   if (

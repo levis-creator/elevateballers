@@ -6,7 +6,7 @@ import { handleApiError } from "@/lib/apiError";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
 	try {
 		const staff = await getLeagueStaff(params.id!);
 		if (!staff) {
@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ params }) => {
 			headers: { "Content-Type": "application/json" },
 		});
 	} catch (error) {
-		return handleApiError(error, "fetch league staff");
+		return handleApiError(error, "fetch league staff", request);
 	}
 };
 

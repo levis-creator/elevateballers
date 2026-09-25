@@ -7,7 +7,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const season = await getSeasonById(params.id!);
     if (!season) {
@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ params }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return handleApiError(error, 'fetch season');
+    return handleApiError(error, 'fetch season', request);
   }
 };
 

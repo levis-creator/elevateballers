@@ -5,7 +5,7 @@ import { requireAuth } from '@/features/cms/lib/auth';
 import { logAudit } from '@/features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   const id = params.id;
   if (!id) {
     return new Response(JSON.stringify({ error: 'Event ID is required' }), {
@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match event:', error);
-    return handleApiError(error, "fetch match event");
+    return handleApiError(error, "fetch match event", request);
   }
 };
 
@@ -97,7 +97,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error updating match event:', error);
-    return handleApiError(error, "update match event");
+    return handleApiError(error, "update match event", request);
   }
 };
 
@@ -161,6 +161,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error deleting match event:', error);
-    return handleApiError(error, "delete match event");
+    return handleApiError(error, "delete match event", request);
   }
 };

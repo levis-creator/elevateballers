@@ -132,6 +132,6 @@ export const POST: APIRoute = async ({ params, request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    return handleApiError(error, 'import match events');
+    return handleApiError(error, 'import match events', request);
   }
 };
