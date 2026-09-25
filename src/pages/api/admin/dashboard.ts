@@ -3,10 +3,13 @@ import { prisma } from '../../../lib/prisma';
 import { getCurrentUser } from '../../../features/cms/lib/auth';
 import { getUserWithPermissions } from '../../../features/rbac/permissions';
 import { handleApiError } from '../../../lib/apiError';
+import { withoutResolvedNotifications } from '../../../features/cms/lib/notificationCleanup';
+import { getPendingRosterRequests } from '../../../features/registration/data/datasources/review-queue';
 
 export const prerender = false;
 
 const DAY = 86_400_000;
+const ROSTER_REQUEST_LABEL = { NEW: 'Coach proposed player', EDIT: 'Coach edit', REMOVAL: 'Coach removal request' } as const;
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -106,14 +109,16 @@ export const GET: APIRoute = async ({ request }) => {
       ? prisma.registrationNotification.findMany({
           where: { read: false },
           include: {
-            team: { select: { id: true, name: true, slug: true } },
-            player: { select: { id: true, firstName: true, lastName: true } },
+            team: { select: { id: true, name: true, slug: true, approved: true } },
+            player: { select: { id: true, firstName: true, lastName: true, approved: true } },
           },
           orderBy: { createdAt: 'desc' },
           take: 10,
         })
       : Promise.resolve([]);
-    const notifications = await notificationsPromise;
+    const notifications = await withoutResolvedNotifications(await notificationsPromise);
+    const canReviewRoster = can('players:update') || can('teams:update');
+    const rosterRequests = canReviewRoster ? await getPendingRosterRequests(10) : { total: 0, items: [] };
 
     const logs = canAudit
       ? await prisma.userAuditLog.findMany({
@@ -166,7 +171,23 @@ export const GET: APIRoute = async ({ request }) => {
         title: notification.player ? `${notification.player.firstName} ${notification.player.lastName}`.trim() : notification.team?.name || notification.message || 'New notification',
         meta: notification.message || 'New notification',
         entityId: notification.player?.id || notification.team?.id,
-      })),
+      })).concat(
+        rosterRequests.items.map((request) => ({
+          id: `roster-${request.id}`,
+          tab: 'Roster',
+          title: `${request.playerName}${request.teamName ? ` · ${request.teamName}` : ''}`,
+          meta: [
+            ROSTER_REQUEST_LABEL[request.requestType],
+            request.requestType !== 'REMOVAL' && request.jerseyNumber != null ? `#${request.jerseyNumber}` : null,
+            request.requestType !== 'REMOVAL' ? request.position : null,
+            request.note ? `“${request.note}”` : null,
+          ]
+            .filter(Boolean)
+            .join(' · '),
+          entityId: request.id,
+        }))
+      ),
+      rosterRequestTotal: rosterRequests.total,
       activity: logs.map((log) => ({
         id: log.id,
         text: `${log.action.replace(/_/g, ' ').toLowerCase()}${userNames.get(log.userId) ? ` · ${userNames.get(log.userId)}` : ''}`,

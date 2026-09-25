@@ -28,7 +28,9 @@ export default function RegistrationReviewQueue() {
     total: 0,
     totalPages: 1,
   });
-  const [kind, setKind] = useState('');
+  const [kind, setKind] = useState(() =>
+    typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('kind') || ''
+  );
   const [status, setStatus] = useState('PENDING');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);

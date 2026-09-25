@@ -49,7 +49,7 @@ export interface Fixture {
 }
 export interface Approval {
 	id: string;
-	tab: "Players" | "Teams" | "Messages";
+	tab: "Players" | "Teams" | "Roster" | "Messages";
 	title: string;
 	meta: string;
 	entityId?: string;
@@ -302,12 +302,23 @@ export function useDashboardData() {
 	const resolve = useCallback(
 		async (approval: Approval, accept: boolean) => {
 			if (approval.tab === "Messages" || !approval.entityId) return;
-			const base = approval.tab === "Players" ? `/api/players/${approval.entityId}/approve` : `/api/teams/${approval.entityId}/approve`;
 			setProcessing((p) => new Set(p).add(approval.id));
 			try {
-				await fetch(base, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approved: accept }) });
-				await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: approval.id, read: true }) });
-				await loadApprovals();
+				if (approval.tab === "Roster") {
+					await fetch("/api/registration/review-queue", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ kind: "ROSTER", ids: [approval.entityId], action: accept ? "APPROVE" : "REJECT" }),
+					});
+				} else {
+					const base = approval.tab === "Players" ? `/api/players/${approval.entityId}/approve` : `/api/teams/${approval.entityId}/approve`;
+					await fetch(base, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approved: accept }) });
+					await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: approval.id, read: true }) });
+				}
+				// The aggregate endpoint carries every tab (roster requests included).
+				const response = await fetch("/api/admin/dashboard");
+				if (response.ok) setApprovals((await response.json()).approvals || []);
+				else await loadApprovals();
 			} catch {
 				/* ignore */
 			} finally {
