@@ -675,6 +675,11 @@ model SeasonTeamPlayer {
   proposalNote   String?                @map("proposal_note") @db.Text
   removalRequestedAt   DateTime?        @map("removal_requested_at")
   removalRequestedById String?          @map("removal_requested_by_id")
+  /// Set when a coach asks for the removal because the player dropped out.
+  dropoutRequestedAt   DateTime?        @map("dropout_requested_at")
+  /// Set when the player left the league mid-season (not a transfer or plain removal).
+  droppedOutAt         DateTime?        @map("dropped_out_at")
+  dropoutReason        String?          @map("dropout_reason") @db.Text
   joinedAt       DateTime               @default(now()) @map("joined_at")
   leftAt         DateTime?              @map("left_at")
   createdAt      DateTime               @default(now()) @map("created_at")

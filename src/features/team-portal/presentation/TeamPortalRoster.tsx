@@ -8,6 +8,7 @@ type Player = {
   jerseyNumber: number | null;
   position: string | null;
   removalRequestedAt: string | null;
+  dropoutRequestedAt?: string | null;
   proposalNote: string | null;
   availability?: { id: string; type: 'SUSPENSION' | 'INJURY'; reason: string | null; label: string }[];
   player: {
@@ -148,6 +149,29 @@ export default function TeamPortalRoster({
     const value = await response.json().catch(() => ({}));
     if (!response.ok) {
       setError(value.error || 'Unable to request player removal.');
+      return;
+    }
+    await loadRoster();
+  };
+  const reportDropout = async (entry: Player) => {
+    const name = `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim() || 'this player';
+    const reason = window.prompt(
+      `Report that ${name} has dropped out of the league?
+
+The league office confirms it before they come off your roster, which frees their spot.
+
+Reason (optional, for the league office):`,
+      ''
+    );
+    if (reason === null) return;
+    const response = await fetch('/api/team-portal/roster', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamId, rosterId: entry.id, dropout: true, reason: reason.trim() || undefined }),
+    });
+    const value = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(value.error || 'Unable to report the dropout.');
       return;
     }
     await loadRoster();
@@ -412,6 +436,7 @@ Injury note (optional, shown publicly):`,
                     onOpenPlayer={onOpenPlayer}
                     onRequestRemoval={() => void requestRemoval(entry)}
                     onSetInjured={(injured) => void setInjured(entry, injured)}
+                    onReportDropout={() => void reportDropout(entry)}
                   />
                 ))}
               </div>
@@ -439,12 +464,14 @@ function PlayerRow({
   onOpenPlayer,
   onRequestRemoval,
   onSetInjured,
+  onReportDropout,
 }: {
   entry: Player;
   onEdit: () => void;
   onOpenPlayer: (playerId: string) => string;
   onRequestRemoval: () => void;
   onSetInjured: (injured: boolean) => void;
+  onReportDropout: () => void;
 }) {
   const availability = entry.availability ?? [];
   const injured = availability.some((item) => item.type === 'INJURY');
@@ -481,6 +508,11 @@ function PlayerRow({
             >
               {entry.status === 'PENDING' ? 'Pending approval' : 'Cleared'}
             </span>
+            {entry.removalRequestedAt && (
+              <span className="rounded-md border border-[#d99a2b]/30 bg-[#d99a2b]/[0.12] px-2 py-1 font-mono text-[8.5px] uppercase tracking-[0.08em] text-[#d99a2b]">
+                {entry.dropoutRequestedAt ? 'Dropout awaiting review' : 'Removal awaiting review'}
+              </span>
+            )}
             {availability.map((item) => (
               <span
                 key={item.id}
@@ -542,6 +574,18 @@ function PlayerRow({
               className="portal-roster-action portal-roster-remove border border-brand/30 bg-brand/[0.08] px-3 py-2.5 font-body text-[11.5px] font-bold text-brand hover:bg-brand/[0.16]"
             >
               Request removal
+            </button>
+          )}
+          {entry.status === 'APPROVED' && !entry.removalRequestedAt && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onReportDropout();
+              }}
+              className="portal-roster-action portal-roster-edit border"
+            >
+              Report dropout
             </button>
           )}
         </div>

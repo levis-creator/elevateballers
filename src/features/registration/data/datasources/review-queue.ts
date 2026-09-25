@@ -1,5 +1,6 @@
 import { prisma } from '../../../../lib/prisma';
 import type { RosterDecision } from '../../application/roster-request-emails';
+import { markRosterDroppedOut } from '../../../player/data/datasources/dropout-repository';
 
 const PROPOSAL_ACTIONS = ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED', 'ROSTER_REMOVAL_PROPOSED'];
 const REMOVAL_ACTIONS = ['ROSTER_REMOVAL_PROPOSED', 'ROSTER_REMOVAL_APPROVED', 'ROSTER_REMOVAL_REJECTED'];
@@ -34,14 +35,15 @@ async function pendingRemovalRosterIds(db: any, ids?: string[]): Promise<string[
 
 /** What the coach asked for, derived from the row state and its latest proposal. */
 function rosterRequestType(row: any, pendingRemovals: ReadonlySet<string>) {
-  if (row.status === 'APPROVED' && pendingRemovals.has(row.id)) return 'REMOVAL';
+  if (row.status === 'APPROVED' && pendingRemovals.has(row.id))
+    return row.dropoutRequestedAt ? 'DROPOUT' : 'REMOVAL';
   if (row.history[0]?.action === 'ROSTER_EDIT_PROPOSED') return 'EDIT';
   return 'NEW';
 }
 
 export type RosterRequest = {
   id: string;
-  requestType: 'NEW' | 'EDIT' | 'REMOVAL';
+  requestType: 'NEW' | 'EDIT' | 'REMOVAL' | 'DROPOUT';
   playerName: string;
   teamName: string | null;
   jerseyNumber: number | null;
@@ -64,6 +66,7 @@ export async function getPendingRosterRequests(
       select: {
         id: true,
         status: true,
+        dropoutRequestedAt: true,
         jerseyNumber: true,
         position: true,
         player: { select: { firstName: true, lastName: true } },
@@ -262,19 +265,29 @@ export async function bulkReviewRosterProposals(input: {
         teamId: true,
         playerId: true,
         status: true,
+        dropoutRequestedAt: true,
         player: { select: { firstName: true, lastName: true } },
         team: { select: { name: true } },
         history: {
           where: { action: { in: PROPOSAL_ACTIONS } },
           orderBy: { createdAt: 'desc' },
           take: 1,
-          select: { action: true, changedById: true },
+          select: { action: true, changedById: true, reason: true },
         },
       },
     });
     if (!rows.length) return { count: 0, decisions: [] as RosterDecision[] };
     const decisions = rows.map((row: any) => {
       const type = rosterRequestType(row, pendingRemovals);
+      // A dropout is a removal the coach flagged as the player leaving the
+      // league; approving it also records the dropout (see below).
+      if (type === 'DROPOUT')
+        return {
+          row,
+          type,
+          data: approve ? null : { dropoutRequestedAt: null },
+          action: approve ? 'ROSTER_REMOVAL_APPROVED' : 'ROSTER_REMOVAL_REJECTED',
+        };
       if (type === 'REMOVAL')
         return {
           row,
@@ -298,8 +311,14 @@ export async function bulkReviewRosterProposals(input: {
         action: approve ? 'ROSTER_APPROVED' : 'ROSTER_REJECTED',
       };
     });
-    for (const { row, data } of decisions)
+    for (const { row, type, data } of decisions) {
       if (data) await tx.seasonTeamPlayer.update({ where: { id: row.id }, data });
+      if (type === 'DROPOUT' && approve)
+        await markRosterDroppedOut(tx, row.id, {
+          reason: row.history[0]?.reason ?? null,
+          changedById: input.reviewerId,
+        });
+    }
     await tx.seasonRosterHistory.createMany({
       data: decisions.map(({ row, action }: any) => ({
         leagueSeasonId: row.leagueSeasonId,

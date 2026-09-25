@@ -72,6 +72,21 @@ describe('notifyAdminsOfRosterRequest', () => {
     expect(data.message).not.toContain('<script>');
   });
 
+  it('tells admins when a coach reports a dropout', async () => {
+    await notifyAdminsOfRosterRequest({
+      eventId: 'h2',
+      kind: 'DROPOUT',
+      playerName: 'Ann Otieno',
+      teamName: 'Queens',
+      coachName: 'Kim',
+      note: 'Moved abroad',
+    });
+    const [data] = mocks.sendAdminNotificationEmail.mock.calls[0];
+    expect(data.title).toBe('Player dropout reported');
+    expect(data.message).toContain('has dropped out of <strong>Queens</strong>');
+    expect(data.message).toContain('Moved abroad');
+  });
+
   it('uses the job queue when it is configured', async () => {
     mocks.publishToJob.mockResolvedValue(true);
     await notifyAdminsOfRosterRequest({ eventId: 'h1', kind: 'REMOVAL', playerName: 'Ann', teamName: 'Queens', coachName: null });
@@ -120,7 +135,16 @@ describe('notifyCoachesOfRosterDecisions', () => {
     expect(email.html).toContain('Ann Otieno is approved');
     expect(email.html).toContain('remove Bea Wanjiru was declined');
     expect(email.html).toContain('https://site.test/team-portal?team=team-1&view=roster');
-    expect(email.idempotencyKey).toBe('roster-decision:coach-1:team-1:r1=A,r2=R');
+    expect(email.idempotencyKey).toBe('roster-decision:coach-1:team-1:r1:NEW=A,r2:REMOVAL=R');
+  });
+
+  it('tells the coach an approved dropout took the player off the roster', async () => {
+    await notifyCoachesOfRosterDecisions([decision({ type: 'DROPOUT' })]);
+    const [email] = mocks.sendTransactionalEmail.mock.calls[0];
+    expect(email.subject).toBe('Roster request approved · Queens');
+    expect(email.html).toContain('Ann Otieno is recorded as having left the league');
+    // Distinct from the email approving the same roster entry when it was added.
+    expect(email.idempotencyKey).toBe('roster-decision:coach-1:team-1:r1:DROPOUT=A');
   });
 
   it('skips coaches who turned email notifications off', async () => {

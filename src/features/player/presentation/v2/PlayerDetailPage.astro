@@ -9,16 +9,20 @@ import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data
 import type { PlayerView } from "@/features/player/domain/entities/player-detail-v2";
 import { resolvePublicPlayerPageSettings, siteSettingsService } from "@/features/settings";
 import { getActiveAvailability } from "@/features/player/data/datasources/availability-repository";
+import { getDroppedOutPlayers } from "@/features/player/data/datasources/dropout-repository";
 
 interface Props {
 	view: PlayerView;
 }
 const { view } = Astro.props;
-const [footer, settingRecords, availability] = await Promise.all([
+const [footer, settingRecords, availability, dropouts] = await Promise.all([
 	getFooterData(),
 	siteSettingsService.list("player").catch(() => []),
 	getActiveAvailability([view.id]).catch(() => new Map()),
+	getDroppedOutPlayers([view.id]).catch(() => new Map()),
 ]);
+// The dropout reason is personal, so only the fact is public.
+const leftLeague = dropouts.has(view.id);
 const unavailable = availability.get(view.id) ?? [];
 const settings = resolvePublicPlayerPageSettings(settingRecords);
 
@@ -65,7 +69,8 @@ const RING_CIRC = 326.73;
 				{settings.teamChip && <div class="mb-4 inline-flex items-center gap-2 rounded bg-white/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-creamdim">
 					{view.hero.team}{view.hero.league ? ` · ${view.hero.league}` : ""}
 				</div>}
-				{unavailable.length > 0 && <div class="mb-4 flex flex-wrap gap-2">
+				{leftLeague && <div class="mb-4 inline-flex items-center gap-2 rounded border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-creamdim">Left the league</div>}
+				{!leftLeague && unavailable.length > 0 && <div class="mb-4 flex flex-wrap gap-2">
 					{unavailable.map((item) => (
 						<div class="inline-flex items-center gap-2 rounded border border-brand/40 bg-brand/15 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-brandsoft">
 							{item.label}{item.reason ? <span class="normal-case tracking-normal text-creamdim">· {item.reason}</span> : null}

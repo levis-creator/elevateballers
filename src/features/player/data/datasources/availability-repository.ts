@@ -10,6 +10,7 @@ import {
   type AvailabilityStatus,
   type TeamMatch,
 } from '../../domain/availability';
+import { getDroppedOutPlayers } from './dropout-repository';
 
 type Db = typeof prisma | Prisma.TransactionClient;
 
@@ -97,15 +98,22 @@ export async function getBlockedPlayers(
 
 /** Throws PlayerUnavailableError if any of the players is suspended for or injured before `matchId`. */
 export async function assertPlayersAvailable(db: Db, matchId: string, playerIds: readonly string[]): Promise<void> {
-  const blocked = await getBlockedPlayers(db, matchId, playerIds);
+  const [blocked, dropouts] = await Promise.all([
+    getBlockedPlayers(db, matchId, playerIds),
+    getDroppedOutPlayers(playerIds, db),
+  ]);
+  const [dropoutId] = dropouts.keys();
   const [first] = blocked.values();
-  if (!first) return;
+  const playerId = dropoutId ?? first?.playerId;
+  if (!playerId) return;
   const player = await db.player.findUnique({
-    where: { id: first.playerId },
+    where: { id: playerId },
     select: { firstName: true, lastName: true },
   });
   const name = `${player?.firstName ?? ''} ${player?.lastName ?? ''}`.trim() || 'This player';
-  throw new PlayerUnavailableError(unavailableMessage(name, first));
+  throw new PlayerUnavailableError(
+    dropoutId ? `${name} has left the league and can't be listed.` : unavailableMessage(name, first!)
+  );
 }
 
 /**

@@ -75,7 +75,7 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
 
   return (
     <section className="eb-pd-card eb-pd-rail-card">
-      <div className="eb-pd-eyebrow">Suspensions &amp; injuries</div>
+      <div className="eb-pd-eyebrow">Availability</div>
       {active.length === 0 && (
         <div className="eb-pd-record">
           <span>Status</span>
@@ -132,6 +132,7 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
         </button>
       </form>
       {error && <div className="eb-pd-record" style={{ color: 'var(--pd-brandsoft)' }}>{error}</div>}
+      <RosterDropouts playerId={playerId} />
       {past.length > 0 && (
         <>
           <div className="eb-pd-eyebrow" style={{ marginTop: 18 }}>History</div>
@@ -147,5 +148,81 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
         </>
       )}
     </section>
+  );
+}
+
+type RosterEntry = {
+  id: string;
+  teamName: string;
+  edition: string;
+  droppedOut: boolean;
+  droppedOutAt: string | null;
+  reason: string | null;
+  dropoutRequested: boolean;
+};
+
+/** Mark the player as having left the league (frees the roster spot), or reinstate them. */
+function RosterDropouts({ playerId }: { playerId: string }) {
+  const [rows, setRows] = useState<RosterEntry[]>([]);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    fetch(`/api/players/${playerId}/dropout`, { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((value) => (Array.isArray(value) ? setRows(value) : setError(value?.error || 'Unable to load rosters.')))
+      .catch(() => setError('Unable to load rosters.'));
+  }, [playerId]);
+  useEffect(load, [load]);
+
+  const act = async (row: RosterEntry) => {
+    let reason: string | undefined;
+    if (row.droppedOut) {
+      if (!window.confirm(`Reinstate this player on ${row.teamName}?`)) return;
+    } else {
+      const answer = window.prompt(
+        `Mark this player as dropped out of ${row.teamName}? They come off the roster, freeing the spot, and leave upcoming lineups.
+
+Reason (optional, admins only):`,
+        ''
+      );
+      if (answer === null) return;
+      reason = answer.trim() || undefined;
+    }
+    setBusy(true);
+    setError('');
+    const response = await fetch(`/api/players/${playerId}/dropout`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rosterId: row.id, action: row.droppedOut ? 'REINSTATE' : 'DROP_OUT', reason }),
+    });
+    const value = await response.json().catch(() => ({}));
+    setBusy(false);
+    if (!response.ok) setError(value.error || 'Unable to save.');
+    load();
+  };
+
+  if (!rows.length && !error) return null;
+  return (
+    <>
+      <div className="eb-pd-eyebrow" style={{ marginTop: 18 }}>League participation</div>
+      {rows.map((row) => (
+        <div key={row.id} className="eb-pd-record" style={{ alignItems: 'center' }}>
+          <span>
+            <strong style={row.droppedOut ? { color: 'var(--pd-brandsoft)' } : undefined}>
+              {row.droppedOut ? 'Dropped out' : row.teamName}
+            </strong>
+            <br />
+            {row.droppedOut ? `${row.teamName} · ${new Date(row.droppedOutAt!).toLocaleDateString()}` : row.edition}
+            {row.reason && <><br />{row.reason}</>}
+            {row.dropoutRequested && <><br /><small>Coach reported a dropout — see Registrations review</small></>}
+          </span>
+          <button className="eb-pd-small-button" disabled={busy} onClick={() => void act(row)}>
+            {row.droppedOut ? 'Reinstate' : 'Drop out'}
+          </button>
+        </div>
+      ))}
+      {error && <div className="eb-pd-record" style={{ color: 'var(--pd-brandsoft)' }}>{error}</div>}
+    </>
   );
 }

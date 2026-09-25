@@ -13,6 +13,8 @@ export type PlayerDirectoryRow = {
   approved?: boolean | null;
   teamId?: string | null;
   team?: { id?: string; name?: string | null; shortName?: string | null; logo?: string | null; image?: string | null; logoUrl?: string | null } | null;
+  /** Set (admins only) when the player has left the league; `rosterId` is the entry to reinstate. */
+  dropout?: { rosterId: string; droppedOutAt: string } | null;
 };
 
 export type PlayerDirectoryFilters = {

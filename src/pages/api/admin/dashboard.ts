@@ -9,7 +9,7 @@ import { getPendingRosterRequests } from '../../../features/registration/data/da
 export const prerender = false;
 
 const DAY = 86_400_000;
-const ROSTER_REQUEST_LABEL = { NEW: 'Coach proposed player', EDIT: 'Coach edit', REMOVAL: 'Coach removal request' } as const;
+const ROSTER_REQUEST_LABEL = { NEW: 'Coach proposed player', EDIT: 'Coach edit', REMOVAL: 'Coach removal request', DROPOUT: 'Coach dropout report' } as const;
 
 type LineupStatus = { players: number; starters: number; updatedAt: Date | null };
 
@@ -215,8 +215,10 @@ export const GET: APIRoute = async ({ request }) => {
           title: `${request.playerName}${request.teamName ? ` · ${request.teamName}` : ''}`,
           meta: [
             ROSTER_REQUEST_LABEL[request.requestType],
-            request.requestType !== 'REMOVAL' && request.jerseyNumber != null ? `#${request.jerseyNumber}` : null,
-            request.requestType !== 'REMOVAL' ? request.position : null,
+            request.requestType !== 'REMOVAL' && request.requestType !== 'DROPOUT' && request.jerseyNumber != null
+              ? `#${request.jerseyNumber}`
+              : null,
+            request.requestType !== 'REMOVAL' && request.requestType !== 'DROPOUT' ? request.position : null,
             request.note ? `“${request.note}”` : null,
           ]
             .filter(Boolean)

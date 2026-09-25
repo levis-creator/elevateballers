@@ -6,6 +6,7 @@ const REQUEST_LABEL: Record<string, string> = {
   NEW: 'Add player',
   EDIT: 'Edit player',
   REMOVAL: 'Remove player',
+  DROPOUT: 'Player dropped out',
 };
 
 type Queue = {
@@ -195,7 +196,7 @@ export default function RegistrationReviewQueue() {
               </td>
               <td>
                 <strong>{REQUEST_LABEL[row.requestType] ?? 'Roster change'}</strong>
-                {row.requestType !== 'REMOVAL' && (
+                {row.requestType !== 'REMOVAL' && row.requestType !== 'DROPOUT' && (
                   <div>
                     #{row.jerseyNumber ?? '—'} · {row.position || 'No position'}
                   </div>
@@ -203,7 +204,7 @@ export default function RegistrationReviewQueue() {
                 {row.note && <div>Note: {row.note}</div>}
               </td>
               <td style={{ whiteSpace: 'nowrap' }}>
-                {row.requestType === 'REMOVAL' || row.status === 'PENDING' ? (
+                {row.requestType === 'REMOVAL' || row.requestType === 'DROPOUT' || row.status === 'PENDING' ? (
                   <>
                     <button onClick={() => void review([key('ROSTER', row.id)], 'APPROVE')}>
                       Approve

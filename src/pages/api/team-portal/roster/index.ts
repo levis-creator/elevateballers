@@ -32,10 +32,16 @@ export const GET: APIRoute = async ({ request }) => {
               status: true,
               jerseyNumber: true,
               position: true,
+              dropoutRequestedAt: true,
               history: {
                 where: {
                   action: {
-                    in: ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED', 'ROSTER_REMOVAL_PROPOSED'],
+                    in: [
+                      'ROSTER_PROPOSED',
+                      'ROSTER_EDIT_PROPOSED',
+                      'ROSTER_REMOVAL_PROPOSED',
+                      'ROSTER_REMOVAL_REJECTED',
+                    ],
                   },
                 },
                 orderBy: { createdAt: 'desc' },
@@ -98,7 +104,12 @@ export const GET: APIRoute = async ({ request }) => {
             const proposal = history.find((item) =>
               ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED'].includes(item.action)
             );
-            const removal = history.find((item) => item.action === 'ROSTER_REMOVAL_PROPOSED');
+            // Only a removal the admin has not yet declined is still pending.
+            const removalDecision = history.find((item) =>
+              ['ROSTER_REMOVAL_PROPOSED', 'ROSTER_REMOVAL_REJECTED'].includes(item.action)
+            );
+            const removal =
+              removalDecision?.action === 'ROSTER_REMOVAL_PROPOSED' ? removalDecision : undefined;
             return {
               ...rosterEntry,
               proposalNote: proposal?.reason ?? null,
@@ -372,12 +383,19 @@ export const DELETE: APIRoute = async ({ request }) => {
       );
     if (roster.history[0]?.action === 'ROSTER_REMOVAL_PROPOSED')
       return new Response(
-        JSON.stringify({ error: 'A removal request is already awaiting review.' }),
+        JSON.stringify({ error: 'A removal or dropout request is already awaiting review.' }),
         {
           status: 409,
         }
       );
+    // A dropout is a removal request flagged as the player leaving the league;
+    // an admin still has to approve it.
+    const dropout = body?.dropout === true;
     const removal = await prisma.$transaction(async (tx) => {
+      await tx.seasonTeamPlayer.update({
+        where: { id: roster.id },
+        data: { dropoutRequestedAt: dropout ? new Date() : null },
+      });
       return tx.seasonRosterHistory.create({
         select: { id: true },
         data: {
@@ -392,21 +410,24 @@ export const DELETE: APIRoute = async ({ request }) => {
       });
     });
     const reason = String(body?.reason ?? '').trim() || null;
-    logAudit(request, 'TEAM_PORTAL_ROSTER_REMOVAL_REQUESTED', {
+    logAudit(request, dropout ? 'TEAM_PORTAL_ROSTER_DROPOUT_REPORTED' : 'TEAM_PORTAL_ROSTER_REMOVAL_REQUESTED', {
       teamId: team.id,
       rosterId: roster.id,
       playerId: roster.playerId,
     });
     await notifyAdminsOfRosterRequest({
       eventId: removal.id,
-      kind: 'REMOVAL',
+      kind: dropout ? 'DROPOUT' : 'REMOVAL',
       playerName:
         `${roster.player?.firstName ?? ''} ${roster.player?.lastName ?? ''}`.trim() || 'A player',
       teamName: team.name,
       coachName: user.name ?? user.email ?? null,
       note: reason,
     });
-    return new Response(JSON.stringify({ message: 'Removal request sent for admin approval.' }), {
+    const message = dropout
+      ? 'Dropout reported. The league office will confirm it.'
+      : 'Removal request sent for admin approval.';
+    return new Response(JSON.stringify({ message }), {
       status: 201,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });

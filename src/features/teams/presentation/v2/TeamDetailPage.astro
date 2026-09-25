@@ -12,6 +12,7 @@ import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data
 import type { TeamDetail } from "@/features/teams/domain/entities/team-detail";
 import { resolvePublicTeamPageSettings, siteSettingsService } from '@/features/settings';
 import { getActiveAvailability } from '@/features/player/data/datasources/availability-repository';
+import { getDroppedOutPlayers } from '@/features/player/data/datasources/dropout-repository';
 
 interface Props {
 	detail: TeamDetail;
@@ -19,8 +20,13 @@ interface Props {
 const { detail } = Astro.props;
 const footer = await getFooterData();
 const settings = resolvePublicTeamPageSettings(await siteSettingsService.list('team').catch(() => []));
-const availability = await getActiveAvailability(detail.players.map((p) => p.id)).catch(() => new Map());
-const players = detail.players.map((p) => {
+const playerIds = detail.players.map((p) => p.id);
+const [availability, dropouts] = await Promise.all([
+	getActiveAvailability(playerIds).catch(() => new Map()),
+	getDroppedOutPlayers(playerIds).catch(() => new Map()),
+]);
+// Players who left the league drop off the current squad; their own pages keep their stats.
+const players = detail.players.filter((p) => !dropouts.has(p.id)).map((p) => {
 	const out = availability.get(p.id);
 	return out?.length ? { ...p, status: out.some((a) => a.type === 'SUSPENSION') ? 'Suspended' : 'Injured' } : p;
 });
@@ -31,7 +37,7 @@ const players = detail.players.map((p) => {
 	<TeamHero detail={detail} settings={settings} />
 	<TeamAbout detail={detail} settings={settings} />
 	<TeamMatches recent={detail.recent} upcoming={detail.upcoming} seasons={detail.seasons} settings={settings} client:visible />
-	<TeamSquad players={players} playerCount={detail.playerCount} settings={settings} client:idle />
+	<TeamSquad players={players} playerCount={players.length} settings={settings} client:idle />
 	<TeamStaff staff={detail.staff} heading={settings.staffHeading} />
 	<Footer footer={footer} />
 </div>
