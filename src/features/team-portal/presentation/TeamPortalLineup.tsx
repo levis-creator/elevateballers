@@ -15,6 +15,8 @@ type RosterPlayer = {
   image: string | null;
   jerseyNumber: number | null;
   position: string | null;
+  /** Suspended for this match, or injured and not yet marked fit. */
+  unavailable?: 'SUSPENSION' | 'INJURY' | null;
 };
 type LineupRow = { playerId: string; started: boolean; jerseyNumber: number | null; name: string };
 type LineupData = {
@@ -90,6 +92,8 @@ export default function TeamPortalLineup({
     Object.entries(selection).some(([id, role]) => initial[id] !== role);
   const rosterIds = new Set(roster.map((p) => p.playerId));
   const offRoster = (data?.lineup ?? []).filter((row) => !rosterIds.has(row.playerId));
+  const unavailableIds = new Set(roster.filter((p) => p.unavailable).map((p) => p.playerId));
+  const unavailableListed = roster.filter((p) => p.unavailable && selection[p.playerId]);
 
   const setRole = (playerId: string, role: Role | null) => {
     setSaveMessage(null);
@@ -114,8 +118,8 @@ export default function TeamPortalLineup({
           teamId,
           matchId: match.id,
           players: Object.entries(selection)
-            // Keep only players still on the roster; the API rejects anyone else.
-            .filter(([playerId]) => rosterIds.has(playerId))
+            // Keep only available players still on the roster; the API rejects anyone else.
+            .filter(([playerId]) => rosterIds.has(playerId) && !unavailableIds.has(playerId))
             .map(([playerId, role]) => ({ playerId, started: role === 'starter' })),
         }),
       });
@@ -217,6 +221,13 @@ export default function TeamPortalLineup({
               removed from this lineup when you save.
             </p>
           )}
+          {unavailableListed.length > 0 && !locked && (
+            <p className="text-[12.5px] text-[#d99a2b]">
+              {unavailableListed.map((p) => p.name).join(', ')}{' '}
+              {unavailableListed.length === 1 ? 'is' : 'are'} suspended or injured and will be removed
+              from this lineup when you save.
+            </p>
+          )}
 
           <section
             aria-label={`${teamName} lineup`}
@@ -227,6 +238,12 @@ export default function TeamPortalLineup({
                 const role = selection[player.playerId] ?? null;
                 const starterFull = starters >= maxStarters && role !== 'starter';
                 const benchFull = bench >= maxBench && role !== 'bench';
+                const outReason =
+                  player.unavailable === 'SUSPENSION'
+                    ? 'Suspended for this match'
+                    : player.unavailable === 'INJURY'
+                      ? 'Injured — mark them fit on the Roster page to pick them'
+                      : null;
                 return (
                   <div
                     key={player.playerId}
@@ -236,7 +253,17 @@ export default function TeamPortalLineup({
                       {player.jerseyNumber ?? '—'}
                     </div>
                     <div className="min-w-[150px] flex-1">
-                      <div className="truncate text-[13.5px] font-bold text-cream">{player.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-[13.5px] font-bold text-cream">{player.name}</span>
+                        {player.unavailable && (
+                          <span
+                            className="flex-shrink-0 rounded border border-[#d99a2b]/40 bg-[#d99a2b]/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] text-[#d99a2b]"
+                            title={outReason ?? undefined}
+                          >
+                            {player.unavailable === 'SUSPENSION' ? 'Suspended' : 'Injured'}
+                          </span>
+                        )}
+                      </div>
                       <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#8a817a]">
                         {player.position || 'Position not set'}
                       </div>
@@ -260,13 +287,16 @@ export default function TeamPortalLineup({
                           aria-checked={role === value}
                           disabled={
                             locked ||
+                            (value !== null && Boolean(outReason)) ||
                             (value === 'starter' && starterFull) ||
                             (value === 'bench' && benchFull)
                           }
                           title={
                             locked
                               ? undefined
-                              : value === 'starter' && starterFull
+                              : value !== null && outReason
+                                ? outReason
+                                : value === 'starter' && starterFull
                                 ? `Only ${maxStarters} starters allowed`
                                 : value === 'bench' && benchFull
                                   ? `Only ${maxBench} bench players allowed`

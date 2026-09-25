@@ -53,6 +53,7 @@ export default function TeamSquad({ players, playerCount, settings }: Props) {
 							</div>
 							<div className="p-4">
 								<span className="block font-body text-[15px] font-extrabold text-ink2">{p.name}</span>
+								{p.status && <span className="mt-1 inline-block rounded bg-brand/10 px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] text-brand">{p.status}</span>}
 								{cardStat(p) && <span className="mt-1 block font-mono text-[11px] uppercase text-brand">{cardStat(p)}</span>}
 							</div>
 						</a>)}
@@ -85,7 +86,7 @@ export default function TeamSquad({ players, playerCount, settings }: Props) {
 											{p.initials}
 										</span>
 									)}
-									<span className="font-body text-[15px] font-bold text-ink2">{p.name}</span>
+									<span className="font-body text-[15px] font-bold text-ink2">{p.name}{p.status && <span className="ml-2 inline-block rounded bg-brand/10 px-1.5 py-0.5 align-middle font-mono text-[9.5px] uppercase tracking-[0.08em] text-brand">{p.status}</span>}</span>
 								</span>
 								<span className="font-body text-[13px] text-muted max-[600px]:hidden">{p.pos}</span>
 								<span className="font-mono text-[13px] text-ink2 max-[600px]:hidden">{p.height}</span>
@@ -125,7 +126,7 @@ export default function TeamSquad({ players, playerCount, settings }: Props) {
 												{p.initials}
 											</span>
 										)}
-										<span className="font-body text-[14px] font-bold text-ink2">{p.name}</span>
+										<span className="font-body text-[14px] font-bold text-ink2">{p.name}{p.status && <span className="ml-2 inline-block rounded bg-brand/10 px-1.5 py-0.5 align-middle font-mono text-[9.5px] uppercase tracking-[0.08em] text-brand">{p.status}</span>}</span>
 									</span>
 									<span className="text-right font-display text-[18px]" style={{ color: p.ppgColor }}>{p.ppg}</span>
 									<span className="text-right font-mono text-[13px] text-ink2">{p.rpg}</span>

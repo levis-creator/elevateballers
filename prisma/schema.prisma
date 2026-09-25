@@ -539,6 +539,7 @@ model Team {
   ownerships                     TeamOwnership[]
   ownershipClaims                TeamOwnershipClaim[]
   seasonTeamPlayers              SeasonTeamPlayer[]
+  playerAvailability             PlayerAvailability[]
 
   @@index([name])
   @@index([slug])
@@ -832,6 +833,7 @@ model Player {
   seasonTeamPlayers               SeasonTeamPlayer[]
   seasonPlayerTransfers           SeasonPlayerTransfer[]
   seasonRosterHistory             SeasonRosterHistory[]
+  availability                    PlayerAvailability[]
 
   @@index([teamId])
   @@index([slug])
@@ -839,6 +841,34 @@ model Player {
   @@index([archived])
   @@index([approved, archived, lastName, firstName], map: "players_public_directory_idx")
   @@map("players")
+}
+
+/// A suspension or injury that keeps a player out of match-day squads.
+/// Suspensions cover the team's next `matchCount` matches dated after
+/// `startsAfter` (ignoring `sourceMatchId`, the match the player was ejected
+/// from); injuries last until a coach or admin marks the player fit.
+model PlayerAvailability {
+  id            String                 @id @default(cuid())
+  playerId      String                 @map("player_id")
+  teamId        String?                @map("team_id")
+  type          PlayerAvailabilityType
+  reason        String?                @db.Text
+  matchCount    Int?                   @map("match_count")
+  startsAfter   DateTime               @default(now()) @map("starts_after")
+  sourceMatchId String?                @map("source_match_id")
+  sourceEventId String?                @unique @map("source_event_id")
+  createdById   String?                @map("created_by_id")
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+  resolvedAt    DateTime?              @map("resolved_at")
+  resolvedById  String?                @map("resolved_by_id")
+  player        Player                 @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team          Team?                  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  sourceEvent   MatchEvent?            @relation(fields: [sourceEventId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, resolvedAt])
+  @@index([teamId, resolvedAt])
+  @@map("player_availability")
 }
 
 model PlayerTeamHistory {
@@ -1123,6 +1153,7 @@ model MatchEvent {
   match            Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
   player           Player?        @relation(fields: [playerId], references: [id])
   team             Team?          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  suspension       PlayerAvailability?
 
   @@index([matchId])
   @@index([playerId])
@@ -1585,6 +1616,11 @@ enum SeasonRosterStatus {
   APPROVED
   REJECTED
   WITHDRAWN
+}
+
+enum PlayerAvailabilityType {
+  SUSPENSION
+  INJURY
 }
 
 enum MatchStatus {

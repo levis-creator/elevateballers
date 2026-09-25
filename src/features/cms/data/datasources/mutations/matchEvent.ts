@@ -2,6 +2,22 @@ import { prisma } from '../../../../../lib/prisma';
 import type { CreateMatchEventInput, UpdateMatchEventInput, MatchEvent } from '../../../types';
 
 export async function createMatchEvent(data: CreateMatchEventInput): Promise<MatchEvent | null> {
+  const event = await insertMatchEvent(data);
+  if (event?.eventType === 'EJECTION') await syncEjection(event.id);
+  return event;
+}
+
+/** An ejection suspends the player for their team's next match; keep that in step with the event. */
+async function syncEjection(eventId: string): Promise<void> {
+  try {
+    const { syncEjectionSuspension } = await import('../../../../player/data/datasources/availability-repository');
+    await syncEjectionSuspension(eventId);
+  } catch (error) {
+    console.error('Error syncing ejection suspension:', error);
+  }
+}
+
+async function insertMatchEvent(data: CreateMatchEventInput): Promise<MatchEvent | null> {
   try {
     const { isScoringEvent, updateMatchScoresFromEvents } = await import(
       '../../../../game-tracking/lib/score-calculation'
@@ -107,6 +123,13 @@ export async function updateMatchEvent(
   id: string,
   data: UpdateMatchEventInput
 ): Promise<MatchEvent | null> {
+  const before = await prisma.matchEvent.findUnique({ where: { id }, select: { eventType: true } });
+  const event = await applyMatchEventUpdate(id, data);
+  if (event && (before?.eventType === 'EJECTION' || event.eventType === 'EJECTION')) await syncEjection(id);
+  return event;
+}
+
+async function applyMatchEventUpdate(id: string, data: UpdateMatchEventInput): Promise<MatchEvent | null> {
   try {
     const { isScoringEvent, updateMatchScoresFromEvents } = await import(
       '../../../../game-tracking/lib/score-calculation'
