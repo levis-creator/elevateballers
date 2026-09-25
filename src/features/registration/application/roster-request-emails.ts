@@ -3,6 +3,7 @@ import { publishToJob } from '@/lib/qstash';
 import { sendAdminNotificationEmail } from '@/lib/email';
 import { C, SITE_URL } from '@/lib/email/config';
 import { btn, emailWrapper, sendTransactionalEmail } from '@/lib/email/core';
+import { enqueueFailedEmail } from '@/lib/email/outbox';
 
 const esc = (value: string) =>
   value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char);
@@ -10,15 +11,21 @@ const site = () => (process.env.SITE_URL || SITE_URL).replace(/\/$/, '');
 
 /**
  * Queue on QStash when configured; otherwise send inline (a background send can
- * be cut off once a serverless response returns). Email failures never fail the
- * request that triggered them.
+ * be cut off once a serverless response returns) and hand a failure to the
+ * email outbox for the hourly resend. Email failures never fail the request
+ * that triggered them.
  */
 async function queueOrSend(jobType: string, data: Record<string, unknown>, sendNow: () => Promise<void>) {
   try {
     if (await publishToJob('/api/jobs/send-email', { jobType, data })) return;
+  } catch (error) {
+    console.error(`[roster-email] ${jobType} could not be queued:`, error);
+  }
+  try {
     await sendNow();
   } catch (error) {
-    console.error(`[roster-email] ${jobType} failed:`, error);
+    console.error(`[roster-email] ${jobType} failed, saved for retry:`, error);
+    await enqueueFailedEmail({ jobType, data }, error, 'inline');
   }
 }
 
