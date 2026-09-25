@@ -50,6 +50,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error starting game:', error);
-    return handleApiError(error, "start game");
+    return handleApiError(error, "start game", request);
   }
 };

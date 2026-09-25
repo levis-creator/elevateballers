@@ -5,7 +5,7 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
-export const GET: APIRoute = async ({ params, url }) => {
+export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
   if (!matchId) {
     return new Response(JSON.stringify({ error: 'Match ID is required' }), {
@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ params, url }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match players:', error);
-    return handleApiError(error, "fetch match players");
+    return handleApiError(error, "fetch match players", request);
   }
 };
 
@@ -87,6 +87,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating match player:', error);
-    return handleApiError(error, "create match player");
+    return handleApiError(error, "create match player", request);
   }
 };

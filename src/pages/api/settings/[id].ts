@@ -27,7 +27,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error) {
     console.error('Error fetching setting:', error);
-    return handleApiError(error, "fetch setting");
+    return handleApiError(error, "fetch setting", request);
   }
 };
 

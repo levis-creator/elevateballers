@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return handleApiError(error, 'fetch staff');
+    return handleApiError(error, 'fetch staff', request);
   }
 };
 

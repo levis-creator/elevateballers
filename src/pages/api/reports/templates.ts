@@ -29,6 +29,6 @@ export const GET: APIRoute = async ({ request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching report templates:', error);
-    return handleApiError(error, "fetch report templates");
+    return handleApiError(error, "fetch report templates", request);
   }
 };

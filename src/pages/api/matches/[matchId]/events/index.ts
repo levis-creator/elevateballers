@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching match events:', error);
-    return handleApiError(error, "fetch match events");
+    return handleApiError(error, "fetch match events", request);
   }
 };
 
@@ -101,6 +101,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating match event:', error);
-    return handleApiError(error, "create match event");
+    return handleApiError(error, "create match event", request);
   }
 };

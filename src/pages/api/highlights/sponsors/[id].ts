@@ -7,7 +7,7 @@ import { handleApiError } from '../../../../lib/apiError';
 import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
     try {
         const id = params.id;
         if (!id) {
@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ params }) => {
         });
     } catch (error: any) {
         console.error('Error fetching sponsor:', error);
-        return handleApiError(error, "fetch sponsor");
+        return handleApiError(error, "fetch sponsor", request);
     }
 };
 

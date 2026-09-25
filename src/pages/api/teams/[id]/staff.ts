@@ -7,7 +7,7 @@ import { logAudit } from '../../../../features/cms/lib/audit';
 import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const teamStaff = await getStaffByTeam(params.id!, true);
 
@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error) {
     console.error('Error fetching team staff:', error);
-    return handleApiError(error, "fetch team staff");
+    return handleApiError(error, "fetch team staff", request);
   }
 };
 

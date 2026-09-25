@@ -6,11 +6,11 @@ import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const metadata = await prisma.newsArticleMetadata.findUnique({ where: { articleId: params.id! } });
     return new Response(JSON.stringify(metadata ?? {}), { headers: { 'Content-Type': 'application/json' } });
-  } catch (error) { return handleApiError(error, 'fetch article metadata', new Request('http://localhost')); }
+  } catch (error) { return handleApiError(error, 'fetch article metadata', request); }
 };
 
 export const PUT: APIRoute = async ({ params, request }) => {

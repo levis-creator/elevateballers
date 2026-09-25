@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error fetching jump balls:', error);
-    return handleApiError(error, "fetch jump balls");
+    return handleApiError(error, "fetch jump balls", request);
   }
 };
 
@@ -113,6 +113,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating jump ball:', error);
-    return handleApiError(error, "create jump ball");
+    return handleApiError(error, "create jump ball", request);
   }
 };

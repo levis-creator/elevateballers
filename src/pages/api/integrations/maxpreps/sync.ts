@@ -48,6 +48,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error: any) {
     console.error('Error syncing to MaxPreps:', error);
-    return handleApiError(error, "sync to MaxPreps");
+    return handleApiError(error, "sync to MaxPreps", request);
   }
 };

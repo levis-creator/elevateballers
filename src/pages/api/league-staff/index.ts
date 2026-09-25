@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ request }) => {
 			headers: { "Content-Type": "application/json" },
 		});
 	} catch (error) {
-		return handleApiError(error, "fetch league staff");
+		return handleApiError(error, "fetch league staff", request);
 	}
 };
 

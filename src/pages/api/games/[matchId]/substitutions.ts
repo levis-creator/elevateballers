@@ -115,6 +115,6 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   } catch (error: any) {
     console.error('Error creating bulk substitutions:', error);
-    return handleApiError(error, 'create bulk substitutions');
+    return handleApiError(error, 'create bulk substitutions', request);
   }
 };

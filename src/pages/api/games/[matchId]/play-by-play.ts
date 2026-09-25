@@ -8,7 +8,7 @@ export const prerender = false;
  * GET /api/games/[matchId]/play-by-play
  * Get play-by-play log for a match
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const matchId = params.matchId;
     if (!matchId) {
@@ -29,6 +29,6 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error: any) {
     console.error('Error fetching play-by-play:', error);
-    return handleApiError(error, "fetch play-by-play");
+    return handleApiError(error, "fetch play-by-play", request);
   }
 };

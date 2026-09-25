@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     console.error('Error fetching settings:', error);
-    return handleApiError(error, "fetch settings");
+    return handleApiError(error, "fetch settings", request);
   }
 };
 

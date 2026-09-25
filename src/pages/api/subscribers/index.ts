@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error: any) {
     console.error('Subscribe error:', error);
-    return handleApiError(error, "subscribe");
+    return handleApiError(error, "subscribe", request);
   }
 };
 
