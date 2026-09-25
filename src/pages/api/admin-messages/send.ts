@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '@/lib/apiError';
 import { sendAdminDirectEmail } from '@/lib/email';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -16,6 +17,8 @@ export const POST: APIRoute = async ({ request }) => {
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) return new Response(JSON.stringify({ error: 'A valid recipient email is required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     if (!subject || !message) return new Response(JSON.stringify({ error: 'Subject and message are required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     await sendAdminDirectEmail({ name, email, subject, message });
+    // Record who wrote to whom and about what; the body itself is not kept.
+    logAudit(request, 'ADMIN_MESSAGE_SENT', { to: email, subject });
     return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     return handleApiError(error, 'send admin message', request);

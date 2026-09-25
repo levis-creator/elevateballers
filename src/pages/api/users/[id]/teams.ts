@@ -4,6 +4,8 @@ import { prisma } from '../../../../lib/prisma';
 import { handleApiError } from '../../../../lib/apiError';
 import { COACH_ROLE_NAME, MAX_COACH_TEAMS, SetCoachTeamsSchema } from '../../../../features/users/domain/entities/user-directory';
 import { parseBody } from '../../../../lib/validateBody';
+import { logAudit } from '../../../../features/cms/lib/audit';
+import { diffIdSets } from '../../../../lib/auditDiff';
 
 export const prerender = false;
 
@@ -60,6 +62,11 @@ export const PUT: APIRoute = async ({ params, request }) => {
       }
     }
 
+    const previous = await prisma.teamOwnership.findMany({
+      where: { userId, role: COACH_ROLE_NAME, revokedAt: null },
+      select: { teamId: true },
+    });
+
     await prisma.$transaction([
       prisma.teamOwnership.updateMany({
         where: { userId, role: COACH_ROLE_NAME, revokedAt: null },
@@ -78,6 +85,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
       where: { userId, role: COACH_ROLE_NAME, revokedAt: null, effectiveFrom: { lte: new Date() }, OR: [{ effectiveTo: null }, { effectiveTo: { gt: new Date() } }] },
       select: { team: { select: { id: true, name: true } } },
     });
+
+    logAudit(
+      request,
+      'COACH_TEAMS_CHANGED',
+      { teams: diffIdSets(previous.map((r) => r.teamId), teamIds) },
+      userId
+    );
 
     return new Response(JSON.stringify({ coachTeams: rows.map((r) => ({ teamId: r.team.id, teamName: r.team.name })) }), {
       status: 200,

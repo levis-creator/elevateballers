@@ -26,6 +26,8 @@ import {
 } from '../roster-request-emails';
 
 const decision = (overrides: Partial<RosterDecision> = {}): RosterDecision => ({
+  rosterId: 'r1',
+  playerId: 'p1',
   type: 'NEW',
   approved: true,
   playerName: 'Ann Otieno',

@@ -6,6 +6,7 @@ import {
   getRegistrationReviewQueue,
 } from '../../../features/registration/data/datasources/review-queue';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '../../../features/cms/lib/audit';
 import { notifyCoachesOfRosterDecisions } from '../../../features/registration/application/roster-request-emails';
 
 export const prerender = false;
@@ -50,16 +51,27 @@ export const POST: APIRoute = async ({ request }) => {
         action: body.action,
         reviewerId: reviewer.id,
       });
+      if (count)
+        logAudit(request, body.action === 'APPROVE' ? 'ROSTER_REQUESTS_APPROVED' : 'ROSTER_REQUESTS_REJECTED', {
+          count,
+          decisions: decisions.map((d) => ({
+            rosterId: d.rosterId,
+            playerId: d.playerId,
+            teamId: d.teamId,
+            type: d.type,
+          })),
+        });
       await notifyCoachesOfRosterDecisions(decisions);
       return json({ count });
     }
-    return json(
-      await bulkReviewRegistrations({
-        kind: body.kind,
-        ids: body.ids.map(String),
-        action: body.action,
-      })
-    );
+    const ids = body.ids.map(String);
+    const result = await bulkReviewRegistrations({ kind: body.kind, ids, action: body.action });
+    if (result.count)
+      logAudit(request, `${body.kind}S_BULK_${body.action === 'APPROVE' ? 'APPROVED' : 'REJECTED'}`, {
+        count: result.count,
+        ids,
+      });
+    return json(result);
   } catch (error) {
     return handleApiError(error, 'bulk review registrations', request);
   }

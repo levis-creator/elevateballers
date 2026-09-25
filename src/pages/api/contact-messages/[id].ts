@@ -3,6 +3,7 @@ import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '@/lib/apiError';
 import { prisma } from '@/lib/prisma';
 import { markContactNotificationsRead } from '@/features/cms/lib/notificationCleanup';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -26,6 +27,7 @@ export const DELETE: APIRoute = async ({ request, params }) => {
       return json({ ok: true, alreadyDeleted: true }, 200);
     }
 
+    logAudit(request, 'CONTACT_MESSAGE_DELETED', { contactMessageId: id });
     return json({ ok: true }, 200);
   } catch (error) {
     return handleApiError(error, 'delete contact message', request);

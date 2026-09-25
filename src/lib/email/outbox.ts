@@ -1,4 +1,5 @@
 import { prisma } from '../prisma';
+import { logAuditSystem } from '../../features/cms/lib/audit';
 
 /** Attempts the hourly resend makes before giving up on an email. */
 export const OUTBOX_MAX_ATTEMPTS = 6;
@@ -18,13 +19,20 @@ export async function enqueueFailedEmail(
   source: 'inline' | 'qstash'
 ): Promise<boolean> {
   try {
-    await prisma.emailOutbox.create({
+    const row = await prisma.emailOutbox.create({
       data: {
         payload: payload as any,
         source,
         lastError: message(error),
         nextAttemptAt: new Date(Date.now() + outboxBackoffHours(1) * 3_600_000),
       },
+      select: { id: true },
+    });
+    logAuditSystem('EMAIL_QUEUED_FOR_RETRY', {
+      outboxId: row.id,
+      source,
+      jobType: typeof payload.jobType === 'string' ? payload.jobType : 'direct',
+      error: message(error),
     });
     return true;
   } catch (cause) {

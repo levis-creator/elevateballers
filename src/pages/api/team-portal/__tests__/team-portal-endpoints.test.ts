@@ -437,6 +437,13 @@ describe('Roster edits', () => {
     expect(mocks.prisma.seasonRosterHistory.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ action: 'ROSTER_EDITED', changedById: 'coach-1' }),
     });
+    expect(mocks.logAudit).toHaveBeenCalledWith(expect.any(Request), 'TEAM_PORTAL_ROSTER_PLAYER_EDITED', {
+      teamId: TEAM.id,
+      rosterId: 'r1',
+      playerId: 'p1',
+      jerseyNumber: { from: 4, to: 11 },
+      position: { from: 'PG', to: 'SG' },
+    });
   });
 
   it('leaves upcoming lineups alone when the jersey is unchanged', async () => {
@@ -447,6 +454,7 @@ describe('Roster edits', () => {
   it('rejects an invalid jersey number', async () => {
     expect((await edit({ jerseyNumber: '120' })).status).toBe(400);
     expect(mocks.prisma.seasonTeamPlayer.update).not.toHaveBeenCalled();
+    expect(mocks.logAudit).not.toHaveBeenCalled();
   });
 });
 
