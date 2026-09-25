@@ -112,20 +112,22 @@ export default function TeamPortalRoster({
       setProposalMessage(
         value.message ||
           (editingEntry
-            ? 'Roster edit sent for admin approval.'
+            ? 'Player details updated.'
             : 'Player proposal sent for admin approval.')
       );
-      setForm({
-        firstName: '',
-        lastName: '',
-        email: '',
-        jerseyNumber: '',
-        position: '',
-        dateOfBirth: '',
-        phone: '',
-        note: '',
-      });
-      setEditingEntry(null);
+      // An edit keeps the form open on the saved values so the coach sees them.
+      if (!editingEntry) {
+        setForm({
+          firstName: '',
+          lastName: '',
+          email: '',
+          jerseyNumber: '',
+          position: '',
+          dateOfBirth: '',
+          phone: '',
+          note: '',
+        });
+      }
       await loadRoster();
     } catch (cause) {
       setProposalError(cause instanceof Error ? cause.message : 'Unable to propose player.');
@@ -231,17 +233,17 @@ export default function TeamPortalRoster({
                 <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-4">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-brandsoft">
-                      Roster proposal
+                      {editingEntry ? 'Roster edit' : 'Roster proposal'}
                     </p>
                     <h2
                       id="propose-player-title"
                       className="mt-1 font-display text-[24px] uppercase text-cream"
                     >
-                      {editingEntry ? 'Propose an edit' : 'Propose a player'}
+                      {editingEntry ? 'Edit player' : 'Propose a player'}
                     </h2>
                     <p className="mt-2 text-[12.5px] text-[#8a817a]">
                       {editingEntry
-                        ? 'Updated roster details will apply after admin approval.'
+                        ? 'Jersey number and position update straight away, including lineups for upcoming games.'
                         : 'The player will be added to the active season after admin approval.'}
                     </p>
                   </div>
@@ -266,7 +268,10 @@ export default function TeamPortalRoster({
                       ['phone', 'Phone'],
                       ['note', 'Note to the league office'],
                     ] as const
-                  ).map(([key, label]) => (
+                  )
+                    // Only jersey number and position can change on an existing player.
+                    .filter(([key]) => !editingEntry || !['phone', 'note'].includes(key))
+                    .map(([key, label]) => (
                     <label
                       key={key}
                       className={key === 'email' || key === 'note' ? 'sm:col-span-2' : ''}
@@ -355,7 +360,13 @@ export default function TeamPortalRoster({
                     disabled={submitting}
                     className="portal-roster-action border border-brand bg-brand px-3.5 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {submitting ? 'Sending…' : 'Send proposal'}
+                    {submitting
+                      ? editingEntry
+                        ? 'Saving…'
+                        : 'Sending…'
+                      : editingEntry
+                        ? 'Save changes'
+                        : 'Send proposal'}
                   </button>
                 </div>
               </form>
@@ -464,10 +475,10 @@ function PlayerRow({
               event.stopPropagation();
               onEdit();
             }}
-            aria-label={`Propose an edit for ${name}`}
+            aria-label={`Edit ${name}`}
             className="portal-roster-action portal-roster-edit border disabled:opacity-50"
           >
-            Propose edit
+            Edit
           </button>
           {entry.status === 'APPROVED' && !entry.removalRequestedAt && (
             <button
