@@ -51,6 +51,7 @@ beforeEach(() => {
 describe('notifyAdminsOfRosterRequest', () => {
   it('sends a roster_request admin email with escaped coach input', async () => {
     await notifyAdminsOfRosterRequest({
+      eventId: 'h1',
       kind: 'NEW',
       playerName: 'Ann <b>Otieno</b>',
       teamName: 'Queens',
@@ -61,6 +62,7 @@ describe('notifyAdminsOfRosterRequest', () => {
     });
     const [data] = mocks.sendAdminNotificationEmail.mock.calls[0];
     expect(data).toMatchObject({
+      idempotencyKey: 'roster-request:h1',
       type: 'roster_request',
       title: 'New player proposed',
       actionUrl: 'https://site.test/admin/registrations?kind=ROSTER',
@@ -72,7 +74,7 @@ describe('notifyAdminsOfRosterRequest', () => {
 
   it('uses the job queue when it is configured', async () => {
     mocks.publishToJob.mockResolvedValue(true);
-    await notifyAdminsOfRosterRequest({ kind: 'REMOVAL', playerName: 'Ann', teamName: 'Queens', coachName: null });
+    await notifyAdminsOfRosterRequest({ eventId: 'h1', kind: 'REMOVAL', playerName: 'Ann', teamName: 'Queens', coachName: null });
     expect(mocks.publishToJob).toHaveBeenCalledWith(
       '/api/jobs/send-email',
       expect.objectContaining({ jobType: 'admin_notification' })
@@ -85,7 +87,7 @@ describe('notifyAdminsOfRosterRequest', () => {
     mocks.sendAdminNotificationEmail.mockRejectedValue(failure);
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(
-      notifyAdminsOfRosterRequest({ kind: 'NEW', playerName: 'Ann', teamName: 'Queens', coachName: null })
+      notifyAdminsOfRosterRequest({ eventId: 'h1', kind: 'NEW', playerName: 'Ann', teamName: 'Queens', coachName: null })
     ).resolves.toBeUndefined();
     expect(mocks.enqueueFailedEmail).toHaveBeenCalledWith(
       { jobType: 'admin_notification', data: expect.objectContaining({ type: 'roster_request' }) },
@@ -98,7 +100,7 @@ describe('notifyAdminsOfRosterRequest', () => {
   it('still sends directly when queueing throws', async () => {
     mocks.publishToJob.mockRejectedValue(new Error('qstash down'));
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    await notifyAdminsOfRosterRequest({ kind: 'NEW', playerName: 'Ann', teamName: 'Queens', coachName: null });
+    await notifyAdminsOfRosterRequest({ eventId: 'h1', kind: 'NEW', playerName: 'Ann', teamName: 'Queens', coachName: null });
     expect(mocks.sendAdminNotificationEmail).toHaveBeenCalled();
     expect(mocks.enqueueFailedEmail).not.toHaveBeenCalled();
     error.mockRestore();
@@ -109,7 +111,7 @@ describe('notifyCoachesOfRosterDecisions', () => {
   it('sends the proposing coach one email covering all their decisions', async () => {
     await notifyCoachesOfRosterDecisions([
       decision(),
-      decision({ type: 'REMOVAL', approved: false, playerName: 'Bea Wanjiru' }),
+      decision({ rosterId: 'r2', type: 'REMOVAL', approved: false, playerName: 'Bea Wanjiru' }),
     ]);
     expect(mocks.sendTransactionalEmail).toHaveBeenCalledTimes(1);
     const [email] = mocks.sendTransactionalEmail.mock.calls[0];
@@ -118,6 +120,7 @@ describe('notifyCoachesOfRosterDecisions', () => {
     expect(email.html).toContain('Ann Otieno is approved');
     expect(email.html).toContain('remove Bea Wanjiru was declined');
     expect(email.html).toContain('https://site.test/team-portal?team=team-1&view=roster');
+    expect(email.idempotencyKey).toBe('roster-decision:coach-1:team-1:r1=A,r2=R');
   });
 
   it('skips coaches who turned email notifications off', async () => {

@@ -251,7 +251,7 @@ export const POST: APIRoute = async ({ request }) => {
           status: 'PENDING',
         },
       });
-      await tx.seasonRosterHistory.create({
+      const proposal = await tx.seasonRosterHistory.create({
         data: {
           leagueSeasonId: seasonTeam.leagueSeasonId,
           playerId: player.id,
@@ -261,8 +261,16 @@ export const POST: APIRoute = async ({ request }) => {
           reason: note,
           changedById: user.id,
         },
+        select: { id: true },
       });
-      return { player, roster, edited: false, before: null, existing: Boolean(existing) };
+      return {
+        player,
+        roster,
+        edited: false,
+        before: null,
+        existing: Boolean(existing),
+        historyId: proposal.id,
+      };
     });
 
     if (result.edited && result.before)
@@ -283,6 +291,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (!result.edited && result.player)
       await notifyAdminsOfRosterRequest({
+        eventId: result.historyId,
         kind: 'NEW',
         playerName: `${result.player.firstName ?? ''} ${result.player.lastName ?? ''}`.trim() || email,
         teamName: team.name,
@@ -365,8 +374,9 @@ export const DELETE: APIRoute = async ({ request }) => {
           status: 409,
         }
       );
-    await prisma.$transaction(async (tx) => {
-      await tx.seasonRosterHistory.create({
+    const removal = await prisma.$transaction(async (tx) => {
+      return tx.seasonRosterHistory.create({
+        select: { id: true },
         data: {
           leagueSeasonId: seasonTeam.leagueSeasonId,
           playerId: roster.playerId,
@@ -385,6 +395,7 @@ export const DELETE: APIRoute = async ({ request }) => {
       playerId: roster.playerId,
     });
     await notifyAdminsOfRosterRequest({
+      eventId: removal.id,
       kind: 'REMOVAL',
       playerName:
         `${roster.player?.firstName ?? ''} ${roster.player?.lastName ?? ''}`.trim() || 'A player',

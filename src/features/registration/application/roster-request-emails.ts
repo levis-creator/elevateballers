@@ -1,35 +1,16 @@
 import { prisma } from '@/lib/prisma';
-import { publishToJob } from '@/lib/qstash';
 import { sendAdminNotificationEmail } from '@/lib/email';
 import { C, SITE_URL } from '@/lib/email/config';
 import { btn, emailWrapper, sendTransactionalEmail } from '@/lib/email/core';
-import { enqueueFailedEmail } from '@/lib/email/outbox';
+import { queueOrSend } from '@/lib/email/queue-or-send';
 
 const esc = (value: string) =>
   value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char);
 const site = () => (process.env.SITE_URL || SITE_URL).replace(/\/$/, '');
 
-/**
- * Queue on QStash when configured; otherwise send inline (a background send can
- * be cut off once a serverless response returns) and hand a failure to the
- * email outbox for the hourly resend. Email failures never fail the request
- * that triggered them.
- */
-async function queueOrSend(jobType: string, data: Record<string, unknown>, sendNow: () => Promise<void>) {
-  try {
-    if (await publishToJob('/api/jobs/send-email', { jobType, data })) return;
-  } catch (error) {
-    console.error(`[roster-email] ${jobType} could not be queued:`, error);
-  }
-  try {
-    await sendNow();
-  } catch (error) {
-    console.error(`[roster-email] ${jobType} failed, saved for retry:`, error);
-    await enqueueFailedEmail({ jobType, data }, error, 'inline');
-  }
-}
-
 export type RosterRequestAlert = {
+  /** The roster-history row recording the request; makes the email once-only. */
+  eventId: string;
   kind: 'NEW' | 'REMOVAL';
   playerName: string;
   teamName: string;
@@ -49,6 +30,7 @@ export async function notifyAdminsOfRosterRequest(alert: RosterRequestAlert) {
     alert.position ? esc(alert.position) : null,
   ].filter(Boolean);
   const data = {
+    idempotencyKey: `roster-request:${alert.eventId}`,
     type: 'roster_request' as const,
     title: alert.kind === 'NEW' ? 'New player proposed' : 'Player removal requested',
     message:
@@ -94,6 +76,7 @@ export async function sendRosterDecisionEmail(data: {
   lines: string[];
   approvedCount: number;
   rejectedCount: number;
+  idempotencyKey?: string;
 }) {
   const subject =
     data.rejectedCount && !data.approvedCount
@@ -114,6 +97,7 @@ export async function sendRosterDecisionEmail(data: {
     to: data.to,
     subject,
     html,
+    idempotencyKey: data.idempotencyKey,
     audit: { template: 'roster_decision', context: { teamId: data.teamId } },
   });
 }
@@ -146,6 +130,11 @@ export async function notifyCoachesOfRosterDecisions(decisions: RosterDecision[]
         lines: items.map(decisionLine),
         approvedCount: items.filter((d) => d.approved).length,
         rejectedCount: items.filter((d) => !d.approved).length,
+        // The same decisions for the same coach are only ever mailed once.
+        idempotencyKey: `roster-decision:${coach.id}:${teamId}:${items
+          .map((d) => `${d.rosterId}=${d.approved ? 'A' : 'R'}`)
+          .sort()
+          .join(',')}`,
       };
       await queueOrSend('roster_decision', data, () => sendRosterDecisionEmail(data));
     }

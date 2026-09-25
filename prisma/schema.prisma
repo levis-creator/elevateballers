@@ -1151,6 +1151,21 @@ model PublicRegistrationSubmission {
   @@map("public_registration_submissions")
 }
 
+/// One row per (event, recipient) an email has gone to. Sends that carry an
+/// idempotency key claim their recipients here first, so a retry, a replayed
+/// job or a repeated event never mails the same person twice.
+model EmailDelivery {
+  id             String   @id @default(cuid())
+  idempotencyKey String   @map("idempotency_key") @db.VarChar(191)
+  /// sha256 of the lower-cased address; the address itself is not stored.
+  recipientHash  String   @map("recipient_hash") @db.VarChar(64)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([idempotencyKey, recipientHash])
+  @@index([createdAt])
+  @@map("email_deliveries")
+}
+
 /// Emails whose send failed after every immediate retry (and QStash's, when
 /// queued). The hourly maintenance job resends them with backoff.
 model EmailOutbox {
