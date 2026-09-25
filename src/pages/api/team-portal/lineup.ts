@@ -172,42 +172,64 @@ export const PUT: APIRoute = async ({ request }) => {
     const invalid = validateLineup(players, new Set(rosterById.keys()));
     if (invalid) return json({ error: invalid }, 400);
 
-    const before = await prisma.$transaction(async (tx) => {
-      // Re-check inside the transaction so a tip-off that lands mid-save wins.
-      const current = await tx.match.findUnique({ where: { id: matchId }, select: { status: true } });
-      if (!current || isLineupLocked(current)) throw new LineupLockedError();
-      const existing = await tx.matchPlayer.findMany({
-        where: { matchId, teamId: team.id },
-        select: { playerId: true, started: true },
-      });
-      await tx.matchPlayer.deleteMany({
-        where: { matchId, teamId: team.id, playerId: { notIn: players.map((p) => p.playerId) } },
-      });
-      for (const entry of players) {
-        const rosterEntry = rosterById.get(entry.playerId)!;
-        const jerseyNumber =
-          entry.jerseyNumber ?? rosterEntry.jerseyNumber ?? rosterEntry.player.jerseyNumber ?? null;
-        // Mirrors createMatchPlayer: starters begin the game on the floor.
-        await tx.matchPlayer.upsert({
-          where: { matchId_playerId_teamId: { matchId, playerId: entry.playerId, teamId: team.id } },
-          update: {
-            started: entry.started,
-            isActive: entry.started,
-            ...(entry.jerseyNumber !== undefined ? { jerseyNumber } : {}),
-          },
-          create: {
-            matchId,
-            playerId: entry.playerId,
-            teamId: team.id,
-            started: entry.started,
-            isActive: entry.started,
-            jerseyNumber,
-            position: rosterEntry.position || rosterEntry.player.position,
-          },
+    const jerseyFor = (entry: (typeof players)[number]) => {
+      const rosterEntry = rosterById.get(entry.playerId)!;
+      return entry.jerseyNumber ?? rosterEntry.jerseyNumber ?? rosterEntry.player.jerseyNumber ?? null;
+    };
+
+    // A fixed handful of queries however big the squad is: one upsert per player
+    // pushed the save past the interactive-transaction limit on the remote DB.
+    const before = await prisma.$transaction(
+      async (tx) => {
+        // Re-check inside the transaction so a tip-off that lands mid-save wins.
+        const current = await tx.match.findUnique({ where: { id: matchId }, select: { status: true } });
+        if (!current || isLineupLocked(current)) throw new LineupLockedError();
+        const existing = await tx.matchPlayer.findMany({
+          where: { matchId, teamId: team.id },
+          select: { playerId: true, started: true },
         });
-      }
-      return existing;
-    });
+        const existingIds = new Set(existing.map((row) => row.playerId));
+        await tx.matchPlayer.deleteMany({
+          where: { matchId, teamId: team.id, playerId: { notIn: players.map((p) => p.playerId) } },
+        });
+        // Mirrors createMatchPlayer: starters begin the game on the floor.
+        for (const started of [true, false]) {
+          const ids = players
+            .filter((p) => p.started === started && existingIds.has(p.playerId))
+            .map((p) => p.playerId);
+          if (ids.length)
+            await tx.matchPlayer.updateMany({
+              where: { matchId, teamId: team.id, playerId: { in: ids } },
+              data: { started, isActive: started },
+            });
+        }
+        for (const entry of players)
+          if (entry.jerseyNumber !== undefined && existingIds.has(entry.playerId))
+            await tx.matchPlayer.updateMany({
+              where: { matchId, teamId: team.id, playerId: entry.playerId },
+              data: { jerseyNumber: jerseyFor(entry) },
+            });
+        const added = players.filter((p) => !existingIds.has(p.playerId));
+        if (added.length)
+          await tx.matchPlayer.createMany({
+            data: added.map((entry) => {
+              const rosterEntry = rosterById.get(entry.playerId)!;
+              return {
+                matchId,
+                playerId: entry.playerId,
+                teamId: team.id,
+                started: entry.started,
+                isActive: entry.started,
+                jerseyNumber: jerseyFor(entry),
+                position: rosterEntry.position || rosterEntry.player.position,
+              };
+            }),
+            skipDuplicates: true,
+          });
+        return existing;
+      },
+      { maxWait: 10_000, timeout: 20_000 }
+    );
 
     logAudit(request, 'TEAM_PORTAL_LINEUP_SUBMITTED', {
       teamId: team.id,
