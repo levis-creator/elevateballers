@@ -149,3 +149,18 @@ export async function listPlayerRosters(playerId: string, db: Db = prisma) {
     dropoutRequested: Boolean(row.dropoutRequestedAt),
   }));
 }
+
+/** Drops the player out of every roster they are active on: they have left the league. */
+export async function dropOutPlayer(tx: Db, playerId: string, input: { reason: string | null; changedById: string }) {
+  const rosters = await tx.seasonTeamPlayer.findMany({ where: { playerId, ...ACTIVE }, select: { id: true, teamId: true } });
+  if (!rosters.length) throw new RosterDropoutError('This player is not on any active roster.');
+  for (const roster of rosters) await markRosterDroppedOut(tx, roster.id, input);
+  return rosters;
+}
+
+/** Reinstates the player on the roster they most recently dropped out of. */
+export async function reinstatePlayer(tx: Db, playerId: string, changedById: string) {
+  const dropout = (await getDroppedOutPlayers([playerId], tx)).get(playerId);
+  if (!dropout) throw new RosterDropoutError('This player has not dropped out.');
+  return reinstateRoster(tx, dropout.rosterId, changedById);
+}

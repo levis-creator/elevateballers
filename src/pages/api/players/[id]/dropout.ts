@@ -4,8 +4,10 @@ import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/features/rbac/middleware';
 import { logAudit } from '@/features/cms/lib/audit';
 import {
+  dropOutPlayer,
   listPlayerRosters,
   markRosterDroppedOut,
+  reinstatePlayer,
   reinstateRoster,
 } from '@/features/player/data/datasources/dropout-repository';
 import { handleApiError } from '@/lib/apiError';
@@ -19,7 +21,8 @@ const json = (body: unknown, status = 200) =>
   });
 
 const bodySchema = z.object({
-  rosterId: z.string().min(1),
+  /** One roster entry; without it the player leaves (or returns to) the league as a whole. */
+  rosterId: z.string().min(1).optional(),
   action: z.enum(['DROP_OUT', 'REINSTATE']),
   reason: z.string().trim().max(500).optional(),
 });
@@ -42,22 +45,26 @@ export const PATCH: APIRoute = async ({ params, request }) => {
     if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? 'Invalid request.' }, 400);
     const { rosterId, action, reason } = parsed.data;
     const playerId = params.id!;
-    const owned = await prisma.seasonTeamPlayer.findFirst({ where: { id: rosterId, playerId }, select: { id: true } });
-    if (!owned) return json({ error: 'Roster entry not found for this player.' }, 404);
-
-    const roster = await prisma.$transaction(
-      (tx) =>
-        action === 'DROP_OUT'
-          ? markRosterDroppedOut(tx, rosterId, { reason: reason || null, changedById: user.id })
-          : reinstateRoster(tx, rosterId, user.id),
+    if (rosterId) {
+      const owned = await prisma.seasonTeamPlayer.findFirst({ where: { id: rosterId, playerId }, select: { id: true } });
+      if (!owned) return json({ error: 'Roster entry not found for this player.' }, 404);
+    }
+    const input = { reason: reason || null, changedById: user.id };
+    const changed = await prisma.$transaction(
+      async (tx) => {
+        if (action === 'DROP_OUT')
+          return rosterId ? [await markRosterDroppedOut(tx, rosterId, input)] : dropOutPlayer(tx, playerId, input);
+        return [rosterId ? await reinstateRoster(tx, rosterId, user.id) : await reinstatePlayer(tx, playerId, user.id)];
+      },
       { maxWait: 10_000, timeout: 20_000 }
     );
-    logAudit(request, action === 'DROP_OUT' ? 'PLAYER_DROPPED_OUT' : 'PLAYER_REINSTATED', {
-      playerId,
-      rosterId,
-      teamId: roster.teamId,
-      reason: action === 'DROP_OUT' ? reason || null : undefined,
-    });
+    for (const roster of changed)
+      logAudit(request, action === 'DROP_OUT' ? 'PLAYER_DROPPED_OUT' : 'PLAYER_REINSTATED', {
+        playerId,
+        rosterId: roster.id,
+        teamId: roster.teamId,
+        reason: action === 'DROP_OUT' ? reason || null : undefined,
+      });
     return json({ message: action === 'DROP_OUT' ? 'Player marked as dropped out.' : 'Player reinstated.' });
   } catch (error) {
     return handleApiError(error, 'update player dropout', request);
