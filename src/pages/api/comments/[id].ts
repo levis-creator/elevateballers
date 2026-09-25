@@ -3,10 +3,11 @@ import { getCommentById } from '../../../features/cms/lib/queries';
 import { updateComment, deleteComment, approveComment, rejectComment } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const { id } = params;
 
@@ -51,6 +52,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
     // Check if this is an approve/reject action
     if (data.action === 'approve') {
       const comment = await approveComment(id);
+      if (comment) logAudit(request, 'COMMENT_APPROVED', { commentId: id });
       if (!comment) {
         return new Response(JSON.stringify({ error: 'Failed to approve comment' }), {
           status: 500,
@@ -64,6 +66,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
     if (data.action === 'reject') {
       const comment = await rejectComment(id);
+      if (comment) logAudit(request, 'COMMENT_REJECTED', { commentId: id });
       if (!comment) {
         return new Response(JSON.stringify({ error: 'Failed to reject comment' }), {
           status: 500,
@@ -80,6 +83,12 @@ export const PUT: APIRoute = async ({ request, params }) => {
       content: data.content,
       approved: data.approved,
     });
+    if (comment)
+      logAudit(request, 'COMMENT_UPDATED', {
+        commentId: id,
+        contentChanged: data.content !== undefined,
+        ...(data.approved !== undefined ? { approved: Boolean(data.approved) } : {}),
+      });
 
     if (!comment) {
       return new Response(JSON.stringify({ error: 'Comment not found or update failed' }), {
@@ -109,6 +118,7 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     }
 
     const success = await deleteComment(id);
+    if (success) logAudit(request, 'COMMENT_DELETED', { commentId: id });
 
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to delete comment' }), {

@@ -3,6 +3,7 @@ import { prisma } from '../../../../lib/prisma';
 import { requirePermission } from '../../../../features/rbac/middleware';
 import { getUserIdFromRequest } from '../../../../features/cms/lib/auth';
 import { handleApiError } from '../../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -23,6 +24,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     const userId = getUserIdFromRequest(request);
     const latest = await prisma.newsArticleRevision.findFirst({ where: { articleId: params.id! }, orderBy: { version: 'desc' } });
     await prisma.newsArticleRevision.create({ data: { articleId: restored.id, version: (latest?.version ?? 0) + 1, title: restored.title, slug: restored.slug, content: restored.content, excerpt: restored.excerpt, category: restored.category, image: restored.image, tags: restored.tags ?? undefined, leagueSeasonId: restored.leagueSeasonId, published: restored.published, feature: restored.feature, publishedAt: restored.publishedAt, changedById: userId, changeNote: `Restored revision ${revision.version}` } });
+    logAudit(request, 'NEWS_ARTICLE_REVISION_RESTORED', { articleId: restored.id, restoredVersion: revision.version, title: restored.title });
     return new Response(JSON.stringify(restored), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) { return handleApiError(error, 'restore article revision', request); }
 };

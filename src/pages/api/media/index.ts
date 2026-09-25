@@ -11,6 +11,7 @@ import { handleApiError } from '../../../lib/apiError';
 import { getFileUrl } from '../../../lib/file-storage';
 import { prisma } from '../../../lib/prisma';
 import { moveR2Object, isR2Configured, toR2Key } from '../../../lib/r2';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -115,6 +116,13 @@ export const PATCH: APIRoute = async ({ request }) => {
         ...body.ids
       );
     } else return Response.json({ error: 'Unsupported bulk action' }, { status: 400 });
+    logAudit(request, 'MEDIA_BULK_UPDATED', {
+      action: body.action,
+      count: body.ids.length,
+      ids: body.ids,
+      ...(body.action === 'move' ? { folderId: body.folderId } : {}),
+      ...(body.action === 'feature' ? { featured: Boolean(body.featured) } : {}),
+    });
     return Response.json({ success: true });
   } catch (error) {
     return handleApiError(error, 'bulk update media', request);
@@ -144,6 +152,7 @@ export const POST: APIRoute = async ({ request }) => {
       featured: data.featured === true,
     });
 
+    logAudit(request, 'MEDIA_CREATED', { mediaId: (mediaItem as any)?.id ?? null, title: data.title, type });
     return Response.json(mediaItem, { status: 201 });
   } catch (error) {
     return handleApiError(error, 'create media', request);

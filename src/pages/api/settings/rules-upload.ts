@@ -6,6 +6,7 @@ import { getFolderByName } from '@/lib/folder-access';
 import { handleApiError } from '@/lib/apiError';
 import { enforceRateLimit } from '@/lib/rateLimit';
 import { resolveSecuritySettings } from '../../../features/settings/application/securitySettings';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -92,6 +93,7 @@ export const POST: APIRoute = async ({ request }) => {
         folder: true,
       },
     });
+    logAudit(request, 'SETTING_RULES_DOCUMENT_UPLOADED', { mediaId: media.id, fileName, filePath });
 
     return new Response(
       JSON.stringify({

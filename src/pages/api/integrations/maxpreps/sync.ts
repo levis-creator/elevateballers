@@ -3,6 +3,7 @@ import { syncMatchToMaxPreps } from '../../../../features/reports/lib/maxpreps';
 import { requireAuth } from '../../../../features/cms/lib/auth';
 
 import { handleApiError } from '../../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
 /**
@@ -27,6 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const result = await syncMatchToMaxPreps(matchId);
+    if (result.success) logAudit(request, 'MAXPREPS_MATCH_SYNCED', { matchId });
 
     if (!result.success) {
       return new Response(JSON.stringify({ error: result.error }), {

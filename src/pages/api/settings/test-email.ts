@@ -4,6 +4,7 @@ import { handleApiError } from '../../../lib/apiError';
 import { emailWrapper, sendTransactionalEmail } from '../../../lib/email/core';
 import { enforceRateLimit } from '../../../lib/rateLimit';
 import { siteSettingsService, resolveSecuritySettings } from '../../../features/settings';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -34,6 +35,7 @@ export const POST: APIRoute = async ({ request }) => {
       dedupeKey: `settings-test-${Date.now()}`,
       audit: { type: 'EMAIL_SENT', template: `test_${String(input.template || 'notification')}` },
     });
+    logAudit(request, 'SETTING_TEST_EMAIL_SENT', { to, template: String(input.template || 'notification') });
     return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     return handleApiError(error, 'send settings test email', request);

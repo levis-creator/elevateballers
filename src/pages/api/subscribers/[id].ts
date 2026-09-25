@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '@/features/rbac/middleware';
 import { handleApiError } from '@/lib/apiError';
 import { prisma } from '@/lib/prisma';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -29,6 +30,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     if (Object.keys(data).length === 0) return json({ error: 'Nothing to update' }, 400);
 
     const subscriber = await prisma.subscriber.update({ where: { id }, data });
+    logAudit(request, 'SUBSCRIBER_UPDATED', { subscriberId: id, fields: Object.keys(data) });
     return json(subscriber, 200);
   } catch (error) {
     return handleApiError(error, 'update subscriber', request);
@@ -47,6 +49,7 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     } catch {
       return json({ ok: true, alreadyDeleted: true }, 200);
     }
+    logAudit(request, 'SUBSCRIBER_DELETED', { subscriberId: id });
     return json({ ok: true }, 200);
   } catch (error) {
     return handleApiError(error, 'delete subscriber', request);

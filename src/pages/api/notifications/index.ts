@@ -3,6 +3,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { handleApiError } from '../../../lib/apiError';
 import { withoutResolvedNotifications } from '../../../features/cms/lib/notificationCleanup';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -110,6 +111,8 @@ export const PATCH: APIRoute = async ({ request }) => {
         },
       },
     });
+
+    logAudit(request, 'NOTIFICATION_UPDATED', { notificationId: data.id, read: notification.read });
 
     return new Response(JSON.stringify(notification), {
       status: 200,

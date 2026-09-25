@@ -4,6 +4,7 @@ import { getSponsorById } from '../../../../features/cms/lib/editorial-queries';
 import { requirePermission } from '../../../../features/rbac/middleware';
 
 import { handleApiError } from '../../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
@@ -46,6 +47,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
         const data = await request.json();
         const sponsor = await updateSponsor(id, data);
+        logAudit(request, 'SPONSOR_UPDATED', { sponsorId: id, fields: Object.keys(data ?? {}) });
 
         return new Response(JSON.stringify(sponsor), {
             headers: { 'Content-Type': 'application/json' },
@@ -67,6 +69,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
         }
 
         await deleteSponsor(id);
+        logAudit(request, 'SPONSOR_DELETED', { sponsorId: id });
 
         return new Response(JSON.stringify({ success: true }), {
             headers: { 'Content-Type': 'application/json' },

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { handleApiError } from '../../../lib/apiError';
 import { enforceRateLimit } from '../../../lib/rateLimit';
 import { resolveSecuritySettings } from '../../../features/settings/application/securitySettings';
+import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
@@ -51,6 +52,8 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    logAudit(request, 'SETTING_RULES_DOCUMENT_DELETED', { filePath });
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },

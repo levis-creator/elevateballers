@@ -4,6 +4,7 @@ import { requireActiveTeamContext } from '@/features/team-portal/application/tea
 import { listTeamSeasonRegistrationOptions, requestTeamSeasonRegistration } from '@/features/team-portal/application/team-season-registration';
 import { normalizeOptionalText, normalizeText } from '@/lib/publicRegistrationSecurity';
 import { handleApiError } from '@/lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -25,6 +26,11 @@ export const POST: APIRoute = async ({ request }) => {
     const leagueSeasonId = normalizeText(body?.leagueSeasonId);
     if (!leagueSeasonId) return new Response(JSON.stringify({ error: 'A season edition is required.' }), { status: 400 });
     const result = await requestTeamSeasonRegistration({ teamId: team.id, teamName: team.name, leagueSeasonId, applicantName: user.name, applicantEmail: user.email, notes: normalizeOptionalText(body?.notes) });
+    logAudit(request, 'TEAM_PORTAL_SEASON_REGISTRATION_REQUESTED', {
+      teamId: team.id,
+      leagueSeasonId,
+      applicationId: (result as any)?.id ?? (result as any)?.application?.id ?? null,
+    });
     return new Response(JSON.stringify(result), { status: 201, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   } catch (error) { return handleApiError(error, 'submit Team Portal registration', request); }
 };

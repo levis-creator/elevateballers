@@ -5,6 +5,7 @@ import { sendSubscriberWelcome } from '../../../lib/email';
 
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
+import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
@@ -46,8 +47,10 @@ export const POST: APIRoute = async ({ request }) => {
       }
       // Re-activate
       await prisma.subscriber.update({ where: { email }, data: { active: true, name: name || existing.name } });
+      logAudit(request, 'SUBSCRIBER_REACTIVATED', { subscriberId: existing.id });
     } else {
       const subscriber = await prisma.subscriber.create({ data: { email, name: name || undefined } });
+      logAudit(request, 'SUBSCRIBER_ADDED', { subscriberId: subscriber.id });
       sendSubscriberWelcome({ email, name: subscriber.name || undefined, unsubscribeToken: subscriber.token }).catch((err) =>
         console.error('Failed to send welcome email:', err)
       );

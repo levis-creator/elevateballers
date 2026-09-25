@@ -4,6 +4,7 @@ import { createSponsor, reorderSponsors } from '../../../../features/cms/lib/edi
 import { requirePermission } from '../../../../features/rbac/middleware';
 
 import { handleApiError } from '../../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
@@ -29,6 +30,7 @@ export const POST: APIRoute = async ({ request }) => {
         // Handle reordering
         if (data.reorder && Array.isArray(data.ids)) {
             await reorderSponsors(data.ids);
+            logAudit(request, 'SPONSORS_REORDERED', { ids: data.ids });
             return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -42,6 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         const sponsor = await createSponsor(data);
+        logAudit(request, 'SPONSOR_CREATED', { sponsorId: (sponsor as any)?.id ?? null, name: data.name });
 
         return new Response(JSON.stringify(sponsor), {
             status: 201,

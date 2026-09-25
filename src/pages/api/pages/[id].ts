@@ -3,6 +3,7 @@ import { getPageContentById } from '../../../features/cms/lib/queries';
 import { updatePageContent, deletePageContent } from '../../../features/cms/lib/mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -32,6 +33,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const data = await request.json();
 
     const page = await updatePageContent(params.id!, data);
+    if (page) logAudit(request, 'PAGE_UPDATED', { pageId: params.id, fields: Object.keys(data ?? {}) });
 
     if (!page) {
       return new Response(JSON.stringify({ error: 'Page not found' }), {
@@ -51,7 +53,15 @@ export const PUT: APIRoute = async ({ params, request }) => {
 export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     await requirePermission(request, 'page_contents:update');
+    // Read the title first: once deleted, the id alone says nothing.
+    const existing = await getPageContentById(params.id!).catch(() => null);
     const success = await deletePageContent(params.id!);
+    if (success)
+      logAudit(request, 'PAGE_DELETED', {
+        pageId: params.id,
+        title: (existing as any)?.title ?? null,
+        slug: (existing as any)?.slug ?? null,
+      });
 
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to delete page' }), {

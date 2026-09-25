@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requireAuth } from '../../../features/cms/lib/auth';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -59,6 +60,11 @@ export const PUT: APIRoute = async ({ request }) => {
         emailPreferences: emailPreferences ?? null,
       },
       select: { enabled: true, emailEnabled: true, emailPreferences: true },
+    });
+    logAudit(request, 'NOTIFICATION_SETTINGS_UPDATED', {
+      enabled: settings.enabled,
+      emailEnabled: settings.emailEnabled,
+      emailPreferences: settings.emailPreferences ?? null,
     });
 
     return new Response(

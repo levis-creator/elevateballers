@@ -4,6 +4,7 @@ import { prisma } from '../../../../lib/prisma';
 import { handleApiError } from '../../../../lib/apiError';
 import { parseBody } from '../../../../lib/validateBody';
 import { SetNotificationsSchema } from '../../../../features/users/domain/entities/user-directory';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -38,6 +39,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       create: { userId, emailEnabled: data.emailEnabled },
       update: { emailEnabled: data.emailEnabled },
     });
+    logAudit(request, 'USER_NOTIFICATIONS_UPDATED', { emailEnabled: setting.emailEnabled }, userId);
 
     return new Response(JSON.stringify({ emailEnabled: setting.emailEnabled }), {
       status: 200,

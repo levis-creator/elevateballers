@@ -3,6 +3,7 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { getMatchById } from '../../../../../features/cms/lib/queries';
 import { bulkCreateMatchEvents } from '../../../../../features/cms/lib/mutations/matchEvent';
 import { handleApiError } from '../../../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 const VALID_EVENT_TYPES = new Set([
   'TWO_POINT_MADE', 'TWO_POINT_MISSED',
@@ -115,6 +116,12 @@ export const POST: APIRoute = async ({ params, request }) => {
     }
 
     const result = await bulkCreateMatchEvents(matchId, events);
+    logAudit(request, 'MATCH_EVENTS_IMPORTED', {
+      matchId,
+      submitted: events.length,
+      created: result.created,
+      errors: validationErrors.length + result.errors.length,
+    });
 
     return new Response(
       JSON.stringify({

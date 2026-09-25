@@ -5,6 +5,7 @@ import { sendEmailReport } from '../../../features/reports/lib/emailService';
 import { requireAuth } from '../../../features/cms/lib/auth';
 
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
 /**
@@ -54,6 +55,7 @@ export const POST: APIRoute = async ({ request }) => {
       recipientName,
       subject,
     });
+    logAudit(request, 'REPORT_EMAILED', { reportGenerationId, emailReportId: emailReport.id, to: recipientEmail, subject });
 
     // Send email (async - don't wait for it)
     sendEmailReport(

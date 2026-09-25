@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { prisma } from '../../../lib/prisma';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -32,6 +33,8 @@ export const PUT: APIRoute = async ({ request }) => {
       },
       data: updateData,
     });
+
+    logAudit(request, 'MEDIA_BATCH_MOVED', { count: result.count, mediaIds, folderId: updateData.folderId });
 
     // Fetch updated media items
     const updatedMedia = await prisma.media.findMany({

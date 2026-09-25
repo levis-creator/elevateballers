@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request }) => {
       total,
       totalPages: Math.ceil(total / PAGE_SIZE),
       durableOnly: true,
-    });
+    }, 200);
   } catch (error) {
     return handleApiError(error, 'list sessions', request);
   }

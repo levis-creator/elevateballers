@@ -3,6 +3,7 @@ import { getGameRules } from '../../../features/game-tracking/lib/queries';
 import { updateGameRules, deleteGameRules } from '../../../features/game-tracking/lib/mutations';
 import { requireAuth } from '../../../features/cms/lib/auth';
 import { handleApiError } from '../../../lib/apiError';
+import { logAudit } from '@/features/cms/lib/audit';
 
 export const prerender = false;
 
@@ -10,7 +11,7 @@ export const prerender = false;
  * GET /api/game-rules/[id]
  * Get game rules by ID
  */
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const id = params.id;
     if (!id) {
@@ -54,6 +55,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     const body = await request.json();
     const rules = await updateGameRules(id, body);
+    if (rules) logAudit(request, 'GAME_RULES_UPDATED', { gameRulesId: id, fields: Object.keys(body ?? {}) });
 
     if (!rules) {
       return new Response(JSON.stringify({ error: 'Failed to update game rules' }), {
@@ -87,6 +89,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }
 
     const success = await deleteGameRules(id);
+    if (success) logAudit(request, 'GAME_RULES_DELETED', { gameRulesId: id });
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to delete game rules' }), {
         status: 500,
