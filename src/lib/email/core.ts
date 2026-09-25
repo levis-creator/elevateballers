@@ -4,6 +4,7 @@ import { logAuditSystem } from '../../features/cms/lib/audit';
 import { SMTP_FROM, SITE_URL, LOGO_URL, C, FONT_DISPLAY, FONT_BODY, FONT_MONO, EMAIL_HASH_SECRET, type AdminNotificationType } from './config';
 import { getResend, getSmtpTransport, hashValue, hashRecipients, parseSmtpCredential, sendBrevoEmail, sendMailgunEmail, type ProviderMessage } from './providers';
 import { cacheGet, cacheSet } from '../cache';
+import { claimRecipients, normalizeRecipients, releaseRecipients } from './idempotency';
 import {
   resolveEmailDeliverySettings,
   resolveOutboundEmailSettings,
@@ -74,6 +75,12 @@ type TransactionalEmailInput = {
   from?: string;
   purpose?: EmailPurpose;
   dedupeKey?: string;
+  /**
+   * Names the event this email is for (e.g. `lineup:<match>:<team>:<hash>`).
+   * Each recipient receives it at most once, however often the send is
+   * retried or replayed. Leave unset for sends that may legitimately repeat.
+   */
+  idempotencyKey?: string;
   /**
    * `context` carries the business ids (matchId, teamId, playerId, ...) that
    * triggered this send, and `userId` the recipient's account id when known —
@@ -193,11 +200,34 @@ export async function sendTransactionalEmail(data: TransactionalEmailInput): Pro
     return;
   }
   void cleanupEmailHistory(delivery);
-  const recipients = (Array.isArray(data.to) ? data.to : [data.to]).map((item) => item.trim()).filter(Boolean);
+  let recipients = normalizeRecipients(data.to);
+  if (!recipients.length) return;
+  if (data.idempotencyKey) {
+    const fresh = await claimRecipients(data.idempotencyKey, recipients);
+    if (fresh.length < recipients.length)
+      console.warn(`[email] Skipped ${recipients.length - fresh.length} recipient(s) already sent "${data.idempotencyKey}".`);
+    if (!fresh.length) return;
+    recipients = fresh;
+  }
+  let sent = false;
+  try {
+    sent = await deliver(data, recipients, outbound, delivery);
+  } finally {
+    // A failed or rate-limited send did not reach anyone, so a retry may try again.
+    if (!sent && data.idempotencyKey) await releaseRecipients(data.idempotencyKey, recipients);
+  }
+}
+
+async function deliver(
+  data: TransactionalEmailInput,
+  recipients: string[],
+  outbound: OutboundEmailSettings,
+  delivery: EmailDeliverySettings
+): Promise<boolean> {
   const gate = await deliveryAllowed(recipients, data.subject, data.dedupeKey || data.audit?.template || 'transactional', delivery);
   if (!gate.allowed) {
     console.warn('[email] Message suppressed by configured rate or duplicate limits.');
-    return;
+    return false;
   }
   const eventId = crypto.randomUUID();
   const traceId = crypto.randomUUID();
@@ -209,7 +239,7 @@ export async function sendTransactionalEmail(data: TransactionalEmailInput): Pro
   const text = htmlToText(html);
   const message: ProviderMessage = {
     from,
-    to: data.to,
+    to: recipients,
     replyTo,
     bcc,
     subject: data.subject,
@@ -242,7 +272,7 @@ export async function sendTransactionalEmail(data: TransactionalEmailInput): Pro
           logAuditSystem('EMAIL_PROVIDER_FAILOVER', { eventId, traceId, failedProviders, selectedProvider: providerName(provider) });
           if (outbound.failoverAlert) void sendFailoverAlert(provider, message, failedProviders, delivery);
         }
-        return;
+        return true;
       } catch (error) {
         lastError = error;
         if (attempt < attempts && !isHardBounce(error)) await wait(Math.min(1000, 150 * (2 ** (attempt - 1))));
@@ -388,6 +418,7 @@ const DEFAULT_EMAIL_PREFS: Record<AdminNotificationType, boolean> = {
   team_registered: true,
   player_registered: true,
   roster_request: true,
+  lineup_submitted: true,
   player_auto_linked: true,
   security_settings_changed: true,
   security_session_activity: true,
@@ -402,6 +433,7 @@ function normalizeEmailPreferences(input: any): Record<AdminNotificationType, bo
     team_registered: input.team_registered !== undefined ? Boolean(input.team_registered) : true,
     player_registered: input.player_registered !== undefined ? Boolean(input.player_registered) : true,
     roster_request: input.roster_request !== undefined ? Boolean(input.roster_request) : true,
+    lineup_submitted: input.lineup_submitted !== undefined ? Boolean(input.lineup_submitted) : true,
     player_auto_linked: input.player_auto_linked !== undefined ? Boolean(input.player_auto_linked) : true,
     security_settings_changed: input.security_settings_changed !== undefined ? Boolean(input.security_settings_changed) : true,
     security_session_activity: input.security_session_activity !== undefined ? Boolean(input.security_session_activity) : true,
@@ -468,7 +500,7 @@ export async function getAdminRecipientEmails(type?: AdminNotificationType): Pro
         const prefs = normalizeEmailPreferences(admin.notificationSettings?.emailPreferences);
         return prefs[type];
       })
-      .map((admin) => admin.email?.trim())
+      .map((admin) => admin.email?.trim().toLowerCase())
       .filter((email): email is string => Boolean(email));
 
     const result = Array.from(new Set(emails));

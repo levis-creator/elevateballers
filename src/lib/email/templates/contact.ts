@@ -7,6 +7,8 @@ export async function sendAdminNotificationEmail(data: {
   message: string;
   actionUrl?: string;
   actionText?: string;
+  /** Sends each admin this notification at most once (see sendTransactionalEmail). */
+  idempotencyKey?: string;
 }): Promise<void> {
   const recipients = await getAdminRecipientEmails(data.type);
   if (recipients.length === 0) return;
@@ -27,6 +29,7 @@ export async function sendAdminNotificationEmail(data: {
     to: recipients,
     subject: data.title,
     html,
+    idempotencyKey: data.idempotencyKey,
     audit: { template: 'admin_notification', type: 'EMAIL_SENT' },
   });
   console.log(`[email] Admin notification sent to ${recipients.join(', ')}`);
