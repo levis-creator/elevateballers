@@ -1,4 +1,15 @@
 export const LINEUP_REMINDER_DAYS = 7;
+/** How long a league-office roster decision stays on the coach's list. */
+export const ROSTER_DECISION_DAYS = 14;
+
+export const ROSTER_DECISION_ACTIONS = [
+  'ROSTER_APPROVED',
+  'ROSTER_REJECTED',
+  'ROSTER_EDIT_REJECTED',
+  'ROSTER_REMOVAL_APPROVED',
+  'ROSTER_REMOVAL_REJECTED',
+] as const;
+export type RosterDecisionAction = (typeof ROSTER_DECISION_ACTIONS)[number];
 
 export type NeedsYouTarget = { view: 'lineup' | 'register' | 'roster'; matchId?: string };
 
@@ -28,7 +39,19 @@ export type NeedsYouInput = {
   } | null;
   pendingPlayers: number;
   pendingRemovals: number;
+  /** League-office decisions on this team's roster within ROSTER_DECISION_DAYS, newest first. */
+  recentDecisions?: { id: string; action: RosterDecisionAction; playerName: string; at: Date }[];
 };
+
+const DECISION_COPY: Record<RosterDecisionAction, (name: string) => { title: string; detail: string }> = {
+  ROSTER_APPROVED: (name) => ({ title: `${name} approved`, detail: 'Cleared by the league office and can now be named in lineups.' }),
+  ROSTER_REJECTED: (name) => ({ title: `${name} not approved`, detail: 'The league office declined this player proposal.' }),
+  ROSTER_EDIT_REJECTED: (name) => ({ title: `Changes to ${name} declined`, detail: 'The player stays on the roster with their earlier details.' }),
+  ROSTER_REMOVAL_APPROVED: (name) => ({ title: `${name} removed`, detail: 'The league office approved your removal request.' }),
+  ROSTER_REMOVAL_REJECTED: (name) => ({ title: `Removal of ${name} declined`, detail: 'The player stays on your roster.' }),
+};
+
+const shortDate = (date: Date) => date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -90,6 +113,17 @@ export function buildNeedsYou(input: NeedsYouInput): NeedsYouItem[] {
       kind: 'info',
       title: 'Roster changes awaiting the league office',
       detail: `${awaiting.join(' and ')} pending approval.`,
+      target: { view: 'roster' },
+    });
+  }
+
+  for (const decision of input.recentDecisions ?? []) {
+    const copy = DECISION_COPY[decision.action](decision.playerName);
+    items.push({
+      key: `roster-decision-${decision.id}`,
+      kind: 'info',
+      title: copy.title,
+      detail: `${copy.detail} · ${shortDate(decision.at)}`,
       target: { view: 'roster' },
     });
   }

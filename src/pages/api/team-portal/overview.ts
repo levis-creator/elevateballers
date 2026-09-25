@@ -5,7 +5,12 @@ import { requireActiveTeamContext } from '@/features/team-portal/application/tea
 import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import { getLineupCounts, toTeamFixture } from '@/features/team-portal/data/datasources/team-fixtures';
 import { getTeamSeasonSummary } from '@/features/team-portal/data/datasources/team-season-summary';
-import { buildNeedsYou } from '@/features/team-portal/domain/entities/needs-you';
+import {
+  buildNeedsYou,
+  ROSTER_DECISION_ACTIONS,
+  ROSTER_DECISION_DAYS,
+  type RosterDecisionAction,
+} from '@/features/team-portal/domain/entities/needs-you';
 import { getFilteredMatches } from '@/features/matches/lib/queries';
 import { handleApiError } from '@/lib/apiError';
 
@@ -25,6 +30,31 @@ async function countPendingRemovals(seasonTeamId: string) {
   return [...latest.values()].filter((action) => action === 'ROSTER_REMOVAL_PROPOSED').length;
 }
 
+/** League-office decisions on the team's roster that the coach hasn't had time to see yet. */
+async function recentRosterDecisions(seasonTeamId: string, now: Date) {
+  const rows = await prisma.seasonRosterHistory.findMany({
+    where: {
+      seasonTeamId,
+      action: { in: [...ROSTER_DECISION_ACTIONS] },
+      createdAt: { gte: new Date(now.getTime() - ROSTER_DECISION_DAYS * 86_400_000) },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+    select: {
+      id: true,
+      action: true,
+      createdAt: true,
+      player: { select: { firstName: true, lastName: true } },
+    },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    action: row.action as RosterDecisionAction,
+    playerName: `${row.player?.firstName ?? ''} ${row.player?.lastName ?? ''}`.trim() || 'A player',
+    at: row.createdAt,
+  }));
+}
+
 export const GET: APIRoute = async ({ request }) => {
   try {
     const user = await getCurrentUser(request);
@@ -38,7 +68,8 @@ export const GET: APIRoute = async ({ request }) => {
       ...(seasonTeam ? { leagueSeasonId: seasonTeam.leagueSeasonId } : {}),
     };
 
-    const [live, upcoming, summary, latestApplication, pendingPlayers, pendingRemovals] =
+    const now = new Date();
+    const [live, upcoming, summary, latestApplication, pendingPlayers, pendingRemovals, recentDecisions] =
       await Promise.all([
         getFilteredMatches({ ...scope, status: 'LIVE' }, 'date-asc', 1),
         getFilteredMatches({ ...scope, status: 'UPCOMING' }, 'date-asc', 1),
@@ -56,6 +87,7 @@ export const GET: APIRoute = async ({ request }) => {
             })
           : Promise.resolve(0),
         seasonTeam ? countPendingRemovals(seasonTeam.id) : Promise.resolve(0),
+        seasonTeam ? recentRosterDecisions(seasonTeam.id, now) : Promise.resolve([]),
       ]);
 
     const next = live[0] ?? upcoming[0] ?? null;
@@ -63,7 +95,7 @@ export const GET: APIRoute = async ({ request }) => {
     const nextFixture = next ? toTeamFixture(next, team.id, lineups) : null;
 
     const needsYou = buildNeedsYou({
-      now: new Date(),
+      now,
       hasActiveSeason: Boolean(season),
       registered: Boolean(seasonTeam),
       nextMatch: nextFixture
@@ -78,6 +110,7 @@ export const GET: APIRoute = async ({ request }) => {
       latestApplication,
       pendingPlayers,
       pendingRemovals,
+      recentDecisions,
     });
 
     return new Response(
