@@ -52,6 +52,7 @@ const AUDIT_ACTIONS: Record<string, string> = {
   PLAYER_MARKED_FIT: 'marked this player fit',
   PLAYER_DROPPED_OUT: 'marked this player as dropped out',
   PLAYER_REINSTATED: 'reinstated this player',
+  PLAYER_TRANSFERRED: 'transferred this player',
   SEASON_ROSTER_PLAYER_ADDED: 'added this player to a season roster',
   SEASON_TRANSFER_REQUESTED: 'requested a transfer',
   SEASON_TRANSFER_APPROVED: 'approved a transfer',
@@ -73,6 +74,8 @@ export function activityLabel(item: { action?: string | null; metadata?: any }):
     return `set season roster status to ${action.slice('SEASON_ROSTER_'.length).toLowerCase()}`;
   const base = AUDIT_ACTIONS[action] ?? humanize(action).toLowerCase();
   const detail = meta.reason || meta.note;
+  if (action === 'PLAYER_TRANSFERRED' && meta.fromTeam && meta.toTeam)
+    return `transferred this player from ${meta.fromTeam} to ${meta.toTeam}${detail ? ` — “${detail}”` : ''}`;
   const matches = action === 'PLAYER_SUSPENDED' && meta.matchCount ? ` for ${meta.matchCount} match${meta.matchCount === 1 ? '' : 'es'}` : '';
   return `${base}${matches}${detail ? ` — “${detail}”` : ''}`;
 }

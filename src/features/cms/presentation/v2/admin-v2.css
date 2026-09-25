@@ -307,3 +307,7 @@ a.eb-player-cell:hover strong { color:var(--brand); }
 /* The player name opens the profile (replaces the hover-only View/Edit links). */
 .eb-player-name { display:block; color:var(--tx); font-weight:600; text-decoration:none; }
 .eb-player-name:hover,.eb-player-name:focus-visible { color:var(--brand); text-decoration:underline; text-underline-offset:3px; outline:none; }
+.eb-dialog-field select { display:block; width:100%; margin-top:7px; min-height:38px; padding:0 10px; border:1px solid var(--bord); border-radius:8px; background:var(--surf2); color:var(--tx); font:13px "Archivo",sans-serif; text-transform:none; letter-spacing:0; outline:none; }
+.eb-dialog-field select:focus { border-color:var(--brand); }
+.eb-dialog-note { margin:0; padding:12px 20px 0; color:var(--muted); font:12px/1.5 "Archivo",sans-serif; }
+.eb-dialog-error { margin:0; padding:12px 20px 0; color:var(--brand); font:12.5px "Archivo",sans-serif; }

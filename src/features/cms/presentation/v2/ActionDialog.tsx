@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 export type ActionDialogProps = {
   eyebrow?: string;
@@ -12,6 +12,12 @@ export type ActionDialogProps = {
   reasonLabel?: string;
   reasonPlaceholder?: string;
   busy?: boolean;
+  /** Extra fields shown above the reason box (e.g. a team picker). */
+  children?: ReactNode;
+  /** Keeps the confirm button disabled, e.g. until a required choice is made. */
+  confirmDisabled?: boolean;
+  /** An error from the last attempt, shown inside the dialog. */
+  error?: string | null;
   onConfirm: (reason: string) => void;
   onCancel: () => void;
 };
@@ -29,6 +35,9 @@ export default function ActionDialog({
   reasonLabel,
   reasonPlaceholder,
   busy,
+  children,
+  confirmDisabled,
+  error,
   onConfirm,
   onCancel,
 }: ActionDialogProps) {
@@ -59,7 +68,7 @@ export default function ActionDialog({
         aria-labelledby="eb-dialog-title"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!busy) onConfirm(reason.trim());
+          if (!busy && !confirmDisabled) onConfirm(reason.trim());
         }}
       >
         <div className="eb-dialog-head">
@@ -67,6 +76,7 @@ export default function ActionDialog({
           <h2 id="eb-dialog-title">{title}</h2>
         </div>
         <p className="eb-dialog-body">{body}</p>
+        {children}
         {reasonLabel && (
           <label className="eb-dialog-field">
             {reasonLabel}
@@ -80,6 +90,7 @@ export default function ActionDialog({
             />
           </label>
         )}
+        {error && <p className="eb-dialog-error" role="alert">{error}</p>}
         <div className="eb-dialog-actions">
           <button type="button" className="eb-dialog-button" onClick={onCancel} disabled={busy}>
             Cancel
@@ -88,7 +99,7 @@ export default function ActionDialog({
             type="submit"
             ref={reasonLabel ? undefined : firstField}
             className={`eb-dialog-button ${danger ? 'danger' : 'primary'}`}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
           >
             {busy ? 'Working…' : confirmLabel}
           </button>

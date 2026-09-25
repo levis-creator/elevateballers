@@ -53,7 +53,7 @@ export function usePlayersDirectory() {
   };
 
   /** The action awaiting confirmation in the ActionDialog, if any. */
-  const [dialog, setDialog] = useState<{ kind: 'DROP_OUT' | 'REINSTATE' | 'DELETE'; ids: string[] } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: 'DROP_OUT' | 'REINSTATE' | 'DELETE' | 'TRANSFER'; ids: string[] } | null>(null);
   const describeIds = (ids: string[]) => (ids.length === 1 ? nameOf(ids[0]) : plural(ids.length, 'player'));
 
   /** Asks for confirmation (and, for a dropout, a reason) before changing players. */
@@ -62,6 +62,7 @@ export function usePlayersDirectory() {
   const confirmDialog = async (reason: string) => {
     if (!dialog) return;
     const { kind, ids } = dialog;
+    if (kind === 'TRANSFER') return;
     await run(async () => {
       if (kind === 'DELETE') {
         await playerDirectoryApi.bulkDelete(ids);
@@ -76,6 +77,9 @@ export function usePlayersDirectory() {
     });
     setDialog(null);
   };
+  const transfer = (id: string) => setDialog({ kind: 'TRANSFER', ids: [id] });
+  /** Called by the TransferDialog once the move has been made. */
+  const finishTransfer = async (text: string) => { setDialog(null); setNotice({ tone: 'ok', text }); await refresh(); };
   const bulkApprove = (ids: string[]) => run(async () => { await playerDirectoryApi.bulkApprove(ids); setSelected(new Set()); return { tone: 'ok', text: `${plural(ids.length, 'player')} approved.` }; });
 
   const exportCsv = (ids: string[]) => {
@@ -86,6 +90,6 @@ export function usePlayersDirectory() {
     URL.revokeObjectURL(url);
   };
 
-  return { busy, notice, setNotice, droppedCount, setDropout, bulkApprove, bulkDelete, exportCsv, dialog, setDialog, describeIds, confirmDialog, players, seasons, currentSeason, scope, setScope, seasonId, setSeasonId, leagueSeasonId, setLeagueSeasonId, editions: currentSeason?.leagueSeasons ?? [], filters, updateFilter, resetFilters, teamOptions, base, filtered, visible, page: currentPage, pageCount, setPage, selected, setSelected, toggleSelection, toggleAll, sortKey, sortDirection, toggleSort, approve, toggleApproval, loading, error, load };
+  return { busy, notice, setNotice, droppedCount, setDropout, bulkApprove, bulkDelete, exportCsv, dialog, setDialog, describeIds, confirmDialog, transfer, finishTransfer, nameOf, players, seasons, currentSeason, scope, setScope, seasonId, setSeasonId, leagueSeasonId, setLeagueSeasonId, editions: currentSeason?.leagueSeasons ?? [], filters, updateFilter, resetFilters, teamOptions, base, filtered, visible, page: currentPage, pageCount, setPage, selected, setSelected, toggleSelection, toggleAll, sortKey, sortDirection, toggleSort, approve, toggleApproval, loading, error, load };
 }
 

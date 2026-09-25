@@ -3,6 +3,7 @@ import { sendContactNotification, sendContactAutoReply } from './templates/conta
 import { sendAdminNotificationEmail, sendRegistrationPaymentEmail } from '../email';
 import { processRegistrationEmailJob } from '../../features/registration/application/process-registration-email-job';
 import { sendRosterDecisionEmail } from '../../features/registration/application/roster-request-emails';
+import { sendPlayerTransferEmail } from '../../features/player/application/transfer-emails';
 
 /** A payload that can never succeed, so retrying it is pointless. */
 export class InvalidEmailJobError extends Error {
@@ -28,6 +29,8 @@ export async function runEmailJob(body: any): Promise<void> {
         return sendAdminNotificationEmail(body.data);
       case 'roster_decision':
         return sendRosterDecisionEmail(body.data);
+      case 'player_transfer':
+        return sendPlayerTransferEmail(body.data);
       case 'registration_payment_received':
         return sendRegistrationPaymentEmail(body.data);
       default:

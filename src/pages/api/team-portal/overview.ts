@@ -43,15 +43,34 @@ async function recentRosterDecisions(seasonTeamId: string, now: Date) {
     select: {
       id: true,
       action: true,
+      rosterId: true,
+      fromTeamId: true,
+      toTeamId: true,
       createdAt: true,
       player: { select: { firstName: true, lastName: true } },
     },
   });
-  return rows.map((row) => ({
+  // An approved dropout report also records a removal approval; show it once, as the dropout.
+  const droppedRosters = new Set(rows.filter((row) => row.action === 'ROSTER_DROPPED_OUT').map((row) => row.rosterId));
+  const visible = rows.filter((row) => !(row.action === 'ROSTER_REMOVAL_APPROVED' && droppedRosters.has(row.rosterId)));
+  // Transfers name the other team; from/to hold season-team ids.
+  const otherIds = [
+    ...new Set(
+      visible.flatMap((row) =>
+        row.action === 'TRANSFER_OUT' ? [row.toTeamId] : row.action === 'TRANSFER_IN' ? [row.fromTeamId] : []
+      )
+    ),
+  ].filter((id): id is string => Boolean(id));
+  const otherTeams = otherIds.length
+    ? await prisma.seasonTeam.findMany({ where: { id: { in: otherIds } }, select: { id: true, team: { select: { name: true } } } })
+    : [];
+  const teamName = new Map(otherTeams.map((row) => [row.id, row.team.name]));
+  return visible.map((row) => ({
     id: row.id,
     action: row.action as RosterDecisionAction,
     playerName: `${row.player?.firstName ?? ''} ${row.player?.lastName ?? ''}`.trim() || 'A player',
     at: row.createdAt,
+    otherTeam: teamName.get((row.action === 'TRANSFER_OUT' ? row.toTeamId : row.fromTeamId) ?? '') ?? null,
   }));
 }
 
