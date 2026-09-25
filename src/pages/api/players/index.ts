@@ -5,6 +5,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { sendPlayerRegistrationAutoReplyBrevo } from '../../../lib/email';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
+import { getDroppedOutPlayers } from '../../../features/player/data/datasources/dropout-repository';
 
 export const prerender = false;
 
@@ -57,8 +58,18 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     const players = await getPlayers(teamId, includeUnapproved);
+    // Admins can filter and reinstate players who left the league.
+    const dropouts = includeUnapproved
+      ? await getDroppedOutPlayers(players.map((player) => player.id))
+      : new Map();
+    const body = includeUnapproved
+      ? players.map((player) => {
+          const dropout = dropouts.get(player.id);
+          return { ...player, dropout: dropout ? { rosterId: dropout.rosterId, droppedOutAt: dropout.droppedOutAt } : null };
+        })
+      : players;
 
-    return new Response(JSON.stringify(players), {
+    return new Response(JSON.stringify(body), {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': includeUnapproved ? 'no-cache' : 'public, s-maxage=120, stale-while-revalidate=60',

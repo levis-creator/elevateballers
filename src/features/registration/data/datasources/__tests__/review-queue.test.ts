@@ -2,14 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   const prisma: any = {
-    seasonTeamPlayer: { findMany: vi.fn(), update: vi.fn() },
-    seasonRosterHistory: { createMany: vi.fn() },
+    seasonTeamPlayer: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    seasonRosterHistory: { createMany: vi.fn(), create: vi.fn() },
+    matchPlayer: { deleteMany: vi.fn() },
   };
   prisma.$transaction = vi.fn((fn: (tx: any) => unknown) => fn(prisma));
   return { prisma };
 });
 
 vi.mock('../../../../../lib/prisma', () => ({ prisma: mocks.prisma }));
+vi.mock('@/lib/prisma', () => ({ prisma: mocks.prisma }));
 
 import { bulkReviewRosterProposals } from '../review-queue';
 
@@ -86,6 +88,54 @@ describe('bulkReviewRosterProposals', () => {
       data: { status: 'WITHDRAWN', leftAt: expect.any(Date) },
     });
     expect(recorded()).toEqual([['r1', 'ROSTER_REMOVAL_APPROVED']]);
+  });
+
+  const dropoutRow = () => ({
+    ...row('r1', 'APPROVED', 'ROSTER_REMOVAL_PROPOSED'),
+    dropoutRequestedAt: new Date(),
+    history: [{ action: 'ROSTER_REMOVAL_PROPOSED', changedById: 'coach-1', reason: 'Moved abroad' }],
+  });
+
+  it('approving a dropout report records the dropout and clears upcoming lineups', async () => {
+    queue([{ id: 'r1', history: [{ action: 'ROSTER_REMOVAL_PROPOSED' }] }], [dropoutRow()]);
+    mocks.prisma.seasonTeamPlayer.findFirst.mockResolvedValue({
+      id: 'r1',
+      leagueSeasonId: 'ls-1',
+      seasonTeamId: 'st-1',
+      teamId: 'team-1',
+      playerId: 'player-r1',
+    });
+    const result = await bulkReviewRosterProposals({ ids: ['r1'], action: 'APPROVE', reviewerId: 'admin' });
+    expect(mocks.prisma.seasonTeamPlayer.update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: expect.objectContaining({
+        status: 'WITHDRAWN',
+        droppedOutAt: expect.any(Date),
+        dropoutReason: 'Moved abroad',
+        dropoutRequestedAt: null,
+      }),
+    });
+    expect(mocks.prisma.seasonRosterHistory.create.mock.calls[0][0].data).toMatchObject({
+      action: 'ROSTER_DROPPED_OUT',
+      changedById: 'admin',
+    });
+    expect(mocks.prisma.matchPlayer.deleteMany).toHaveBeenCalledWith({
+      where: { playerId: 'player-r1', teamId: 'team-1', match: { status: 'UPCOMING' } },
+    });
+    expect(recorded()).toEqual([['r1', 'ROSTER_REMOVAL_APPROVED']]);
+    expect(result.decisions[0]).toMatchObject({ type: 'DROPOUT', approved: true, coachId: 'coach-1' });
+  });
+
+  it('declining a dropout report keeps the player and clears the flag', async () => {
+    queue([{ id: 'r1', history: [{ action: 'ROSTER_REMOVAL_PROPOSED' }] }], [dropoutRow()]);
+    await bulkReviewRosterProposals({ ids: ['r1'], action: 'REJECT', reviewerId: 'admin' });
+    expect(mocks.prisma.seasonTeamPlayer.update).toHaveBeenCalledTimes(1);
+    expect(mocks.prisma.seasonTeamPlayer.update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: { dropoutRequestedAt: null },
+    });
+    expect(mocks.prisma.seasonRosterHistory.create).not.toHaveBeenCalled();
+    expect(recorded()).toEqual([['r1', 'ROSTER_REMOVAL_REJECTED']]);
   });
 
   it('ignores removal requests that were already decided', async () => {

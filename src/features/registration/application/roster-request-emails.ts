@@ -11,7 +11,7 @@ const site = () => (process.env.SITE_URL || SITE_URL).replace(/\/$/, '');
 export type RosterRequestAlert = {
   /** The roster-history row recording the request; makes the email once-only. */
   eventId: string;
-  kind: 'NEW' | 'REMOVAL';
+  kind: 'NEW' | 'REMOVAL' | 'DROPOUT';
   playerName: string;
   teamName: string;
   coachName: string | null;
@@ -32,11 +32,18 @@ export async function notifyAdminsOfRosterRequest(alert: RosterRequestAlert) {
   const data = {
     idempotencyKey: `roster-request:${alert.eventId}`,
     type: 'roster_request' as const,
-    title: alert.kind === 'NEW' ? 'New player proposed' : 'Player removal requested',
+    title:
+      alert.kind === 'NEW'
+        ? 'New player proposed'
+        : alert.kind === 'DROPOUT'
+          ? 'Player dropout reported'
+          : 'Player removal requested',
     message:
       (alert.kind === 'NEW'
         ? `${who} proposed ${player}${details.length ? ` (${details.join(' · ')})` : ''} for ${team}.`
-        : `${who} asked to remove ${player} from ${team}.`) +
+        : alert.kind === 'DROPOUT'
+          ? `${who} reported that ${player} has dropped out of ${team} and the league.`
+          : `${who} asked to remove ${player} from ${team}.`) +
       (alert.note ? `<br /><br />Note: “${esc(alert.note)}”` : ''),
     actionUrl: `${site()}/admin/registrations?kind=ROSTER`,
     actionText: 'Review request',
@@ -47,7 +54,7 @@ export async function notifyAdminsOfRosterRequest(alert: RosterRequestAlert) {
 export type RosterDecision = {
   rosterId: string;
   playerId: string;
-  type: 'NEW' | 'EDIT' | 'REMOVAL';
+  type: 'NEW' | 'EDIT' | 'REMOVAL' | 'DROPOUT';
   approved: boolean;
   playerName: string;
   teamId: string;
@@ -57,6 +64,10 @@ export type RosterDecision = {
 
 const decisionLine = (d: RosterDecision) => {
   const player = esc(d.playerName);
+  if (d.type === 'DROPOUT')
+    return d.approved
+      ? `${player} is recorded as having left the league and is off the roster.`
+      : `Your dropout report for ${player} was declined. They stay on the roster.`;
   if (d.type === 'REMOVAL')
     return d.approved
       ? `${player} has been removed from the roster.`
@@ -130,9 +141,10 @@ export async function notifyCoachesOfRosterDecisions(decisions: RosterDecision[]
         lines: items.map(decisionLine),
         approvedCount: items.filter((d) => d.approved).length,
         rejectedCount: items.filter((d) => !d.approved).length,
-        // The same decisions for the same coach are only ever mailed once.
+        // The same decisions for the same coach are only ever mailed once; the
+        // type keeps a later removal or dropout from matching the original approval.
         idempotencyKey: `roster-decision:${coach.id}:${teamId}:${items
-          .map((d) => `${d.rosterId}=${d.approved ? 'A' : 'R'}`)
+          .map((d) => `${d.rosterId}:${d.type}=${d.approved ? 'A' : 'R'}`)
           .sort()
           .join(',')}`,
       };
