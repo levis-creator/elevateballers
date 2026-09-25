@@ -23,7 +23,39 @@ export type PlayerDirectoryFilters = {
   position: string;
   status: string;
   letter: string;
+  /** League participation: everyone, only players still playing, or only those who dropped out. */
+  participation: PlayerParticipation;
 };
+
+export type PlayerParticipation = 'all' | 'active' | 'dropped';
+
+export function matchesParticipation(player: PlayerDirectoryRow, participation: PlayerParticipation): boolean {
+  if (participation === 'dropped') return Boolean(player.dropout);
+  if (participation === 'active') return !player.dropout;
+  return true;
+}
+
+const csvCell = (value: unknown) => {
+  const text = value == null ? '' : String(value);
+  // Quote anything with separators, and neutralise spreadsheet formulas.
+  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+};
+
+/** The selected players as CSV for the bulk Export action. */
+export function toPlayersCsv(players: PlayerDirectoryRow[]): string {
+  const header = ['First name', 'Last name', 'Team', 'Position', 'Jersey', 'Approved', 'Dropped out'];
+  const rows = players.map((p) => [
+    p.firstName,
+    p.lastName,
+    p.team?.name,
+    p.position,
+    p.jerseyNumber,
+    p.approved ? 'Yes' : 'No',
+    p.dropout ? new Date(p.dropout.droppedOutAt).toISOString().slice(0, 10) : '',
+  ]);
+  return [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+}
 
 export const PLAYER_POSITIONS: Record<string, { label: string; color: string }> = {
   PG: { label: 'Point Guard', color: '#2a6fdb' },
