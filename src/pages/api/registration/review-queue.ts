@@ -51,15 +51,13 @@ export const POST: APIRoute = async ({ request }) => {
         action: body.action,
         reviewerId: reviewer.id,
       });
-      if (count)
-        logAudit(request, body.action === 'APPROVE' ? 'ROSTER_REQUESTS_APPROVED' : 'ROSTER_REQUESTS_REJECTED', {
-          count,
-          decisions: decisions.map((d) => ({
-            rosterId: d.rosterId,
-            playerId: d.playerId,
-            teamId: d.teamId,
-            type: d.type,
-          })),
+      // One entry per player so each decision shows in that player's activity.
+      for (const d of decisions)
+        logAudit(request, d.approved ? 'ROSTER_REQUEST_APPROVED' : 'ROSTER_REQUEST_REJECTED', {
+          rosterId: d.rosterId,
+          playerId: d.playerId,
+          teamId: d.teamId,
+          type: d.type,
         });
       await notifyCoachesOfRosterDecisions(decisions);
       return json({ count });
