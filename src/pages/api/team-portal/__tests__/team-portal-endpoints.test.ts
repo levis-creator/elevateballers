@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => {
   const prisma: any = {
     match: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn() },
-    matchPlayer: { findMany: vi.fn(), deleteMany: vi.fn(), upsert: vi.fn() },
+    matchPlayer: { findMany: vi.fn(), deleteMany: vi.fn(), updateMany: vi.fn(), createMany: vi.fn() },
+    season: { findFirst: vi.fn() },
+    seasonTeam: { findFirst: vi.fn() },
     matchPeriod: { findMany: vi.fn() },
-    seasonTeamPlayer: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn() },
-    seasonRosterHistory: { findMany: vi.fn() },
+    seasonTeamPlayer: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), update: vi.fn() },
+    seasonRosterHistory: { findMany: vi.fn(), create: vi.fn() },
     seasonRegistrationApplication: { findFirst: vi.fn() },
     player: { findMany: vi.fn() },
   };
@@ -38,7 +40,7 @@ import { GET as getLineup, PUT as putLineup } from '../lineup';
 import { GET as getFixtures } from '../fixtures';
 import { GET as getStats } from '../stats';
 import { GET as getOverview } from '../overview';
-import { GET as getRoster } from '../roster/index';
+import { GET as getRoster, POST as postRoster } from '../roster/index';
 import { GET as getPlayer } from '../player';
 import { GET as getMatch } from '../match';
 
@@ -95,7 +97,8 @@ beforeEach(() => {
   mocks.prisma.match.findUnique.mockResolvedValue(match());
   mocks.prisma.matchPlayer.findMany.mockResolvedValue([]);
   mocks.prisma.matchPlayer.deleteMany.mockResolvedValue({ count: 0 });
-  mocks.prisma.matchPlayer.upsert.mockResolvedValue({});
+  mocks.prisma.matchPlayer.updateMany.mockResolvedValue({ count: 0 });
+  mocks.prisma.matchPlayer.createMany.mockResolvedValue({ count: 0 });
   mocks.prisma.matchPeriod.findMany.mockResolvedValue([]);
   mocks.prisma.seasonTeamPlayer.findMany.mockResolvedValue(ROSTER);
   mocks.prisma.seasonTeamPlayer.findFirst.mockResolvedValue(null);
@@ -276,7 +279,8 @@ describe('Lineup', () => {
       .mockResolvedValueOnce({ status: 'LIVE' });
     const response = await putLineup(put(lineupBody([{ playerId: 'p1', started: true }])));
     expect(response.status).toBe(409);
-    expect(mocks.prisma.matchPlayer.upsert).not.toHaveBeenCalled();
+    expect(mocks.prisma.matchPlayer.updateMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.matchPlayer.createMany).not.toHaveBeenCalled();
   });
 
   it('returns 404 for a match the team does not play in', async () => {
@@ -295,6 +299,19 @@ describe('Lineup', () => {
     const response = await putLineup(put(lineupBody(players)));
     expect(response.status).toBe(400);
     expect((await response.json()).error).toMatch(/at most 5 starters/);
+  });
+
+  it('saves a full squad with a constant number of queries', async () => {
+    const players = ROSTER.map((entry, index) => ({ playerId: entry.player.id, started: index < 5 }));
+    const response = await putLineup(put(lineupBody(players)));
+    expect(response.status).toBe(200);
+    expect(mocks.prisma.matchPlayer.createMany).toHaveBeenCalledTimes(1);
+    expect(mocks.prisma.matchPlayer.createMany.mock.calls[0][0].data).toHaveLength(6);
+    expect(mocks.prisma.matchPlayer.updateMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ timeout: expect.any(Number) })
+    );
   });
 
   it('returns 400 naming the missing field for a malformed body', async () => {
@@ -322,14 +339,17 @@ describe('Lineup', () => {
     expect(mocks.prisma.matchPlayer.deleteMany).toHaveBeenCalledWith({
       where: { matchId: 'm1', teamId: TEAM.id, playerId: { notIn: ['p1', 'p2'] } },
     });
-    expect(mocks.prisma.matchPlayer.upsert).toHaveBeenCalledTimes(2);
-    expect(mocks.prisma.matchPlayer.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { matchId_playerId_teamId: { matchId: 'm1', playerId: 'p1', teamId: TEAM.id } },
-        update: { started: true, isActive: true },
-        create: expect.objectContaining({ started: true, isActive: true, jerseyNumber: 1, teamId: TEAM.id }),
-      })
-    );
+    expect(mocks.prisma.matchPlayer.updateMany).toHaveBeenCalledTimes(1);
+    expect(mocks.prisma.matchPlayer.updateMany).toHaveBeenCalledWith({
+      where: { matchId: 'm1', teamId: TEAM.id, playerId: { in: ['p1'] } },
+      data: { started: true, isActive: true },
+    });
+    expect(mocks.prisma.matchPlayer.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ playerId: 'p2', started: false, isActive: false, jerseyNumber: 2, teamId: TEAM.id }),
+      ],
+      skipDuplicates: true,
+    });
     expect(mocks.logAudit).toHaveBeenCalledWith(
       expect.any(Request),
       'TEAM_PORTAL_LINEUP_SUBMITTED',
@@ -338,6 +358,61 @@ describe('Lineup', () => {
         starters: { added: ['p1'], removed: ['p6'] },
       })
     );
+  });
+});
+
+describe('Roster edits', () => {
+  const edit = (body: Record<string, unknown>) =>
+    postRoster({
+      request: new Request('https://example.test/api/team-portal/roster', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ teamId: TEAM.id, rosterId: 'r1', ...body }),
+      }),
+    } as any);
+
+  beforeEach(() => {
+    mocks.prisma.season.findFirst.mockResolvedValue(SEASON);
+    mocks.prisma.seasonTeam.findFirst.mockResolvedValue(SEASON_TEAM);
+    mocks.prisma.seasonTeamPlayer.findFirst.mockResolvedValue({
+      id: 'r1',
+      playerId: 'p1',
+      jerseyNumber: 4,
+      position: 'PG',
+    });
+    mocks.prisma.seasonTeamPlayer.update.mockResolvedValue({ id: 'r1' });
+    mocks.prisma.seasonRosterHistory.create.mockResolvedValue({});
+  });
+
+  it('applies jersey and position straight away without re-approval', async () => {
+    const response = await edit({ jerseyNumber: '11', position: 'SG' });
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe('Player details updated.');
+    expect(mocks.prisma.seasonTeamPlayer.update).toHaveBeenCalledWith({
+      where: { id: 'r1' },
+      data: { jerseyNumber: 11, position: 'SG' },
+    });
+    expect(mocks.prisma.matchPlayer.updateMany).toHaveBeenCalledWith({
+      where: {
+        playerId: 'p1',
+        teamId: TEAM.id,
+        match: { leagueSeasonId: 'ls-1', status: 'UPCOMING' },
+      },
+      data: { jerseyNumber: 11 },
+    });
+    expect(mocks.prisma.seasonRosterHistory.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: 'ROSTER_EDITED', changedById: 'coach-1' }),
+    });
+  });
+
+  it('leaves upcoming lineups alone when the jersey is unchanged', async () => {
+    await edit({ jerseyNumber: '4', position: 'SF' });
+    expect(mocks.prisma.matchPlayer.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid jersey number', async () => {
+    expect((await edit({ jerseyNumber: '120' })).status).toBe(400);
+    expect(mocks.prisma.seasonTeamPlayer.update).not.toHaveBeenCalled();
   });
 });
 
