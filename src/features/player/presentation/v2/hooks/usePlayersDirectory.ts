@@ -52,35 +52,32 @@ export function usePlayersDirectory() {
     finally { setBusy(false); }
   };
 
-  /** Drop out (asks for a reason) or reinstate players; reports any that could not change. */
-  const setDropout = (ids: string[], action: 'DROP_OUT' | 'REINSTATE') => {
-    if (!ids.length) return;
-    const who = ids.length === 1 ? nameOf(ids[0]) : plural(ids.length, 'player');
-    let reason: string | undefined;
-    if (action === 'DROP_OUT') {
-      const answer = window.prompt(`Mark ${who} as dropped out of the league?
+  /** The action awaiting confirmation in the ActionDialog, if any. */
+  const [dialog, setDialog] = useState<{ kind: 'DROP_OUT' | 'REINSTATE' | 'DELETE'; ids: string[] } | null>(null);
+  const describeIds = (ids: string[]) => (ids.length === 1 ? nameOf(ids[0]) : plural(ids.length, 'player'));
 
-They come off their active rosters (freeing the spots) and leave upcoming lineups. You can reinstate them later.
-
-Reason (optional, admins only):`, '');
-      if (answer === null) return;
-      reason = answer.trim() || undefined;
-    } else if (!window.confirm(`Reinstate ${who} on the roster${ids.length === 1 ? '' : 's'} they left?`)) return;
-    return run(async () => {
-      const { done, skipped } = await playerDirectoryApi.dropout(ids, action, reason);
+  /** Asks for confirmation (and, for a dropout, a reason) before changing players. */
+  const setDropout = (ids: string[], action: 'DROP_OUT' | 'REINSTATE') => { if (ids.length) setDialog({ kind: action, ids }); };
+  const bulkDelete = (ids: string[]) => { if (ids.length) setDialog({ kind: 'DELETE', ids }); };
+  const confirmDialog = async (reason: string) => {
+    if (!dialog) return;
+    const { kind, ids } = dialog;
+    await run(async () => {
+      if (kind === 'DELETE') {
+        await playerDirectoryApi.bulkDelete(ids);
+        setSelected(new Set());
+        return { tone: 'ok', text: `${describeIds(ids)} deleted.` };
+      }
+      const { done, skipped } = await playerDirectoryApi.dropout(ids, kind, reason || undefined);
       setSelected((current) => { const next = new Set(current); done.forEach((id) => next.delete(id)); return next; });
-      const verb = action === 'DROP_OUT' ? 'marked as dropped out' : 'reinstated';
+      const verb = kind === 'DROP_OUT' ? 'marked as dropped out' : 'reinstated';
       const skippedText = skipped.map((item) => `${nameOf(item.id)}: ${item.error}`).join(' ');
       return { tone: skipped.length ? 'warn' : 'ok', text: [done.length ? `${plural(done.length, 'player')} ${verb}.` : '', skippedText].filter(Boolean).join(' ') };
     });
+    setDialog(null);
   };
   const bulkApprove = (ids: string[]) => run(async () => { await playerDirectoryApi.bulkApprove(ids); setSelected(new Set()); return { tone: 'ok', text: `${plural(ids.length, 'player')} approved.` }; });
-  const bulkDelete = (ids: string[]) => {
-    if (!window.confirm(`Permanently delete ${ids.length === 1 ? nameOf(ids[0]) : plural(ids.length, 'player')}? Their profiles and stats are removed and this cannot be undone.
 
-If they have only left the league, use "Mark dropped out" instead.`)) return;
-    return run(async () => { await playerDirectoryApi.bulkDelete(ids); setSelected(new Set()); return { tone: 'ok', text: `${plural(ids.length, 'player')} deleted.` }; });
-  };
   const exportCsv = (ids: string[]) => {
     const rows = players.filter((player) => ids.includes(player.id));
     const url = URL.createObjectURL(new Blob([toPlayersCsv(rows)], { type: 'text/csv;charset=utf-8' }));
@@ -89,6 +86,6 @@ If they have only left the league, use "Mark dropped out" instead.`)) return;
     URL.revokeObjectURL(url);
   };
 
-  return { busy, notice, setNotice, droppedCount, setDropout, bulkApprove, bulkDelete, exportCsv, players, seasons, currentSeason, scope, setScope, seasonId, setSeasonId, leagueSeasonId, setLeagueSeasonId, editions: currentSeason?.leagueSeasons ?? [], filters, updateFilter, resetFilters, teamOptions, base, filtered, visible, page: currentPage, pageCount, setPage, selected, setSelected, toggleSelection, toggleAll, sortKey, sortDirection, toggleSort, approve, toggleApproval, loading, error, load };
+  return { busy, notice, setNotice, droppedCount, setDropout, bulkApprove, bulkDelete, exportCsv, dialog, setDialog, describeIds, confirmDialog, players, seasons, currentSeason, scope, setScope, seasonId, setSeasonId, leagueSeasonId, setLeagueSeasonId, editions: currentSeason?.leagueSeasons ?? [], filters, updateFilter, resetFilters, teamOptions, base, filtered, visible, page: currentPage, pageCount, setPage, selected, setSelected, toggleSelection, toggleAll, sortKey, sortDirection, toggleSort, approve, toggleApproval, loading, error, load };
 }
 

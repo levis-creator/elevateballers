@@ -274,3 +274,36 @@ a.eb-player-cell strong { color:var(--tx); }
 a.eb-player-cell:hover strong { color:var(--brand); }
 .eb-roster-card-link { display:block; color:inherit; text-decoration:none; }
 .eb-roster-card-link:hover strong { color:var(--brand); }
+
+/* ActionDialog: in-page confirmation for admin actions (matches the player-page modal). */
+.eb-dialog-backdrop { position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,.62); }
+.eb-dialog { width:min(100%,480px); border:1px solid var(--bord); border-radius:16px; background:var(--surf); box-shadow:0 24px 70px rgba(0,0,0,.45); }
+.eb-dialog-head { padding:20px 20px 0; }
+.eb-dialog-eyebrow { color:var(--brand); font:10px "Space Mono",monospace; letter-spacing:.16em; text-transform:uppercase; }
+.eb-dialog h2 { margin:6px 0 0; color:var(--tx); font:22px Anton,"Arial Black",Arial,sans-serif; text-transform:uppercase; letter-spacing:.01em; }
+.eb-dialog-body { margin:0; padding:10px 20px 0; color:var(--muted); font:13px/1.55 "Archivo",sans-serif; }
+.eb-dialog-field { display:block; padding:16px 20px 0; color:var(--muted); font:10.5px "Space Mono",monospace; letter-spacing:.06em; text-transform:uppercase; }
+.eb-dialog-field textarea { display:block; width:100%; margin-top:7px; padding:10px; border:1px solid var(--bord); border-radius:8px; background:var(--surf2); color:var(--tx); font:13px "Archivo",sans-serif; text-transform:none; letter-spacing:0; resize:vertical; outline:none; }
+.eb-dialog-field textarea:focus { border-color:var(--brand); }
+.eb-dialog-actions { display:flex; justify-content:flex-end; gap:8px; padding:20px; }
+.eb-dialog-button { min-height:36px; border:1px solid var(--bord); border-radius:8px; background:var(--surf); color:var(--tx); padding:0 14px; font:600 12px "Archivo",sans-serif; cursor:pointer; }
+.eb-dialog-button.primary { border-color:var(--tx); background:var(--tx); color:var(--surf); }
+.eb-dialog-button.danger { border-color:var(--brand); background:var(--brand); color:var(--brandfg); }
+.eb-dialog-button:disabled { cursor:wait; opacity:.6; }
+
+/* RowMenu: row actions dropdown, portalled into #eb-admin-root and fixed to its trigger. */
+.eb-kebab { width:28px; height:28px; border-radius:6px; }
+.eb-kebab:hover,.eb-kebab.open,.eb-kebab:focus-visible { background:var(--surf2); color:var(--tx); outline:none; }
+.eb-row-menu { position:fixed; z-index:70; padding:5px; border:1px solid var(--bord); border-radius:10px; background:var(--surf); box-shadow:0 16px 40px rgba(0,0,0,.35); transform-origin:top right; animation:eb-row-menu-in .12s ease-out; }
+.eb-row-menu.up { transform-origin:bottom right; }
+@keyframes eb-row-menu-in { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:scale(1); } }
+.eb-row-menu-item { display:block; width:100%; border:0; border-radius:6px; background:transparent; color:var(--tx); padding:8px 10px; text-align:left; font:12.5px "Archivo",sans-serif; text-decoration:none; cursor:pointer; }
+.eb-row-menu-item:hover,.eb-row-menu-item:focus-visible { background:var(--surf2); outline:none; }
+.eb-row-menu-item.danger { color:var(--brand); }
+.eb-row-menu-item.danger:hover,.eb-row-menu-item.danger:focus-visible { background:color-mix(in srgb, var(--brand) 12%, var(--surf)); }
+.eb-row-menu-sep { height:1px; margin:4px 2px; background:var(--bord); }
+@media (prefers-reduced-motion: reduce) { .eb-row-menu { animation:none; } }
+
+/* The player name opens the profile (replaces the hover-only View/Edit links). */
+.eb-player-name { display:block; color:var(--tx); font-weight:600; text-decoration:none; }
+.eb-player-name:hover,.eb-player-name:focus-visible { color:var(--brand); text-decoration:underline; text-underline-offset:3px; outline:none; }
