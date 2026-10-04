@@ -25,11 +25,22 @@ type LineupData = {
   maxStarters?: number;
   maxBench?: number;
   matches: MatchSummary[];
-  match: (MatchSummary & { locked: boolean }) | null;
+  match:
+    | (MatchSummary & {
+        locked: boolean;
+        lockReason?: 'COMPLETED' | 'STARTED' | 'DEADLINE' | null;
+        /** Hours before tip-off that coaches stop being able to change the lineup. */
+        deadlineHours?: number;
+        closesLabel?: string;
+      })
+    | null;
   roster?: RosterPlayer[];
   lineup?: LineupRow[];
 };
 type Role = 'starter' | 'bench';
+
+const deadlineWindow = (hours: number) =>
+  hours === 0 ? 'at tip-off' : `${hours} hour${hours === 1 ? '' : 's'} before tip-off`;
 
 const lineupStyles = `.portal-lineup-card{background:var(--portal-surface,#111010);border-color:var(--portal-border,rgba(255,255,255,.08))}.portal-lineup-row{border-color:var(--portal-border-muted,rgba(255,255,255,.06))}.portal-lineup-number{border-color:var(--portal-border,rgba(255,255,255,.08));background:var(--portal-surface-muted,rgba(255,255,255,.03))}.portal-lineup-select{min-height:44px;border:1px solid var(--portal-border);border-radius:9px;background:var(--portal-surface-muted);padding:0 12px;font-family:Archivo,sans-serif;font-size:13px;color:var(--portal-text,#f3efe9);outline:none;max-width:100%}.portal-lineup-select:focus{border-color:#e4002b}.portal-lineup-seg{display:inline-flex;border:1px solid var(--portal-border);border-radius:9px;overflow:hidden}.portal-lineup-seg button{min-height:38px;min-width:64px;padding:0 10px;border:0;border-radius:0!important;background:var(--portal-surface-muted);color:var(--portal-muted,#8a817a);font-family:'Space Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}.portal-lineup-seg button+button{border-left:1px solid var(--portal-border)}.portal-lineup-seg button:disabled{cursor:not-allowed;opacity:.45}.portal-lineup-seg button.seg-out{background:rgba(255,255,255,.08);color:var(--portal-text,#f3efe9)}.portal-lineup-seg button.seg-bench{background:rgba(217,154,43,.16);color:#d99a2b}.portal-lineup-seg button.seg-starter{background:rgba(228,0,43,.16);color:#ff5a72}.portal-lineup-save{min-height:44px;padding:0 18px;border:1px solid #e4002b;border-radius:9px;background:#e4002b;color:#fff;font-family:Archivo,sans-serif;font-size:12px;font-weight:700;cursor:pointer}.portal-lineup-save:disabled{cursor:not-allowed;opacity:.5}.portal-light .portal-lineup-card,.portal-light .portal-lineup-select{--portal-surface:#fff;--portal-border:#e6e1d8;--portal-border-muted:#ece7df;--portal-surface-muted:#f4f1ea;--portal-muted:#6f665c;--portal-text:#141009}.portal-light .portal-lineup-seg button.seg-out{background:#e6e1d8;color:#141009}.portal-light .portal-lineup-seg button.seg-starter{color:#e4002b}.portal-light .portal-lineup-card .text-cream{color:#141009!important}.portal-light .portal-lineup-card .text-\\[\\#8a817a\\]{color:#6f665c!important}.portal-light .portal-lineup-card .text-\\[\\#b8afa6\\]{color:#4a443d!important}`;
 
@@ -83,6 +94,8 @@ export default function TeamPortalLineup({
   const roster = data?.roster ?? [];
   const match = data?.match ?? null;
   const locked = match?.locked ?? false;
+  const deadlineHours = match?.deadlineHours ?? 2;
+  const submitted = (data?.lineup?.length ?? 0) > 0;
   const starters = Object.values(selection).filter((role) => role === 'starter').length;
   const bench = Object.values(selection).filter((role) => role === 'bench').length;
   const listed = Object.keys(selection).length;
@@ -205,14 +218,26 @@ export default function TeamPortalLineup({
               <Lock size={15} />
               {match.status === 'COMPLETED'
                 ? 'This match is over, so its lineup is locked.'
-                : 'This match has started, so the lineup is locked. The Court Console now manages who is on the floor.'}
+                : match.status === 'LIVE'
+                  ? 'This match has started, so the lineup is locked. The Court Console now manages who is on the floor.'
+                  : `Lineups closed ${deadlineWindow(deadlineHours)}${match.closesLabel ? ` (${match.closesLabel})` : ''}. ${submitted ? 'Contact the league office for any changes.' : 'No lineup was submitted — contact the league office to name your squad.'}`}
             </div>
           ) : (
-            <p className="text-[12.5px] text-[#8a817a]">
-              Pick up to {maxStarters} starters and {maxBench} on the bench ({maxStarters + maxBench} players
-              in total). The league office sees this lineup in the Court Console at tip-off. Changes are
-              allowed until the match goes live.
-            </p>
+            <>
+              {match.closesLabel && (
+                <div className="flex items-center gap-2 rounded-xl border border-[#d99a2b]/30 bg-[#d99a2b]/[0.08] px-4 py-3 text-[12.5px] text-[#d99a2b]">
+                  {submitted ? <Check size={15} /> : <AlertCircle size={15} />}
+                  {submitted
+                    ? `Submitted — you can still edit this lineup until ${match.closesLabel}.`
+                    : `Submit your lineup by ${match.closesLabel}.`}
+                </div>
+              )}
+              <p className="text-[12.5px] text-[#8a817a]">
+                Pick up to {maxStarters} starters and {maxBench} on the bench ({maxStarters + maxBench} players
+                in total). The league office sees this lineup in the Court Console at tip-off. Lineups close{' '}
+                {deadlineWindow(deadlineHours)}; after that, only the league office can make changes.
+              </p>
+            </>
           )}
           {offRoster.length > 0 && !locked && (
             <p className="text-[12.5px] text-[#d99a2b]">

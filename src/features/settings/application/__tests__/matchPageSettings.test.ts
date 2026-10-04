@@ -34,6 +34,15 @@ describe('match page settings', () => {
     });
   });
 
+  it('defaults the lineup deadline to 2 hours and clamps it to 0–48', () => {
+    expect(resolvePublicMatchPageSettings([]).lineupDeadlineHours).toBe(2);
+    expect(resolvePublicMatchPageSettings([setting('match_lineupDeadlineHours', '0')]).lineupDeadlineHours).toBe(0);
+    expect(resolvePublicMatchPageSettings([setting('match_lineupDeadlineHours', '3')]).lineupDeadlineHours).toBe(3);
+    expect(resolvePublicMatchPageSettings([setting('match_lineupDeadlineHours', '500')]).lineupDeadlineHours).toBe(48);
+    expect(resolvePublicMatchPageSettings([setting('match_lineupDeadlineHours', '-1')]).lineupDeadlineHours).toBe(0);
+    expect(resolvePublicMatchPageSettings([setting('match_lineupDeadlineHours', 'soon')]).lineupDeadlineHours).toBe(2);
+  });
+
   it('enforces all box-score visibility levels', () => {
     expect(canViewMatchBoxScore('Public', false, false)).toBe(true);
     expect(canViewMatchBoxScore('Signed-in users', false, false)).toBe(false);

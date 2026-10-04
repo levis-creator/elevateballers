@@ -36,6 +36,8 @@ export type NeedsYouInput = {
     status: 'UPCOMING' | 'LIVE' | 'COMPLETED';
     opponent: string;
     lineupPlayers: number;
+    /** True once the lineup deadline (or tip-off) has passed for coaches. */
+    lineupLocked?: boolean;
   } | null;
   latestApplication: {
     status: 'PENDING' | 'OWNERSHIP_VERIFICATION' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
@@ -74,13 +76,23 @@ export function buildNeedsYou(input: NeedsYouInput): NeedsYouItem[] {
     nextMatch.lineupPlayers === 0 &&
     nextMatch.date.getTime() - input.now.getTime() <= LINEUP_REMINDER_DAYS * 86_400_000
   ) {
-    items.push({
-      key: `lineup-${nextMatch.id}`,
-      kind: 'action',
-      title: 'Submit your lineup',
-      detail: `No players are listed yet for the match against ${nextMatch.opponent}.`,
-      target: { view: 'lineup', matchId: nextMatch.id },
-    });
+    items.push(
+      nextMatch.lineupLocked
+        ? {
+            key: `lineup-closed-${nextMatch.id}`,
+            kind: 'action',
+            title: 'Lineup deadline passed',
+            detail: `No lineup was submitted for the match against ${nextMatch.opponent}. Contact the league office to name your squad.`,
+            target: { view: 'lineup', matchId: nextMatch.id },
+          }
+        : {
+            key: `lineup-${nextMatch.id}`,
+            kind: 'action',
+            title: 'Submit your lineup',
+            detail: `No players are listed yet for the match against ${nextMatch.opponent}.`,
+            target: { view: 'lineup', matchId: nextMatch.id },
+          }
+    );
   }
 
   if (!input.registered && input.hasActiveSeason) {

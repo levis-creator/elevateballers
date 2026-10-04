@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   const prisma: any = {
@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => {
     getStandings: vi.fn(),
     logAudit: vi.fn(),
     notifyAdminsOfLineup: vi.fn(),
+    getLineupDeadlineHours: vi.fn(),
   };
 });
 
@@ -31,6 +32,9 @@ vi.mock('@/features/cms/lib/auth', () => ({ getCurrentUser: mocks.getCurrentUser
 vi.mock('@/features/cms/lib/audit', () => ({ logAudit: mocks.logAudit }));
 vi.mock('@/features/team-portal/application/lineup-emails', () => ({
   notifyAdminsOfLineup: mocks.notifyAdminsOfLineup,
+}));
+vi.mock('@/features/team-portal/application/lineup-deadline', () => ({
+  getLineupDeadlineHours: mocks.getLineupDeadlineHours,
 }));
 vi.mock('@/features/team-portal/application/team-portal-access', () => ({
   requireActiveTeamContext: mocks.requireActiveTeamContext,
@@ -103,8 +107,15 @@ const lineupBody = (players: Array<{ playerId: string; started: boolean }>) => (
   players,
 });
 
+// Fixtures tip off at 2026-09-26T09:30Z; the clock sits a few days earlier so
+// lineups are open unless a test moves it past the deadline.
+const BEFORE_DEADLINE = new Date('2026-09-23T09:00:00Z');
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(BEFORE_DEADLINE);
+  mocks.getLineupDeadlineHours.mockResolvedValue(2);
   mocks.getCurrentUser.mockResolvedValue({ id: 'coach-1' });
   mocks.requireActiveTeamContext.mockResolvedValue({ team: TEAM });
   mocks.getActiveSeasonTeam.mockResolvedValue({ season: SEASON, seasonTeam: SEASON_TEAM });
@@ -125,6 +136,10 @@ beforeEach(() => {
   mocks.prisma.seasonRegistrationApplication.findFirst.mockResolvedValue(null);
   mocks.prisma.player.findMany.mockResolvedValue([]);
   mocks.prisma.playerAvailability.findMany.mockResolvedValue([]);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('Team Portal endpoints: auth and team scoping', () => {
@@ -213,7 +228,7 @@ describe('Fixtures and stats scoping', () => {
     expect(mocks.prisma.matchPlayer.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { matchId: { in: ['m1'] }, teamId: TEAM.id } })
     );
-    expect(body.upcoming[0].lineup).toEqual({ players: 2, starters: 1 });
+    expect(body.upcoming[0].lineup).toMatchObject({ players: 2, starters: 1, locked: false });
   });
 
   it('builds stats from the approved active-season roster only', async () => {
@@ -376,6 +391,54 @@ describe('Lineup', () => {
     expect(response.status).toBe(409);
     expect(mocks.prisma.matchPlayer.updateMany).not.toHaveBeenCalled();
     expect(mocks.prisma.matchPlayer.createMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 once the lineup deadline has passed', async () => {
+    vi.setSystemTime(new Date('2026-09-26T07:30:00Z')); // exactly 2h before tip-off
+    const response = await putLineup(put(lineupBody([{ playerId: 'p1', started: true }])));
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatch(/closed at .*Contact the league office/);
+    expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('still saves just before the deadline', async () => {
+    vi.setSystemTime(new Date('2026-09-26T07:29:00Z'));
+    const response = await putLineup(put(lineupBody([{ playerId: 'p1', started: true }])));
+    expect(response.status).toBe(200);
+  });
+
+  it('keeps lineups open until tip-off when the deadline is 0', async () => {
+    mocks.getLineupDeadlineHours.mockResolvedValue(0);
+    vi.setSystemTime(new Date('2026-09-26T09:00:00Z'));
+    const response = await putLineup(put(lineupBody([{ playerId: 'p1', started: true }])));
+    expect(response.status).toBe(200);
+  });
+
+  it('returns 409 when the deadline passes during the save', async () => {
+    mocks.prisma.match.findUnique
+      .mockResolvedValueOnce(match())
+      .mockImplementationOnce(async () => {
+        vi.setSystemTime(new Date('2026-09-26T08:00:00Z'));
+        return match();
+      });
+    const response = await putLineup(put(lineupBody([{ playerId: 'p1', started: true }])));
+    expect(response.status).toBe(409);
+    expect(mocks.prisma.matchPlayer.createMany).not.toHaveBeenCalled();
+  });
+
+  it('reports the deadline and lock state when loading the lineup', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(match());
+    const open = await (await getLineup(get('/api/team-portal/lineup?teamId=team-1&matchId=m1'))).json();
+    expect(open.match).toMatchObject({
+      locked: false,
+      lockReason: null,
+      deadlineHours: 2,
+      closesAt: '2026-09-26T07:30:00.000Z',
+    });
+
+    vi.setSystemTime(new Date('2026-09-26T08:00:00Z'));
+    const closed = await (await getLineup(get('/api/team-portal/lineup?teamId=team-1&matchId=m1'))).json();
+    expect(closed.match).toMatchObject({ locked: true, lockReason: 'DEADLINE' });
   });
 
   it('returns 404 for a match the team does not play in', async () => {
@@ -650,5 +713,13 @@ describe('Match detail', () => {
       match({ leagueSeasonId: 'old-season', events: [], matchPlayers: [] })
     );
     expect((await (await load()).json()).lineupEditable).toBe(false);
+  });
+
+  it('stops offering lineup edits after the deadline', async () => {
+    mocks.prisma.match.findFirst.mockResolvedValue(match({ events: [], matchPlayers: [] }));
+    vi.setSystemTime(new Date('2026-09-26T08:00:00Z'));
+    const body = await (await load()).json();
+    expect(body.lineupEditable).toBe(false);
+    expect(body.match.lineup).toMatchObject({ locked: true });
   });
 });

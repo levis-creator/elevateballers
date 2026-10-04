@@ -4,6 +4,9 @@ import {
   MAX_STARTERS,
   isLineupLocked,
   isTeamMatch,
+  lineupDeadline,
+  lineupLockReason,
+  lineupLockedMessage,
   lineupSubmissionSchema,
   validateLineup,
 } from './lineup';
@@ -41,9 +44,13 @@ describe('lineup rules', () => {
   });
 
   it('locks every status except UPCOMING', () => {
-    expect(isLineupLocked({ status: 'UPCOMING' })).toBe(false);
-    expect(isLineupLocked({ status: 'LIVE' })).toBe(true);
-    expect(isLineupLocked({ status: 'COMPLETED' })).toBe(true);
+    const date = new Date('2026-10-10T16:00:00Z');
+    const now = new Date('2026-10-01T00:00:00Z');
+    expect(isLineupLocked({ status: 'UPCOMING', date }, now, 2)).toBe(false);
+    expect(isLineupLocked({ status: 'LIVE', date }, now, 2)).toBe(true);
+    expect(isLineupLocked({ status: 'COMPLETED', date }, now, 2)).toBe(true);
+    expect(lineupLockReason({ status: 'LIVE', date }, now, 2)).toBe('STARTED');
+    expect(lineupLockReason({ status: 'COMPLETED', date }, now, 2)).toBe('COMPLETED');
   });
 
   it('only treats matches in the team’s active league season as its own', () => {
@@ -71,5 +78,38 @@ describe('lineup rules', () => {
       players: [{ playerId: 'p1', started: true, jerseyNumber: 100 }],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('lineup deadline', () => {
+  const tipOff = new Date('2026-10-10T16:00:00Z');
+  const upcoming = { status: 'UPCOMING' as const, date: tipOff };
+  const at = (iso: string) => new Date(iso);
+
+  it('closes the given number of hours before tip-off', () => {
+    expect(lineupDeadline(upcoming, 2)).toEqual(at('2026-10-10T14:00:00Z'));
+  });
+
+  it('stays open until the deadline and locks from it onwards', () => {
+    expect(lineupLockReason(upcoming, at('2026-10-10T13:59:59Z'), 2)).toBeNull();
+    expect(lineupLockReason(upcoming, at('2026-10-10T14:00:00Z'), 2)).toBe('DEADLINE');
+    expect(lineupLockReason(upcoming, at('2026-10-10T15:00:00Z'), 2)).toBe('DEADLINE');
+  });
+
+  it('locks at tip-off when the deadline is 0', () => {
+    expect(lineupLockReason(upcoming, at('2026-10-10T15:59:59Z'), 0)).toBeNull();
+    expect(lineupLockReason(upcoming, at('2026-10-10T16:00:00Z'), 0)).toBe('DEADLINE');
+  });
+
+  it('follows a rescheduled match date', () => {
+    const now = at('2026-10-10T15:00:00Z');
+    expect(lineupLockReason(upcoming, now, 2)).toBe('DEADLINE');
+    expect(lineupLockReason({ ...upcoming, date: '2026-10-11T16:00:00Z' }, now, 2)).toBeNull();
+  });
+
+  it('tells the coach when lineups closed and who to contact', () => {
+    expect(lineupLockedMessage('DEADLINE', 'Oct 10 · 5:00 PM')).toBe(
+      'Lineups for this match closed at Oct 10 · 5:00 PM. Contact the league office to make changes.'
+    );
   });
 });
