@@ -5,13 +5,17 @@ import { logAudit } from '@/features/cms/lib/audit';
 import { requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
 import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import {
-  isLineupLocked,
   isTeamMatch,
+  lineupDeadline,
+  lineupLockedMessage,
+  lineupLockReason,
   lineupSubmissionSchema,
   validateLineup,
   MAX_STARTERS,
   MAX_BENCH,
+  type LineupLockReason,
 } from '@/features/team-portal/domain/entities/lineup';
+import { getLineupDeadlineHours } from '@/features/team-portal/application/lineup-deadline';
 import { fmtWhen, homeName, awayName } from '@/features/teams/domain/usecases/match-format';
 import { getDisplayImageUrl } from '@/lib/asset-url';
 import { diffIdSets } from '@/lib/auditDiff';
@@ -22,7 +26,11 @@ import { unavailableMessage } from '@/features/player/domain/availability';
 
 export const prerender = false;
 
-class LineupLockedError extends Error {}
+class LineupLockedError extends Error {
+  constructor(readonly reason: LineupLockReason) {
+    super(reason);
+  }
+}
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -98,6 +106,7 @@ export const GET: APIRoute = async ({ request }) => {
           }),
         ])
       : [[], []];
+    const deadlineHours = await getLineupDeadlineHours();
     const blocked = match
       ? await getBlockedPlayers(
           prisma,
@@ -127,7 +136,20 @@ export const GET: APIRoute = async ({ request }) => {
       maxStarters: MAX_STARTERS,
       maxBench: MAX_BENCH,
       matches: matches.map(summarize),
-      match: match ? { ...summarize(match), locked: isLineupLocked(match) } : null,
+      match: match
+        ? (() => {
+            const lockReason = lineupLockReason(match, new Date(), deadlineHours);
+            const closesAt = lineupDeadline(match, deadlineHours);
+            return {
+              ...summarize(match),
+              locked: lockReason !== null,
+              lockReason,
+              deadlineHours,
+              closesAt: closesAt.toISOString(),
+              closesLabel: fmtWhen(closesAt),
+            };
+          })()
+        : null,
       roster: roster.map(({ jerseyNumber, position, player }) => ({
         playerId: player.id,
         name: `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim() || 'Unnamed player',
@@ -181,16 +203,10 @@ export const PUT: APIRoute = async ({ request }) => {
     });
     if (!match || !isTeamMatch(match, team.id, seasonTeam.leagueSeasonId))
       return json({ error: 'Match not found for your team this season.' }, 404);
-    if (isLineupLocked(match))
-      return json(
-        {
-          error:
-            match.status === 'COMPLETED'
-              ? 'This match is over, so its lineup can no longer be changed.'
-              : 'This match has started, so its lineup can no longer be changed.',
-        },
-        409
-      );
+    const deadlineHours = await getLineupDeadlineHours();
+    const closesLabel = fmtWhen(lineupDeadline(match, deadlineHours));
+    const lockReason = lineupLockReason(match, new Date(), deadlineHours);
+    if (lockReason) return json({ error: lineupLockedMessage(lockReason, closesLabel) }, 409);
 
     const roster = await approvedRoster(seasonTeam.id);
     const rosterById = new Map(roster.map((entry) => [entry.player.id, entry]));
@@ -217,9 +233,12 @@ export const PUT: APIRoute = async ({ request }) => {
     // pushed the save past the interactive-transaction limit on the remote DB.
     const before = await prisma.$transaction(
       async (tx) => {
-        // Re-check inside the transaction so a tip-off that lands mid-save wins.
-        const current = await tx.match.findUnique({ where: { id: matchId }, select: { status: true } });
-        if (!current || isLineupLocked(current)) throw new LineupLockedError();
+        // Re-check inside the transaction so a tip-off or deadline that lands
+        // mid-save wins.
+        const current = await tx.match.findUnique({ where: { id: matchId }, select: { status: true, date: true } });
+        if (!current) throw new LineupLockedError('STARTED');
+        const reason = lineupLockReason(current, new Date(), deadlineHours);
+        if (reason) throw new LineupLockedError(reason);
         const existing = await tx.matchPlayer.findMany({
           where: { matchId, teamId: team.id },
           select: { playerId: true, started: true },
@@ -309,7 +328,7 @@ export const PUT: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     if (error instanceof LineupLockedError)
-      return json({ error: 'This match has started, so its lineup can no longer be changed.' }, 409);
+      return json({ error: lineupLockedMessage(error.reason, 'the deadline') }, 409);
     return handleApiError(error, 'save Team Portal lineup', request);
   }
 };

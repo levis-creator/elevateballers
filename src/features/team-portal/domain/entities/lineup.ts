@@ -26,16 +26,52 @@ export type LineupSubmission = z.infer<typeof lineupSubmissionSchema>;
 
 export type LineupMatch = {
   status: 'UPCOMING' | 'LIVE' | 'COMPLETED';
+  date: Date | string;
   team1Id: string | null;
   team2Id: string | null;
   leagueSeasonId: string | null;
 };
 
-/** A lineup can only be changed before tip-off; once live the console owns it. */
-export const isLineupLocked = (match: Pick<LineupMatch, 'status'>) => match.status !== 'UPCOMING';
+/** Hours before tip-off that coaches stop being able to submit or edit lineups. */
+export const DEFAULT_LINEUP_DEADLINE_HOURS = 2;
+export const MAX_LINEUP_DEADLINE_HOURS = 48;
+
+/** When coaches stop being able to submit or change the lineup for a match. */
+export const lineupDeadline = (match: Pick<LineupMatch, 'date'>, deadlineHours: number) =>
+  new Date(new Date(match.date).getTime() - deadlineHours * 3_600_000);
+
+export type LineupLockReason = 'COMPLETED' | 'STARTED' | 'DEADLINE';
+
+/**
+ * Why coaches can no longer change a lineup, or null while they still can. It
+ * closes `deadlineHours` before the scheduled tip-off (0 = at tip-off); once the
+ * match is live the Court Console owns it. Admins can still change it after.
+ */
+export function lineupLockReason(
+  match: Pick<LineupMatch, 'status' | 'date'>,
+  now: Date,
+  deadlineHours: number
+): LineupLockReason | null {
+  if (match.status === 'COMPLETED') return 'COMPLETED';
+  if (match.status !== 'UPCOMING') return 'STARTED';
+  return now.getTime() >= lineupDeadline(match, deadlineHours).getTime() ? 'DEADLINE' : null;
+}
+
+export const isLineupLocked = (
+  match: Pick<LineupMatch, 'status' | 'date'>,
+  now: Date,
+  deadlineHours: number
+) => lineupLockReason(match, now, deadlineHours) !== null;
+
+/** The coach-facing explanation for a locked lineup. */
+export function lineupLockedMessage(reason: LineupLockReason, deadlineLabel: string): string {
+  if (reason === 'COMPLETED') return 'This match is over, so its lineup can no longer be changed.';
+  if (reason === 'STARTED') return 'This match has started, so its lineup can no longer be changed.';
+  return `Lineups for this match closed at ${deadlineLabel}. Contact the league office to make changes.`;
+}
 
 /** The match must involve the team and belong to the team's active league season. */
-export const isTeamMatch = (match: LineupMatch, teamId: string, leagueSeasonId: string) =>
+export const isTeamMatch = (match: Pick<LineupMatch, 'team1Id' | 'team2Id' | 'leagueSeasonId'>, teamId: string, leagueSeasonId: string) =>
   (match.team1Id === teamId || match.team2Id === teamId) && match.leagueSeasonId === leagueSeasonId;
 
 /** Returns a user-facing error for an invalid lineup, or null when it can be saved. */

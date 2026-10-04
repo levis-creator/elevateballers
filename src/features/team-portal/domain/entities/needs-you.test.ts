@@ -44,6 +44,16 @@ describe('buildNeedsYou', () => {
     expect(buildNeedsYou({ ...base, nextMatch: upcoming(10) })).toEqual([]);
   });
 
+  it('tells the team to contact the league office once the lineup deadline has passed', () => {
+    const [item] = buildNeedsYou({ ...base, nextMatch: { ...upcoming(0.05), lineupLocked: true } });
+    expect(item).toMatchObject({
+      key: 'lineup-closed-m1',
+      title: 'Lineup deadline passed',
+      target: { view: 'lineup', matchId: 'm1' },
+    });
+    expect(item!.detail).toContain('league office');
+  });
+
   it('skips the lineup reminder once the match is live', () => {
     const live = { ...upcoming(0), status: 'LIVE' as const };
     expect(buildNeedsYou({ ...base, nextMatch: live })).toEqual([]);

@@ -9,6 +9,11 @@ import {
   leagueOf,
 } from '@/features/teams/domain/usecases/match-format';
 import { getDisplayImageUrl } from '@/lib/asset-url';
+import {
+  DEFAULT_LINEUP_DEADLINE_HOURS,
+  lineupDeadline,
+  lineupLockReason,
+} from '@/features/team-portal/domain/entities/lineup';
 
 export type LineupCount = { players: number; starters: number };
 
@@ -29,8 +34,15 @@ export async function getLineupCounts(matchIds: string[], teamId: string) {
   return counts;
 }
 
+export type LineupDeadlineContext = { hours: number; now: Date };
+
 /** Maps a match (with team relations) to the given team's point of view. */
-export function toTeamFixture(m: any, teamId: string, lineups: Map<string, LineupCount>) {
+export function toTeamFixture(
+  m: any,
+  teamId: string,
+  lineups: Map<string, LineupCount>,
+  deadline: LineupDeadlineContext = { hours: DEFAULT_LINEUP_DEADLINE_HOURS, now: new Date() }
+) {
   const isHome = (m.team1?.id ?? m.team1Id) === teamId;
   const hasScore = m.team1Score != null && m.team2Score != null;
   const teamScore: number | null = hasScore ? (isHome ? m.team1Score : m.team2Score) : null;
@@ -61,8 +73,16 @@ export function toTeamFixture(m: any, teamId: string, lineups: Map<string, Lineu
     teamScore,
     oppScore,
     result,
-    // Lineup status is only meaningful before and during a match.
-    lineup: m.status === 'COMPLETED' ? null : (lineups.get(m.id) ?? { players: 0, starters: 0 }),
+    // Lineup status is only meaningful before and during a match. `locked` is
+    // true once coaches can no longer change it (the deadline or tip-off).
+    lineup:
+      m.status === 'COMPLETED'
+        ? null
+        : {
+            ...(lineups.get(m.id) ?? { players: 0, starters: 0 }),
+            locked: lineupLockReason(m, deadline.now, deadline.hours) !== null,
+            closesLabel: fmtWhen(lineupDeadline(m, deadline.hours)),
+          },
   };
 }
 

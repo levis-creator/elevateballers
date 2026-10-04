@@ -5,6 +5,7 @@ import { requireActiveTeamContext } from '@/features/team-portal/application/tea
 import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import { toTeamFixture } from '@/features/team-portal/data/datasources/team-fixtures';
 import { isLineupLocked } from '@/features/team-portal/domain/entities/lineup';
+import { getLineupDeadlineHours } from '@/features/team-portal/application/lineup-deadline';
 import { calculatePlayerMatchStats } from '@/features/player/lib/playerStats';
 import { handleApiError } from '@/lib/apiError';
 
@@ -75,10 +76,12 @@ export const GET: APIRoute = async ({ request }) => {
 
     const listed = match.matchPlayers.length;
     const starters = match.matchPlayers.filter((row) => row.started).length;
+    const deadline = { hours: await getLineupDeadlineHours(), now: new Date() };
     const fixture = toTeamFixture(
       resultPending ? { ...match, team1Score: null, team2Score: null } : match,
       team.id,
-      new Map([[match.id, { players: listed, starters }]])
+      new Map([[match.id, { players: listed, starters }]]),
+      deadline
     );
 
     const [periods, { seasonTeam }] = await Promise.all([
@@ -151,7 +154,7 @@ export const GET: APIRoute = async ({ request }) => {
       showStats,
       // Only the active season's upcoming matches accept lineup changes.
       lineupEditable:
-        !isLineupLocked(match) && Boolean(seasonTeam) && match.leagueSeasonId === seasonTeam?.leagueSeasonId,
+        !isLineupLocked(match, deadline.now, deadline.hours) && Boolean(seasonTeam) && match.leagueSeasonId === seasonTeam?.leagueSeasonId,
       quarters: periods.map((period) => ({
         label: periodLabel(period.periodNumber),
         team: isHome ? period.team1Score : period.team2Score,

@@ -10,7 +10,7 @@ type NextFixture = {
   league: string;
   isHome: boolean;
   opponent: { name: string; logo: string | null };
-  lineup: { players: number; starters: number } | null;
+  lineup: { players: number; starters: number; locked?: boolean; closesLabel?: string } | null;
 };
 type OverviewData = {
   season: { name: string } | null;
@@ -133,14 +133,21 @@ export default function TeamPortalOverview({
                       ? ` · ${next.lineup.players} listed, ${next.lineup.starters} starters`
                       : ' · No lineup submitted yet'
                     : ''}
+                  {next.lineup && next.status === 'UPCOMING'
+                    ? next.lineup.locked
+                      ? ' · Lineups closed'
+                      : next.lineup.closesLabel
+                        ? ` · Lineup closes ${next.lineup.closesLabel}`
+                        : ''
+                    : ''}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {next.status === 'UPCOMING' && (
                     <a
                       href={hrefFor({ view: 'lineup', matchId: next.id })}
-                      className={`portal-overview-link ${next.lineup?.players ? '' : 'overview-link-primary'}`}
+                      className={`portal-overview-link ${next.lineup?.players || next.lineup?.locked ? '' : 'overview-link-primary'}`}
                     >
-                      {next.lineup?.players ? 'Edit lineup' : 'Set lineup'}
+                      {next.lineup?.locked ? 'View lineup' : next.lineup?.players ? 'Edit lineup' : 'Set lineup'}
                     </a>
                   )}
                   <a href={hrefFor({ view: 'match', matchId: next.id })} className="portal-overview-link">

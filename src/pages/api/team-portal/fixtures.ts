@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/features/cms/lib/auth';
 import { requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
 import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import { getLineupCounts, toTeamFixture } from '@/features/team-portal/data/datasources/team-fixtures';
+import { getLineupDeadlineHours } from '@/features/team-portal/application/lineup-deadline';
 import { getFilteredMatches } from '@/features/matches/lib/queries';
 import { handleApiError } from '@/lib/apiError';
 
@@ -30,11 +31,15 @@ export const GET: APIRoute = async ({ request }) => {
       getFilteredMatches({ ...filter, status: 'UPCOMING' }, 'date-asc', UPCOMING_LIMIT),
       getFilteredMatches({ ...filter, status: 'COMPLETED' }, 'date-desc', RESULTS_LIMIT),
     ]);
-    const lineups = await getLineupCounts(
-      [...live, ...upcoming].map((m) => m.id),
-      team.id
-    );
-    const toFixture = (m: any) => toTeamFixture(m, team.id, lineups);
+    const [lineups, deadlineHours] = await Promise.all([
+      getLineupCounts(
+        [...live, ...upcoming].map((m) => m.id),
+        team.id
+      ),
+      getLineupDeadlineHours(),
+    ]);
+    const deadline = { hours: deadlineHours, now: new Date() };
+    const toFixture = (m: any) => toTeamFixture(m, team.id, lineups, deadline);
 
     return new Response(
       JSON.stringify({

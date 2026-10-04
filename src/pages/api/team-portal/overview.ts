@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/features/cms/lib/auth';
 import { requireActiveTeamContext } from '@/features/team-portal/application/team-portal-access';
 import { getActiveSeasonTeam } from '@/features/team-portal/data/datasources/team-portal-repository';
 import { getLineupCounts, toTeamFixture } from '@/features/team-portal/data/datasources/team-fixtures';
+import { getLineupDeadlineHours } from '@/features/team-portal/application/lineup-deadline';
 import { getTeamSeasonSummary } from '@/features/team-portal/data/datasources/team-season-summary';
 import {
   buildNeedsYou,
@@ -110,8 +111,11 @@ export const GET: APIRoute = async ({ request }) => {
       ]);
 
     const next = live[0] ?? upcoming[0] ?? null;
-    const lineups = await getLineupCounts(next ? [next.id] : [], team.id);
-    const nextFixture = next ? toTeamFixture(next, team.id, lineups) : null;
+    const [lineups, deadlineHours] = await Promise.all([
+      getLineupCounts(next ? [next.id] : [], team.id),
+      getLineupDeadlineHours(),
+    ]);
+    const nextFixture = next ? toTeamFixture(next, team.id, lineups, { hours: deadlineHours, now }) : null;
 
     const needsYou = buildNeedsYou({
       now,
@@ -124,6 +128,7 @@ export const GET: APIRoute = async ({ request }) => {
             status: nextFixture.status,
             opponent: nextFixture.opponent.name,
             lineupPlayers: nextFixture.lineup?.players ?? 0,
+            lineupLocked: nextFixture.lineup?.locked ?? false,
           }
         : null,
       latestApplication,

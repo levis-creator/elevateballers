@@ -13,7 +13,7 @@ type Fixture = {
   teamScore: number | null;
   oppScore: number | null;
   result: 'win' | 'loss' | 'draw' | null;
-  lineup: { players: number; starters: number } | null;
+  lineup: { players: number; starters: number; locked?: boolean; closesLabel?: string } | null;
 };
 type FixturesData = {
   season: { name: string } | null;
@@ -213,10 +213,13 @@ function FixtureRow({
           >
             {lineup.players
               ? `${lineup.players} listed · ${lineup.starters} starters`
-              : 'No lineup yet'}
+              : lineup.locked
+                ? 'No lineup · closed'
+                : 'No lineup yet'}
+            {!lineup.locked && lineup.closesLabel ? ` · closes ${lineup.closesLabel}` : ''}
           </span>
           <a href={lineupHref(fixture.id)} className="portal-fixtures-lineup">
-            {lineup.players ? 'Edit lineup' : 'Set lineup'}
+            {lineup.locked ? 'View lineup' : lineup.players ? 'Edit lineup' : 'Set lineup'}
           </a>
         </div>
       )}

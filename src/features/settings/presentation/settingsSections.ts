@@ -2756,6 +2756,12 @@ export const SECTIONS: Section[] = [
             { type: 'toggle', defaultValue: 'false' }
           ),
           f(
+            'match_lineupDeadlineHours',
+            'Lineup deadline (hours before tip-off)',
+            'Coaches can submit and edit lineups in the Team Portal until this many hours before the scheduled start (0–48; 0 = until tip-off). Admins can still change lineups after.',
+            { type: 'number', defaultValue: '2' }
+          ),
+          f(
             'match_liveBadge',
             'Live badge',
             'Shown on in-progress matches everywhere on the site.',

@@ -31,7 +31,7 @@ type MatchData = {
     teamScore: number | null;
     oppScore: number | null;
     result: 'win' | 'loss' | 'draw' | null;
-    lineup: { players: number; starters: number } | null;
+    lineup: { players: number; starters: number; locked?: boolean; closesLabel?: string } | null;
   };
   resultPending: boolean;
   showStats: boolean;
@@ -187,6 +187,12 @@ export default function TeamPortalMatch({
                   className={`portal-match-link ${match.lineup?.players ? '' : 'match-link-primary'}`}
                 >
                   {match.lineup?.players ? 'Edit lineup' : 'Set lineup'}
+                  {match.lineup?.closesLabel ? ` · closes ${match.lineup.closesLabel}` : ''}
+                </a>
+              )}
+              {!data.lineupEditable && match.status === 'UPCOMING' && match.lineup?.locked && (
+                <a href={lineupHref(match.id)} className="portal-match-link">
+                  View lineup · closed
                 </a>
               )}
               <a href={match.href} target="_blank" rel="noopener" className="portal-match-link">
