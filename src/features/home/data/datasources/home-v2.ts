@@ -8,7 +8,10 @@ import { getUpcomingMatches, getCompletedMatches } from "@/features/matches/lib/
 import { getZonedDateParts, formatMatchTime } from "@/features/matches/domain/usecases/utils";
 import { getNewsArticles } from "@/features/cms/lib/queries/news";
 import { getFeaturedMedia } from "@/features/cms/lib/queries/media";
-import { getActivePlayerOfTheWeek } from "@/features/cms/lib/editorial-queries";
+import { getActivePlayersOfTheWeek } from "@/features/cms/lib/editorial-queries";
+import { currentPotwSlots, leagueShortName, type PotwSlot } from "@/features/cms/lib/potw-slots";
+import { getPublicCompetitions } from "@/features/seasons/data/public-competitions";
+import type { PlayerOfTheWeekWithPlayer } from "@/features/cms/domain/entities";
 import { getAllSiteSettings } from "@/features/cms/lib/queries";
 import { calculatePlayerStatistics } from "@/features/player/lib/playerStats";
 import { getDisplayImageUrl, resolveAssetUrl } from "@/lib/asset-url";
@@ -295,44 +298,68 @@ export async function fetchStats(): Promise<StatsResult | null> {
 	}
 }
 
+function toPotwCard(
+	potw: PlayerOfTheWeekWithPlayer,
+	slot: PotwSlot | null,
+	statsByPlayer?: StatsResult["statsByPlayer"],
+): Potw {
+	const p: any = potw.player;
+	const name = `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || "Player of the Week";
+	const jersey = p.jerseyNumber != null ? `#${p.jerseyNumber}` : "";
+	const teamLabel = [p.team?.name, jersey].filter(Boolean).join(" · ");
+	const raw = potw.customImage || p.image;
+	// POTW images may be freshly uploaded to Supabase before Vercel's image
+	// fetcher can see them. Use the public object URL directly here so a
+	// transient optimizer 404 cannot hide the featured player photo.
+	const image = resolveAssetUrl(raw) || null;
+	const s = statsByPlayer?.[p.id];
+	const stats = s
+		? [
+				{ value: String(Math.round(s.pointsPerGame * 10) / 10), label: "Points" },
+				{ value: String(Math.round(s.threesPerGame * 10) / 10), label: "Threes" },
+				{ value: String(Math.round(s.reboundsPerGame * 10) / 10), label: "Rebounds" },
+				{ value: String(Math.round(s.assistsPerGame * 10) / 10), label: "Assists" },
+			]
+		: [];
+	const href = p.slug || p.id ? `/players/${p.slug || p.id}` : null;
+	const descriptionParts = String(potw.description ?? "").split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
+	const first = descriptionParts[0] ?? "";
+	const hasTagline = descriptionParts.length > 1 && first.length <= 60;
+	return {
+		slotLabel: slot?.label ?? null,
+		slotDescription: slot
+			? slot.conferenceId ? `${slot.label} conference, ${leagueShortName(slot.leagueLabel)}` : slot.leagueLabel
+			: null,
+		name,
+		teamName: p.team?.name ?? null,
+		awardedAt: new Date(potw.createdAt).toISOString(),
+		teamLabel,
+		tagline: hasTagline ? first : null,
+		image,
+		description: hasTagline ? descriptionParts.slice(1).join("\n\n") : String(potw.description ?? ""),
+		stats,
+		href,
+	};
+}
+
+/**
+ * One Player of the Week card per current award slot (each conference of a
+ * conference league, or the whole of a single-table league) that has an active
+ * pick. Until any slot is filled, the newest active award shows on its own so
+ * the section never goes blank during the switch-over.
+ */
 export async function fetchPotw(
 	statsByPlayer?: StatsResult["statsByPlayer"],
-): Promise<Potw | null> {
+): Promise<Potw[] | null> {
 	try {
-		const potw = await getActivePlayerOfTheWeek();
-		if (!potw) return null;
-		const p: any = potw.player;
-		const name = `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || "Player of the Week";
-		const jersey = p.jerseyNumber != null ? `#${p.jerseyNumber}` : "";
-		const teamLabel = [p.team?.name, jersey].filter(Boolean).join(" · ");
-		const raw = (potw as any).customImage || p.image;
-		const resolved = resolveAssetUrl(raw);
-		// POTW images may be freshly uploaded to Supabase before Vercel's image
-		// fetcher can see them. Use the public object URL directly here so a
-		// transient optimizer 404 cannot hide the featured player photo.
-		const image = resolved || null;
-		const s = statsByPlayer?.[p.id];
-		const stats = s
-			? [
-					{ value: String(Math.round(s.pointsPerGame * 10) / 10), label: "Points" },
-					{ value: String(Math.round(s.threesPerGame * 10) / 10), label: "Threes" },
-					{ value: String(Math.round(s.reboundsPerGame * 10) / 10), label: "Rebounds" },
-					{ value: String(Math.round(s.assistsPerGame * 10) / 10), label: "Assists" },
-				]
-			: [];
-		const href = p.slug || p.id ? `/players/${p.slug || p.id}` : null;
-		const descriptionParts = String(potw.description ?? "").split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
-		const first = descriptionParts[0] ?? "";
-		const hasTagline = descriptionParts.length > 1 && first.length <= 60;
-		return {
-			name,
-			teamLabel,
-			tagline: hasTagline ? first : null,
-			image,
-			description: hasTagline ? descriptionParts.slice(1).join("\n\n") : String(potw.description ?? ""),
-			stats,
-			href,
-		};
+		const [competitions, active] = await Promise.all([getPublicCompetitions(), getActivePlayersOfTheWeek()]);
+		if (!active.length) return null;
+		const cards = currentPotwSlots(competitions).flatMap((slot) => {
+			const pick = active.find((item) =>
+				item.leagueSeasonId === slot.leagueSeasonId && (item.conferenceId ?? null) === slot.conferenceId);
+			return pick ? [toPotwCard(pick, slot, statsByPlayer)] : [];
+		});
+		return cards.length ? cards : [toPotwCard(active[0], null, statsByPlayer)];
 	} catch {
 		return null;
 	}

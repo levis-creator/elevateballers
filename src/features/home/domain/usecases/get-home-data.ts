@@ -57,7 +57,7 @@ export async function getHomeData(): Promise<HomeData> {
 		// on the page when there's nothing to show.
 		media: media ?? [],
 		mediaTabs: FALLBACK_MEDIA_TABS,
-		potw: potw ?? FALLBACK_POTW,
+		potws: potw?.length ? potw : [FALLBACK_POTW],
 		registrationOpen: reg ?? true,
 	};
 }

@@ -104,7 +104,15 @@ export interface PotwStat {
 
 /** The Player of the Week spotlight. */
 export interface Potw {
+	/** Award slot shown on the card — a conference ("Clutch") or league ("EWBL"). */
+	slotLabel: string | null;
+	/** Longer slot name for alt text / structured data, e.g. "Clutch conference, EBL". */
+	slotDescription: string | null;
 	name: string;
+	/** Team name alone (teamLabel also carries the jersey number). */
+	teamName: string | null;
+	/** ISO date the award was published; null for demo content. */
+	awardedAt: string | null;
 	teamLabel: string;
 	tagline: string | null;
 	image: string | null;
@@ -128,6 +136,7 @@ export interface HomeData {
 	counts: CountTargets;
 	media: MediaItem[];
 	mediaTabs: string[];
-	potw: Potw;
+	/** One card per filled award slot; never empty (falls back to demo content). */
+	potws: Potw[];
 	registrationOpen: boolean;
 }

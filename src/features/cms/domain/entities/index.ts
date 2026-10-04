@@ -483,6 +483,8 @@ export type PlayerOfTheWeekWithPlayer = PlayerOfTheWeek & {
   player: Player & {
     team: Team | null;
   };
+  leagueSeason?: { id: string; league: { name: string }; season: { name: string } } | null;
+  conference?: { id: string; name: string } | null;
 };
 
 export type CreatePlayerOfTheWeekInput = {
@@ -490,6 +492,9 @@ export type CreatePlayerOfTheWeekInput = {
   customImage?: string;
   description: string;
   active?: boolean;
+  /** Award slot — the league edition, plus the conference when it has them. */
+  leagueSeasonId?: string | null;
+  conferenceId?: string | null;
 };
 
 export type UpdatePlayerOfTheWeekInput = Partial<CreatePlayerOfTheWeekInput>;
