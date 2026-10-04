@@ -8,8 +8,9 @@ import { handleApiError } from '../../../lib/apiError';
 import { validatePlayoffMatch } from '../../../features/matches/lib/playoff-rules';
 import { resolveLeagueSeasonById } from '../../../features/seasons/data/league-season-scope';
 import { getCurrentUser } from '../../../features/cms/lib/auth';
-import { resolvePublicMatchPageSettings, siteSettingsService } from '../../../features/settings';
 import { notifyMatchParticipants } from '../../../features/settings/application/notificationMaintenance';
+import { cacheInvalidatePattern } from '../../../lib/cache';
+import { standingsCachePattern } from '../../../features/standings/lib/standings-cache';
 
 export const prerender = false;
 
@@ -167,12 +168,9 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     await requirePermission(request, 'matches:create');
     const data = await request.json();
-    if (data.status === 'COMPLETED') {
-      const settings = resolvePublicMatchPageSettings(
-        await siteSettingsService.list('match').catch(() => []),
-      );
-      data.resultPublishedAt = settings.autoPublish ? new Date() : null;
-    }
+    // Results entered from the admin form go live immediately; auto-publish
+    // only governs finals marked by live scorers.
+    data.resultPublishedAt = data.status === 'COMPLETED' ? new Date() : null;
 
     // Validate required fields
     if (
@@ -245,6 +243,7 @@ export const POST: APIRoute = async ({ request }) => {
       team1Score: data.team1Score,
       team2Score: data.team2Score,
       status: data.status || 'UPCOMING',
+      resultPublishedAt: data.resultPublishedAt,
       // Only pass stage if it's a valid value (not empty string or __none placeholder)
       stage: data.stage && data.stage !== '__none' && data.stage.trim() !== '' ? data.stage : undefined,
       duration: data.duration,
@@ -259,6 +258,15 @@ export const POST: APIRoute = async ({ request }) => {
       seasonId: match.seasonId,
       date: match.date,
     });
+
+    if (match.status === 'COMPLETED') {
+      await Promise.all([
+        cacheInvalidatePattern('leaders:*'),
+        ...(match.leagueSeasonId
+          ? [cacheInvalidatePattern(standingsCachePattern(match.leagueSeasonId))]
+          : []),
+      ]);
+    }
 
     if (match.status === 'UPCOMING') {
       void notifyMatchParticipants(match.id).catch((error) => console.error('[email] Match publication notification failed:', error));

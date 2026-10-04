@@ -10,6 +10,8 @@ import { getCurrentUser } from '../../../features/cms/lib/auth';
 import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from '../../../features/settings';
 import { notifyMatchParticipants } from '../../../features/settings/application/notificationMaintenance';
 import { diffFields } from '../../../lib/auditDiff';
+import { cacheInvalidatePattern } from '../../../lib/cache';
+import { standingsCachePattern } from '../../../features/standings/lib/standings-cache';
 
 const MATCH_AUDIT_FIELDS = [
   'status',
@@ -29,6 +31,17 @@ const MATCH_AUDIT_FIELDS = [
 export const prerender = false;
 
 const ALLOW_EDIT_AFTER_COMPLETION_KEY = 'match_allow_edit_after_completion';
+
+// Standings and leaders are cached in Redis for up to 30 minutes, so any change
+// to a completed result has to drop them — for both the old and new competition
+// when a match is moved between league seasons.
+async function invalidateResultCaches(...leagueSeasonIds: (string | null | undefined)[]): Promise<void> {
+  const ids = [...new Set(leagueSeasonIds.filter((id): id is string => Boolean(id)))];
+  await Promise.all([
+    cacheInvalidatePattern('leaders:*'),
+    ...ids.map((id) => cacheInvalidatePattern(standingsCachePattern(id))),
+  ]);
+}
 
 async function isPostCompletionEditAllowed(): Promise<boolean> {
   try {
@@ -96,12 +109,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     const data = await request.json();
 
-    if (data.status === 'COMPLETED' && existingMatch?.status !== 'COMPLETED') {
-      const settings = resolvePublicMatchPageSettings(
-        await siteSettingsService.list('match').catch(() => []),
-      );
-      data.resultPublishedAt = settings.autoPublish ? new Date() : null;
-    } else if (data.status && data.status !== 'COMPLETED') {
+    // A result saved from the admin match form is published straight away —
+    // including a completed match that was left unpublished. The auto-publish
+    // setting only governs finals marked by live scorers (/api/games/*/end).
+    const effectiveStatus = data.status ?? existingMatch.status;
+    if (effectiveStatus === 'COMPLETED') {
+      data.resultPublishedAt = existingMatch.resultPublishedAt ?? new Date();
+    } else if (data.status) {
       data.resultPublishedAt = null;
     }
 
@@ -149,6 +163,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     const changes = diffFields(existingMatch, match, MATCH_AUDIT_FIELDS);
 
+    if (existingMatch.status === 'COMPLETED' || match.status === 'COMPLETED') {
+      await invalidateResultCaches(existingMatch.leagueSeasonId, match.leagueSeasonId);
+    }
+
     await logAudit(request, 'MATCH_UPDATED', {
       matchId: match.id,
       leagueId: match.leagueId,
@@ -182,6 +200,10 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     const success = await deleteMatch(params.id!);
 
     if (!success) return json({ error: 'Failed to delete match' }, 500);
+
+    if (existingMatch?.status === 'COMPLETED') {
+      await invalidateResultCaches(existingMatch.leagueSeasonId);
+    }
 
     await logAudit(request, 'MATCH_DELETED', {
       matchId: params.id,
