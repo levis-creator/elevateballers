@@ -386,6 +386,7 @@ model LeagueSeason {
   seasonPlayerTransfers    SeasonPlayerTransfer[]
   seasonRosterHistory      SeasonRosterHistory[]
   staffAssignments         TeamStaff[]                     @relation("LeagueSeasonStaffAssignments")
+  playersOfTheWeek         PlayerOfTheWeek[]
 
   @@unique([leagueId, seasonId])
   @@index([seasonId])
@@ -407,6 +408,7 @@ model Conference {
   season         Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   leagueSeason   LeagueSeason @relation("LeagueSeasonConferences", fields: [leagueSeasonId], references: [id], onDelete: Cascade)
   seasonTeams    SeasonTeam[]
+  playersOfTheWeek PlayerOfTheWeek[]
 
   @@unique([leagueSeasonId, name])
   @@index([seasonId])
@@ -1541,10 +1543,18 @@ model PlayerOfTheWeek {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  /// The award slot: a league season, plus a conference when that edition is
+  /// split into conferences. Null on awards made before slots existed.
+  leagueSeasonId String?       @map("league_season_id")
+  conferenceId   String?       @map("conference_id")
+  player         Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  leagueSeason   LeagueSeason? @relation(fields: [leagueSeasonId], references: [id], onDelete: SetNull)
+  conference     Conference?   @relation(fields: [conferenceId], references: [id], onDelete: SetNull)
 
   @@index([playerId])
   @@index([active])
+  @@index([leagueSeasonId, conferenceId, active])
+  @@index([conferenceId])
   @@map("player_of_the_week")
 }
 

@@ -45,7 +45,7 @@ export function handleApiError(error: unknown, context: string, request?: Reques
   }
   if (
     error instanceof Error &&
-    (error.name === 'LeagueSeasonScopeError' || error.name === 'FixtureScopeError')
+    (error.name === 'LeagueSeasonScopeError' || error.name === 'FixtureScopeError' || error.name === 'PotwSlotError')
   ) {
     return json({ error: msg }, 400);
   }

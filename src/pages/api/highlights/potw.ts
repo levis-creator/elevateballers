@@ -1,9 +1,11 @@
 import type { APIRoute } from 'astro';
-import { getActivePlayerOfTheWeek, getPlayerOfTheWeekHistory } from '../../../features/cms/lib/editorial-queries';
+import { getActivePlayerOfTheWeek, getActivePlayersOfTheWeek, getPlayerOfTheWeekHistory, getPotwCandidates } from '../../../features/cms/lib/editorial-queries';
+import { buildPotwSlots, currentPotwSlots } from '../../../features/cms/lib/potw-slots';
+import { getPublicCompetitions } from '../../../features/seasons/data/public-competitions';
 import { setActivePlayerOfTheWeek, updatePlayerOfTheWeek, deletePlayerOfTheWeek } from '../../../features/cms/lib/editorial-mutations';
 import { requirePermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
-import { handleApiError } from '../../../lib/apiError';
+import { handleApiError, json } from '../../../lib/apiError';
 
 export const prerender = false;
 
@@ -11,6 +13,25 @@ export const GET: APIRoute = async ({ request }) => {
     try {
         const url = new URL(request.url);
         const history = url.searchParams.get('history') === 'true';
+
+        // Award slots (one per conference, or per single-table league) with the
+        // active pick in each, for the admin manager.
+        if (url.searchParams.get('slots') === 'true') {
+            const [competitions, active] = await Promise.all([getPublicCompetitions(), getActivePlayersOfTheWeek()]);
+            return json({
+                slots: buildPotwSlots(competitions),
+                currentSlotKeys: currentPotwSlots(competitions).map((slot) => slot.key),
+                active,
+            }, 200);
+        }
+
+        // Players eligible for one slot, ranked by points per game there.
+        if (url.searchParams.get('candidates') === 'true') {
+            await requirePermission(request, 'potw:create');
+            const leagueSeasonId = url.searchParams.get('leagueSeasonId');
+            if (!leagueSeasonId) return json({ error: 'leagueSeasonId is required' }, 400);
+            return json(await getPotwCandidates(leagueSeasonId, url.searchParams.get('conferenceId') || null), 200);
+        }
 
         if (history) {
             const allPotw = await getPlayerOfTheWeekHistory();
@@ -44,7 +65,12 @@ export const POST: APIRoute = async ({ request }) => {
         await logAudit(
             request,
             'POTW_CREATED',
-            { playerId: data.playerId, hasDescription: Boolean(data.description) }
+            {
+                playerId: data.playerId,
+                leagueSeasonId: data.leagueSeasonId ?? null,
+                conferenceId: data.conferenceId ?? null,
+                hasDescription: Boolean(data.description),
+            }
         );
 
         return new Response(JSON.stringify(potw), {

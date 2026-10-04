@@ -107,7 +107,11 @@ export const FALLBACK_MEDIA: MediaItem[] = [
 export const FALLBACK_MEDIA_TABS: string[] = ["All", "Images", "Audio"];
 
 export const FALLBACK_POTW: Potw = {
+	slotLabel: null,
+	slotDescription: null,
 	name: "Travious Kitondo",
+	teamName: null,
+	awardedAt: null,
 	teamLabel: "CBA Jets · #7",
 	tagline: "Dynamite.",
 	image: null,

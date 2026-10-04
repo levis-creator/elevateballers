@@ -3,7 +3,7 @@
  *
  * Restores v1's site-wide graph (SportsOrganization / WebSite / WebPage /
  * BreadcrumbList / logo) and adds SportsEvent + NewsArticle derived from the
- * real HomeData. Demo/fallback rows (no ISO date) are excluded so we never emit
+ * real HomeData, plus a Person for each Player of the Week. Demo/fallback rows (no ISO date) are excluded so we never emit
  * fake events/articles.
  */
 import type { HomeData } from "@/features/home/domain/entities/home-v2";
@@ -116,6 +116,29 @@ export function buildHomeJsonLd(
 			...(n.image ? { image: abs(origin, n.image) } : {}),
 			author: orgRef,
 			publisher: orgRef,
+		});
+	}
+
+	// Real Players of the Week → Person with the award. Demo content (no profile
+	// link / award date) is skipped so we never mark up a fake athlete.
+	for (const p of home.potws) {
+		if (!p.href || !p.awardedAt) continue;
+		const award = p.slotDescription ? `Player of the Week — ${p.slotDescription}` : "Player of the Week";
+		graph.push({
+			"@type": "Person",
+			"@id": `${abs(origin, p.href)}#person`,
+			name: p.name,
+			url: abs(origin, p.href),
+			...(p.image ? { image: abs(origin, p.image) } : {}),
+			award,
+			...(p.teamName ? { memberOf: { "@type": "SportsTeam", name: p.teamName, sport: "Basketball" } } : {}),
+			affiliation: orgRef,
+			subjectOf: {
+				"@type": "WebPageElement",
+				name: award,
+				datePublished: p.awardedAt,
+				isPartOf: { "@id": `${origin}/` },
+			},
 		});
 	}
 

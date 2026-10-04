@@ -52,7 +52,7 @@ const jsonLd = buildHomeJsonLd(siteBase, home, footer.socials.map((s) => s.url),
 	<Hero heroCtaLabel={heroCtaLabel} nextMatch={home.nextMatch} counts={home.counts} settings={homeSettings} showArt={brandSettings.heroArt} animateCounters={homeSettings.countUp && brandSettings.counters} />
 	{homeSettings.ticker && tickerItems.length > 0 && <NewsTicker items={tickerItems} label={homeSettings.tickerLabel} speed={homeSettings.tickerSpeed} />}
 	{homeSettings.fixturesBlock && <FixturesResults upcoming={home.upcoming.slice(0, homeSettings.fixturesCount)} results={home.results.slice(0, homeSettings.fixturesCount)} fixturesHeading={homeSettings.fixturesHeading} resultsHeading={homeSettings.resultsHeading} emptyMessage={homeSettings.emptyFixtures} />}
-	{homeSettings.potw && <PlayerOfTheWeek potw={home.potw} settings={potwSettings} />}
+	{homeSettings.potw && <PlayerOfTheWeek potws={home.potws} settings={potwSettings} />}
 	{homeSettings.newsBlock && <LatestNews news={home.news.slice(0, homeSettings.newsCount)} categories={home.newsCategories} eyebrow={homeSettings.newsEyebrow} heading={homeSettings.newsHeading} showFilters={homeSettings.newsFilters} client:visible />}
 	{homeSettings.leadersBlock && <StatsSection
 		leaderData={leaderData}
