@@ -1154,6 +1154,9 @@ model MatchEvent {
   metadata         Json?
   isUndone         Boolean        @default(false) @map("is_undone")
   undoneAt         DateTime?      @map("undone_at")
+  // Idempotency key minted by the live console at the tap. Unique per match,
+  // so a retried send can never record the same event twice.
+  clientId         String?        @map("client_id") @db.VarChar(64)
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
   assistPlayer     Player?        @relation("AssistEvents", fields: [assistPlayerId], references: [id])
@@ -1170,6 +1173,7 @@ model MatchEvent {
   @@index([period])
   @@index([sequenceNumber])
   @@index([isUndone])
+  @@unique([matchId, clientId])
   @@index([assistPlayerId], map: "match_events_assist_player_id_fkey")
   @@map("match_events")
 }
@@ -1386,6 +1390,8 @@ model Timeout {
   period           Int
   timeoutType      TimeoutType @map("timeout_type")
   secondsRemaining Int?        @map("seconds_remaining")
+  // Idempotency key from the live console; unique per match.
+  clientId         String?     @map("client_id") @db.VarChar(64)
   createdAt        DateTime    @default(now()) @map("created_at")
   match            Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
   team             Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -1393,6 +1399,7 @@ model Timeout {
   @@index([matchId])
   @@index([teamId])
   @@index([period])
+  @@unique([matchId, clientId])
   @@map("timeouts")
 }
 
@@ -1419,7 +1426,9 @@ model Substitution {
   @@index([playerInId])
   @@index([playerOutId])
   @@index([period])
-  @@index([matchId, clientBatchId])
+  // One row per pair in a batch, so the batch id plus the player going off
+  // identifies a row; unique so a replayed batch can't duplicate it.
+  @@unique([matchId, clientBatchId, playerOutId])
   @@map("substitutions")
 }
 

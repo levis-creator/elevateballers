@@ -2,9 +2,8 @@
 export const prerender = false;
 export const ssr = false;
 
-// Live scoring console. Hosts the full game-tracking experience
-// (MatchDetailView) regardless of UI version — under v2 the read-only match
-// detail lives at /admin/matches/view/[id] and links here to score.
+// Match Center — same page as /admin/matches/view/[id]. Shows the pre-match,
+// live console or post-match view for the match's status.
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
 import MatchDetailView from '../../../../features/cms/components/MatchDetailView';
 

@@ -80,8 +80,20 @@ export function isHalftimeTransition(currentPeriod: number, nextPeriod: number, 
 }
 
 /**
- * Calculate next sequence number for a match event
- * Note: This function requires prisma to be passed or imported where used
+ * Lock a match's row for the rest of the transaction. Every write that adds
+ * match events takes this lock before allocating sequence numbers, so two
+ * writers (two devices, or the console and an admin edit) take turns instead
+ * of both reading the same "last" number. Pass the transaction client.
+ */
+export async function lockMatchForEvents(tx: any, matchId: string): Promise<void> {
+  await tx.$queryRaw`SELECT id FROM matches WHERE id = ${matchId} FOR UPDATE`;
+}
+
+/**
+ * Next sequence number for a match event. Counts undone events too, so their
+ * numbers are never handed out again. Call inside a transaction after
+ * lockMatchForEvents so the read and the insert can't interleave with another
+ * writer.
  */
 export async function getNextSequenceNumber(
   matchId: string,
@@ -90,7 +102,6 @@ export async function getNextSequenceNumber(
   const lastEvent = await prismaClient.matchEvent.findFirst({
     where: {
       matchId,
-      isUndone: false,
     },
     orderBy: {
       sequenceNumber: 'desc',

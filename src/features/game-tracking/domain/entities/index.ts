@@ -140,6 +140,8 @@ export type CreateTimeoutInput = {
   period: number;
   timeoutType: TimeoutType;
   secondsRemaining?: number | null;
+  /** Live console client id; a retried request with the same id is ignored. */
+  clientId?: string | null;
 };
 
 export type CreateSubstitutionInput = {

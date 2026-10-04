@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     }
 
     const body = await request.json();
-    const { teamId, period, timeoutType, secondsRemaining } = body;
+    const { teamId, period, timeoutType, secondsRemaining, clientId } = body;
 
     if (!teamId || !period || !timeoutType) {
       return new Response(
@@ -127,6 +127,7 @@ export const POST: APIRoute = async ({ params, request }) => {
       period: parseInt(period),
       timeoutType: timeoutType as TimeoutType,
       secondsRemaining: secondsRemaining ? parseInt(secondsRemaining) : null,
+      clientId: typeof clientId === 'string' ? clientId.slice(0, 64) : null,
     });
 
     if (!timeout) {

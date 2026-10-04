@@ -350,6 +350,19 @@ export async function getPlayByPlay(matchId: string): Promise<PlayByPlayData> {
 }
 
 /**
+ * Events added or changed since `since` (including ones undone), for keeping
+ * several devices on the same live match in step without refetching the log.
+ */
+export async function getPlayByPlayChanges(matchId: string, since: Date): Promise<PlayByPlayEvent[]> {
+  const events = await prisma.matchEvent.findMany({
+    where: { matchId, updatedAt: { gt: since } },
+    include: { player: true, assistPlayer: true, team: true },
+    orderBy: [{ period: 'asc' }, { sequenceNumber: 'asc' }],
+  });
+  return events as PlayByPlayEvent[];
+}
+
+/**
  * Get jump balls for a match
  */
 export async function getMatchJumpBalls(matchId: string): Promise<JumpBallWithRelations[]> {

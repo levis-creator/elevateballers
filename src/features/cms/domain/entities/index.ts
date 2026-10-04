@@ -454,7 +454,7 @@ export type CreateMatchEventInput = {
   secondsRemaining?: number;
 };
 
-export type UpdateMatchEventInput = Partial<Omit<CreateMatchEventInput, 'matchId' | 'eventType'>>;
+export type UpdateMatchEventInput = Partial<Omit<CreateMatchEventInput, 'matchId'>> & { isUndone?: boolean };
 
 // Extended Folder types with relations
 export type FolderWithMediaCount = Folder & {
