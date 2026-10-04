@@ -2,10 +2,10 @@
 export const prerender = false;
 export const ssr = false;
 
+// Match details open the Match Center, which shows the pre-match, live or
+// post-match view for the match's status (same page as the console route).
 import AdminLayout from '../../../../features/cms/components/AdminLayout.astro';
 import MatchDetailView from '../../../../features/cms/components/MatchDetailView';
-import MatchDetailV2 from '../../../../features/matches/presentation/v2/MatchDetailV2';
-import { usePublicAdminV2 } from '@/lib/admin-ui-version';
 
 const { id } = Astro.params;
 
@@ -14,6 +14,6 @@ if (!id) {
 }
 ---
 
-<AdminLayout title="Match Details - Admin" permission="matches:read">
-  {usePublicAdminV2 ? <MatchDetailV2 matchId={id} client:load /> : <MatchDetailView matchId={id} client:load />}
+<AdminLayout title="Match Center - Admin" permission="matches:read">
+  <MatchDetailView matchId={id} client:load />
 </AdminLayout>

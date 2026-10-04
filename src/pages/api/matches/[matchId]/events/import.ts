@@ -11,7 +11,8 @@ const VALID_EVENT_TYPES = new Set([
   'FREE_THROW_MADE', 'FREE_THROW_MISSED',
   'ASSIST', 'REBOUND_OFFENSIVE', 'REBOUND_DEFENSIVE',
   'STEAL', 'BLOCK', 'TURNOVER',
-  'FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT',
+  'FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_FLAGRANT', 'FOUL_UNSPORTSMANLIKE',
+  'FOUL_BENCH_TECHNICAL', 'FOUL_COACH_TECHNICAL', 'EJECTION',
   'SUBSTITUTION_IN', 'SUBSTITUTION_OUT',
   'TIMEOUT', 'INJURY', 'BREAK', 'PLAY_RESUMED', 'OTHER',
 ]);
@@ -105,6 +106,11 @@ export const POST: APIRoute = async ({ params, request }) => {
         teamId: row.teamId ? String(row.teamId) : undefined,
         assistPlayerId: row.assistPlayerId ? String(row.assistPlayerId) : undefined,
         description: row.description ? String(row.description) : undefined,
+        // Optional per-row idempotency key: re-importing the same file
+        // returns the rows already saved instead of duplicating them.
+        ...(typeof row.clientId === 'string' && row.clientId.length > 0 && row.clientId.length <= 64
+          ? { metadata: { cid: row.clientId } }
+          : {}),
       });
     }
 

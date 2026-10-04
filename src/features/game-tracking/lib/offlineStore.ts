@@ -17,6 +17,8 @@ export interface PendingEvent {
   period: number;
   secondsRemaining: number | null;
   description?: string | null;
+  assistPlayerId?: string | null;
+  metadata?: Record<string, unknown> | null;
   createdAt: number;    // Date.now() — used for ordering during sync
 }
 
@@ -37,9 +39,34 @@ export interface PendingSubBatch {
   createdAt: number;
 }
 
+/**
+ * One write from the live console, saved on the device before it is sent.
+ * The outbox sends them one at a time in tap order and deletes each only
+ * once the server confirms it.
+ */
+export interface OutboxItem {
+  id?: number;
+  matchId: string;
+  kind: 'event' | 'patch' | 'state' | 'clock' | 'timeout' | 'subs';
+  url: string;
+  method: 'POST' | 'PUT';
+  body: Record<string, unknown>;
+  /** Client id of an event this item creates. */
+  cid?: string | null;
+  /** Client id of the event a patch targets, resolved to a server id on send. */
+  refCid?: string | null;
+  /** Server id of the patch target, once known. */
+  refId?: string | null;
+  /** Date.now() at the tap, for clock requests and ordering. */
+  tappedAt: number;
+  attempts: number;
+  createdAt: number;
+}
+
 class ElevateOfflineStore extends Dexie {
   pendingEvents!: Table<PendingEvent, number>;
   pendingSubBatches!: Table<PendingSubBatch, number>;
+  outbox!: Table<OutboxItem, number>;
 
   constructor() {
     super('elevateBallers_offline_v1');
@@ -51,6 +78,12 @@ class ElevateOfflineStore extends Dexie {
     this.version(2).stores({
       pendingEvents: '++id, matchId, createdAt',
       pendingSubBatches: '++id, matchId, clientBatchId, createdAt',
+    });
+    // v3 adds the live console outbox.
+    this.version(3).stores({
+      pendingEvents: '++id, matchId, createdAt',
+      pendingSubBatches: '++id, matchId, clientBatchId, createdAt',
+      outbox: '++id, matchId, createdAt',
     });
   }
 }

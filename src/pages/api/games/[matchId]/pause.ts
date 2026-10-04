@@ -34,7 +34,8 @@ export const POST: APIRoute = async ({ params, request }) => {
     const running = body.running !== undefined ? body.running : undefined;
     const clockSeconds = body.clockSeconds !== undefined ? body.clockSeconds : undefined;
 
-    const success = await toggleGameClock(matchId, running, clockSeconds);
+    const delayMs = typeof body.delayMs === 'number' && Number.isFinite(body.delayMs) ? body.delayMs : 0;
+    const success = await toggleGameClock(matchId, running, clockSeconds, delayMs);
 
     if (!success) {
       return new Response(JSON.stringify({ error: 'Failed to toggle game clock' }), {

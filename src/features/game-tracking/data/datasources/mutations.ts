@@ -4,9 +4,10 @@
  */
 
 import { prisma } from '../../../../lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { getEnvBoolean } from '../../../../lib/env';
 import { cacheDel } from '../../../../lib/cache';
-import { getNextSequenceNumber } from '../../domain/usecases/utils';
+import { getNextSequenceNumber, lockMatchForEvents } from '../../domain/usecases/utils';
 import { assertSquadLimits, squadLimitError, SquadLimitError } from '../../domain/squad-limits';
 import { assertPlayersAvailable } from '../../../player/data/datasources/availability-repository';
 import type {
@@ -25,6 +26,18 @@ import type {
   Substitution,
   JumpBall,
 } from '../../types';
+
+/**
+ * Insert one game-level event with the next sequence number, under the
+ * per-match lock (see lockMatchForEvents).
+ */
+async function createNumberedEvent(data: Omit<Prisma.MatchEventUncheckedCreateInput, 'sequenceNumber'>) {
+  return prisma.$transaction(async (tx) => {
+    await lockMatchForEvents(tx, data.matchId);
+    const sequenceNumber = await getNextSequenceNumber(data.matchId, tx);
+    return tx.matchEvent.create({ data: { ...data, sequenceNumber } });
+  });
+}
 
 /**
  * Create game rules
@@ -325,9 +338,18 @@ export async function endGame(matchId: string, publishFinal = false): Promise<bo
 }
 
 /**
- * Pause/resume game clock
+ * Pause/resume game clock.
+ *
+ * `delayMs` is how long the request waited in the live console's outbox:
+ * the start/stop is applied at tap time, not arrival time, so a request held
+ * up by a slow or dropped connection doesn't shift the clock.
  */
-export async function toggleGameClock(matchId: string, running?: boolean, clockSeconds?: number): Promise<boolean> {
+export async function toggleGameClock(
+  matchId: string,
+  running?: boolean,
+  clockSeconds?: number,
+  delayMs = 0,
+): Promise<boolean> {
   try {
     const match = await prisma.match.findUnique({
       where: { id: matchId },
@@ -344,20 +366,21 @@ export async function toggleGameClock(matchId: string, running?: boolean, clockS
     }
 
     const newState = running !== undefined ? running : !match.clockRunning;
+    const tappedAt = Date.now() - Math.min(15 * 60 * 1000, Math.max(0, delayMs || 0));
 
     const updateData: Record<string, unknown> = { clockRunning: newState };
 
     if (newState === true) {
       // Resuming: record when the clock started and the seconds at that moment
       const currentSeconds = clockSeconds ?? match.clockSeconds ?? 0;
-      updateData.clockStartedAt = new Date();
+      updateData.clockStartedAt = new Date(tappedAt);
       updateData.clockSecondsAtStart = currentSeconds;
       updateData.clockSeconds = currentSeconds;
     } else {
       // Pausing: compute actual remaining from timestamp, persist it
       let remaining: number;
       if (match.clockStartedAt && match.clockSecondsAtStart !== null) {
-        const elapsed = Math.floor((Date.now() - match.clockStartedAt.getTime()) / 1000);
+        const elapsed = Math.floor((tappedAt - match.clockStartedAt.getTime()) / 1000);
         remaining = Math.max(0, match.clockSecondsAtStart - elapsed);
       } else {
         // Fallback: use value sent by client or stored value
@@ -385,6 +408,12 @@ export async function toggleGameClock(matchId: string, running?: boolean, clockS
  * Create timeout
  */
 export async function createTimeout(data: CreateTimeoutInput): Promise<Timeout | null> {
+  // Idempotency: a retried request returns the timeout already recorded. The
+  // unique (match_id, client_id) index also stops a retry that races the
+  // original, and the whole transaction (count included) rolls back.
+  const clientId = data.clientId || null;
+  const findExisting = () =>
+    clientId ? prisma.timeout.findUnique({ where: { matchId_clientId: { matchId: data.matchId, clientId } } }) : null;
   try {
     // Update team timeout count
     const match = await prisma.match.findUnique({
@@ -396,59 +425,47 @@ export async function createTimeout(data: CreateTimeoutInput): Promise<Timeout |
       return null;
     }
 
+    const existing = await findExisting();
+    if (existing) return existing;
+
     const isTeam1 = match.team1Id === data.teamId;
     const timeoutField = isTeam1 ? 'team1Timeouts' : 'team2Timeouts';
-    let currentTimeouts = isTeam1 ? match.team1Timeouts : match.team2Timeouts;
-
-    // If timeout count is 0 or null (game hasn't started), initialize timeouts from game rules
-    if (currentTimeouts === null || currentTimeouts === 0) {
-      const defaultTimeouts = match.gameRules?.timeouts60Second ?? 6;
-      // Initialize timeouts for this team (and the other team if also 0/null)
-      const updateData: any = {
-        [timeoutField]: defaultTimeouts,
-      };
-      // Also initialize the other team's timeouts if they're 0/null
-      const otherTimeoutField = isTeam1 ? 'team2Timeouts' : 'team1Timeouts';
-      const otherTimeouts = isTeam1 ? match.team2Timeouts : match.team1Timeouts;
-      if (otherTimeouts === null || otherTimeouts === 0) {
-        updateData[otherTimeoutField] = defaultTimeouts;
-      }
-
-      await prisma.match.update({
-        where: { id: data.matchId },
-        data: updateData,
-      });
-
-      // Update currentTimeouts to the initialized value
-      currentTimeouts = defaultTimeouts;
-    }
-
-    if (currentTimeouts <= 0) {
-      throw new Error('No timeouts remaining');
-    }
-
-    // Get sequence number for match event
-    const { getNextSequenceNumber } = await import('../../domain/usecases/utils');
-    const sequenceNumber = await getNextSequenceNumber(data.matchId, prisma);
-
-    // Calculate minute from secondsRemaining (approximate)
+    const otherTimeoutField = isTeam1 ? 'team2Timeouts' : 'team1Timeouts';
+    const defaultTimeouts = match.gameRules?.timeouts60Second ?? 6;
     const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
     const minute = data.secondsRemaining
       ? Math.ceil((periodLengthSeconds - data.secondsRemaining) / 60)
       : Math.ceil(periodLengthSeconds / 2 / 60); // Default to middle of period
 
-    // Create timeout record and match event in transaction
-    const [timeout] = await prisma.$transaction([
-      prisma.timeout.create({
+    // Lock the match so the remaining-timeouts count, the key check and the
+    // sequence number can't interleave with another writer.
+    const timeout = await prisma.$transaction(async (tx) => {
+      await lockMatchForEvents(tx, data.matchId);
+      if (clientId) {
+        const again = await tx.timeout.findUnique({ where: { matchId_clientId: { matchId: data.matchId, clientId } } });
+        if (again) return again;
+      }
+      const counts = await tx.match.findUnique({
+        where: { id: data.matchId },
+        select: { team1Timeouts: true, team2Timeouts: true },
+      });
+      // A count of 0/null means the game hasn't initialised timeouts yet.
+      const current = counts?.[timeoutField] || defaultTimeouts;
+      const other = counts?.[otherTimeoutField] || defaultTimeouts;
+      if (current <= 0) throw new Error('No timeouts remaining');
+
+      const sequenceNumber = await getNextSequenceNumber(data.matchId, tx);
+      const created = await tx.timeout.create({
         data: {
           matchId: data.matchId,
           teamId: data.teamId,
           period: data.period,
           timeoutType: data.timeoutType,
           secondsRemaining: data.secondsRemaining,
+          clientId,
         },
-      }),
-      prisma.matchEvent.create({
+      });
+      await tx.matchEvent.create({
         data: {
           matchId: data.matchId,
           eventType: 'TIMEOUT',
@@ -458,19 +475,24 @@ export async function createTimeout(data: CreateTimeoutInput): Promise<Timeout |
           sequenceNumber,
           teamId: data.teamId,
           description: `Timeout (${data.timeoutType === 'SIXTY_SECOND' ? '60s' : '30s'})`,
+          clientId,
+          ...(clientId ? { metadata: { cid: clientId } } : {}),
         },
-      }),
-      prisma.match.update({
+      });
+      await tx.match.update({
         where: { id: data.matchId },
         data: {
-          [timeoutField]: currentTimeouts - 1,
+          [timeoutField]: current - 1,
+          [otherTimeoutField]: other,
           clockRunning: false, // Pause clock on timeout
         },
-      }),
-    ]);
+      });
+      return created;
+    });
 
     return timeout;
   } catch (error) {
+    if (clientId && (error as { code?: string })?.code === 'P2002') return await findExisting();
     console.error('Error creating timeout:', error);
     return null;
   }
@@ -491,10 +513,6 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
       return null;
     }
 
-    // Get sequence numbers for match events
-    const { getNextSequenceNumber } = await import('../../domain/usecases/utils');
-    const sequenceNumber = await getNextSequenceNumber(data.matchId, prisma);
-
     // Calculate minute from secondsRemaining (approximate)
     const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
     const minute = data.secondsRemaining
@@ -503,6 +521,8 @@ export async function createSubstitution(data: CreateSubstitutionInput): Promise
 
     // Update player active status and create substitution + events in transaction
     const result = await prisma.$transaction(async (tx) => {
+      await lockMatchForEvents(tx, data.matchId);
+      const sequenceNumber = await getNextSequenceNumber(data.matchId, tx);
       // Get playerOut details (we already have playerIn partial, but fetch full name here)
       const [pIn, pOut] = await Promise.all([
         tx.player.findUnique({ where: { id: data.playerInId }, select: { firstName: true, lastName: true, jerseyNumber: true } }),
@@ -711,8 +731,10 @@ export async function createBulkSubstitutions(
     : Math.ceil(periodLengthSeconds / 2 / 60);
   const playerById = new Map(players.map((p) => [p.id, p]));
 
-  return prisma.$transaction(
+  try {
+    return await prisma.$transaction(
     async (tx) => {
+      await lockMatchForEvents(tx, data.matchId);
       // Idempotency: if this batch id has been recorded already (retry after
       // a timed-out response), skip the writes and return the existing rows.
       if (data.clientBatchId) {
@@ -887,6 +909,14 @@ export async function createBulkSubstitutions(
     },
     { timeout: 20000 },
   );
+  } catch (error) {
+    // A replay that raced the original batch hits the unique
+    // (match_id, client_batch_id, player_out_id) index; the batch is saved.
+    if (data.clientBatchId && (error as { code?: string })?.code === 'P2002') {
+      return prisma.substitution.findMany({ where: { matchId: data.matchId, clientBatchId: data.clientBatchId } });
+    }
+    throw error;
+  }
 }
 
 /**
@@ -955,13 +985,6 @@ export async function endPeriod(matchId: string): Promise<boolean> {
     const halftimePeriod = rules?.halftimePeriod ?? 2;
     const isHalftime = match.currentPeriod === halftimePeriod;
 
-    // Get sequence number for halftime event if applicable
-    let halftimeSequenceNumber: number | null = null;
-    if (isHalftime) {
-      const { getNextSequenceNumber } = await import('../../domain/usecases/utils');
-      halftimeSequenceNumber = await getNextSequenceNumber(matchId, prisma);
-    }
-
     // End current period
     await updateMatchPeriod(matchId, match.currentPeriod, {
       endTime: new Date(),
@@ -979,21 +1002,18 @@ export async function endPeriod(matchId: string): Promise<boolean> {
     const timeoutCount = rules?.timeouts60Second ?? 6;
 
     // Create halftime event if we're at halftime transition
-    if (isHalftime && halftimeSequenceNumber !== null) {
+    if (isHalftime) {
       // Calculate minute (end of quarter = 0 minutes remaining = full quarter length in minutes)
       const minute = rules?.minutesPerPeriod ?? 10;
 
-      await prisma.matchEvent.create({
-        data: {
-          matchId,
-          eventType: 'BREAK',
-          minute,
-          period: match.currentPeriod,
-          secondsRemaining: 0,
-          sequenceNumber: halftimeSequenceNumber,
-          teamId: null, // Break events are game-level, not team-specific
-          description: `${rules?.halftimeDurationMinutes ?? 15} min`,
-        },
+      await createNumberedEvent({
+        matchId,
+        eventType: 'BREAK',
+        minute,
+        period: match.currentPeriod,
+        secondsRemaining: 0,
+        teamId: null, // Break events are game-level, not team-specific
+        description: `${rules?.halftimeDurationMinutes ?? 15} min`,
       });
     }
 
@@ -1024,19 +1044,13 @@ export async function endPeriod(matchId: string): Promise<boolean> {
 
     // Create "break over" event if we're starting the quarter after halftime
     if (isHalftime) {
-      const { getNextSequenceNumber } = await import('../../domain/usecases/utils');
-      const breakOverSequenceNumber = await getNextSequenceNumber(matchId, prisma);
-
-      await prisma.matchEvent.create({
-        data: {
-          matchId,
-          eventType: 'PLAY_RESUMED',
-          minute: 0,
-          period: nextPeriod,
-          secondsRemaining: periodLengthSeconds,
-          sequenceNumber: breakOverSequenceNumber,
-          teamId: null, // Play resumed events are game-level, not team-specific
-        },
+      await createNumberedEvent({
+        matchId,
+        eventType: 'PLAY_RESUMED',
+        minute: 0,
+        period: nextPeriod,
+        secondsRemaining: periodLengthSeconds,
+        teamId: null, // Play resumed events are game-level, not team-specific
       });
     }
 
@@ -1061,10 +1075,6 @@ export async function createJumpBall(data: CreateJumpBallInput): Promise<JumpBal
       return null;
     }
 
-    // Get sequence number for match event
-    const { getNextSequenceNumber } = await import('../../domain/usecases/utils');
-    const sequenceNumber = await getNextSequenceNumber(data.matchId, prisma);
-
     // Calculate minute from secondsRemaining (approximate)
     const periodLengthSeconds = (match.gameRules?.minutesPerPeriod ?? 10) * 60;
     const minute = data.secondsRemaining
@@ -1073,6 +1083,8 @@ export async function createJumpBall(data: CreateJumpBallInput): Promise<JumpBal
 
     // Create jump ball record and match event in transaction
     const jumpBall = await prisma.$transaction(async (tx) => {
+      await lockMatchForEvents(tx, data.matchId);
+      const sequenceNumber = await getNextSequenceNumber(data.matchId, tx);
       const jb = await tx.jumpBall.create({
         data: {
           matchId: data.matchId,
