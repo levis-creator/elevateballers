@@ -7,13 +7,13 @@
 import { getUpcomingMatches, getCompletedMatches } from "@/features/matches/lib/queries";
 import { getZonedDateParts, formatMatchTime } from "@/features/matches/domain/usecases/utils";
 import { getDisplayImageUrl } from "@/lib/asset-url";
-import type { FixtureMatch, FixtureStatus, FixturesData } from "@/features/fixtures/domain/entities/fixtures-v2";
+import type { FixtureMatch, FixtureStatus, FixturesData, PlayoffStage } from "@/features/fixtures/domain/entities/fixtures-v2";
 import { prisma } from "@/lib/prisma";
 import { getPublicCompetitions } from "@/features/seasons/data/public-competitions";
 import { calculatePlayerMatchStats } from "@/features/player/domain/usecases/playerStats";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
-const FIXTURES_CACHE_KEY = "public:fixtures:v2";
+const FIXTURES_CACHE_KEY = "public:fixtures:v3";
 const FIXTURES_CACHE_TTL_SECONDS = 60;
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -28,6 +28,13 @@ const abbrOf = (name: string): string => {
 
 const statusOf = (s: string): FixtureStatus =>
 	s === "COMPLETED" ? "done" : s === "LIVE" ? "live" : "upcoming";
+
+const STAGE_BY_ENUM: Record<string, PlayoffStage> = {
+	PLAYOFF: "PO",
+	QUARTER_FINALS: "QF",
+	SEMI_FINALS: "SF",
+	CHAMPIONSHIP: "F",
+};
 
 /** Match link — canonical slug when present, else the cuid (both resolve). */
 const hrefOf = (m: any): string => `/matches/${(m.slug as string) || m.id}`;
@@ -58,6 +65,7 @@ function toFixture(m: any): FixtureMatch {
 		awayTeamId: m.team2Id ?? null,
 		venue: m.venue ?? m.team1?.venue ?? m.team2?.venue ?? null,
 		round: m.bracketRound ? `Round ${m.bracketRound}` : m.stage ? String(m.stage).toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter: string) => letter.toUpperCase()) : "Regular Season",
+		stage: STAGE_BY_ENUM[m.stage] ?? null,
 		performer: null,
 		ts: new Date(m.date).getTime(),
 		isoDate,

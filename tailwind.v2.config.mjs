@@ -33,6 +33,7 @@ export default {
         night: 'rgb(var(--site-night-rgb, 12 11 10) / <alpha-value>)',
         night2: 'rgb(var(--site-night-raised-rgb, 17 16 16) / <alpha-value>)',
         cream: 'rgb(var(--site-cream-rgb, 243 239 233) / <alpha-value>)',
+        gold: '#e2b04a',
         creamdim: 'rgb(var(--site-cream-dim-rgb, 184 175 166) / <alpha-value>)',
       },
       fontFamily: {

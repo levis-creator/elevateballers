@@ -6,6 +6,10 @@
 
 export type FixtureStatus = "upcoming" | "live" | "done";
 
+/** Knockout round a match belongs to; null for regular-season games.
+ *  PO = generic playoff, QF/SF = quarter/semifinal, F = championship final. */
+export type PlayoffStage = "PO" | "QF" | "SF" | "F";
+
 export interface FixtureMatch {
 	id: string;
 	/** Link to the match detail page. */
@@ -23,6 +27,8 @@ export interface FixtureMatch {
 	awayTeamId: string | null;
 	venue: string | null;
 	round: string;
+	/** Optional for cache entries written before the field existed. */
+	stage?: PlayoffStage | null;
 	performer?: { name: string; team: string; image: string | null; pts: number; reb: number; ast: number } | null;
 
 	/** Epoch ms — precise sort key (upcoming ascending, results descending). */
