@@ -89,5 +89,7 @@ describe('stageLabel', () => {
   it('title-cases the enum', () => {
     expect(stageLabel('REGULAR_SEASON')).toBe('Regular Season');
     expect(stageLabel('QUARTER_FINALS')).toBe('Quarter Finals');
+    expect(stageLabel('SEMI_FINALS')).toBe('Semi-finals');
+    expect(stageLabel('CHAMPIONSHIP')).toBe('Finals');
   });
 });

@@ -4,7 +4,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ChevronLeft, Search, X, Users, CalendarClock, Trophy, Check, Save, Plus, AlertCircle } from 'lucide-react';
 import type { MatchStatus } from '@prisma/client';
 import { getTeamInitials } from '../../domain/usecases/team-helpers';
-import { MATCH_STAGES, stageLabel, scoresUnlocked } from '../../domain/usecases/match-form';
+import { stageOptions, stageLabel, scoresUnlocked } from '../../domain/usecases/match-form';
 import { useMatchForm, type DraftRosterPlayer, type TeamOption } from './hooks/useMatchForm';
 import MatchRoster from './MatchRoster';
 
@@ -282,7 +282,7 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
               <div>
                 <label className={labelCls}>Match Stage <span className="text-[var(--brand)]">*</span></label>
                 <select value={form.stage} onChange={(e) => f.setField('stage', e.target.value as typeof form.stage)} className="eb-in cursor-pointer">
-                  {MATCH_STAGES.map((s) => (
+                  {stageOptions(form.stage).map((s) => (
                     <option key={s} value={s}>{stageLabel(s)}</option>
                   ))}
                 </select>
