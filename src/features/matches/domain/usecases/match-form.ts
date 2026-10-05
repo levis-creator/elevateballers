@@ -6,20 +6,30 @@
 import type { MatchStage, MatchStatus } from '@prisma/client';
 import { parseLocalDateTimeToUTC } from './match-datetime';
 
+/** Stages offered when creating/editing a match. The database enum keeps the
+ *  older values (Preseason, Exhibition, …) so existing matches still load. */
 export const MATCH_STAGES: MatchStage[] = [
   'REGULAR_SEASON',
-  'PRESEASON',
-  'EXHIBITION',
-  'PLAYOFF',
   'QUARTER_FINALS',
   'SEMI_FINALS',
   'CHAMPIONSHIP',
-  'QUALIFIER',
-  'OTHER',
 ];
+
+const STAGE_LABELS: Partial<Record<MatchStage, string>> = {
+  SEMI_FINALS: 'Semi-finals',
+  CHAMPIONSHIP: 'Finals',
+};
+
+/** Stage options for a form: the offered stages, plus the match's current
+ *  stage when it is a retired one, so editing never silently changes it. */
+export function stageOptions(current: MatchStage | '' | null | undefined): MatchStage[] {
+  return current && !MATCH_STAGES.includes(current) ? [...MATCH_STAGES, current] : MATCH_STAGES;
+}
 
 /** Human label for a stage enum, e.g. "QUARTER_FINALS" -> "Quarter Finals". */
 export function stageLabel(stage: MatchStage | string): string {
+  const label = STAGE_LABELS[stage as MatchStage];
+  if (label) return label;
   return String(stage)
     .toLowerCase()
     .split('_')

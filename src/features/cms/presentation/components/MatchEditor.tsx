@@ -5,6 +5,7 @@ import type { MatchStage } from '@prisma/client';
 import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getTeam1Id, getTeam2Id } from '../../../matches/lib/team-helpers';
 import { getLeagueName, getLeagueId } from '../../../matches/lib/league-helpers';
 import { getSeasonId } from '../../../matches/lib/season-helpers';
+import { stageOptions, stageLabel } from '../../../matches/domain/usecases/match-form';
 import MatchPlayersManager from './MatchPlayersManager';
 import MatchEventsManager from './MatchEventsManager';
 import MatchImagesManager from './MatchImagesManager';
@@ -28,17 +29,6 @@ import { ArrowLeft, Save, X, AlertCircle, Trophy, Calendar, RefreshCw, Loader2, 
 
 // Constants moved outside component to prevent recreation on each render
 const MATCH_STATUSES: MatchStatus[] = ['UPCOMING', 'LIVE', 'COMPLETED'];
-const MATCH_STAGES: MatchStage[] = [
-  'REGULAR_SEASON',
-  'PRESEASON',
-  'EXHIBITION',
-  'PLAYOFF',
-  'QUARTER_FINALS',
-  'SEMI_FINALS',
-  'CHAMPIONSHIP',
-  'QUALIFIER',
-  'OTHER',
-];
 
 // Environment-based logging
 const isDev = typeof window !== 'undefined' && 
@@ -940,9 +930,9 @@ export default function MatchEditor({ matchId, seasonId: initialSeasonId }: Matc
                     <SelectValue placeholder="Select stage" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MATCH_STAGES.map((stage) => (
+                    {stageOptions(formData.stage).map((stage) => (
                       <SelectItem key={stage} value={stage}>
-                        {stage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        {stageLabel(stage)}
                       </SelectItem>
                     ))}
                   </SelectContent>
