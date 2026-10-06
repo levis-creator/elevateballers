@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toConsoleRules, timeoutWindow, periodLabel, periodLength } from './rules';
 import { derive, disqualification, emptyLine, lineOf, teamFoulsNow } from './derive';
-import { lastUndoable, linkedKeys, turnoverKind, type ConsoleEvent } from './model';
+import { lastUndoable, linkedKeys, turnoverKind, turnoverLabel, type ConsoleEvent } from './model';
 import { applySwaps, reconcileSlots } from './floor';
 
 const H = 'home';
@@ -89,11 +89,17 @@ describe('derive', () => {
     const events = [
       ev({ eventType: 'TURNOVER', playerId: 'p1', metadata: { subtype: 'TRAVEL' } }),
       ev({ eventType: 'TURNOVER', playerId: 'p1', metadata: { subtype: 'CARRY' } }),
+      ev({ eventType: 'TURNOVER', playerId: 'p1', metadata: { subtype: 'STEAL' } }),
+      ev({ eventType: 'TURNOVER', playerId: 'p1', metadata: { subtype: 'SHOT_CLOCK' } }),
+      ev({ eventType: 'TURNOVER', playerId: 'p1', metadata: { subtype: 'LOST_BALL' } }),
       ev({ eventType: 'TURNOVER', playerId: 'p1' }),
     ];
     const t = derive(events, H, A).teams.get(H)!;
-    expect(t.turnoversByKind).toEqual({ TRAVEL: 1, VIOLATION: 1, OTHER: 1 });
+    expect(t.turnoversByKind).toEqual({ TRAVEL: 1, CARRY: 1, STEAL: 1, CLOCK_VIOLATION: 1, UNTYPED: 2 });
     expect(turnoverKind('PASS')).toBe('BAD_PASS');
+    expect(turnoverKind('ILLEGAL_SCREEN')).toBe('OFFENSIVE_FOUL');
+    expect(turnoverKind('VIOLATION')).toBe('UNTYPED');
+    expect(turnoverLabel(null)).toBe('Untyped');
   });
 });
 

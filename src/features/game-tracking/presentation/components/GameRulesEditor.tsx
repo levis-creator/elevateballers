@@ -325,8 +325,14 @@ export default function GameRulesEditor({ rulesId, onSave }: GameRulesEditorProp
               onCheckedChange={(checked) => handleChange('displayGameClock', checked)}
             />
           </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="trackTurnoverTypes">Track Turnover Types</Label>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="trackTurnoverTypes">Track Turnover Types</Label>
+              <p className="text-sm text-muted-foreground">
+                After V, the scorer picks the type: steal, bad pass, traveling, offensive foul, double dribble,
+                carry, out of bounds, backcourt or clock violation. When off, V only asks who stole the ball.
+              </p>
+            </div>
             <Switch
               id="trackTurnoverTypes"
               checked={formData.trackTurnoverTypes}

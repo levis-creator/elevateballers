@@ -54,6 +54,7 @@ function FloorColumn({ lc, sc, side }: Props & { side: Side }) {
           if (prompt) {
             if (prompt.kind === 'ast') eligible = teamId === prompt.team && pid !== prompt.pid;
             else if (prompt.kind === 'stl') eligible = teamId === prompt.team;
+            else if (prompt.kind === 'tov') eligible = teamId !== prompt.team;
             else if (prompt.kind === 'reb') eligible = true;
             else eligible = false;
           }
@@ -186,14 +187,22 @@ function ActionPad({ lc, sc }: Props) {
       opts = playerOpts(prompt.team, () => true);
     } else if (prompt.kind === 'tov') {
       promptSub = `Turnover · ${tag(lc.players.get(prompt.pid))}`;
-      promptTitle = 'What kind?';
+      promptTitle = 'Turnover type? · or press the stealer';
       promptSkip = 'Cancel';
-      opts = TURNOVER_TYPES.map((t, i) => ({
-        key: String(i + 1),
-        label: t.label,
-        cls: 'flex h-10 items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 text-[13px] font-semibold text-[var(--tx)] hover:border-[var(--tx)]',
-        onClick: () => sc.pickTurnover(i),
-      }));
+      opts = [
+        ...TURNOVER_TYPES.map((t, i) => ({
+          key: String(i + 1),
+          label: `${t.label} · ${t.group}`,
+          cls: 'flex h-10 items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 text-[13px] font-semibold text-[var(--tx)] hover:border-[var(--tx)]',
+          onClick: () => sc.pickTurnover(i),
+        })),
+        {
+          key: '↵',
+          label: 'Log untyped',
+          cls: 'flex h-10 items-center gap-2 rounded-lg border border-dashed border-[var(--bord)] bg-[var(--surf2)] px-3 text-[13px] font-semibold text-[var(--txd)] hover:border-[var(--tx)] hover:text-[var(--tx)]',
+          onClick: sc.logUntypedTurnover,
+        },
+      ];
     } else if (prompt.kind === 'team') {
       promptSub = prompt.type === 'FOUL_BENCH_TECHNICAL' ? 'Bench technical' : 'Coach technical';
       promptTitle = 'Which bench?';
@@ -219,7 +228,6 @@ function ActionPad({ lc, sc }: Props) {
     ['Assist', 'A', 'ASSIST'],
     ['Off reb', 'X', 'REBOUND_OFFENSIVE'],
     ['Def reb', 'D', 'REBOUND_DEFENSIVE'],
-    ['Steal', 'S', 'STEAL'],
     ['Block', 'B', 'BLOCK'],
     ['Turnover', 'V', 'TURNOVER'],
   ];

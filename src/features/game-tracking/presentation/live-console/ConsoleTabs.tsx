@@ -1,7 +1,7 @@
 import { TONE, card, type Side } from './tone';
 import { periodLabel } from '../../domain/live-console/rules';
 import { disqualification, emptyLine, lineOf } from '../../domain/live-console/derive';
-import { INCIDENTS, MADE_SHOTS, POINTS, TURNOVER_TYPES } from '../../domain/live-console/model';
+import { INCIDENTS, MADE_SHOTS, POINTS, TURNOVER_TYPES, UNTYPED_TURNOVER } from '../../domain/live-console/model';
 import { jersey } from './roster';
 import { mmss } from './useConsoleClock';
 import type { LiveConsole } from './useLiveConsole';
@@ -127,6 +127,8 @@ export function BoxScoreTab({ lc, final = false }: { lc: LiveConsole; final?: bo
             ['Coach T', totals.coachTechs],
           ];
           const tovs = TURNOVER_TYPES.map((k) => [k.label, totals.turnoversByKind[k.value] ?? 0] as [string, number]);
+          const untyped = totals.turnoversByKind[UNTYPED_TURNOVER.value] ?? 0;
+          if (untyped) tovs.push([UNTYPED_TURNOVER.label, untyped]);
           const Tile = ({ label, val }: { label: string; val: number }) => (
             <div className="flex items-baseline justify-between rounded-lg border border-[var(--bord2)] bg-[var(--surf2)] px-2.5 py-2">
               <span className="text-[12px] text-[var(--txd)]">{label}</span>

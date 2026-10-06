@@ -92,37 +92,44 @@ export const EVENT_LABEL: Record<string, string> = {
 
 export const TEAM_REBOUND_LABEL = 'Team rebound';
 
-/** The six turnover kinds the console asks for (keys 1–6). */
+/**
+ * The nine turnover kinds the console asks for (keys 1–9). A steal is a
+ * turnover kind — the defender is credited with a linked STEAL event.
+ */
 export const TURNOVER_TYPES = [
-  { value: 'BAD_PASS', label: 'Bad pass' },
-  { value: 'LOST_BALL', label: 'Lost ball' },
-  { value: 'TRAVEL', label: 'Travel' },
-  { value: 'OFFENSIVE_FOUL', label: 'Offensive foul' },
-  { value: 'VIOLATION', label: 'Violation' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'STEAL', label: 'Steal', group: 'Defence' },
+  { value: 'BAD_PASS', label: 'Bad pass', group: 'Passing' },
+  { value: 'TRAVEL', label: 'Traveling', group: 'Ball-handling' },
+  { value: 'OFFENSIVE_FOUL', label: 'Offensive foul', group: 'Foul' },
+  { value: 'DOUBLE_DRIBBLE', label: 'Double dribble', group: 'Ball-handling' },
+  { value: 'CARRY', label: 'Carry / palm', group: 'Ball-handling' },
+  { value: 'OUT_OF_BOUNDS', label: 'Out of bounds', group: 'Violation' },
+  { value: 'BACKCOURT', label: 'Backcourt', group: 'Violation' },
+  { value: 'CLOCK_VIOLATION', label: 'Clock violation', group: 'Violation' },
 ] as const;
 
-/** Older consoles used finer subtypes; fold them into the six kinds. */
+export type TurnoverType = (typeof TURNOVER_TYPES)[number];
+
+/** Turnovers logged without a type, or with a legacy type too vague to place. */
+export const UNTYPED_TURNOVER = { value: 'UNTYPED', label: 'Untyped' } as const;
+
+/** Older consoles used other subtypes; fold the ones that map cleanly. */
 const LEGACY_TURNOVER: Record<string, string> = {
   PASS: 'BAD_PASS',
-  DOUBLE_DRIBBLE: 'VIOLATION',
-  CARRY: 'VIOLATION',
-  OUT_OF_BOUNDS: 'VIOLATION',
-  BACKCOURT: 'VIOLATION',
-  SHOT_CLOCK: 'VIOLATION',
-  THREE_SECOND: 'VIOLATION',
+  SHOT_CLOCK: 'CLOCK_VIOLATION',
+  THREE_SECOND: 'CLOCK_VIOLATION',
   ILLEGAL_SCREEN: 'OFFENSIVE_FOUL',
 };
 
 export function turnoverKind(subtype: string | undefined | null): string {
-  if (!subtype) return 'OTHER';
+  if (!subtype) return UNTYPED_TURNOVER.value;
   if (TURNOVER_TYPES.some((t) => t.value === subtype)) return subtype;
-  return LEGACY_TURNOVER[subtype] ?? 'OTHER';
+  return LEGACY_TURNOVER[subtype] ?? UNTYPED_TURNOVER.value;
 }
 
 export function turnoverLabel(subtype: string | undefined | null): string {
   const kind = turnoverKind(subtype);
-  return TURNOVER_TYPES.find((t) => t.value === kind)?.label ?? 'Other';
+  return TURNOVER_TYPES.find((t) => t.value === kind)?.label ?? UNTYPED_TURNOVER.label;
 }
 
 export const MADE_SHOTS = new Set(['TWO_POINT_MADE', 'THREE_POINT_MADE', 'FREE_THROW_MADE']);
