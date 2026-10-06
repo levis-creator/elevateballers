@@ -71,7 +71,7 @@ export async function getDefaultGameRules(): Promise<GameRules> {
       enableThreePointShots: true,
       foulsToFoulOut: 5,
       displayGameClock: true,
-      trackTurnoverTypes: false,
+      trackTurnoverTypes: true,
       trackFoulTypes: false,
       trackPlayingTime: false,
       recordShotLocations: false,

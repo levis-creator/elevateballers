@@ -64,7 +64,7 @@ export function toConsoleRules(source: RulesSource | null | undefined): ConsoleR
     techsToDQ: FIBA.techsToDQ,
     unsportsToDQ: FIBA.unsportsToDQ,
     teamFoulsCarryIntoOT: FIBA.teamFoulsCarryIntoOT,
-    trackTurnoverTypes: r.trackTurnoverTypes ?? false,
+    trackTurnoverTypes: r.trackTurnoverTypes ?? true,
   };
 }
 

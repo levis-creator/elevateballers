@@ -38,7 +38,7 @@ export default function GameRulesEditor({ rulesId, onSave }: GameRulesEditorProp
     enableThreePointShots: true,
     foulsToFoulOut: 5,
     displayGameClock: true,
-    trackTurnoverTypes: false,
+    trackTurnoverTypes: true,
     trackFoulTypes: false,
     trackPlayingTime: false,
     recordShotLocations: false,

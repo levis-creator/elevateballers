@@ -62,7 +62,7 @@ export async function createGameRules(data: CreateGameRulesInput): Promise<GameR
         enableThreePointShots: data.enableThreePointShots ?? true,
         foulsToFoulOut: data.foulsToFoulOut ?? 5,
         displayGameClock: data.displayGameClock ?? true,
-        trackTurnoverTypes: data.trackTurnoverTypes ?? false,
+        trackTurnoverTypes: data.trackTurnoverTypes ?? true,
         trackFoulTypes: data.trackFoulTypes ?? false,
         trackPlayingTime: data.trackPlayingTime ?? false,
         recordShotLocations: data.recordShotLocations ?? false,
