@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMatchViewStore } from "@/features/matches/presentation/stores/v2/useMatchViewStore";
 import TeamName from "@/features/teams/presentation/components/TeamName";
-import type { MatchView } from "@/features/matches/domain/entities/match-detail-v2";
+import type { LineupPlayer, MatchView } from "@/features/matches/domain/entities/match-detail-v2";
 import { resolveMatchTabs, type MatchTabKind, type PublicMatchPageSettings } from "@/features/settings/application/matchPageSettings";
 
 const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
@@ -23,6 +23,42 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 	<h2 className="mb-4 font-display text-[22px] uppercase text-ink">{children}</h2>
 );
 
+/** One team's submitted match-day lineup: starters first, then the bench. */
+function LineupCard({ team, abbr, logo, nickname, players }: { team: string; abbr: string; logo: string | null; nickname?: string | null; players: LineupPlayer[] }) {
+	const groups = [
+		{ label: "Starters", rows: players.filter((p) => p.starter) },
+		{ label: "Bench", rows: players.filter((p) => !p.starter) },
+	];
+	return (
+		<div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
+			<div className="border-b border-black/[0.08] bg-paper2 px-5 py-3.5">
+				<TeamName team={{ name: team, nickname, logo, initials: abbr }} variant="compact" withCrest className="font-body text-[15px] font-extrabold uppercase text-ink2" />
+			</div>
+			{players.length ? (
+				groups.map((g) =>
+					g.rows.length ? (
+						<div key={g.label}>
+							<div className="px-5 pt-3 pb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">{g.label}</div>
+							{g.rows.map((p, i) => (
+								<div key={i} className="flex items-center gap-3 border-b border-black/[0.06] px-5 py-2.5 last:border-0">
+									<span className="w-8 flex-shrink-0 text-right font-display text-[16px] text-ink">{p.num || "—"}</span>
+									<Avatar image={p.image} size={36} />
+									<div className="min-w-0">
+										<div className="truncate font-body text-[14px] font-bold text-ink2">{p.name}</div>
+										{p.position && <div className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted2">{p.position}</div>}
+									</div>
+								</div>
+							))}
+						</div>
+					) : null,
+				)
+			) : (
+				<div className="px-5 py-8 text-center font-body text-[13px] text-muted">Lineup not submitted yet.</div>
+			)}
+		</div>
+	);
+}
+
 const youtubeEmbed = (url: string): string | null => {
 	const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{6,})/i);
 	return match ? `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1` : null;
@@ -30,7 +66,7 @@ const youtubeEmbed = (url: string): string | null => {
 
 /** Full match-detail view: scoreboard hero + state-driven sections
  *  (live/final: quarters, performers, comparison, box, play-by-play;
- *  upcoming: recent form, head-to-head, players to watch). React island;
+ *  upcoming: lineups, recent form, head-to-head, players to watch). React island;
  *  box team and play-by-play period live in a Zustand store. */
 export default function MatchDetailBoard({ view: initialView, settings, canViewBoxScore }: { view: MatchView; settings: PublicMatchPageSettings; canViewBoxScore: boolean }) {
 	const [view, setView] = useState(initialView);
@@ -246,16 +282,17 @@ export default function MatchDetailBoard({ view: initialView, settings, canViewB
 								<button type="button" onClick={() => setBox("away")} className={seg(activeBox === "away")}>{view.away.name}</button>
 							</div>
 							<div className="overflow-x-auto rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)]">
-								<div className="min-w-[640px]">
-									<div className="grid grid-cols-[1fr_52px_52px_52px_52px_52px_56px] items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
-										<span>Player</span><span className="text-center">MIN</span><span className="text-center">PTS</span><span className="text-center">REB</span><span className="text-center">AST</span><span className="text-center">STL</span><span className="text-center">3PT</span>
+								<div className="min-w-[760px]">
+									<div className="grid grid-cols-[1fr_52px_52px_52px_52px_52px_56px_52px_52px] items-center gap-2 border-b border-black/[0.08] bg-paper2 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
+										<span>Player</span><span className="text-center">MIN</span><span className="text-center">PTS</span><span className="text-center">REB</span><span className="text-center">AST</span><span className="text-center">STL</span><span className="text-center">3PT</span><span className="text-center">BLK</span><span className="text-center">PF</span>
 									</div>
 									{boxRows.length > 0 ? boxRows.map((p, i) => (
-										<div key={i} className="grid grid-cols-[1fr_52px_52px_52px_52px_52px_56px] items-center gap-2 border-b border-black/[0.06] px-5 py-3 last:border-0 hover:bg-paper2">
+										<div key={i} className="grid grid-cols-[1fr_52px_52px_52px_52px_52px_56px_52px_52px] items-center gap-2 border-b border-black/[0.06] px-5 py-3 last:border-0 hover:bg-paper2">
 											<span className="flex items-center gap-3">
 												<span className="w-6 font-mono text-[11px] text-muted2">{p.num}</span>
 												<span className="font-body text-[14px] font-bold text-ink2">{p.name}</span>
 														{settings.lineups && p.starter && <span className="rounded bg-brand/10 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.08em] text-brand">ST</span>}
+														{p.ejected && <span className="rounded bg-brand px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.08em] text-brandfg">Ejected</span>}
 											</span>
 											<span className="text-center font-mono text-[13px] text-muted">{p.min}</span>
 											<span className="text-center font-mono text-[13px] font-bold text-ink2">{p.pts}</span>
@@ -263,6 +300,8 @@ export default function MatchDetailBoard({ view: initialView, settings, canViewB
 											<span className="text-center font-mono text-[13px] text-muted">{p.ast}</span>
 											<span className="text-center font-mono text-[13px] text-muted">{p.stl}</span>
 											<span className="text-center font-mono text-[13px] text-muted">{p.tp}</span>
+											<span className="text-center font-mono text-[13px] text-muted">{p.blk}</span>
+											<span className="text-center font-mono text-[13px] text-muted">{p.pf}</span>
 										</div>
 									)) : (
 										<div className="px-5 py-8 text-center font-body text-[13px] text-muted">No box score recorded for this team.</div>
@@ -330,6 +369,17 @@ export default function MatchDetailBoard({ view: initialView, settings, canViewB
 				</>
 			) : (
 				<>
+					{/* LINEUPS — public as soon as a team submits */}
+					{settings.lineups && (view.lineups.home.length > 0 || view.lineups.away.length > 0) && (
+						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
+							<SectionTitle>Lineups</SectionTitle>
+							<div className="grid grid-cols-2 gap-4 max-[600px]:grid-cols-1">
+								<LineupCard team={view.home.name} abbr={view.home.abbr} logo={view.home.logo} nickname={view.home.nickname} players={view.lineups.home} />
+								<LineupCard team={view.away.name} abbr={view.away.abbr} logo={view.away.logo} nickname={view.away.nickname} players={view.lineups.away} />
+							</div>
+						</section>
+					)}
+
 					{/* RECENT FORM */}
 					{view.formGuide.length > 0 && (
 						<section className="mx-auto max-w-[1000px] px-8 pt-[48px] max-[960px]:px-6 max-[960px]:pt-9">
@@ -393,7 +443,7 @@ export default function MatchDetailBoard({ view: initialView, settings, canViewB
 						</section>
 					)}
 
-					{!view.formGuide.length && !view.h2h.length && !view.watch.length && (
+					{!view.formGuide.length && !view.h2h.length && !view.watch.length && !(settings.lineups && (view.lineups.home.length || view.lineups.away.length)) && (
 						<section className="mx-auto max-w-[1000px] px-8 py-[56px] max-[960px]:px-6">
 							<div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-black/[0.16] bg-paper2 px-8 py-16 text-center">
 								<div className="font-display text-[20px] uppercase text-ink">Preview coming soon</div>

@@ -63,9 +63,21 @@ export interface BoxRow {
 	ast: number;
 	stl: number;
 	tp: number;
-	/** Blocks / personal fouls — surfaced in the admin box score. */
 	blk: number;
+	/** Player fouls: personal, technical, flagrant and unsportsmanlike. */
 	pf: number;
+	/** Ejected from the game. */
+	ejected: boolean;
+}
+
+/** One player in a submitted match-day lineup. */
+export interface LineupPlayer {
+	/** e.g. "#7", or "" when no number is set. */
+	num: string;
+	name: string;
+	image: string | null;
+	position: string | null;
+	starter: boolean;
 }
 
 /** One play-by-play entry with the running score after it. */
@@ -163,4 +175,6 @@ export interface MatchView {
 	formGuide: FormGuide[];
 	h2h: H2HRow[];
 	watch: WatchCard[];
+	/** Submitted match-day lineups (empty for a team that hasn't submitted). */
+	lineups: { home: LineupPlayer[]; away: LineupPlayer[] };
 }

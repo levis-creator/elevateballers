@@ -25,6 +25,7 @@ import type {
 	FormGuide,
 	H2HRow,
 	WatchCard,
+	LineupPlayer,
 } from "@/features/matches/domain/entities/match-detail-v2";
 
 const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -67,6 +68,10 @@ const PBP_CAT: Record<string, string> = {
 	FOUL_PERSONAL: "FOUL",
 	FOUL_TECHNICAL: "FOUL",
 	FOUL_FLAGRANT: "FOUL",
+	FOUL_UNSPORTSMANLIKE: "FOUL",
+	FOUL_BENCH_TECHNICAL: "FOUL",
+	FOUL_COACH_TECHNICAL: "FOUL",
+	EJECTION: "EJECT",
 };
 
 // Event types shown in the play-by-play feed — meaningful in-game plays only.
@@ -88,6 +93,10 @@ const PBP_SHOW = new Set([
 	"FOUL_PERSONAL",
 	"FOUL_TECHNICAL",
 	"FOUL_FLAGRANT",
+	"FOUL_UNSPORTSMANLIKE",
+	"FOUL_BENCH_TECHNICAL",
+	"FOUL_COACH_TECHNICAL",
+	"EJECTION",
 ]);
 
 const EVENT_LABEL: Record<string, string> = {
@@ -105,13 +114,28 @@ const EVENT_LABEL: Record<string, string> = {
 	TURNOVER: "turnover",
 	FOUL_PERSONAL: "personal foul",
 	FOUL_TECHNICAL: "technical foul",
+	FOUL_FLAGRANT: "flagrant foul",
+	FOUL_UNSPORTSMANLIKE: "unsportsmanlike foul",
+	FOUL_BENCH_TECHNICAL: "bench technical foul",
+	FOUL_COACH_TECHNICAL: "coach technical foul",
+	EJECTION: "ejected",
 	SUBSTITUTION_IN: "substitution",
 	TIMEOUT: "timeout",
 	JUMP_BALL: "jump ball",
 };
 
 // Foul event types tracked in the timeline; personals count toward foul-out.
-const FOUL_TYPES = new Set(["FOUL_PERSONAL", "FOUL_TECHNICAL", "FOUL_FLAGRANT", "FOUL_UNSPORTSMANLIKE"]);
+// Bench/coach technicals charge to the team, so they carry no player.
+const FOUL_TYPES = new Set([
+	"FOUL_PERSONAL",
+	"FOUL_TECHNICAL",
+	"FOUL_FLAGRANT",
+	"FOUL_UNSPORTSMANLIKE",
+	"FOUL_BENCH_TECHNICAL",
+	"FOUL_COACH_TECHNICAL",
+	"EJECTION",
+]);
+const TEAM_FOUL_TYPES = new Set(["FOUL_BENCH_TECHNICAL", "FOUL_COACH_TECHNICAL"]);
 const FOUL_OUT_LIMIT = 5; // standard disqualification limit
 
 const ordinal = (n: number): string => {
@@ -259,7 +283,7 @@ function buildComparisonRow(
 
 /** Aggregate a team's per-player stats into team totals. */
 function teamTotals(playerIds: string[], statById: Map<string, PlayerMatchStatistics>) {
-	const t = { fgm: 0, fga: 0, reb: 0, ast: 0, to: 0, tpm: 0 };
+	const t = { fgm: 0, fga: 0, reb: 0, ast: 0, to: 0, tpm: 0, pf: 0 };
 	for (const id of playerIds) {
 		const s = statById.get(id);
 		if (!s) continue;
@@ -269,6 +293,7 @@ function teamTotals(playerIds: string[], statById: Map<string, PlayerMatchStatis
 		t.ast += s.assists;
 		t.to += s.turnovers;
 		t.tpm += s.threePointersMade;
+		t.pf += s.fouls;
 	}
 	return t;
 }
@@ -439,6 +464,25 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			away,
 		};
 
+		const matchPlayers: any[] = Array.isArray(match.matchPlayers) ? match.matchPlayers : [];
+		// Lineups go public as soon as a coach submits them (or the office enters them).
+		const lineupFor = (teamId?: string): LineupPlayer[] =>
+			matchPlayers
+				.filter((mp) => mp.teamId === teamId)
+				.map((mp) => ({
+					num: mp.jerseyNumber != null ? `#${mp.jerseyNumber}` : "",
+					name: playerName(mp.player),
+					image: getDisplayImageUrl(mp.player?.image),
+					position: mp.position || mp.player?.position || null,
+					starter: Boolean(mp.started),
+				}))
+				.sort(
+					(a, b) =>
+						Number(b.starter) - Number(a.starter) ||
+						(parseInt(a.num.slice(1)) || 999) - (parseInt(b.num.slice(1)) || 999),
+				);
+		const lineups = { home: lineupFor(team1Id), away: lineupFor(team2Id) };
+
 		if (!showStats) {
 			const extras = await buildUpcomingExtras(
 				completed,
@@ -455,13 +499,17 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 				pbpPeriods: [],
 				pbpByPeriod: {},
 				timeline: [],
+				lineups,
 				...extras,
 			};
 		}
 
 		// --- live / final: derive everything from events + periods ---
 		const events: any[] = Array.isArray(match.events) ? match.events : [];
-		const players: any[] = Array.isArray(match.matchPlayers) ? match.matchPlayers : [];
+		const players = matchPlayers;
+		const ejectedIds = new Set(
+			events.filter((e) => e.eventType === "EJECTION" && !e.isUndone && e.playerId).map((e) => e.playerId),
+		);
 
 		const statById = new Map<string, PlayerMatchStatistics>();
 		for (const mp of players) {
@@ -514,6 +562,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 						tp: s.threePointersMade,
 						blk: s.blocks,
 						pf: s.fouls,
+						ejected: ejectedIds.has(mp.playerId),
 					};
 				});
 		const box = { home: boxFor(team1Id), away: boxFor(team2Id) };
@@ -562,13 +611,15 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 		const foulCount = new Map<string, number>();
 		for (const e of chronAll) {
 			if (!FOUL_TYPES.has(e.eventType)) continue;
-			const who = e.player ? playerName(e.player) : "Team";
+			const who = e.player ? playerName(e.player) : TEAM_FOUL_TYPES.has(e.eventType) ? teamName(e.teamId) : "Team";
 			let detail: string;
 			if (e.eventType === "FOUL_PERSONAL") {
 				const key = e.playerId ?? who;
 				const n = (foulCount.get(key) ?? 0) + 1;
 				foulCount.set(key, n);
 				detail = `${ordinal(n)} personal foul${n >= FOUL_OUT_LIMIT ? " — to the bench" : ""}`;
+			} else if (e.eventType === "EJECTION") {
+				detail = "Ejected from the game";
 			} else {
 				const label = EVENT_LABEL[e.eventType] || "foul";
 				detail = label.charAt(0).toUpperCase() + label.slice(1);
@@ -577,7 +628,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 				period: e.period ?? 1,
 				secs: e.secondsRemaining,
 				ev: {
-					chip: "FOUL",
+					chip: e.eventType === "EJECTION" ? "EJECT" : "FOUL",
 					kind: "fouls",
 					color: FOUL_C,
 					title: who,
@@ -691,6 +742,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 					buildComparisonRow("Assists", ht.ast, at.ast, ""),
 					buildComparisonRow("Turnovers", ht.to, at.to, "", true),
 					buildComparisonRow("3-Pointers", ht.tpm, at.tpm, ""),
+					buildComparisonRow("Fouls", ht.pf, at.pf, "", true),
 				]
 			: [];
 
@@ -711,7 +763,15 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			if (!PBP_SHOW.has(e.eventType)) continue;
 			const key = periodLabel(e.period ?? 1);
 			const label = EVENT_LABEL[e.eventType] || String(e.eventType).toLowerCase().replace(/_/g, " ");
-			const who = e.player ? playerName(e.player) : "";
+			const who = e.player
+				? playerName(e.player)
+				: TEAM_FOUL_TYPES.has(e.eventType)
+					? e.teamId === team1Id
+						? homeName
+						: e.teamId === team2Id
+							? awayName
+							: ""
+					: "";
 			const text = (e.description && String(e.description).trim()) || (who ? `${who} ${label}` : label);
 			(pbpByPeriod[key] ||= []).push({
 				t: mmss(e.secondsRemaining) || `${e.minute ?? 0}′`,
@@ -736,6 +796,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			formGuide: [],
 			h2h: [],
 			watch: [],
+			lineups,
 		};
 	} catch {
 		return null;

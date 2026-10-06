@@ -9,6 +9,7 @@ import {
   lineupLockedMessage,
   lineupSubmissionSchema,
   validateLineup,
+  duplicateJerseyMessage,
 } from './lineup';
 
 const roster = new Set(Array.from({ length: 14 }, (_, i) => `p${i + 1}`));
@@ -111,5 +112,27 @@ describe('lineup deadline', () => {
     expect(lineupLockedMessage('DEADLINE', 'Oct 10 · 5:00 PM')).toBe(
       'Lineups for this match closed at Oct 10 · 5:00 PM. Contact the league office to make changes.'
     );
+  });
+});
+
+describe('duplicateJerseyMessage', () => {
+  it('allows distinct and missing numbers', () => {
+    expect(
+      duplicateJerseyMessage([
+        { name: 'A', jerseyNumber: 4 },
+        { name: 'B', jerseyNumber: null },
+        { name: 'C', jerseyNumber: null },
+        { name: 'D', jerseyNumber: 0 },
+      ])
+    ).toBeNull();
+  });
+
+  it('names both players sharing a number', () => {
+    expect(
+      duplicateJerseyMessage([
+        { name: 'Ann', jerseyNumber: 7 },
+        { name: 'Bo', jerseyNumber: 7 },
+      ])
+    ).toBe('Ann and Bo are both wearing #7.');
   });
 });

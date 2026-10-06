@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, ListChecks, Lock } from 'lucide-react';
+import { duplicateJerseyMessage } from '@/features/team-portal/domain/entities/lineup';
 
 type MatchSummary = {
   id: string;
@@ -39,6 +40,22 @@ type LineupData = {
 };
 type Role = 'starter' | 'bench';
 
+/** Match-day jersey numbers: the saved lineup's number, else the roster number. */
+const toJerseys = (data: LineupData | null) => {
+  const saved = new Map((data?.lineup ?? []).map((row) => [row.playerId, row.jerseyNumber]));
+  return Object.fromEntries(
+    (data?.roster ?? []).map((p) => {
+      const n = saved.has(p.playerId) ? saved.get(p.playerId) : p.jerseyNumber;
+      return [p.playerId, n == null ? '' : String(n)];
+    })
+  ) as Record<string, string>;
+};
+const parseJersey = (value: string | undefined) => (value == null || value === '' ? null : Number(value));
+const validJersey = (value: string | undefined) => {
+  const n = parseJersey(value);
+  return n === null || (Number.isInteger(n) && n >= 0 && n <= 99);
+};
+
 const deadlineWindow = (hours: number) =>
   hours === 0 ? 'at tip-off' : `${hours} hour${hours === 1 ? '' : 's'} before tip-off`;
 
@@ -65,6 +82,7 @@ export default function TeamPortalLineup({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selection, setSelection] = useState<Record<string, Role>>({});
+  const [jerseys, setJerseys] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -81,6 +99,7 @@ export default function TeamPortalLineup({
       .then((value) => {
         setData(value);
         setSelection(toSelection(value.lineup));
+        setJerseys(toJerseys(value));
       })
       .catch((cause) => setError(cause instanceof Error ? cause.message : 'Unable to load lineup.'))
       .finally(() => setLoading(false));
@@ -100,13 +119,19 @@ export default function TeamPortalLineup({
   const bench = Object.values(selection).filter((role) => role === 'bench').length;
   const listed = Object.keys(selection).length;
   const initial = useMemo(() => toSelection(data?.lineup), [data]);
+  const initialJerseys = useMemo(() => toJerseys(data), [data]);
   const dirty =
     Object.keys(initial).length !== listed ||
-    Object.entries(selection).some(([id, role]) => initial[id] !== role);
+    Object.entries(selection).some(([id, role]) => initial[id] !== role) ||
+    Object.keys(selection).some((id) => (jerseys[id] ?? '') !== (initialJerseys[id] ?? ''));
   const rosterIds = new Set(roster.map((p) => p.playerId));
   const offRoster = (data?.lineup ?? []).filter((row) => !rosterIds.has(row.playerId));
   const unavailableIds = new Set(roster.filter((p) => p.unavailable).map((p) => p.playerId));
   const unavailableListed = roster.filter((p) => p.unavailable && selection[p.playerId]);
+  const squad = roster.filter((p) => selection[p.playerId] && !p.unavailable);
+  const jerseyError = squad.some((p) => !validJersey(jerseys[p.playerId]))
+    ? 'Jersey numbers must be between 0 and 99.'
+    : duplicateJerseyMessage(squad.map((p) => ({ name: p.name, jerseyNumber: parseJersey(jerseys[p.playerId]) })));
 
   const setRole = (playerId: string, role: Role | null) => {
     setSaveMessage(null);
@@ -133,7 +158,11 @@ export default function TeamPortalLineup({
           players: Object.entries(selection)
             // Keep only available players still on the roster; the API rejects anyone else.
             .filter(([playerId]) => rosterIds.has(playerId) && !unavailableIds.has(playerId))
-            .map(([playerId, role]) => ({ playerId, started: role === 'starter' })),
+            .map(([playerId, role]) => ({
+              playerId,
+              started: role === 'starter',
+              jerseyNumber: parseJersey(jerseys[playerId]),
+            })),
         }),
       });
       const value = await response.json().catch(() => ({}));
@@ -234,7 +263,9 @@ export default function TeamPortalLineup({
               )}
               <p className="text-[12.5px] text-[#8a817a]">
                 Pick up to {maxStarters} starters and {maxBench} on the bench ({maxStarters + maxBench} players
-                in total). The league office sees this lineup in the Court Console at tip-off. Lineups close{' '}
+                in total). The league office sees this lineup in the Court Console at tip-off. Change a jersey number for
+                this game in the box next to the player. The lineup appears on the public match page as soon as
+                you save it. Lineups close{' '}
                 {deadlineWindow(deadlineHours)}; after that, only the league office can make changes.
               </p>
             </>
@@ -274,9 +305,27 @@ export default function TeamPortalLineup({
                     key={player.playerId}
                     className="portal-lineup-row flex flex-wrap items-center gap-4 border-b px-5 py-3.5 last:border-b-0"
                   >
-                    <div className="portal-lineup-number flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-lg border font-display text-[15px] leading-none text-[#b8afa6]">
-                      {player.jerseyNumber ?? '—'}
-                    </div>
+                    {role && !locked ? (
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={99}
+                        value={jerseys[player.playerId] ?? ''}
+                        onChange={(event) => {
+                          setSaveMessage(null);
+                          setJerseys((current) => ({ ...current, [player.playerId]: event.target.value }));
+                        }}
+                        placeholder="#"
+                        aria-label={`${player.name} jersey number for this match`}
+                        title="Jersey number for this match"
+                        className="portal-lineup-number h-[38px] w-[46px] flex-shrink-0 rounded-lg border text-center font-display text-[15px] leading-none text-cream outline-none [appearance:textfield] focus:border-brand [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    ) : (
+                      <div className="portal-lineup-number flex h-[38px] w-[46px] flex-shrink-0 items-center justify-center rounded-lg border font-display text-[15px] leading-none text-[#b8afa6]">
+                        {(role ? jerseys[player.playerId] : player.jerseyNumber) || (player.jerseyNumber ?? '—')}
+                      </div>
+                    )}
                     <div className="min-w-[150px] flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate text-[13.5px] font-bold text-cream">{player.name}</span>
@@ -350,6 +399,12 @@ export default function TeamPortalLineup({
 
           {!locked && roster.length > 0 && (
             <div className="flex flex-wrap items-center justify-end gap-3">
+              {jerseyError && (
+                <span role="alert" className="flex items-center gap-1.5 text-[12.5px] text-[#d99a2b]">
+                  <AlertCircle size={15} />
+                  {jerseyError}
+                </span>
+              )}
               {saveMessage && !dirty && (
                 <span role="status" className="flex items-center gap-1.5 text-[12.5px] text-[#4ea36a]">
                   <Check size={15} />
@@ -359,7 +414,7 @@ export default function TeamPortalLineup({
               <button
                 type="button"
                 onClick={() => void save()}
-                disabled={saving || !dirty}
+                disabled={saving || !dirty || Boolean(jerseyError)}
                 className="portal-lineup-save"
               >
                 {saving ? 'Saving…' : 'Save lineup'}
