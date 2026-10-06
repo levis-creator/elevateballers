@@ -55,31 +55,28 @@ export async function getMatchWithFullDetails(matchIdOrSlug: string): Promise<Ma
     // Use the resolved match's id for sub-queries — the original param may have
     // been a slug, but related lookups (events, players, subs) all key on id.
     const matchId = match.id;
-    let matchPlayers: any[] = [];
-    let events: any[] = [];
-
-    try {
-      matchPlayers = await getMatchPlayers(matchId);
-    } catch (err) {
-      console.warn('Failed to fetch match players:', err);
-    }
-
-    try {
-      events = await getMatchEvents(matchId);
-    } catch (err) {
-      console.warn('Failed to fetch match events:', err);
-    }
-
-    let substitutions: any[] = [];
-    try {
-      substitutions = await prisma.substitution.findMany({
-        where: { matchId },
-        orderBy: { createdAt: 'desc' },
-        include: { playerIn: true, playerOut: true },
-      });
-    } catch (err) {
-      console.warn('Failed to fetch substitutions:', err);
-    }
+    // Independent lookups run together: the live match page polls this, and
+    // each sequential round trip to the remote DB adds visible lag.
+    const [matchPlayers, events, substitutions] = await Promise.all([
+      getMatchPlayers(matchId).catch((err): any[] => {
+        console.warn('Failed to fetch match players:', err);
+        return [];
+      }),
+      getMatchEvents(matchId).catch((err): any[] => {
+        console.warn('Failed to fetch match events:', err);
+        return [];
+      }),
+      prisma.substitution
+        .findMany({
+          where: { matchId },
+          orderBy: { createdAt: 'desc' },
+          include: { playerIn: true, playerOut: true },
+        })
+        .catch((err): any[] => {
+          console.warn('Failed to fetch substitutions:', err);
+          return [];
+        }),
+    ]);
 
     return { ...match, matchPlayers, events, substitutions } as MatchWithFullDetails;
   } catch (error: any) {

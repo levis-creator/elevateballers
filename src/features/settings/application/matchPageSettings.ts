@@ -1,5 +1,10 @@
 import type { SiteSetting } from '../domain/siteSetting';
 
+/** Fastest the public match page re-checks a live game, in seconds. */
+export const LIVE_REFRESH_MIN_SECONDS = 3;
+/** How long the CDN may reuse a live match view; kept short so it never stacks on the poll interval. */
+export const LIVE_EDGE_CACHE_SECONDS = 2;
+
 export type MatchPageTab = { label: string };
 export type MatchBoxScoreVisibility = 'Public' | 'Signed-in users' | 'Staff only';
 
@@ -27,7 +32,7 @@ export const DEFAULT_PUBLIC_MATCH_PAGE_SETTINGS: PublicMatchPageSettings = {
   quarters: true,
   lineups: true,
   video: true,
-  delay: 30,
+  delay: 5,
   autoPublish: false,
   lineupDeadlineHours: 2,
   liveBadge: 'LIVE',
@@ -63,7 +68,7 @@ export function resolvePublicMatchPageSettings(settings: SiteSetting[]): PublicM
     quarters: bool(values.match_quarters, defaults.quarters),
     lineups: bool(values.match_lineups, defaults.lineups),
     video: bool(values.match_video, defaults.video),
-    delay: integer(values.match_delay, defaults.delay, 0, 300),
+    delay: integer(values.match_delay, defaults.delay, LIVE_REFRESH_MIN_SECONDS, 300),
     autoPublish: bool(values.match_autoPublish, defaults.autoPublish),
     lineupDeadlineHours: integer(values.match_lineupDeadlineHours, defaults.lineupDeadlineHours, 0, 48),
     liveBadge: values.match_liveBadge === undefined ? defaults.liveBadge : values.match_liveBadge.trim(),

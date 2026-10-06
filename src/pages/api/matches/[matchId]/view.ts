@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getMatchView } from "@/features/matches/domain/usecases/get-match-view";
 import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from "@/features/settings";
+import { LIVE_EDGE_CACHE_SECONDS } from "@/features/settings/application/matchPageSettings";
 import { getCurrentUser } from "@/features/cms/lib/auth";
 
 export const prerender = false;
@@ -42,7 +43,9 @@ export const GET: APIRoute = async ({ params, request }) => {
 	}
 	const canViewBox = canViewMatchBoxScore(settings.boxScore, Boolean(currentUser), staff);
 	const publicView = canViewBox ? view : { ...view, box: { home: [], away: [] } };
-	const cacheSeconds = Math.max(1, settings.delay);
+	// Live views stay fresh at the edge for a moment only: a cache as long as
+	// the poll interval (plus stale-while-revalidate) used to triple the lag.
+	const cacheSeconds = view.state === "live" ? LIVE_EDGE_CACHE_SECONDS : Math.max(LIVE_EDGE_CACHE_SECONDS, settings.delay);
 	return new Response(JSON.stringify(publicView), {
 		headers: {
 			"Content-Type": "application/json",
