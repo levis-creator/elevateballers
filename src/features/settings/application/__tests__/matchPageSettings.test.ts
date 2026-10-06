@@ -50,4 +50,9 @@ describe('match page settings', () => {
     expect(canViewMatchBoxScore('Staff only', true, false)).toBe(false);
     expect(canViewMatchBoxScore('Staff only', true, true)).toBe(true);
   });
+
+  it('refreshes live games every 5s by default and never faster than 3s', () => {
+    expect(resolvePublicMatchPageSettings([]).delay).toBe(5);
+    expect(resolvePublicMatchPageSettings([setting('match_delay', '0')]).delay).toBe(3);
+  });
 });

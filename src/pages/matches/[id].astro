@@ -15,6 +15,7 @@ import LayoutV2 from "@/layouts/v2/Layout.astro";
 import MatchDetailPage from "@/features/matches/presentation/v2/MatchDetailPage.astro";
 import { getMatchView } from "@/features/matches/domain/usecases/get-match-view";
 import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from "@/features/settings";
+import { LIVE_EDGE_CACHE_SECONDS } from "@/features/settings/application/matchPageSettings";
 import { getCurrentUser } from "@/features/cms/lib/auth";
 
 const [view, matchSettingRecords, currentUser] = await Promise.all([
@@ -37,7 +38,7 @@ const cacheControl =
 	view.state === "final"
 		? "public, s-maxage=86400, stale-while-revalidate=604800"
 		: view.state === "live"
-			? `public, s-maxage=${Math.max(1, matchSettings.delay)}, stale-while-revalidate=${Math.max(1, matchSettings.delay)}`
+			? `public, s-maxage=${LIVE_EDGE_CACHE_SECONDS}, stale-while-revalidate=${LIVE_EDGE_CACHE_SECONDS}`
 			: "public, s-maxage=60, stale-while-revalidate=300";
 Astro.response.headers.set("Cache-Control", cacheControl);
 

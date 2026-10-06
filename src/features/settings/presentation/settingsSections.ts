@@ -2745,9 +2745,9 @@ export const SECTIONS: Section[] = [
         fields: [
           f(
             'match_delay',
-            'Live score delay (seconds)',
-            'Buffer between the Live Console and the public page.',
-            { defaultValue: '30' }
+            'Live refresh interval (seconds)',
+            'How often the public match page checks for new plays during a live game (3–300). Lower is closer to real time.',
+            { defaultValue: '5' }
           ),
           f(
             'match_autoPublish',

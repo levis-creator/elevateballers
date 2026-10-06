@@ -8,7 +8,6 @@
  */
 import { prisma } from "@/lib/prisma";
 import { getMatchWithFullDetails, getPlayers } from "@/features/cms/lib/queries";
-import { getCompletedMatches } from "@/features/matches/lib/queries";
 import { getTeamPlayerStats } from "@/features/player/lib/queries";
 import { calculatePlayerMatchStats, type PlayerMatchStatistics } from "@/features/player/domain/usecases/playerStats";
 import { formatMatchDate, formatMatchTime, getZonedDateParts } from "@/features/matches/domain/usecases/utils";
@@ -396,11 +395,45 @@ export async function fetchMatchHighlightUrl(matchId: string, slug?: string | nu
 	})?.url ?? null;
 }
 
+/**
+ * Published results involving either team — all that records, form and
+ * head-to-head need. Loading every completed match in the league on each live
+ * poll made the play-by-play slow to refresh.
+ */
+function fetchTeamResults(teamIds: Array<string | null | undefined>) {
+	const ids = teamIds.filter((id): id is string => Boolean(id));
+	if (!ids.length) return Promise.resolve([] as any[]);
+	return prisma.match.findMany({
+		where: {
+			status: "COMPLETED",
+			resultPublishedAt: { not: null },
+			OR: [{ team1Id: { in: ids } }, { team2Id: { in: ids } }],
+		},
+		select: {
+			date: true,
+			seasonId: true,
+			team1Id: true,
+			team2Id: true,
+			team1Score: true,
+			team2Score: true,
+			team1Name: true,
+			team2Name: true,
+			team1: { select: { name: true } },
+			team2: { select: { name: true } },
+		},
+		orderBy: { date: "desc" },
+	});
+}
+
 export async function fetchMatchView(slugOrId: string): Promise<MatchView | null> {
 	try {
 		const match = await getMatchWithFullDetails(slugOrId);
 		if (!match) return null;
-		const highlightUrl = await fetchMatchHighlightUrl(match.id, (match as any).slug);
+		const [highlightUrl, completed, periods] = await Promise.all([
+			fetchMatchHighlightUrl(match.id, (match as any).slug),
+			fetchTeamResults([match.team1Id || match.team1?.id, match.team2Id || match.team2?.id]),
+			prisma.matchPeriod.findMany({ where: { matchId: match.id }, orderBy: { periodNumber: "asc" } }),
+		]);
 
 		const state: MatchState = match.status === "COMPLETED" ? "final" : match.status === "LIVE" ? "live" : "upcoming";
 		const hasScore = state === "final" || state === "live";
@@ -414,8 +447,6 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 		const team2Id = match.team2Id || match.team2?.id;
 		const hs = match.team1Score;
 		const as = match.team2Score;
-
-		const completed = await getCompletedMatches();
 
 		const p = getZonedDateParts(match.date);
 		const weekday = WD[new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()];
@@ -517,10 +548,6 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 		}
 
 		// Quarter scoring
-		const periods = await prisma.matchPeriod.findMany({
-			where: { matchId: match.id },
-			orderBy: { periodNumber: "asc" },
-		});
 		const periodLabels = periods.map((pd) => periodLabel(pd.periodNumber));
 		const quarters: QuarterRow[] =
 			periods.length > 0
@@ -568,10 +595,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 		const box = { home: boxFor(team1Id), away: boxFor(team2Id) };
 
 		// --- Match timeline: subs + fouls + quarter/half/final markers + runs ---
-		const subsRaw = await prisma.substitution.findMany({
-			where: { matchId: match.id },
-			include: { playerIn: true, playerOut: true },
-		});
+		const subsRaw: any[] = Array.isArray((match as any).substitutions) ? (match as any).substitutions : [];
 
 		const homeShort = shortTeam(homeName, homeNickname);
 		const awayShort = shortTeam(awayName, awayNickname);

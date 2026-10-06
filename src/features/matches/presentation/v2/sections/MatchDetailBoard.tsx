@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMatchViewStore } from "@/features/matches/presentation/stores/v2/useMatchViewStore";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { LineupPlayer, MatchView } from "@/features/matches/domain/entities/match-detail-v2";
-import { resolveMatchTabs, type MatchTabKind, type PublicMatchPageSettings } from "@/features/settings/application/matchPageSettings";
+import { LIVE_REFRESH_MIN_SECONDS, resolveMatchTabs, type MatchTabKind, type PublicMatchPageSettings } from "@/features/settings/application/matchPageSettings";
 
 const STRIPE = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
 
@@ -78,26 +78,47 @@ export default function MatchDetailBoard({ view: initialView, settings, canViewB
 		if (!tabs.some((tab) => tab.kind === activeTab)) setActiveTab(tabs[0]?.kind ?? "play");
 	}, [activeTab, canViewBoxScore, settings.tabs]);
 
-	// Live matches refresh themselves in place. Poll the computed view every 15s
-	// while LIVE; the effect re-runs and tears the timer down once the match ends
-	// (state flips to "final"). Selected tabs live in the store, so they persist
-	// across updates.
+	// Live matches refresh themselves in place every `settings.delay` seconds;
+	// the loop stops once the match ends (state flips to "final"). One request
+	// at a time — the next is scheduled after the last lands, so a slow response
+	// never stacks up. Hidden tabs pause, and coming back refreshes at once.
+	// Selected tabs live in the store, so they persist across updates.
 	useEffect(() => {
 		if (view.state !== "live") return;
+		const intervalMs = Math.max(LIVE_REFRESH_MIN_SECONDS, settings.delay) * 1000;
 		let cancelled = false;
-		const timer = setInterval(async () => {
+		let inFlight = false;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const schedule = () => {
+			clearTimeout(timer);
+			if (!cancelled && document.visibilityState === "visible") timer = setTimeout(refresh, intervalMs);
+		};
+		const refresh = async () => {
+			if (cancelled || inFlight) return;
+			inFlight = true;
 			try {
 				const res = await fetch(`/api/matches/${view.id}/view`, { headers: { accept: "application/json" } });
-				if (!res.ok) return;
-				const next = (await res.json()) as MatchView;
-				if (!cancelled && next?.id) setView(next);
+				if (res.ok) {
+					const next = (await res.json()) as MatchView;
+					if (!cancelled && next?.id) setView(next);
+				}
 			} catch {
 				/* transient network error — keep the last good view, retry next tick */
+			} finally {
+				inFlight = false;
+				schedule();
 			}
-		}, Math.max(1, settings.delay) * 1000);
+		};
+		const onVisible = () => {
+			if (document.visibilityState === "visible") void refresh();
+			else clearTimeout(timer);
+		};
+		document.addEventListener("visibilitychange", onVisible);
+		schedule();
 		return () => {
 			cancelled = true;
-			clearInterval(timer);
+			clearTimeout(timer);
+			document.removeEventListener("visibilitychange", onVisible);
 		};
 	}, [view.id, view.state, settings.delay]);
 
