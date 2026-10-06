@@ -87,3 +87,17 @@ export function validateLineup(
     return `A lineup can have at most ${MAX_BENCH} players on the bench (${MAX_SQUAD} in total).`;
   return null;
 }
+
+/** Two players in one match-day squad can't wear the same number. */
+export function duplicateJerseyMessage(
+  players: ReadonlyArray<{ name: string; jerseyNumber: number | null }>
+): string | null {
+  const seen = new Map<number, string>();
+  for (const { name, jerseyNumber } of players) {
+    if (jerseyNumber == null) continue;
+    const other = seen.get(jerseyNumber);
+    if (other) return `${other} and ${name} are both wearing #${jerseyNumber}.`;
+    seen.set(jerseyNumber, name);
+  }
+  return null;
+}

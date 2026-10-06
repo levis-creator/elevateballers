@@ -11,6 +11,7 @@ import {
   lineupLockReason,
   lineupSubmissionSchema,
   validateLineup,
+  duplicateJerseyMessage,
   MAX_STARTERS,
   MAX_BENCH,
   type LineupLockReason,
@@ -228,6 +229,16 @@ export const PUT: APIRoute = async ({ request }) => {
       const rosterEntry = rosterById.get(entry.playerId)!;
       return entry.jerseyNumber ?? rosterEntry.jerseyNumber ?? rosterEntry.player.jerseyNumber ?? null;
     };
+    const clash = duplicateJerseyMessage(
+      players.map((entry) => {
+        const { player } = rosterById.get(entry.playerId)!;
+        return {
+          name: `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim() || 'A player',
+          jerseyNumber: jerseyFor(entry),
+        };
+      })
+    );
+    if (clash) return json({ error: clash }, 400);
 
     // A fixed handful of queries however big the squad is: one upsert per player
     // pushed the save past the interactive-transaction limit on the remote DB.
