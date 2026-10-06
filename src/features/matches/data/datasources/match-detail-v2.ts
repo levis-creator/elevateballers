@@ -772,7 +772,12 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 							? awayName
 							: ""
 					: "";
-			const text = (e.description && String(e.description).trim()) || (who ? `${who} ${label}` : label);
+			const desc = e.description ? String(e.description).trim() : "";
+			// A turnover's description is just its type ("Bad pass"), so keep the player.
+			const text =
+				e.eventType === "TURNOVER" && desc
+					? `${who ? `${who} ` : ""}turnover (${desc.toLowerCase()})`
+					: desc || (who ? `${who} ${label}` : label);
 			(pbpByPeriod[key] ||= []).push({
 				t: mmss(e.secondsRemaining) || `${e.minute ?? 0}′`,
 				text,
