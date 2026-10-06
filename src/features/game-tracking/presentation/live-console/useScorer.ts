@@ -2,13 +2,17 @@
  * Scorer interaction: pick a player, record an action, answer the follow-up
  * prompt (assist, rebound, steal, turnover kind, which bench).
  *
+ * Steals are not a standalone action: they hang off a turnover. With turnover
+ * types on, V opens the type picker (1–9, the stealer's key, or ↵ untyped);
+ * with them off, V logs the turnover and asks who stole it.
+ *
  * Keyboard: Q–T / Y–P pick the floor slots, 2 · 3 · M made shots (⇧ for a
- * miss), A X D assist and rebounds, S B V steal / block / turnover, F G H J
+ * miss), A X D assist and rebounds, B V block / turnover, F G H J
  * personal / technical / unsportsmanlike / ejection, K L bench and coach
  * technicals, Space the clock, ← → possession, Esc skip, ⌘Z / Ctrl+Z undo.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TURNOVER_TYPES, EVENT_LABEL } from '../../domain/live-console/model';
+import { TURNOVER_TYPES, EVENT_LABEL, type TurnoverType } from '../../domain/live-console/model';
 import { disqualification, emptyLine, lineOf } from '../../domain/live-console/derive';
 import type { LiveConsole } from './useLiveConsole';
 import { tag } from './roster';
@@ -23,7 +27,6 @@ export type Action =
   | 'ASSIST'
   | 'REBOUND_OFFENSIVE'
   | 'REBOUND_DEFENSIVE'
-  | 'STEAL'
   | 'BLOCK'
   | 'TURNOVER'
   | 'FOUL_PERSONAL'
@@ -58,7 +61,6 @@ const keyAction = (code: string, shift: boolean): Action | null => {
     KeyA: 'ASSIST',
     KeyX: 'REBOUND_OFFENSIVE',
     KeyD: 'REBOUND_DEFENSIVE',
-    KeyS: 'STEAL',
     KeyB: 'BLOCK',
     KeyV: 'TURNOVER',
     KeyF: 'FOUL_PERSONAL',
@@ -88,6 +90,21 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
 
   const sideTeam = useCallback((side: 'home' | 'away') => (side === 'home' ? lc.homeId : lc.awayId), [lc.homeId, lc.awayId]);
 
+  const postTurnover = useCallback(
+    (team: string, pid: string, kind: TurnoverType | null) => {
+      const e = lc.post({
+        eventType: 'TURNOVER',
+        teamId: team,
+        playerId: pid,
+        description: kind?.label ?? null,
+        metadata: kind ? { subtype: kind.value } : {},
+      });
+      lc.setPossession(lc.opp(team));
+      return e;
+    },
+    [lc],
+  );
+
   const promptPick = useCallback(
     (team: string, pid: string) => {
       if (!prompt) return;
@@ -104,13 +121,23 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
       } else if (prompt.kind === 'stl') {
         if (team !== prompt.team) return;
         lc.post({ eventType: 'STEAL', teamId: team, playerId: pid, metadata: { parentCid: prompt.parentCid } });
+      } else if (prompt.kind === 'tov') {
+        // Shortcut: pressing a defender instead of a type logs a steal.
+        if (team === prompt.team) {
+          setHint('Press the stealer — a defender on the floor.');
+          return;
+        }
+        const e = postTurnover(prompt.team, prompt.pid, TURNOVER_TYPES[0]);
+        lc.post({ eventType: 'STEAL', teamId: team, playerId: pid, metadata: { parentCid: e.cid! } });
+        const p = lc.players.get(pid);
+        lc.flash(`Steal ${tag(p)} · TO ${tag(lc.players.get(prompt.pid))}`);
       } else {
         return;
       }
       setPrompt(null);
       setHint(null);
     },
-    [prompt, lc],
+    [prompt, lc, postTurnover],
   );
 
   const pickPlayer = useCallback(
@@ -135,21 +162,14 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
     [sideTeam, lc.floor, pickPlayer],
   );
 
+  /** Logs the turnover, then asks for the stealer when `askSteal` is set. */
   const recordTurnover = useCallback(
-    (team: string, pid: string, kind: (typeof TURNOVER_TYPES)[number] | null) => {
-      const e = lc.post({
-        eventType: 'TURNOVER',
-        teamId: team,
-        playerId: pid,
-        description: kind?.label ?? null,
-        metadata: kind ? { subtype: kind.value } : {},
-      });
-      lc.setPossession(lc.opp(team));
-      // A steal only follows a live-ball turnover; without types we still ask.
-      const steal = !kind || kind.value === 'BAD_PASS' || kind.value === 'LOST_BALL';
-      setPrompt(steal ? { kind: 'stl', parentCid: e.cid!, team: lc.opp(team), label: `Turnover${kind ? ` · ${kind.label}` : ''}` } : null);
+    (team: string, pid: string, kind: TurnoverType | null, askSteal: boolean) => {
+      const e = postTurnover(team, pid, kind);
+      setHint(null);
+      setPrompt(askSteal ? { kind: 'stl', parentCid: e.cid!, team: lc.opp(team), label: `Turnover${kind ? ` · ${kind.label}` : ''}` } : null);
     },
-    [lc],
+    [lc, postTurnover],
   );
 
   const act = useCallback(
@@ -173,7 +193,7 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
       setHint(null);
       if (type === 'TURNOVER') {
         if (lc.rules.trackTurnoverTypes) setPrompt({ kind: 'tov', team, pid });
-        else recordTurnover(team, pid, null);
+        else recordTurnover(team, pid, null, true);
         return;
       }
       const e = lc.post({ eventType: type, teamId: team, playerId: pid });
@@ -184,7 +204,7 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
         const mates = (lc.floor[team] ?? []).filter((x) => x !== pid && !isOut(x));
         if (mates.length) setPrompt({ kind: 'ast', parentCid: e.cid!, team, pid, label });
       }
-      if (type === 'REBOUND_DEFENSIVE' || type === 'STEAL') lc.setPossession(team);
+      if (type === 'REBOUND_DEFENSIVE') lc.setPossession(team);
       if (type === 'TWO_POINT_MISSED' || type === 'THREE_POINT_MISSED' || type === 'FREE_THROW_MISSED') {
         setPrompt({ kind: 'reb', parentCid: e.cid!, team, pid, label });
       }
@@ -207,10 +227,17 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
   const pickTurnover = useCallback(
     (i: number) => {
       if (prompt?.kind !== 'tov') return;
-      recordTurnover(prompt.team, prompt.pid, TURNOVER_TYPES[i]);
+      const kind = TURNOVER_TYPES[i];
+      if (kind) recordTurnover(prompt.team, prompt.pid, kind, kind.value === 'STEAL');
     },
     [prompt, recordTurnover],
   );
+
+  const logUntypedTurnover = useCallback(() => {
+    if (prompt?.kind !== 'tov') return;
+    recordTurnover(prompt.team, prompt.pid, null, false);
+    lc.flash('Turnover logged · type it later in play-by-play');
+  }, [prompt, recordTurnover, lc]);
 
   const pickBench = useCallback(
     (team: string) => {
@@ -236,8 +263,8 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
   }, []);
 
   // ---- keyboard ------------------------------------------------------------
-  const ref = useRef({ act, pickSlot, pickTurnover, pickBench, teamRebound, skipPrompt, prompt, consoleTabActive, enabled, lc });
-  ref.current = { act, pickSlot, pickTurnover, pickBench, teamRebound, skipPrompt, prompt, consoleTabActive, enabled, lc };
+  const ref = useRef({ act, pickSlot, pickTurnover, logUntypedTurnover, pickBench, teamRebound, skipPrompt, prompt, consoleTabActive, enabled, lc });
+  ref.current = { act, pickSlot, pickTurnover, logUntypedTurnover, pickBench, teamRebound, skipPrompt, prompt, consoleTabActive, enabled, lc };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -277,7 +304,11 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
         r.pickSlot(...KEY_SLOTS[c]);
         return;
       }
-      if (pr?.kind === 'tov' && /^Digit[1-6]$/.test(c)) return r.pickTurnover(Number(c.slice(5)) - 1);
+      if (pr?.kind === 'tov' && /^Digit[1-9]$/.test(c)) return r.pickTurnover(Number(c.slice(5)) - 1);
+      if (pr?.kind === 'tov' && (c === 'Enter' || c === 'NumpadEnter')) {
+        e.preventDefault();
+        return r.logUntypedTurnover();
+      }
       if (pr?.kind === 'team' && (c === 'Digit1' || c === 'Digit2')) return r.pickBench(c === 'Digit1' ? r.lc.homeId : r.lc.awayId);
       if (pr?.kind === 'reb' && c === 'KeyN') return r.teamRebound();
       const action = keyAction(c, e.shiftKey);
@@ -299,6 +330,7 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
     pickPlayer,
     act,
     pickTurnover,
+    logUntypedTurnover,
     pickBench,
     teamRebound,
     skipPrompt,

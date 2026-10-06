@@ -17,6 +17,7 @@ import type {
   TimeoutWithRelations,
   SubstitutionWithRelations,
   MatchPeriodWithMatch,
+  JumpBallWithRelations,
   PlayByPlayEvent,
   PlayByPlayData,
 } from '../../types';

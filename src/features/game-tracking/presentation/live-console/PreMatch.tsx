@@ -223,7 +223,8 @@ export default function PreMatch({ lc, tipTime, tipIn, tipDay, starting, onStart
             <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--warn)]">3 keys changed</span>
           </div>
           <div className="border-b border-[var(--bord2)] bg-[var(--surf2)] px-4 py-2.5 text-[12px] leading-[1.45] text-[var(--txd)]">
-            Brief your scorers before tip-off: <b className="text-[var(--tx)]">V</b> is now turnover,{' '}
+            Brief your scorers before tip-off: <b className="text-[var(--tx)]">V</b> is now turnover (then pick the type — steals live there,{' '}
+            <b className="text-[var(--tx)]">S</b> is gone),{' '}
             <b className="text-[var(--tx)]">G</b> is technical, and <b className="text-[var(--tx)]">X</b> is offensive rebound —{' '}
             <b className="text-[var(--tx)]">O</b> only picks a player.
           </div>
