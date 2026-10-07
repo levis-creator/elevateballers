@@ -1,6 +1,8 @@
 /**
  * Scorer interaction: pick a player, record an action, answer the follow-up
- * prompt (assist, rebound, steal, turnover kind, which bench).
+ * prompt (assist, rebound, steal, turnover kind, which bench). The picked
+ * player stays selected across actions until another pick, a second press on
+ * them, Esc, or they leave the floor.
  *
  * Steals are not a standalone action: they hang off a turnover. With turnover
  * types on, V opens the type picker (1–9, the stealer's key, or ↵ untyped);
@@ -87,6 +89,11 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
   const [sub, setSub] = useState<SubDraft>({ team: lc.homeId, out: [], in: [] });
 
   const isOut = useCallback((pid: string) => !!disqualification(lineOf(lc.d, pid), lc.rules), [lc.d, lc.rules]);
+
+  // A sticky selection drops once that player leaves the floor or is disqualified.
+  useEffect(() => {
+    if (sel && (!(lc.floor[sel.team] ?? []).includes(sel.pid) || isOut(sel.pid))) setSel(null);
+  }, [sel, lc.floor, isOut]);
 
   const sideTeam = useCallback((side: 'home' | 'away') => (side === 'home' ? lc.homeId : lc.awayId), [lc.homeId, lc.awayId]);
 
@@ -180,7 +187,6 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
           return;
         }
         lc.post({ eventType: type, teamId: sel.team });
-        setSel(null);
         lc.flash(`${EVENT_LABEL[type]} — ${lc.teams[sel.team]?.short ?? ''}`);
         return;
       }
@@ -188,8 +194,9 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
         setHint('Pick a player first — Q W E R T or Y U I O P.');
         return;
       }
+      // The player stays selected so a run of plays by one player (three
+      // straight rebounds) needs one pick; picking someone else or Esc changes it.
       const { team, pid } = sel;
-      setSel(null);
       setHint(null);
       if (type === 'TURNOVER') {
         if (lc.rules.trackTurnoverTypes) setPrompt({ kind: 'tov', team, pid });
