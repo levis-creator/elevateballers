@@ -12,6 +12,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Page scrollbar for the public site: brand-red thumb on the paper panel
+   colour, matching the dark scrollers below. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--site-brand-rgb, 228 0 43) / 0.75) rgb(var(--site-paper-panel-rgb, 239 236 229));
+}
+html::-webkit-scrollbar { width: 10px; height: 10px; }
+html::-webkit-scrollbar-track { background: rgb(var(--site-paper-panel-rgb, 239 236 229)); }
+html::-webkit-scrollbar-thumb {
+  background: rgb(var(--site-brand-rgb, 228 0 43) / 0.75);
+  border: 2px solid rgb(var(--site-paper-panel-rgb, 239 236 229));
+  border-radius: 999px;
+}
+html::-webkit-scrollbar-thumb:hover { background: rgb(var(--site-brand-rgb, 228 0 43)); }
+
 /* Slim scrollbar for horizontal scrollers on dark (night) sections, e.g. the
    playoff bracket: brand-red thumb on a faint track instead of the white
    browser default. */
