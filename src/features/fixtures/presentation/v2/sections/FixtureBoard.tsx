@@ -4,6 +4,7 @@ import type { FixtureMatch, PlayoffStage } from "@/features/fixtures/domain/enti
 import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 import { configuredDefaultCompetitionId, type PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 import { fixturesToken, type PublicFixturesSettings } from "@/features/settings/application/fixturesSettings";
+import { buildBracket, seriesByGame, type Series, type SeriesSide } from "@/features/fixtures/domain/usecases/playoff-series";
 
 interface Props {
 	matches: FixtureMatch[];
@@ -285,28 +286,18 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 			}
 			: null;
 
-	// Roads to Finals — one bracket per competition in scope that has
-	// quarterfinal games, independent of the Upcoming/Results toggle and the
-	// fixtures horizon. QF → SF → Final are always drawn; rounds not yet
-	// scheduled are padded with TBD slots. A legacy generic "Playoff" round only
-	// appears when it has games.
-	const MIN_SLOTS: Record<PlayoffStage, number> = { PO: 0, QF: 4, SF: 2, F: 1 };
+	// Roads to Finals — one bracket per competition in scope with knockout
+	// games, independent of the Upcoming/Results toggle and the fixtures horizon.
+	// QF/SF are best-of-3 series; winners are projected into the next round.
 	const brackets = scopeCompetitions.flatMap((c) => {
-		const pm = inScope.filter((m) => m.leagueSeasonId === c.id && m.stage).sort((a, b) => a.ts - b.ts);
-		if (!pm.some((m) => m.stage === "QF")) return [];
-		const rounds = STAGE_ORDER.filter((k) => k !== "PO" || pm.some((m) => m.stage === k)).map((k) => {
-			const ms = pm.filter((m) => m.stage === k);
-			return {
-				key: k,
-				st: STAGES[k],
-				date: ms.length ? `${ms[0].weekday.slice(0, 3)} ${Number(ms[0].day)} ${ms[0].mon}` : "TBD",
-				matches: ms,
-				placeholders: Math.max(0, MIN_SLOTS[k] - ms.length),
-			};
-		});
-		const final = pm.find((m) => m.stage === "F" && m.status === "done");
-		return [{ c, rounds, champion: final ? winnerOf(final) : "" }];
+		const bracket = buildBracket(inScope.filter((m) => m.leagueSeasonId === c.id), settings.playoffFormat);
+		return bracket ? [{ c, ...bracket }] : [];
 	});
+	// Series context for every knockout game card in the list (all conferences).
+	const gameSeries = new Map(scopeCompetitions.flatMap((c) => {
+		const bracket = buildBracket(matches.filter((m) => m.leagueSeasonId === c.id), settings.playoffFormat);
+		return bracket ? [...seriesByGame(bracket.rounds)] : [];
+	}));
 
 	const emptyTitle = allRegistration
 		? `${heroSeason} schedule coming soon`
@@ -518,7 +509,7 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 												const competition = competitions.find((c) => c.id === m.leagueSeasonId);
 												const code = competition ? codeOf(competition) : m.leagueCode || m.league;
 												return st
-													? <PlayoffCard key={m.id} m={m} st={st} code={code} season={competition ? shortSeason(competition.seasonLabel) : heroSeason} settings={settings} liveBadge={liveBadge} />
+													? <PlayoffCard key={m.id} m={m} st={st} series={gameSeries.get(m.id)} code={code} season={competition ? shortSeason(competition.seasonLabel) : heroSeason} settings={settings} liveBadge={liveBadge} />
 													: <RegularCard key={m.id} m={m} code={code} conferenceName={conferenceName} settings={settings} liveBadge={liveBadge} />;
 											})}
 										</div>
@@ -553,7 +544,7 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 								<h2 className="font-display text-[clamp(40px,6vw,76px)] uppercase leading-[0.9]">Roads to <span className="text-gold">Finals</span></h2>
 							</div>
 							<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-creamdim">
-								Quarterfinals → Semifinals → Final
+								{(["QF", "SF", "F"] as const).map((k) => `${k === "F" ? "Final" : STAGES[k].label} · ${formatLabel(settings.playoffFormat[k])}`).join(" → ")}
 							</span>
 						</div>
 						<div className="flex flex-col gap-12">
@@ -564,65 +555,27 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 										<span className="font-mono text-[11px] text-creamdim">{b.c.leagueLabel}</span>
 										{b.champion && (
 											<span className="ml-auto rounded-full px-4 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-gold" style={{ boxShadow: `inset 0 0 0 1px ${goldA(0.7)}`, background: goldA(0.08) }}>
-												★ {b.champion} · {shortSeason(b.c.seasonLabel)} {codeOf(b.c)} Champions
+												★ {b.champion.name} · {shortSeason(b.c.seasonLabel)} {codeOf(b.c)} Champions
 											</span>
 										)}
 									</div>
-									<div className="overflow-x-auto pb-2">
+									<div className="eb-dark-scroll overflow-x-auto pb-3">
 										<div className="grid min-w-[720px] gap-5" style={{ gridTemplateColumns: `repeat(${b.rounds.length},minmax(0,1fr))` }}>
-											{b.rounds.map((r) => (
-												<div key={r.key} className="flex flex-col">
-													<div className="mb-3 flex items-baseline justify-between gap-2">
-														<span className="font-display text-[18px] uppercase leading-none" style={{ color: r.st.accent }}>{r.st.label}</span>
-														<span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">{r.date}</span>
+											{b.rounds.map((r) => {
+												const st = STAGES[r.stage];
+												const dated = r.series.flatMap((x) => x.games).sort((x, y) => x.ts - y.ts)[0];
+												return (
+													<div key={r.stage} className="flex flex-col">
+														<div className="mb-3 flex items-baseline justify-between gap-2">
+															<span className="font-display text-[18px] uppercase leading-none" style={{ color: st.accent }}>{st.label}</span>
+															<span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">{dated ? `${dated.weekday.slice(0, 3)} ${Number(dated.day)} ${dated.mon}` : "TBD"}</span>
+														</div>
+														<div className="flex flex-1 flex-col justify-around gap-3">
+															{r.series.map((x) => <SeriesCard key={x.key} series={x} st={st} liveBadge={liveBadge} />)}
+														</div>
 													</div>
-													<div className="flex flex-1 flex-col justify-around gap-3">
-														{r.matches.map((m) => {
-															const scored = scoredOf(m);
-															const rows = [
-																{ name: m.home, logo: m.homeLogo, ab: m.homeAbbr, sc: m.homeScore, win: m.homeWin },
-																{ name: m.away, logo: m.awayLogo, ab: m.awayAbbr, sc: m.awayScore, win: m.awayWin },
-															];
-															return (
-																<a key={m.id} href={m.href} className="relative block overflow-hidden rounded-lg bg-[#141210] no-underline transition-transform duration-200 hover:-translate-y-0.5" style={r.st.card}>
-																	<div className="pointer-events-none absolute inset-0" style={r.st.glow} />
-																	<div className="relative" style={r.st.bar} />
-																	<div className="relative flex flex-col gap-2 px-3.5 py-3">
-																		{rows.map((t, i) => (
-																			<div key={i} className="flex items-center gap-2.5">
-																				{t.logo
-																					? <img src={t.logo} alt="" loading="lazy" className="h-7 w-7 flex-shrink-0 rounded-full bg-white object-cover" />
-																					: <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] font-mono text-[9px] font-bold text-creamdim">{t.ab}</span>}
-																				<span className="min-w-0 flex-1 truncate font-body text-[13px] font-bold" style={{ color: scored && !t.win ? DIM : LIGHT }} title={t.name}>
-																					{t.name}
-																				</span>
-																				<span className="font-display text-[18px] leading-none" style={{ color: t.win ? r.st.accent : DIM }}>{scored ? t.sc : ""}</span>
-																			</div>
-																		))}
-																		<div className="border-t border-white/[0.08] pt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-muted2">
-																			{m.status === "done" ? "Final" : m.status === "live" ? liveBadge : m.time}
-																		</div>
-																	</div>
-																</a>
-															);
-														})}
-														{Array.from({ length: r.placeholders }, (_, i) => (
-															<div key={`tbd-${i}`} className="relative overflow-hidden rounded-lg border border-dashed border-white/[0.14] bg-white/[0.02]">
-																<div className="relative" style={{ ...r.st.bar, opacity: 0.35 }} />
-																<div className="flex flex-col gap-2 px-3.5 py-3">
-																	{[0, 1].map((row) => (
-																		<div key={row} className="flex items-center gap-2.5">
-																			<span className="h-7 w-7 flex-shrink-0 rounded-full border border-dashed border-white/[0.16]" />
-																			<span className="font-body text-[13px] font-bold text-[#5c554d]">TBD</span>
-																		</div>
-																	))}
-																	<div className="border-t border-white/[0.06] pt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[#5c554d]">To be decided</div>
-																</div>
-															</div>
-														))}
-													</div>
-												</div>
-											))}
+												);
+											})}
 										</div>
 									</div>
 								</div>
@@ -632,6 +585,89 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 				</section>
 			)}
 		</>
+	);
+}
+
+/** "Single game" / "Best of 3". */
+const formatLabel = (bestOf: number) => (bestOf > 1 ? `Best of ${bestOf}` : "Single game");
+
+const sideScoreLine = (series: Series) => {
+	const [a, b] = series.sides;
+	return a && b ? `${Math.max(a.wins, b.wins)}–${Math.min(a.wins, b.wins)}` : "";
+};
+
+/** Status line under a bracket series: result, next game, or what it awaits. */
+function seriesStatus(series: Series, liveBadge: string): string {
+	const [a, b] = series.sides;
+	if (series.winner) return series.bestOf > 1 ? `${series.winner.name} win ${sideScoreLine(series)}` : "Final";
+	if (series.projected) return a && b ? "To be scheduled" : "Awaiting winner";
+	const next = series.nextGame;
+	const gameNo = next ? series.games.indexOf(next) + 1 : 0;
+	if (next?.status === "live") return `${liveBadge} · Game ${gameNo}`;
+	if (next) return `Game ${gameNo} · ${next.weekday.slice(0, 3)} ${Number(next.day)} ${next.mon} · ${next.time}`;
+	return a && b ? `Series ${a.wins}–${b.wins}` : "To be decided";
+}
+
+/** One bracket tie: both teams with their series wins, each game's score, and
+ *  the series status. A team reaching the wins needed is shown advancing. */
+function SeriesCard({ series, st, liveBadge }: { series: Series; st: StageStyle; liveBadge: string }) {
+	const empty = series.sides.every((side) => !side);
+	const href = (series.nextGame ?? series.games[series.games.length - 1])?.href;
+	const showWins = series.bestOf > 1 || series.games.length > 1;
+	const done = series.games.filter((g) => g.status === "done");
+	const row = (side: SeriesSide | null, i: number) => {
+		const won = Boolean(series.winner && side && series.winner.id === side.id);
+		const lost = Boolean(series.winner && side && !won);
+		const single = !showWins ? done[0] : undefined;
+		const singleScore = single && side ? (single.homeTeamId === side.id || single.home === side.name ? single.homeScore : single.awayScore) : null;
+		return (
+			<div key={i} className="flex items-center gap-2.5">
+				{side?.logo
+					? <img src={side.logo} alt="" loading="lazy" className="h-7 w-7 flex-shrink-0 rounded-full bg-white object-cover" />
+					: side
+						? <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] font-mono text-[9px] font-bold text-creamdim">{side.abbr}</span>
+						: <span className="h-7 w-7 flex-shrink-0 rounded-full border border-dashed border-white/[0.16]" />}
+				<span className="min-w-0 flex-1 truncate font-body text-[13px] font-bold" style={{ color: !side ? "#5c554d" : lost ? DIM : LIGHT }} title={side?.name}>
+					{side ? side.name : "TBD"}
+				</span>
+				{won && <span className="font-mono text-[9px] uppercase tracking-[0.1em]" style={{ color: st.accent }}>Advances</span>}
+				{side && !series.projected && (
+					<span className="font-display text-[18px] leading-none" style={{ color: won ? st.accent : DIM }}>
+						{showWins ? side.wins : singleScore ?? ""}
+					</span>
+				)}
+			</div>
+		);
+	};
+	const body = (
+		<>
+			<div className="pointer-events-none absolute inset-0" style={empty ? undefined : st.glow} />
+			<div className="relative" style={empty || series.projected ? { ...st.bar, opacity: 0.35 } : st.bar} />
+			<div className="relative flex flex-col gap-2 px-3.5 py-3">
+				{series.sides.map(row)}
+				{showWins && done.length > 0 && (
+					<div className="flex flex-wrap gap-1.5">
+						{series.games.map((g, i) => {
+							const [a] = series.sides;
+							const aHome = a && (g.homeTeamId === a.id || g.home === a.name);
+							const score = g.status === "done" ? (aHome ? `${g.homeScore}–${g.awayScore}` : `${g.awayScore}–${g.homeScore}`) : g.status === "live" ? liveBadge : "—";
+							return <span key={g.id} className="rounded bg-white/[0.05] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.06em] text-creamdim">G{i + 1} {score}</span>;
+						})}
+					</div>
+				)}
+				<div className="border-t border-white/[0.08] pt-2 font-mono text-[10px] uppercase tracking-[0.08em]" style={{ color: series.winner ? st.accent : empty ? "#5c554d" : undefined }}>
+					<span className={series.winner || empty ? "" : "text-muted2"}>{seriesStatus(series, liveBadge)}</span>
+				</div>
+			</div>
+		</>
+	);
+	if (href) {
+		return <a href={href} className="relative block overflow-hidden rounded-lg bg-[#141210] no-underline transition-transform duration-200 hover:-translate-y-0.5" style={st.card}>{body}</a>;
+	}
+	return (
+		<div className={`relative overflow-hidden rounded-lg ${empty ? "border border-dashed border-white/[0.14] bg-white/[0.02]" : "bg-[#141210]"}`} style={empty ? undefined : { ...st.card, borderStyle: "dashed" }}>
+			{body}
+		</div>
 	);
 }
 
@@ -692,15 +728,35 @@ function RegularCard({ m, code, conferenceName, settings, liveBadge }: CardProps
 }
 
 /** Knockout match card (dark) — styling escalates by round. */
-function PlayoffCard({ m, st, code, season, settings, liveBadge }: CardProps & { st: StageStyle; season: string }) {
+function PlayoffCard({ m, st, series: info, code, season, settings, liveBadge }: CardProps & { st: StageStyle; season: string; series?: { series: Series; gameNumber: number } }) {
 	const scored = scoredOf(m);
 	const done = m.status === "done";
 	const homeDark = scored && !m.homeWin ? DIM : LIGHT;
 	const awayDark = scored && !m.awayWin ? DIM : LIGHT;
 	const winner = winnerOf(m);
-	const tagline = m.stage === "F"
-		? (done && winner ? `${winner} · ${season} ${code} Champions` : `Winner lifts the ${season} ${code} title`)
-		: (done && winner ? `${winner} advance to the ${st.next}` : `Winner advances to the ${st.next}`);
+	const series = info && info.series.bestOf > 1 ? info.series : null;
+	let tagline: string;
+	if (series) {
+		// Best-of-3: describe the series as it stands, not just this game.
+		const [a, b] = series.sides;
+		const game = `Game ${info!.gameNumber}`;
+		if (series.winner) {
+			tagline = m.stage === "F"
+				? `${series.winner.name} · ${season} ${code} Champions`
+				: `${series.winner.name} win the series ${sideScoreLine(series)} · advance to the ${st.next}`;
+		} else if (a && b && (a.wins || b.wins)) {
+			const leader = a.wins === b.wins ? null : a.wins > b.wins ? a : b;
+			tagline = leader
+				? `${game} · ${leader.name} lead ${sideScoreLine(series)}`
+				: `${game} · Series tied ${a.wins}–${b.wins}`;
+		} else {
+			tagline = `${game} · ${formatLabel(series.bestOf)} — first to ${series.winsNeeded} wins ${m.stage === "F" ? "is champion" : "advances"}`;
+		}
+	} else {
+		tagline = m.stage === "F"
+			? (done && winner ? `${winner} · ${season} ${code} Champions` : `Winner lifts the ${season} ${code} title`)
+			: (done && winner ? `${winner} advance to the ${st.next}` : `Winner advances to the ${st.next}`);
+	}
 	const statusText = done ? "Final" : m.status === "live" ? liveBadge : "Upcoming";
 	const statusColor = done ? "#b8afa6" : m.stage === "F" ? GOLD : BRAND_SOFT;
 	const venue = settings.venue ? m.venue : null;

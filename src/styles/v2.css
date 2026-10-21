@@ -12,6 +12,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Slim scrollbar for horizontal scrollers on dark (night) sections, e.g. the
+   playoff bracket: brand-red thumb on a faint track instead of the white
+   browser default. */
+.eb-dark-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--site-brand-rgb, 228 0 43) / 0.7) rgb(255 255 255 / 0.06);
+}
+.eb-dark-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+.eb-dark-scroll::-webkit-scrollbar-track { background: rgb(255 255 255 / 0.06); border-radius: 999px; }
+.eb-dark-scroll::-webkit-scrollbar-thumb { background: rgb(var(--site-brand-rgb, 228 0 43) / 0.7); border-radius: 999px; }
+.eb-dark-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--site-brand-rgb, 228 0 43)); }
+.eb-dark-scroll::-webkit-scrollbar-button { display: none; }
+
 /* Hide x-cloak elements until Alpine initializes (mobile menu). */
 [x-cloak] { display: none !important; }
 

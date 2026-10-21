@@ -2618,6 +2618,27 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
+        label: 'Playoff format',
+        fields: [
+          f(
+            'fixtures_seriesQF',
+            'Quarterfinals',
+            'Games per tie. In a series the first team to win a majority advances.',
+            { type: 'select', options: ['Single game', 'Best of 3', 'Best of 5', 'Best of 7'], defaultValue: 'Best of 3' }
+          ),
+          f('fixtures_seriesSF', 'Semifinals', 'Games per tie.', {
+            type: 'select',
+            options: ['Single game', 'Best of 3', 'Best of 5', 'Best of 7'],
+            defaultValue: 'Best of 3',
+          }),
+          f('fixtures_seriesF', 'Final', 'Games in the championship final.', {
+            type: 'select',
+            options: ['Single game', 'Best of 3', 'Best of 5', 'Best of 7'],
+            defaultValue: 'Single game',
+          }),
+        ],
+      },
+      {
         label: 'Empty state',
         fields: [
           f('fixtures_emptyTitle', 'Heading', 'Shown when the filters return nothing.', {

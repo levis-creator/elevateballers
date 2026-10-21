@@ -29,6 +29,8 @@ export interface FixtureMatch {
 	round: string;
 	/** Optional for cache entries written before the field existed. */
 	stage?: PlayoffStage | null;
+	/** Bracket slot set in the admin (orders playoff series); null when unset. */
+	bracketPosition?: number | null;
 	performer?: { name: string; team: string; image: string | null; pts: number; reb: number; ast: number } | null;
 
 	/** Epoch ms — precise sort key (upcoming ascending, results descending). */

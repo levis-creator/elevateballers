@@ -13,7 +13,7 @@ import { getPublicCompetitions } from "@/features/seasons/data/public-competitio
 import { calculatePlayerMatchStats } from "@/features/player/domain/usecases/playerStats";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
-const FIXTURES_CACHE_KEY = "public:fixtures:v3";
+const FIXTURES_CACHE_KEY = "public:fixtures:v4";
 const FIXTURES_CACHE_TTL_SECONDS = 60;
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -66,6 +66,7 @@ function toFixture(m: any): FixtureMatch {
 		venue: m.venue ?? m.team1?.venue ?? m.team2?.venue ?? null,
 		round: m.bracketRound ? `Round ${m.bracketRound}` : m.stage ? String(m.stage).toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter: string) => letter.toUpperCase()) : "Regular Season",
 		stage: STAGE_BY_ENUM[m.stage] ?? null,
+		bracketPosition: m.bracketPosition ?? null,
 		performer: null,
 		ts: new Date(m.date).getTime(),
 		isoDate,

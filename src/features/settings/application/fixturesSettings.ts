@@ -5,7 +5,11 @@ export type PublicFixturesSettings = {
   viewTabs: boolean; leagueFilter: boolean; dayNav: boolean; horizon: number;
   venue: boolean; leagueTag: boolean; crests: boolean; ics: boolean;
   emptyTitle: string; emptyBody: string; emptyBodyFiltered: string;
+  /** Games per knockout tie by round (1 = single game, 3 = best of 3, …). */
+  playoffFormat: PlayoffFormat;
 };
+
+export type PlayoffFormat = { QF: number; SF: number; F: number };
 
 export const DEFAULT_PUBLIC_FIXTURES_SETTINGS: PublicFixturesSettings = {
   eyebrow: 'Match Calendar · Season {season}', title: 'Fixtures', browseRow: true,
@@ -14,6 +18,17 @@ export const DEFAULT_PUBLIC_FIXTURES_SETTINGS: PublicFixturesSettings = {
   emptyTitle: 'No upcoming fixtures',
   emptyBody: 'The schedule for this season hasn’t been published yet. Check back soon.',
   emptyBodyFiltered: 'No {league} fixtures are scheduled right now.',
+  playoffFormat: { QF: 3, SF: 3, F: 1 },
+};
+
+/** "Single game" → 1, "Best of 5" → 5; anything else falls back. Even
+ *  numbers are rounded up so a series always has a majority winner. */
+const bestOf = (value: string | undefined, fallback: number) => {
+  if (!value) return fallback;
+  if (/single/i.test(value)) return 1;
+  const n = Number(value.match(/\d+/)?.[0]);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(9, n % 2 === 0 ? n + 1 : n);
 };
 
 const text = (value: string | undefined, fallback: string) => value === undefined ? fallback : value.trim();
@@ -29,6 +44,11 @@ export function resolvePublicFixturesSettings(settings: SiteSetting[]): PublicFi
     viewTabs: bool(v.fixtures_viewTabs, d.viewTabs), leagueFilter: bool(v.fixtures_leagueFilter, d.leagueFilter), dayNav: bool(v.fixtures_dayNav, d.dayNav), horizon: integer(v.fixtures_horizon, d.horizon, 1, 365),
     venue: bool(v.fixtures_venue, d.venue), leagueTag: bool(v.fixtures_leagueTag, d.leagueTag), crests: bool(v.fixtures_crests, d.crests), ics: bool(v.fixtures_ics, d.ics),
     emptyTitle: text(v.fixtures_emptyTitle ?? v.fixtures_empty, d.emptyTitle), emptyBody: text(v.fixtures_emptyBody, d.emptyBody), emptyBodyFiltered: text(v.fixtures_emptyBodyFiltered, d.emptyBodyFiltered),
+    playoffFormat: {
+      QF: bestOf(v.fixtures_seriesQF, d.playoffFormat.QF),
+      SF: bestOf(v.fixtures_seriesSF, d.playoffFormat.SF),
+      F: bestOf(v.fixtures_seriesF, d.playoffFormat.F),
+    },
   };
 }
 
