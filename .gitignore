@@ -37,3 +37,5 @@ ${HOME}/
 .netlify
 .vercel
 sync_config.jsonc
+# local data backups (may contain personal data)
+backups/

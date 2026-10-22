@@ -63,21 +63,21 @@ datasource db {
 
 Then use connection string with SSL:
 ```
-DATABASE_URL="postgresql://postgres.zjnlvnyjsidnelgciqmz:[REDACTED]@aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require&pgbouncer=true"
+DATABASE_URL="postgresql://postgres.zjnlvnyjsidnelgciqmz:[YOUR-PASSWORD]@aws-1-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require&pgbouncer=true"
 ```
 
 ### Option 2: Use Direct Connection (if IP whitelisted)
 
 If your IP is whitelisted in Supabase:
 ```
-DATABASE_URL="postgresql://postgres:[REDACTED]@db.zjnlvnyjsidnelgciqmz.supabase.co:5432/postgres?sslmode=require"
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.zjnlvnyjsidnelgciqmz.supabase.co:5432/postgres?sslmode=require"
 ```
 
 ### Option 3: Use Connection Pooling Port
 
 Try port 6543 for connection pooling:
 ```
-DATABASE_URL="postgresql://postgres.zjnlvnyjsidnelgciqmz:[REDACTED]@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
+DATABASE_URL="postgresql://postgres.zjnlvnyjsidnelgciqmz:[YOUR-PASSWORD]@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
 ```
 
 ## After Migration
