@@ -850,6 +850,19 @@ model Player {
   @@map("players")
 }
 
+model PlayerDuplicateReview {
+  id           String   @id @default(cuid())
+  matchKey     String   @unique @map("match_key")
+  resolution   String   @default("OPEN")
+  reviewedById String?  @map("reviewed_by_id")
+  reviewedAt   DateTime? @map("reviewed_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([resolution])
+  @@map("player_duplicate_reviews")
+}
+
 /// A suspension or injury that keeps a player out of match-day squads.
 /// Suspensions cover the team's next `matchCount` matches dated after
 /// `startsAfter` (ignoring `sourceMatchId`, the match the player was ejected

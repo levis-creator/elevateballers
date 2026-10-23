@@ -29,7 +29,7 @@ type Queue = {
   players: any[];
   teams: any[];
   rosterProposals: any[];
-  duplicates: { key: string; ids: string[] }[];
+  duplicates: { key: string; ids: string[]; resolution?: string }[];
   page: number;
   total: number;
   totalPages: number;
@@ -64,6 +64,9 @@ export default function RegistrationReviewQueue() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [duplicateReview, setDuplicateReview] = useState<{ key: string; ids: string[]; resolution?: string } | null>(null);
+  const [duplicatePlayers, setDuplicatePlayers] = useState<any[]>([]);
+  const [duplicateLoading, setDuplicateLoading] = useState(false);
 
   const load = async (page = 1) => {
     setLoading(true);
@@ -81,6 +84,38 @@ export default function RegistrationReviewQueue() {
   };
 
   useEffect(() => { void load(); }, [kind, status]);
+
+  const openDuplicateReview = async (duplicate: { key: string; ids: string[]; resolution?: string }) => {
+    setDuplicateReview(duplicate);
+    setDuplicatePlayers([]);
+    setDuplicateLoading(true);
+    try {
+      const responses = await Promise.all(duplicate.ids.map((id) => fetch(`/api/players/${id}`)));
+      const players = await Promise.all(responses.map((response) => response.ok ? response.json() : null));
+      setDuplicatePlayers(players.filter(Boolean));
+    } catch {
+      setError('Could not load the matching player records.');
+    } finally {
+      setDuplicateLoading(false);
+    }
+  };
+
+  const resolveDuplicate = async (resolution: 'NOT_DUPLICATE' | 'FLAG_FOR_MERGE') => {
+    if (!duplicateReview) return;
+    setError(null);
+    const response = await fetch('/api/registration/duplicates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matchKey: duplicateReview.key, resolution }),
+    });
+    if (!response.ok) {
+      setError((await response.json().catch(() => ({}))).error ?? 'Could not save the duplicate decision.');
+      return;
+    }
+    setMessage(resolution === 'NOT_DUPLICATE' ? 'Marked as not a duplicate.' : 'Flagged for a controlled merge review.');
+    setDuplicateReview(null);
+    void load(queue.page);
+  };
 
   const players = queue.players;
   const teams = queue.teams;
@@ -133,7 +168,7 @@ export default function RegistrationReviewQueue() {
         </div></div>
 
         {(message || error) && <div role="status" className={`mb-4 flex items-center gap-2 rounded-lg border px-3.5 py-3 text-[13px] ${error ? 'border-rose-500/25 bg-rose-500/10 text-rose-200' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'}`}>{error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}{error || message}</div>}
-        {queue.duplicates.length > 0 && <div role="alert" className="mb-4 rounded-xl border-2 border-[var(--warn-border)] bg-[var(--warn-bg)] p-4 shadow-[0_8px_24px_rgba(245,158,11,0.12)]"><div className="mb-2 flex flex-wrap items-center gap-2 text-[var(--warn-text)]"><FileWarning className="h-5 w-5" /><span className="font-['Anton'] text-[18px] uppercase leading-none tracking-[0.02em]">Possible duplicates need attention</span><span className="rounded-full bg-[var(--warn-border)] px-2 py-0.5 font-['Space_Mono'] text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--warn-text)]">{queue.duplicates.length} matches</span></div><p className="mb-3 text-[12px] leading-5 text-[var(--warn-muted)]">Review these matching emails or names before approving new registrations.</p><div className="flex flex-wrap gap-2">{queue.duplicates.map((duplicate) => <span key={duplicate.key} className="rounded-md border border-[var(--warn-chip-border)] bg-[var(--warn-chip-bg)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--warn-chip-text)]">{duplicate.key} · {duplicate.ids.length} records</span>)}</div></div>}
+        {queue.duplicates.length > 0 && <div role="alert" className="mb-4 rounded-xl border-2 border-[var(--warn-border)] bg-[var(--warn-bg)] p-4 shadow-[0_8px_24px_rgba(245,158,11,0.12)]"><div className="mb-2 flex flex-wrap items-center gap-2 text-[var(--warn-text)]"><FileWarning className="h-5 w-5" /><span className="font-['Anton'] text-[18px] uppercase leading-none tracking-[0.02em]">Possible duplicates need attention</span><span className="rounded-full bg-[var(--warn-border)] px-2 py-0.5 font-['Space_Mono'] text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--warn-text)]">{queue.duplicates.length} matches</span></div><p className="mb-3 text-[12px] leading-5 text-[var(--warn-muted)]">Review these matching emails or names before approving new registrations.</p><div className="flex flex-wrap gap-2">{queue.duplicates.map((duplicate) => <button type="button" key={duplicate.key} onClick={() => void openDuplicateReview(duplicate)} className="rounded-md border border-[var(--warn-chip-border)] bg-[var(--warn-chip-bg)] px-2.5 py-1.5 text-left text-[11px] font-semibold text-[var(--warn-chip-text)] transition-colors hover:border-[var(--warn-text)] hover:bg-[var(--warn-border)]"><span className="block">{duplicate.key} · {duplicate.ids.length} records</span>{duplicate.resolution === 'FLAG_FOR_MERGE' && <span className="mt-1 block font-['Space_Mono'] text-[9px] uppercase tracking-[0.06em]">Flagged for merge</span>}</button>)}</div></div>}
         {selected.length > 0 && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--brand)]/25 bg-[var(--brand)]/[0.08] px-4 py-3"><span className="mr-auto font-['Space_Mono'] text-[11px] uppercase tracking-[0.08em] text-[var(--brandsoft)]">{selected.length} selected</span><button type="button" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[11px] font-bold text-white hover:bg-emerald-500" onClick={() => void review(selected, 'APPROVE')}><Check className="h-3.5 w-3.5" /> Approve</button><button type="button" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-500/30 px-3 text-[11px] font-bold text-rose-300 hover:bg-rose-500/10" onClick={() => void review(selected, 'REJECT')}><X className="h-3.5 w-3.5" /> Reject</button></div>}
 
         <div className="overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf)] shadow-[0_8px_24px_rgba(0,0,0,0.08)]"><div className="flex items-center justify-between border-b border-[var(--bord2)] px-4 py-3 sm:px-5"><div><h2 className="font-['Anton'] text-[19px] uppercase leading-none text-[var(--tx)]">Review queue</h2><p className="mt-1 text-[11px] text-[var(--txm)]">{queue.total} result{queue.total === 1 ? '' : 's'} · page {queue.page} of {queue.totalPages}</p></div>{loading && <Loader2 className="h-4 w-4 animate-spin text-[var(--brand)]" />}</div>
@@ -145,6 +180,7 @@ export default function RegistrationReviewQueue() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--bord2)] px-4 py-3 sm:px-5"><span className="font-['Space_Mono'] text-[10px] uppercase tracking-[0.08em] text-[var(--txm)]">Page {queue.page} of {queue.totalPages}</span><div className="flex gap-2"><button type="button" disabled={queue.page <= 1 || loading} onClick={() => void load(queue.page - 1)} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--bord)] px-3 text-[11px] font-bold text-[var(--txd)] disabled:cursor-not-allowed disabled:opacity-40 hover:border-[var(--brand)]"><ChevronLeft className="h-3.5 w-3.5" /> Previous</button><button type="button" disabled={queue.page >= queue.totalPages || loading} onClick={() => void load(queue.page + 1)} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--bord)] px-3 text-[11px] font-bold text-[var(--txd)] disabled:cursor-not-allowed disabled:opacity-40 hover:border-[var(--brand)]">Next <ChevronRight className="h-3.5 w-3.5" /></button></div></div>
         </div>
 
+        {duplicateReview && <DuplicateReviewDialog duplicate={duplicateReview} players={duplicatePlayers} loading={duplicateLoading} onClose={() => setDuplicateReview(null)} onResolve={resolveDuplicate} />}
       </div>
     </section>
   );
@@ -152,3 +188,24 @@ export default function RegistrationReviewQueue() {
 
 function StatusBadge({ status }: { status: string }) { return <span className={`inline-flex rounded-full border px-2 py-1 font-['Space_Mono'] text-[9px] uppercase tracking-[0.06em] ${statusClass(status)}`}>{statusLabel[status] || status}</span>; }
 function RowActions({ onApprove, onReject }: { onApprove: () => void; onReject: () => void }) { return <div className="flex items-center gap-1.5"><button type="button" aria-label="Approve registration" onClick={onApprove} className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-600/90 px-2 text-[10px] font-bold text-white hover:bg-emerald-500"><Check className="h-3 w-3" /> Approve</button><button type="button" aria-label="Reject registration" onClick={onReject} className="inline-flex h-7 items-center gap-1 rounded-md border border-rose-500/25 px-2 text-[10px] font-bold text-rose-300 hover:bg-rose-500/10"><X className="h-3 w-3" /> Reject</button></div>; }
+
+function DuplicateReviewDialog({
+  duplicate,
+  players,
+  loading,
+  onClose,
+  onResolve,
+}: {
+  duplicate: { key: string; ids: string[]; resolution?: string };
+  players: any[];
+  loading: boolean;
+  onClose: () => void;
+  onResolve: (resolution: 'NOT_DUPLICATE' | 'FLAG_FOR_MERGE') => void;
+}) {
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <section className="max-h-[90vh] w-full max-w-[760px] overflow-y-auto rounded-2xl border border-[var(--bord)] bg-[var(--surf)] text-[var(--tx)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]" role="dialog" aria-modal="true" aria-labelledby="duplicate-review-title">
+      <header className="flex items-start justify-between gap-4 border-b border-[var(--bord2)] px-5 py-4"><div><div className="mb-1 font-['Space_Mono'] text-[9px] uppercase tracking-[0.16em] text-[var(--brandsoft)]">Duplicate review</div><h2 id="duplicate-review-title" className="font-['Anton'] text-[24px] uppercase leading-none">Compare records</h2><p className="mt-1 text-[12px] text-[var(--txm)]">Match: {duplicate.key}</p></div><button type="button" aria-label="Close duplicate review" onClick={onClose} className="rounded-md p-1.5 text-[var(--txm)] hover:bg-[var(--hov)] hover:text-[var(--tx)]"><X className="h-5 w-5" /></button></header>
+      <div className="p-5">{loading ? <div className="flex items-center justify-center gap-2 py-16 text-[13px] text-[var(--txm)]"><Loader2 className="h-5 w-5 animate-spin text-[var(--brand)]" /> Loading player records…</div> : <><div className="grid gap-3 md:grid-cols-2">{players.map((player) => { const name = displayName(player, 'PLAYER'); return <article key={player.id} className="rounded-xl border border-[var(--bord)] bg-[var(--surf2)] p-4"><div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-[15px] font-bold text-[var(--tx)]">{name}</h3><p className="mt-1 text-[11px] text-[var(--txm)]">{player.team?.name || 'No team assigned'}</p></div><StatusBadge status={player.approved ? 'APPROVED' : 'PENDING'} /></div><dl className="grid gap-2 text-[12px]"><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Email</dt><dd className="max-w-[190px] truncate text-right text-[var(--txd)]">{player.email || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Phone</dt><dd className="text-right text-[var(--txd)]">{player.phone || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Position</dt><dd className="text-right text-[var(--txd)]">{player.position || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Created</dt><dd className="text-right text-[var(--txd)]">{player.createdAt ? new Date(player.createdAt).toLocaleDateString() : '—'}</dd></div></dl><a href={`/admin/players/${player.id}`} className="mt-4 inline-flex text-[11px] font-bold text-[var(--brand)] no-underline hover:underline">View full profile →</a></article>; })}</div><div className="mt-5 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 py-3 text-[12px] leading-5 text-[var(--txm)]">A duplicate warning does not automatically mean either registration should be rejected. Compare the records, then record the appropriate decision.</div><div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" onClick={onClose} className="h-9 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)]">Cancel</button><button type="button" onClick={() => onResolve('NOT_DUPLICATE')} className="h-9 rounded-lg border border-emerald-500/30 px-3.5 text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/10">Not a duplicate</button><button type="button" onClick={() => onResolve('FLAG_FOR_MERGE')} className="h-9 rounded-lg bg-[var(--brand)] px-3.5 text-[12px] font-extrabold text-[var(--brandfg)] hover:bg-[var(--brandlt)]">Flag for merge</button></div></>}</div>
+    </section>
+  </div>;
+}

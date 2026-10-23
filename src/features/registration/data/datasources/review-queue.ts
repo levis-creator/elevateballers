@@ -218,13 +218,24 @@ export async function getRegistrationReviewQueue(input: {
       `${player.firstName?.toLowerCase()}::${player.lastName?.toLowerCase()}`;
     if (key) duplicateKeys.set(key, [...(duplicateKeys.get(key) || []), player.id]);
   }
+  const duplicateGroups = [...duplicateKeys.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([matchKey, ids]) => ({ matchKey, ids }));
+  const duplicateReviews = duplicateGroups.length
+    ? await db.playerDuplicateReview.findMany({
+        where: { matchKey: { in: duplicateGroups.map(({ matchKey }) => matchKey) } },
+        select: { matchKey: true, resolution: true },
+      })
+    : [];
+  const reviewByKey = new Map(duplicateReviews.map((review: any) => [review.matchKey, review.resolution]));
+
   return {
     players,
     teams,
     rosterProposals: mappedRosterProposals,
-    duplicates: [...duplicateKeys.entries()]
-      .filter(([, ids]) => ids.length > 1)
-      .map(([key, ids]) => ({ key, ids })),
+    duplicates: duplicateGroups
+      .filter(({ matchKey }) => reviewByKey.get(matchKey) !== 'NOT_DUPLICATE')
+      .map(({ matchKey, ids }) => ({ key: matchKey, ids, resolution: reviewByKey.get(matchKey) ?? 'OPEN' })),
     page: input.page,
     limit: input.limit,
     total: playerTotal + teamTotal + rosterTotal,
