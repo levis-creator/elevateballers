@@ -67,6 +67,7 @@ export default function RegistrationReviewQueue() {
   const [duplicateReview, setDuplicateReview] = useState<{ key: string; ids: string[]; resolution?: string } | null>(null);
   const [duplicatePlayers, setDuplicatePlayers] = useState<any[]>([]);
   const [duplicateLoading, setDuplicateLoading] = useState(false);
+  const [duplicateMerging, setDuplicateMerging] = useState(false);
 
   const load = async (page = 1) => {
     setLoading(true);
@@ -115,6 +116,31 @@ export default function RegistrationReviewQueue() {
     setMessage(resolution === 'NOT_DUPLICATE' ? 'Marked as not a duplicate.' : 'Flagged for a controlled merge review.');
     setDuplicateReview(null);
     void load(queue.page);
+  };
+
+  const mergeDuplicate = async (primaryPlayerId: string, secondaryPlayerId: string) => {
+    if (!duplicateReview) return;
+    setDuplicateMerging(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/registration/duplicates/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchKey: duplicateReview.key, primaryPlayerId, secondaryPlayerId, confirm: true }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError([body.error, ...(body.conflicts ?? [])].filter(Boolean).join(' '));
+        return;
+      }
+      setMessage('Player records merged. The secondary record was archived and its history was linked to the primary record.');
+      setDuplicateReview(null);
+      void load(queue.page);
+    } catch {
+      setError('Could not merge the player records.');
+    } finally {
+      setDuplicateMerging(false);
+    }
   };
 
   const players = queue.players;
@@ -180,7 +206,7 @@ export default function RegistrationReviewQueue() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--bord2)] px-4 py-3 sm:px-5"><span className="font-['Space_Mono'] text-[10px] uppercase tracking-[0.08em] text-[var(--txm)]">Page {queue.page} of {queue.totalPages}</span><div className="flex gap-2"><button type="button" disabled={queue.page <= 1 || loading} onClick={() => void load(queue.page - 1)} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--bord)] px-3 text-[11px] font-bold text-[var(--txd)] disabled:cursor-not-allowed disabled:opacity-40 hover:border-[var(--brand)]"><ChevronLeft className="h-3.5 w-3.5" /> Previous</button><button type="button" disabled={queue.page >= queue.totalPages || loading} onClick={() => void load(queue.page + 1)} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--bord)] px-3 text-[11px] font-bold text-[var(--txd)] disabled:cursor-not-allowed disabled:opacity-40 hover:border-[var(--brand)]">Next <ChevronRight className="h-3.5 w-3.5" /></button></div></div>
         </div>
 
-        {duplicateReview && <DuplicateReviewDialog duplicate={duplicateReview} players={duplicatePlayers} loading={duplicateLoading} onClose={() => setDuplicateReview(null)} onResolve={resolveDuplicate} />}
+        {duplicateReview && <DuplicateReviewDialog duplicate={duplicateReview} players={duplicatePlayers} loading={duplicateLoading} merging={duplicateMerging} onClose={() => setDuplicateReview(null)} onResolve={resolveDuplicate} onMerge={mergeDuplicate} />}
       </div>
     </section>
   );
@@ -193,19 +219,32 @@ function DuplicateReviewDialog({
   duplicate,
   players,
   loading,
+  merging,
   onClose,
   onResolve,
+  onMerge,
 }: {
   duplicate: { key: string; ids: string[]; resolution?: string };
   players: any[];
   loading: boolean;
+  merging: boolean;
   onClose: () => void;
   onResolve: (resolution: 'NOT_DUPLICATE' | 'FLAG_FOR_MERGE') => void;
+  onMerge: (primaryPlayerId: string, secondaryPlayerId: string) => void;
 }) {
+  const [primaryPlayerId, setPrimaryPlayerId] = useState('');
+  const [confirmMerge, setConfirmMerge] = useState(false);
+
+  useEffect(() => {
+    setPrimaryPlayerId(players[0]?.id ?? '');
+    setConfirmMerge(false);
+  }, [players]);
+
+  const secondaryPlayerId = players.find((player) => player.id !== primaryPlayerId)?.id ?? '';
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <section className="max-h-[90vh] w-full max-w-[760px] overflow-y-auto rounded-2xl border border-[var(--bord)] bg-[var(--surf)] text-[var(--tx)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]" role="dialog" aria-modal="true" aria-labelledby="duplicate-review-title">
       <header className="flex items-start justify-between gap-4 border-b border-[var(--bord2)] px-5 py-4"><div><div className="mb-1 font-['Space_Mono'] text-[9px] uppercase tracking-[0.16em] text-[var(--brandsoft)]">Duplicate review</div><h2 id="duplicate-review-title" className="font-['Anton'] text-[24px] uppercase leading-none">Compare records</h2><p className="mt-1 text-[12px] text-[var(--txm)]">Match: {duplicate.key}</p></div><button type="button" aria-label="Close duplicate review" onClick={onClose} className="rounded-md p-1.5 text-[var(--txm)] hover:bg-[var(--hov)] hover:text-[var(--tx)]"><X className="h-5 w-5" /></button></header>
-      <div className="p-5">{loading ? <div className="flex items-center justify-center gap-2 py-16 text-[13px] text-[var(--txm)]"><Loader2 className="h-5 w-5 animate-spin text-[var(--brand)]" /> Loading player records…</div> : <><div className="grid gap-3 md:grid-cols-2">{players.map((player) => { const name = displayName(player, 'PLAYER'); return <article key={player.id} className="rounded-xl border border-[var(--bord)] bg-[var(--surf2)] p-4"><div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-[15px] font-bold text-[var(--tx)]">{name}</h3><p className="mt-1 text-[11px] text-[var(--txm)]">{player.team?.name || 'No team assigned'}</p></div><StatusBadge status={player.approved ? 'APPROVED' : 'PENDING'} /></div><dl className="grid gap-2 text-[12px]"><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Email</dt><dd className="max-w-[190px] truncate text-right text-[var(--txd)]">{player.email || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Phone</dt><dd className="text-right text-[var(--txd)]">{player.phone || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Position</dt><dd className="text-right text-[var(--txd)]">{player.position || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Created</dt><dd className="text-right text-[var(--txd)]">{player.createdAt ? new Date(player.createdAt).toLocaleDateString() : '—'}</dd></div></dl><a href={`/admin/players/${player.id}`} className="mt-4 inline-flex text-[11px] font-bold text-[var(--brand)] no-underline hover:underline">View full profile →</a></article>; })}</div><div className="mt-5 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 py-3 text-[12px] leading-5 text-[var(--txm)]">A duplicate warning does not automatically mean either registration should be rejected. Compare the records, then record the appropriate decision.</div><div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" onClick={onClose} className="h-9 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)]">Cancel</button><button type="button" onClick={() => onResolve('NOT_DUPLICATE')} className="h-9 rounded-lg border border-emerald-500/30 px-3.5 text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/10">Not a duplicate</button><button type="button" onClick={() => onResolve('FLAG_FOR_MERGE')} className="h-9 rounded-lg bg-[var(--brand)] px-3.5 text-[12px] font-extrabold text-[var(--brandfg)] hover:bg-[var(--brandlt)]">Flag for merge</button></div></>}</div>
+      <div className="p-5">{loading ? <div className="flex items-center justify-center gap-2 py-16 text-[13px] text-[var(--txm)]"><Loader2 className="h-5 w-5 animate-spin text-[var(--brand)]" /> Loading player records…</div> : <><div className="grid gap-3 md:grid-cols-2">{players.map((player) => { const name = displayName(player, 'PLAYER'); const isPrimary = player.id === primaryPlayerId; return <article key={player.id} className={`rounded-xl border bg-[var(--surf2)] p-4 ${isPrimary ? 'border-[var(--brand)] ring-1 ring-[var(--brand)]/30' : 'border-[var(--bord)]'}`}><div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-[15px] font-bold text-[var(--tx)]">{name}</h3><p className="mt-1 text-[11px] text-[var(--txm)]">{player.team?.name || 'No team assigned'}</p></div><StatusBadge status={player.approved ? 'APPROVED' : 'PENDING'} /></div><dl className="grid gap-2 text-[12px]"><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Email</dt><dd className="max-w-[190px] truncate text-right text-[var(--txd)]">{player.email || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Phone</dt><dd className="text-right text-[var(--txd)]">{player.phone || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Position</dt><dd className="text-right text-[var(--txd)]">{player.position || '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--txm)]">Created</dt><dd className="text-right text-[var(--txd)]">{player.createdAt ? new Date(player.createdAt).toLocaleDateString() : '—'}</dd></div></dl><label className="mt-4 flex cursor-pointer items-center gap-2 text-[11px] font-bold text-[var(--txd)]"><input type="radio" name="duplicate-primary" checked={isPrimary} onChange={() => setPrimaryPlayerId(player.id)} className="accent-[var(--brand)]" /> Keep this record</label><a href={`/admin/players/${player.id}`} className="mt-3 inline-flex text-[11px] font-bold text-[var(--brand)] no-underline hover:underline">View full profile →</a></article>; })}</div><div className="mt-5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-[12px] leading-5 text-amber-200">Merging keeps the selected primary record, links related registrations and match history to it, then archives the other record. This cannot be undone from this screen.</div><label className="mt-3 flex cursor-pointer items-start gap-2 text-[12px] text-[var(--txd)]"><input type="checkbox" checked={confirmMerge} onChange={(event) => setConfirmMerge(event.target.checked)} className="mt-0.5 accent-[var(--brand)]" /><span>I understand that the secondary record will be archived and its linked history will use the primary record.</span></label><div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" onClick={onClose} className="h-9 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)]">Cancel</button><button type="button" onClick={() => onResolve('NOT_DUPLICATE')} className="h-9 rounded-lg border border-emerald-500/30 px-3.5 text-[12px] font-bold text-emerald-300 hover:bg-emerald-500/10">Not a duplicate</button><button type="button" onClick={() => onResolve('FLAG_FOR_MERGE')} className="h-9 rounded-lg border border-[var(--brand)]/40 px-3.5 text-[12px] font-bold text-[var(--brand)] hover:bg-[var(--brand)]/10">Flag for merge</button><button type="button" disabled={!primaryPlayerId || !secondaryPlayerId || !confirmMerge || merging} onClick={() => onMerge(primaryPlayerId, secondaryPlayerId)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand)] px-3.5 text-[12px] font-extrabold text-[var(--brandfg)] hover:bg-[var(--brandlt)] disabled:cursor-not-allowed disabled:opacity-40">{merging && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Merge records</button></div></>}</div>
     </section>
   </div>;
 }

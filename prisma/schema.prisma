@@ -812,6 +812,9 @@ model Player {
   stats                           Json?
   approved                        Boolean                          @default(false)
   archived                        Boolean                          @default(false)
+  mergedIntoId                    String?                          @map("merged_into_id")
+  mergedAt                        DateTime?                        @map("merged_at")
+  mergedById                      String?                          @map("merged_by_id")
   createdAt                       DateTime                         @default(now()) @map("created_at")
   updatedAt                       DateTime                         @updatedAt @map("updated_at")
   teamId                          String?                          @map("team_id")
@@ -846,6 +849,7 @@ model Player {
   @@index([slug])
   @@index([approved])
   @@index([archived])
+  @@index([mergedIntoId])
   @@index([approved, archived, lastName, firstName], map: "players_public_directory_idx")
   @@map("players")
 }

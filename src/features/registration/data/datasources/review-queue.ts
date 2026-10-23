@@ -207,6 +207,8 @@ export async function getRegistrationReviewQueue(input: {
   }));
   const duplicates = await db.player.findMany({
     where: {
+      archived: false,
+      mergedIntoId: null,
       OR: [{ email: { not: null } }, { firstName: { not: null }, lastName: { not: null } }],
     },
     select: { id: true, firstName: true, lastName: true, email: true },
