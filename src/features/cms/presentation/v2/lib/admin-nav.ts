@@ -124,6 +124,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: '/admin/messages',
         icon: MessageSquare,
         permission: 'contact_messages:read',
+        badge: 'messages',
       },
       {
         label: 'Subscribers',

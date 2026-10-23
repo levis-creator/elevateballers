@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
 import { useAdminShell } from '@/features/cms/presentation/components/AdminShellContext';
 import { usePathname } from '@/features/cms/presentation/hooks/usePathname';
@@ -13,6 +14,30 @@ export default function AdminSidebarV2() {
   const { can, canAny, user, roles } = usePermissions();
   const { sidebarShown, isMobile, setSidebarOpen } = useAdminShell();
   const activePath = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUnreadCount = async () => {
+      try {
+        const response = await fetch('/api/contact-messages?unread=true&pageSize=1');
+        if (!response.ok) return;
+        const body = await response.json().catch(() => null);
+        const count = Number(body?.meta?.total ?? 0);
+        if (!cancelled) setUnreadCount(Number.isFinite(count) ? count : 0);
+      } catch {
+        // The badge is supplemental navigation UI; leave the last known value.
+      }
+    };
+
+    void loadUnreadCount();
+    const timer = window.setInterval(loadUnreadCount, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const allowed = (item: AdminNavItem): boolean => {
     if (item.permission && !can(item.permission)) return false;
@@ -95,6 +120,16 @@ export default function AdminSidebarV2() {
                       className={`h-[18px] w-[18px] flex-shrink-0 ${active ? 'text-white' : 'text-[var(--txm)]'}`}
                     />
                     <span className="flex-1 text-left">{item.label}</span>
+                    {item.badge === 'messages' && unreadCount > 0 && (
+                      <span
+                        className={`min-w-[20px] rounded-full px-1.5 py-0.5 text-center font-['Space_Mono'] text-[9px] font-bold leading-none ${
+                          active ? 'bg-white text-[var(--brand)]' : 'bg-[var(--brand)] text-white'
+                        }`}
+                        aria-label={`${unreadCount} unread message${unreadCount === 1 ? '' : 's'}`}
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </a>
                 );
               })}
