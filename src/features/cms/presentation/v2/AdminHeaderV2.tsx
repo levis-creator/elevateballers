@@ -16,7 +16,7 @@ export default function AdminHeaderV2() {
   const { user, can } = usePermissions();
   const { toggleSidebar } = useAdminShell();
   const { theme, toggle: toggleTheme } = useAdminTheme();
-  const { unreadCount: notificationCount, markAllRead } = useAdminNotifications(can('notifications:read'));
+  const { notifications, unreadCount: notificationCount, markAllRead, open: openNotification } = useAdminNotifications(can('notifications:read'));
 
   const [menu, setMenu] = useState<null | 'user' | 'notifications'>(null);
   const [query, setQuery] = useState('');
@@ -108,22 +108,47 @@ export default function AdminHeaderV2() {
             )}
           </button>
           {menu === 'notifications' && (
-            <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[230px] rounded-xl border border-[var(--bord)] bg-[var(--surf)] p-3 shadow-[0_14px_40px_rgba(0,0,0,0.45)]">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="font-['Anton'] text-[15px] uppercase text-[var(--tx)]">Notifications</span>
-                <span className="font-['Space_Mono'] text-[9px] uppercase text-[var(--txm)]">{notificationCount} unread</span>
+            <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[340px] overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)] shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+              <div className="flex items-start justify-between gap-3 border-b border-[var(--bord2)] px-4 py-3">
+                <div>
+                  <div className="font-['Space_Mono'] text-[9px] uppercase tracking-[0.16em] text-[var(--brandsoft)]">Admin desk</div>
+                  <span className="mt-0.5 block font-['Anton'] text-[18px] uppercase leading-none text-[var(--tx)]">Notifications</span>
+                </div>
+                <span className="rounded-full bg-[var(--chip)] px-2 py-1 font-['Space_Mono'] text-[9px] font-bold uppercase text-[var(--txm)]">{notificationCount} unread</span>
               </div>
+              <div className="max-h-[300px] overflow-y-auto p-2">
+                {notifications.length === 0 ? (
+                  <div className="px-3 py-8 text-center">
+                    <Bell className="mx-auto mb-2 h-5 w-5 text-[var(--faint)]" />
+                    <p className="font-['Archivo'] text-[12px] font-semibold text-[var(--txd)]">You’re all caught up</p>
+                    <p className="mt-1 font-['Space_Mono'] text-[9px] uppercase tracking-[0.08em] text-[var(--faint)]">No unread notifications</p>
+                  </div>
+                ) : notifications.map((notification) => (
+                  <button
+                    type="button"
+                    key={notification.id}
+                    onClick={() => { openNotification(notification); setMenu(null); }}
+                    className="w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[var(--hov)]"
+                  >
+                    <span className="block font-['Space_Mono'] text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--brandsoft)]">
+                      {notification.type.replaceAll('_', ' ')}
+                    </span>
+                    <span className="mt-1 block font-['Archivo'] text-[12px] font-semibold leading-4 text-[var(--tx)]">{notification.message}</span>
+                    <span className="mt-1 block font-['Space_Mono'] text-[9px] text-[var(--txm)]">{new Date(notification.createdAt).toLocaleDateString()}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 border-t border-[var(--bord2)] px-3 py-3">
               <button
                 type="button"
                 disabled={notificationCount === 0}
                 onClick={() => { void markAllRead(); setMenu(null); }}
-                className="w-full rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 py-2 text-left font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 py-2 text-[11px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Mark all as read
               </button>
-              <a href="/admin" onClick={() => setMenu(null)} className="mt-2 block px-1 font-['Archivo'] text-[11px] font-semibold text-[var(--brand)] no-underline hover:underline">
-                View notification details →
-              </a>
+              <a href="/admin" onClick={() => setMenu(null)} className="rounded-lg bg-[var(--brand)] px-3 py-2 font-['Archivo'] text-[11px] font-bold text-white no-underline hover:opacity-90">Dashboard</a>
+              </div>
             </div>
           )}
           </div>
