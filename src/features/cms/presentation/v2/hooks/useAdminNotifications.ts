@@ -71,6 +71,19 @@ export function useAdminNotifications(enabled: boolean) {
 		}
 	}, []);
 
+	const markAllRead = useCallback(async () => {
+		setNotifications([]);
+		try {
+			await fetch("/api/notifications", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ all: true }),
+			});
+		} catch {
+			/* The next poll restores the server state if the request failed. */
+		}
+	}, []);
+
 	const open = useCallback(
 		(n: AdminNotification) => {
 			markRead(n.id);
@@ -82,5 +95,5 @@ export function useAdminNotifications(enabled: boolean) {
 		[markRead],
 	);
 
-	return { notifications, notificationsEnabled, unreadCount, markRead, open };
+	return { notifications, notificationsEnabled, unreadCount, markRead, markAllRead, open };
 }

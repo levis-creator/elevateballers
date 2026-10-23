@@ -71,6 +71,15 @@ export const PATCH: APIRoute = async ({ request }) => {
     await requirePermission(request, 'notifications:read');
     const data = await request.json();
 
+    if (data.all === true) {
+      await prisma.registrationNotification.updateMany({ where: { read: false }, data: { read: true } });
+      logAudit(request, 'NOTIFICATIONS_MARKED_READ', {});
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!data.id) {
       return new Response(
         JSON.stringify({ error: 'Notification ID is required' }),

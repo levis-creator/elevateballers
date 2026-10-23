@@ -16,9 +16,9 @@ export default function AdminHeaderV2() {
   const { user, can } = usePermissions();
   const { toggleSidebar } = useAdminShell();
   const { theme, toggle: toggleTheme } = useAdminTheme();
-  const { unreadCount: notificationCount } = useAdminNotifications(can('notifications:read'));
+  const { unreadCount: notificationCount, markAllRead } = useAdminNotifications(can('notifications:read'));
 
-  const [menu, setMenu] = useState<null | 'user'>(null);
+  const [menu, setMenu] = useState<null | 'user' | 'notifications'>(null);
   const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -92,11 +92,13 @@ export default function AdminHeaderV2() {
         </a>
 
         {can('notifications:read') && (
-          <a
-            href="/admin"
+          <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenu((current) => current === 'notifications' ? null : 'notifications')}
             aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
             title="Notifications"
-            className={`${iconBtn} relative no-underline`}
+            className={`${iconBtn} relative`}
           >
             <Bell className="h-4 w-4" />
             {notificationCount > 0 && (
@@ -104,7 +106,27 @@ export default function AdminHeaderV2() {
                 {notificationCount > 99 ? '99+' : notificationCount}
               </span>
             )}
-          </a>
+          </button>
+          {menu === 'notifications' && (
+            <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[230px] rounded-xl border border-[var(--bord)] bg-[var(--surf)] p-3 shadow-[0_14px_40px_rgba(0,0,0,0.45)]">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="font-['Anton'] text-[15px] uppercase text-[var(--tx)]">Notifications</span>
+                <span className="font-['Space_Mono'] text-[9px] uppercase text-[var(--txm)]">{notificationCount} unread</span>
+              </div>
+              <button
+                type="button"
+                disabled={notificationCount === 0}
+                onClick={() => { void markAllRead(); setMenu(null); }}
+                className="w-full rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 py-2 text-left font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Mark all as read
+              </button>
+              <a href="/admin" onClick={() => setMenu(null)} className="mt-2 block px-1 font-['Archivo'] text-[11px] font-semibold text-[var(--brand)] no-underline hover:underline">
+                View notification details →
+              </a>
+            </div>
+          )}
+          </div>
         )}
 
         {/* Theme */}
