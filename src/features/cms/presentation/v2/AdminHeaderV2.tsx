@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { navigate } from 'astro:transitions/client';
-import { Menu, Search, Plus, Sun, Moon, ChevronDown } from 'lucide-react';
+import { Menu, Search, Plus, Sun, Moon, ChevronDown, Bell } from 'lucide-react';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
 import { useAdminShell } from '@/features/cms/presentation/components/AdminShellContext';
 import { ADMIN_NAV } from './lib/admin-nav';
 import { useAdminTheme } from './hooks/useAdminTheme';
+import { useAdminNotifications } from './hooks/useAdminNotifications';
 
 /**
  * v2 admin topbar. Presentation + light local UI state (open menus). Reuses the
@@ -12,9 +13,10 @@ import { useAdminTheme } from './hooks/useAdminTheme';
  * mirrors the existing flow.
  */
 export default function AdminHeaderV2() {
-  const { user } = usePermissions();
+  const { user, can } = usePermissions();
   const { toggleSidebar } = useAdminShell();
   const { theme, toggle: toggleTheme } = useAdminTheme();
+  const { unreadCount: notificationCount } = useAdminNotifications(can('notifications:read'));
 
   const [menu, setMenu] = useState<null | 'user'>(null);
   const [query, setQuery] = useState('');
@@ -88,6 +90,22 @@ export default function AdminHeaderV2() {
           <Plus className="h-[14px] w-[14px]" />
           <span className="max-[600px]:hidden">Create</span>
         </a>
+
+        {can('notifications:read') && (
+          <a
+            href="/admin"
+            aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
+            title="Notifications"
+            className={`${iconBtn} relative no-underline`}
+          >
+            <Bell className="h-4 w-4" />
+            {notificationCount > 0 && (
+              <span className="absolute -right-1 -top-1 min-w-[17px] rounded-full bg-[var(--brand)] px-1 py-0.5 text-center font-['Space_Mono'] text-[8px] font-bold leading-none text-white">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
+            )}
+          </a>
+        )}
 
         {/* Theme */}
         <button
