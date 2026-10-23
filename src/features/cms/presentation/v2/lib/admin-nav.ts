@@ -15,6 +15,8 @@ import {
   FileText,
   Settings,
   ClipboardCheck,
+  MessageSquare,
+  Mail,
 } from 'lucide-react';
 
 /**
@@ -111,6 +113,23 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: '/admin/highlights/sponsors',
         icon: Handshake,
         permission: 'sponsors:read',
+      },
+    ],
+  },
+  {
+    label: 'Communication',
+    items: [
+      {
+        label: 'Messages',
+        href: '/admin/messages',
+        icon: MessageSquare,
+        permission: 'contact_messages:read',
+      },
+      {
+        label: 'Subscribers',
+        href: '/admin/subscribers',
+        icon: Mail,
+        permission: 'subscribers:read',
       },
     ],
   },
