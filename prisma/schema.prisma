@@ -1307,6 +1307,8 @@ model ContactMessage {
   trashedAt  DateTime? @map("trashed_at")
   ipAddress  String?   @map("ip_address")
   userAgent  String?   @map("user_agent")
+  source     String    @default("CONTACT")
+  externalId String?   @unique @map("external_id")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
@@ -1315,6 +1317,7 @@ model ContactMessage {
   @@index([trashedAt])
   @@index([createdAt])
   @@index([email])
+  @@index([source])
   @@map("contact_messages")
 }
 

@@ -22,6 +22,7 @@ export type Field = {
     | 'image'
     | 'file'
     | 'list'
+    | 'mailbox'
     | 'number'
     | 'action';
   help?: string;
@@ -781,6 +782,15 @@ export const SECTIONS: Section[] = [
               'Round-robin across verified',
             ],
             defaultValue: 'By “Use for” column',
+          }),
+        ],
+      },
+      {
+        label: 'Inbound mailbox',
+        fields: [
+          f('mailbox_imap', 'IMAP mailbox', 'Connect a cPanel mailbox so incoming email can be synchronized into Messages. Credentials are encrypted and masked after saving.', {
+            type: 'mailbox',
+            defaultValue: '{"host":"mail.elevateballers.com","port":"993","username":"info@elevateballers.com","password":"","mailbox":"INBOX","secure":"true"}',
           }),
         ],
       },

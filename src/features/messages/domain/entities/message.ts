@@ -14,6 +14,7 @@ export interface Message {
 	draftReply?: string | null;
 	trashedAt: string | null;
 	createdAt: string;
+	source?: string;
 }
 
 export type MessageStatus = "unread" | "read" | "replied";

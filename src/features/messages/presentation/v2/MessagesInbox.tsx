@@ -40,7 +40,7 @@ function InboxContent() {
 				<div>
 					<div className="mb-1 font-['Space_Mono'] text-[11px] uppercase tracking-[0.16em] text-[var(--brandsoft)]">Communication</div>
 					<h1 className="font-['Anton'] text-[28px] uppercase leading-none text-[var(--tx)]">Contact Messages</h1>
-					<p className="mt-1.5 font-['Archivo'] text-[13px] text-[var(--txm)]">Messages submitted through the public contact form.</p>
+					<p className="mt-1.5 font-['Archivo'] text-[13px] text-[var(--txm)]">Contact form submissions and synchronized mailbox email.</p>
 				</div>
 				<div className="flex items-center gap-2">
 					<button type="button" onClick={() => setComposeOpen(true)} className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--brand)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-white hover:opacity-90">New message</button>

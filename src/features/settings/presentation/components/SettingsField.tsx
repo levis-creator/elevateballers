@@ -2,6 +2,7 @@ import type { Field } from '../settingsSections';
 import SettingsImageControl from './SettingsImageControl';
 import SettingsFileControl from './SettingsFileControl';
 import SettingsNavListControl from './SettingsNavListControl';
+import SettingsMailboxControl from './SettingsMailboxControl';
 
 type Props = {
   field: Field;
@@ -59,6 +60,8 @@ export default function SettingsField({
             canManage={canManage}
             onChange={onChange}
           />
+        ) : field.type === 'mailbox' ? (
+          <SettingsMailboxControl field={field} value={value} canManage={canManage} onChange={onChange} />
         ) : field.type === 'toggle' ? (
           <button
             type="button"

@@ -26,6 +26,9 @@ const decrypt = (value: string) => {
 const parse = (value: string): Array<Record<string, string>> => {
   try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
 };
+const parseObject = (value: string): Record<string, string> => {
+  try { const parsed = JSON.parse(value); return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}; } catch { return {}; }
+};
 
 /**
  * Keys stored as a single opaque secret string (as opposed to `email_providers`,
@@ -36,12 +39,20 @@ export const SENSITIVE_TEXT_KEYS = new Set([
   'security_resendWebhookSecret',
   'security_mailgunWebhookSigningKey',
 ]);
+const SENSITIVE_JSON_KEYS = new Set(['mailbox_imap']);
 
 export function protectSensitiveSettingValue(keyName: string, value: string, previousValue?: string): string {
   if (SENSITIVE_TEXT_KEYS.has(keyName)) {
     if (!value) return '';
     if (value.includes('•') || value.includes('*')) return previousValue ?? '';
     return encrypt(value);
+  }
+  if (SENSITIVE_JSON_KEYS.has(keyName)) {
+    const current = parseObject(value);
+    const previous = parseObject(previousValue ?? '{}');
+    const password = String(current.password ?? '');
+    const preserved = password.includes('•') || password.includes('*') ? String(previous.password ?? '') : password;
+    return JSON.stringify({ ...current, password: preserved ? encrypt(preserved) : '' });
   }
   if (keyName !== 'email_providers') return value;
   const previous = parse(previousValue ?? '[]');
@@ -59,6 +70,10 @@ export function revealSensitiveSetting(setting: SiteSetting): SiteSetting {
     if (!setting.value) return setting;
     try { return { ...setting, value: decrypt(setting.value) }; } catch { return { ...setting, value: '' }; }
   }
+  if (SENSITIVE_JSON_KEYS.has(setting.key)) {
+    const config = parseObject(setting.value);
+    return { ...setting, value: JSON.stringify({ ...config, password: config.password ? decrypt(String(config.password)) : '' }) };
+  }
   if (setting.key !== 'email_providers') return setting;
   return { ...setting, value: JSON.stringify(parse(setting.value).map((provider) => ({ ...provider, credential: decrypt(String(provider.credential ?? '')) }))) };
 }
@@ -66,10 +81,16 @@ export function revealSensitiveSetting(setting: SiteSetting): SiteSetting {
 export function maskSensitiveSetting(setting: SiteSetting): SiteSetting {
   if (SENSITIVE_TEXT_KEYS.has(setting.key)) {
     if (!setting.value) return setting;
-    let plain = setting.value;
-    try { plain = decrypt(setting.value); } catch { plain = ''; }
+    let plain = '';
+    try { plain = decrypt(setting.value); } catch { /* invalid secret */ }
     const suffix = plain && !plain.includes('•') && !plain.includes('*') ? plain.slice(-4) : '';
     return { ...setting, value: plain ? `${MASK}${suffix}` : '' };
+  }
+  if (SENSITIVE_JSON_KEYS.has(setting.key)) {
+    const config = parseObject(setting.value);
+    let password = String(config.password ?? '');
+    try { password = decrypt(password); } catch { password = ''; }
+    return { ...setting, value: JSON.stringify({ ...config, password: password ? `${MASK}${password.slice(-4)}` : '' }) };
   }
   if (setting.key !== 'email_providers') return setting;
   return { ...setting, value: JSON.stringify(parse(setting.value).map((provider) => {
