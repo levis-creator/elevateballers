@@ -27,6 +27,7 @@ import {
   Database,
   Search,
   Upload,
+  RefreshCw,
   X,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
@@ -160,6 +161,7 @@ export default function MediaLibraryV2() {
   const [urlDialog, setUrlDialog] = useState(false);
   const [urlValue, setUrlValue] = useState('');
   const [urlTitle, setUrlTitle] = useState('');
+  const [reconcilingUsage, setReconcilingUsage] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -332,6 +334,21 @@ export default function MediaLibraryV2() {
     addToast({ description: 'Selected media deleted', variant: 'success' });
   };
 
+  const reconcileUsage = async () => {
+    setReconcilingUsage(true);
+    try {
+      const response = await fetch('/api/file-usage/reconcile', { method: 'POST' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Could not reconcile media usage.');
+      addToast({ description: `Usage refreshed: ${result.references ?? 0} active references found`, variant: 'success' });
+      if (active) await load();
+    } catch (error) {
+      addToast({ description: error instanceof Error ? error.message : 'Could not reconcile media usage.', variant: 'error' });
+    } finally {
+      setReconcilingUsage(false);
+    }
+  };
+
   const toggleSelected = (id: string) =>
     setSelected((current) => {
       const next = new Set(current);
@@ -344,7 +361,6 @@ export default function MediaLibraryV2() {
   return (
     <div
       className="eb-root min-h-[calc(100vh-57px)] font-archivo text-txd"
-      data-media-theme="dark"
       aria-label="Media Library"
     >
       <div className="eb-scroll flex-1 overflow-y-auto px-6 py-6 max-[600px]:px-4">
@@ -372,6 +388,9 @@ export default function MediaLibraryV2() {
               </button>
               <button className="media-btn secondary" onClick={() => setUrlDialog(true)}>
                 <Link2 size={14} /> Add From URL
+              </button>
+              <button className="media-btn secondary" onClick={() => void reconcileUsage()} disabled={reconcilingUsage}>
+                <RefreshCw size={14} className={reconcilingUsage ? 'animate-spin' : ''} /> {reconcilingUsage ? 'Refreshing…' : 'Refresh usage'}
               </button>
               <button className="media-btn primary" onClick={() => fileInput.current?.click()}>
                 <Upload size={15} /> Upload Files

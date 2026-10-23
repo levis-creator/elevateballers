@@ -223,3 +223,38 @@ export async function getFileUsageSummary(mediaId: string) {
     return {};
   }
 }
+
+/**
+ * Rebuild usage rows from the canonical URL fields on supported entities.
+ * This repairs stale rows left by older mutation paths and keeps deletion
+ * protection trustworthy.
+ */
+export async function reconcileFileUsage() {
+  const [players, teams, staff, articles, leagues] = await Promise.all([
+    prisma.player.findMany({ where: { image: { not: null } }, select: { id: true, image: true } }),
+    prisma.team.findMany({ where: { logo: { not: null } }, select: { id: true, logo: true } }),
+    prisma.staff.findMany({ where: { image: { not: null } }, select: { id: true, image: true } }),
+    prisma.newsArticle.findMany({ where: { image: { not: null } }, select: { id: true, image: true } }),
+    prisma.league.findMany({ where: { logo: { not: null } }, select: { id: true, logo: true } }),
+  ]);
+
+  const references: Array<{ url: string; entityType: FileUsageEntityType; entityId: string; fieldName: string }> = [];
+  for (const row of players) if (row.image) references.push({ url: row.image, entityType: 'PLAYER', entityId: row.id, fieldName: 'image' });
+  for (const row of teams) if (row.logo) references.push({ url: row.logo, entityType: 'TEAM', entityId: row.id, fieldName: 'logo' });
+  for (const row of staff) if (row.image) references.push({ url: row.image, entityType: 'STAFF', entityId: row.id, fieldName: 'image' });
+  for (const row of articles) if (row.image) references.push({ url: row.image, entityType: 'NEWS_ARTICLE', entityId: row.id, fieldName: 'image' });
+  for (const row of leagues) if (row.logo) references.push({ url: row.logo, entityType: 'LEAGUE', entityId: row.id, fieldName: 'logo' });
+
+  const resolved = [];
+  for (const reference of references) {
+    const mediaId = await findMediaByUrl(reference.url);
+    if (mediaId) resolved.push({ mediaId, entityType: reference.entityType, entityId: reference.entityId, fieldName: reference.fieldName });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.fileUsage.deleteMany({});
+    if (resolved.length) await tx.fileUsage.createMany({ data: resolved });
+  });
+
+  return { references: resolved.length, scanned: references.length };
+}
