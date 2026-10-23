@@ -104,23 +104,35 @@ export async function getRegistrationReviewQueue(input: {
   search?: string;
 }) {
   const db = prisma as any;
+  const playerStatusWhere = input.status === 'APPROVED'
+    ? { approved: true }
+    : input.status === 'REJECTED'
+      ? { reviewStatus: 'REJECTED' }
+      : input.status === 'PENDING'
+        ? { approved: false, OR: [{ reviewStatus: null }, { reviewStatus: 'PENDING' }] }
+        : {};
+  const teamStatusWhere = input.status === 'APPROVED'
+    ? { approved: true }
+    : input.status === 'REJECTED'
+      ? { reviewStatus: 'REJECTED' }
+      : input.status === 'PENDING'
+        ? { approved: false, OR: [{ reviewStatus: null }, { reviewStatus: 'PENDING' }] }
+        : {};
   const playerWhere: any = {
-    ...(input.status ? { approved: input.status === 'APPROVED' } : {}),
-    ...(input.search
-      ? {
-          OR: [
-            { firstName: { contains: input.search } },
-            { lastName: { contains: input.search } },
-            { email: { contains: input.search } },
-          ],
-        }
-      : {}),
+    AND: [
+      playerStatusWhere,
+      ...(input.search ? [{ OR: [
+        { firstName: { contains: input.search } },
+        { lastName: { contains: input.search } },
+        { email: { contains: input.search } },
+      ] }] : []),
+    ],
   };
   const teamWhere: any = {
-    ...(input.status ? { approved: input.status === 'APPROVED' } : {}),
-    ...(input.search
-      ? { OR: [{ name: { contains: input.search } }, { contactEmail: { contains: input.search } }] }
-      : {}),
+    AND: [
+      teamStatusWhere,
+      ...(input.search ? [{ OR: [{ name: { contains: input.search } }, { contactEmail: { contains: input.search } }] }] : []),
+    ],
   };
   const includePlayers = !input.kind || input.kind === 'PLAYER';
   const includeTeams = !input.kind || input.kind === 'TEAM';
@@ -252,9 +264,10 @@ export async function bulkReviewRegistrations(input: {
 }) {
   const db = prisma as any;
   const approved = input.action === 'APPROVE';
+  const reviewStatus = approved ? 'APPROVED' : 'REJECTED';
   if (input.kind === 'PLAYER')
-    return db.player.updateMany({ where: { id: { in: input.ids } }, data: { approved } });
-  return db.team.updateMany({ where: { id: { in: input.ids } }, data: { approved } });
+    return db.player.updateMany({ where: { id: { in: input.ids } }, data: { approved, reviewStatus } });
+  return db.team.updateMany({ where: { id: { in: input.ids } }, data: { approved, reviewStatus } });
 }
 
 export async function bulkReviewRosterProposals(input: {

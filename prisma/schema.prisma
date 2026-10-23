@@ -507,6 +507,7 @@ model Team {
   logo                           String?
   description                    String?
   approved                       Boolean                         @default(false)
+  reviewStatus                  String?                         @map("review_status")
   createdAt                      DateTime                        @default(now()) @map("created_at")
   updatedAt                      DateTime                        @updatedAt @map("updated_at")
   slug                           String                          @unique
@@ -546,6 +547,7 @@ model Team {
   @@index([name])
   @@index([slug])
   @@index([approved])
+  @@index([reviewStatus])
   @@index([approved, name], map: "teams_public_directory_idx")
   @@map("teams")
 }
@@ -811,6 +813,7 @@ model Player {
   jerseyNumber                    Int?                             @map("jersey_number")
   stats                           Json?
   approved                        Boolean                          @default(false)
+  reviewStatus                    String?                          @map("review_status")
   archived                        Boolean                          @default(false)
   mergedIntoId                    String?                          @map("merged_into_id")
   mergedAt                        DateTime?                        @map("merged_at")
@@ -848,6 +851,7 @@ model Player {
   @@index([teamId])
   @@index([slug])
   @@index([approved])
+  @@index([reviewStatus])
   @@index([archived])
   @@index([mergedIntoId])
   @@index([approved, archived, lastName, firstName], map: "players_public_directory_idx")
