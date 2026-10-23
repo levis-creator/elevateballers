@@ -25,6 +25,13 @@
 	--brandlt: rgb(var(--site-brand-light-rgb, 255 45 67));
 	--brandsoft: rgb(var(--site-brand-soft-rgb, 255 90 114));
 	--brandfg: rgb(var(--site-brand-foreground-rgb, 255 255 255));
+	--warn-bg: rgb(245 158 11 / 0.12);
+	--warn-border: rgb(251 191 36 / 0.6);
+	--warn-text: #fde68a;
+	--warn-muted: #fef3c7;
+	--warn-chip-bg: rgb(245 158 11 / 0.15);
+	--warn-chip-border: rgb(252 211 77 / 0.5);
+	--warn-chip-text: #fef3c7;
 }
 
 .eb-root.light {
@@ -44,6 +51,13 @@
 	--hov: rgb(var(--site-paper-panel-rgb, 237 235 231));
 	--chip: rgb(var(--site-paper-panel-rgb, 237 235 231));
 	--track: rgb(var(--site-ink-rgb, 20 16 9) / 0.09);
+	--warn-bg: #fffbeb;
+	--warn-border: #d97706;
+	--warn-text: #78350f;
+	--warn-muted: #92400e;
+	--warn-chip-bg: #fef3c7;
+	--warn-chip-border: #f59e0b;
+	--warn-chip-text: #78350f;
 }
 
 .eb-root {
