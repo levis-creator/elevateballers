@@ -137,6 +137,7 @@ export default function MessageList(p: Props) {
 											<>
 												<MenuItem label={m.read ? "Mark as unread" : "Mark as read"} onClick={() => { p.rowSetRead(m.id, !m.read); setMenuId(null); }} />
 																{m.folder === "SPAM" && <MenuItem label="Move to inbox" onClick={() => { p.rowFolder(m.id, "INBOX"); setMenuId(null); }} />}
+																{m.folder === "ARCHIVE" ? <MenuItem label="Move to inbox" onClick={() => { p.rowFolder(m.id, "INBOX"); setMenuId(null); }} /> : <MenuItem label="Archive" onClick={() => { p.rowFolder(m.id, "ARCHIVE"); setMenuId(null); }} />}
 													<MenuItem label="Mark as spam" onClick={() => { p.rowFolder(m.id, "SPAM"); setMenuId(null); }} />
 												<MenuItem label="Move to trash" onClick={() => { p.rowTrash(m.id, true); setMenuId(null); }} />
 											</>

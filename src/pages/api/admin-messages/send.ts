@@ -20,7 +20,8 @@ export const POST: APIRoute = async ({ request }) => {
     if (!subject || !message) return new Response(JSON.stringify({ error: 'Subject and message are required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     await sendAdminDirectEmail({ name, email, subject, message });
     const externalId = `admin-${crypto.randomUUID()}@elevateballers.com`;
-    await prisma.contactMessage.create({ data: { name: name || email, email, subject, message, read: true, source: 'ADMIN', direction: 'OUTBOUND', folder: 'SENT', sentAt: new Date(), externalId } });
+    const created = await prisma.contactMessage.create({ data: { name: name || email, email, subject, message, read: true, source: 'ADMIN', direction: 'OUTBOUND', folder: 'SENT', sentAt: new Date(), externalId } });
+    await prisma.contactMessage.update({ where: { id: created.id }, data: { threadId: created.id } });
     await appendSentMessage({ to: email, subject, text: message, messageId: externalId }).catch((error) => console.warn('[messages] sent-mail append failed:', error));
     // Record who wrote to whom and about what; the body itself is not kept.
     logAudit(request, 'ADMIN_MESSAGE_SENT', { to: email, subject });

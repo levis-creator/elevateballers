@@ -1299,6 +1299,7 @@ model ContactMessage {
   email      String
   subject    String
   message    String    @db.LongText
+  htmlBody   String?   @map("html_body") @db.LongText
   read       Boolean   @default(false)
   repliedAt  DateTime? @map("replied_at")
   repliedBy  String?   @map("replied_by")
@@ -1317,6 +1318,13 @@ model ContactMessage {
   threadId  String?    @map("thread_id")
   imapUid   Int?      @map("imap_uid")
   imapFolder String?  @map("imap_folder")
+  deliveryStatus String  @default("RECEIVED") @map("delivery_status")
+  providerId String?      @map("provider_id")
+  failureReason String?  @map("failure_reason") @db.Text
+  archivedAt DateTime?    @map("archived_at")
+  inReplyTo String?       @map("in_reply_to")
+  references String?      @db.Text
+  attachments MessageAttachment[]
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
@@ -1331,6 +1339,26 @@ model ContactMessage {
   @@index([threadId])
   @@index([imapFolder, imapUid])
   @@map("contact_messages")
+}
+
+model MessageAttachment {
+  id          String         @id @default(cuid())
+  messageId   String         @map("message_id")
+  message     ContactMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  externalId  String         @unique @map("external_id")
+  filename    String
+  mimeType    String         @map("mime_type")
+  size        Int
+  contentId   String?        @map("content_id")
+  storagePath String?        @map("storage_path")
+  scanStatus  String         @default("PENDING_SCAN") @map("scan_status")
+  scanReason  String?        @map("scan_reason") @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@index([messageId])
+  @@index([scanStatus])
+  @@map("message_attachments")
 }
 
 model Subscriber {

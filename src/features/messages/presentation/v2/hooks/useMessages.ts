@@ -26,6 +26,7 @@ export function useMessages() {
 	const [savingDraft, setSavingDraft] = useState(false);
 	const [checked, setChecked] = useState<Set<string>>(new Set());
 	const [draftLoaded, setDraftLoaded] = useState(false);
+	const [conversation, setConversation] = useState<Message[]>([]);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -65,13 +66,15 @@ export function useMessages() {
 	const filtered = useMemo(() => messages.filter((m) => matchesFilter(m, filter) && matchesSearch(m, search)), [messages, filter, search]);
 
 	const counts = useMemo(() => {
-		const c = { All: 0, Unread: 0, Read: 0, Replied: 0, Sent: 0, Spam: 0, Trash: 0 } as Record<MessageFilter, number>;
+		const c = { All: 0, Unread: 0, Read: 0, Replied: 0, Sent: 0, Drafts: 0, Spam: 0, Archive: 0, Trash: 0 } as Record<MessageFilter, number>;
 		for (const m of messages) {
 			if (m.trashedAt) {
 				c.Trash++;
 				continue;
 			}
 			if (m.folder === "SPAM") { c.Spam++; continue; }
+			if (m.folder === "ARCHIVE") { c.Archive++; continue; }
+			if (m.folder === "DRAFT") c.Drafts++;
 			if (m.direction === "OUTBOUND") c.Sent++;
 			c.All++;
 			if (!m.read) c.Unread++;
@@ -103,6 +106,7 @@ export function useMessages() {
 			const draft = m?.draftReply?.trim() ? m.draftReply : "";
 			setReply(draft || "");
 			setDraftLoaded(!!draft);
+			void fetch(`/api/contact-messages/${id}/thread`).then((res) => res.ok ? res.json() : null).then((body) => setConversation(Array.isArray(body?.data) ? body.data : m ? [m] : [])).catch(() => setConversation(m ? [m] : []));
 			if (m && !m.read && !m.trashedAt) setRead(id, true);
 		},
 		[messages, setRead],
@@ -112,6 +116,7 @@ export function useMessages() {
 		setSelectedId(null);
 		setReply("");
 		setDraftLoaded(false);
+		setConversation([]);
 	}, []);
 
 	const toggleRead = useCallback(() => {
@@ -257,6 +262,7 @@ export function useMessages() {
 		loading,
 		error,
 		selected,
+		conversation,
 		selectedId,
 		search,
 		setSearch,

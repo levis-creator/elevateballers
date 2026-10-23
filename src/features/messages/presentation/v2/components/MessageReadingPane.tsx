@@ -1,4 +1,4 @@
-import { Inbox, Check, Trash2, RotateCcw, CornerUpLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, X } from "lucide-react";
+import { Inbox, Check, Trash2, RotateCcw, CornerUpLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, X, Paperclip, Download } from "lucide-react";
 import { type Message, messageStatus, isTrashed } from "@/features/messages/domain/entities/message";
 import EntityAvatar from "@/components/EntityAvatar";
 
@@ -15,8 +15,15 @@ function fullTime(iso: string | null): string {
 	return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+function fileSize(bytes: number) {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 interface Props {
 	selected: Message | null;
+	conversation?: Message[];
 	reply: string;
 	onReplyChange: (s: string) => void;
 	onSend: () => void;
@@ -32,6 +39,7 @@ interface Props {
 	onSaveDraft: () => void;
 	savingDraft: boolean;
 	onClose: () => void;
+	onForward: () => void;
 }
 
 export default function MessageReadingPane(p: Props) {
@@ -50,6 +58,7 @@ export default function MessageReadingPane(p: Props) {
 	const trashed = isTrashed(s);
 	const firstName = s.name.trim().split(/\s+/)[0] || s.name;
 	const replyText = p.reply.trim();
+	const conversation = p.conversation && p.conversation.length > 1 ? p.conversation : [];
 
 	return (
 		<div className="eb-scroll min-h-0 flex-1 overflow-y-auto bg-[var(--surf3)]">
@@ -71,9 +80,31 @@ export default function MessageReadingPane(p: Props) {
 					<div className="font-['Space_Mono'] text-[11px] text-[var(--txm)]">{fullTime(s.createdAt)}</div>
 				</div>
 
+				{conversation.length > 1 && <div className="mb-4 rounded-xl border border-[var(--bord)] bg-[var(--surf)] p-3">
+					<div className="mb-2 px-2 font-['Anton'] text-[15px] uppercase text-[var(--tx)]">Conversation · {conversation.length} messages</div>
+					<div className="grid gap-2">{conversation.map((item) => <div key={item.id} className={`rounded-lg border px-3 py-2.5 ${item.id === s.id ? "border-[var(--brand)] bg-[var(--brand)]/[0.06]" : "border-[var(--bord2)] bg-[var(--surf2)]"}`}><div className="flex items-center justify-between gap-3"><span className="font-['Archivo'] text-[12px] font-bold text-[var(--tx)]">{item.direction === "OUTBOUND" ? "ElevateBallers Team" : item.name}</span><span className="font-['Space_Mono'] text-[9px] text-[var(--txm)]">{fullTime(item.createdAt)}</span></div><p className="mt-1 whitespace-pre-line line-clamp-3 font-['Archivo'] text-[12px] leading-[1.5] text-[var(--txd)]">{item.message}</p></div>)}</div>
+				</div>}
+
 				<div className="mb-4 rounded-xl border border-[var(--bord)] bg-[var(--surf)] px-5 py-5">
-					<p className="whitespace-pre-line font-['Archivo'] text-[14.5px] leading-[1.7] text-[var(--txd)]">{s.message}</p>
+					{s.htmlBody ? (
+						<div
+							className="email-html max-w-none overflow-x-auto font-['Archivo'] text-[14.5px] leading-[1.7] text-[var(--txd)] [&_a]:text-[var(--brandsoft)] [&_a]:underline [&_img]:max-w-full [&_table]:max-w-full [&_td]:p-1 [&_th]:p-1"
+							dangerouslySetInnerHTML={{ __html: s.htmlBody }}
+						/>
+					) : (
+						<p className="whitespace-pre-line font-['Archivo'] text-[14.5px] leading-[1.7] text-[var(--txd)]">{s.message}</p>
+					)}
 				</div>
+
+				{Boolean(s.attachments?.length) && <div className="mb-6 rounded-xl border border-[var(--bord)] bg-[var(--surf)] px-5 py-4">
+					<div className="mb-3 flex items-center gap-2 font-['Anton'] text-[15px] uppercase text-[var(--tx)]"><Paperclip className="h-4 w-4 text-[var(--brand)]" />Attachments</div>
+					<div className="grid gap-2">
+						{s.attachments?.map((attachment) => <div key={attachment.id} className="flex items-center gap-3 rounded-lg border border-[var(--bord2)] bg-[var(--surf2)] px-3 py-2.5">
+							<div className="min-w-0 flex-1"><div className="truncate font-['Archivo'] text-[12.5px] font-bold text-[var(--tx)]">{attachment.filename}</div><div className="font-['Space_Mono'] text-[10px] text-[var(--txm)]">{attachment.mimeType} · {fileSize(attachment.size)}</div></div>
+							{attachment.scanStatus === "CLEAN" ? <a href={`/api/contact-messages/${s.id}/attachments/${attachment.id}`} className="flex items-center gap-1.5 rounded-md border border-[var(--bord)] bg-[var(--surf)] px-2.5 py-1.5 font-['Archivo'] text-[11px] font-bold text-[var(--txd)] no-underline hover:border-[var(--brand)] hover:text-[var(--brand)]"><Download className="h-3.5 w-3.5" />Download</a> : <span className="font-['Space_Mono'] text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--txm)]">{attachment.scanStatus === "BLOCKED" ? "Blocked" : "Scanning"}</span>}
+						</div>)}
+					</div>
+				</div>}
 
 				{/* Sent reply thread */}
 				{s.replyBody && (
@@ -101,6 +132,7 @@ export default function MessageReadingPane(p: Props) {
 					<>
 						<div className="mb-6 flex flex-wrap items-center gap-2">
 							<button type="button" onClick={p.onToggleRead} className="flex items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]"><Check className="h-[14px] w-[14px]" />{s.read ? "Mark as unread" : "Mark as read"}</button>
+							<button type="button" onClick={p.onForward} className="flex items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]"><CornerUpLeft className="h-[14px] w-[14px]" />Forward</button>
 							<button type="button" onClick={p.onMoveToTrash} className="ml-auto flex items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-[var(--txm)] hover:border-[var(--brand)]/50 hover:text-[var(--brand)]"><Trash2 className="h-[14px] w-[14px]" />Move to trash</button>
 						</div>
 

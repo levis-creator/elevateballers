@@ -32,6 +32,14 @@ function InboxContent() {
 			setComposeSending(false);
 		}
 	};
+	const openForward = () => {
+		if (!m.selected) return;
+		setComposeOpen(true);
+		setComposeTo("");
+		setComposeName("");
+		setComposeSubject(`Fwd: ${m.selected.subject}`);
+		setComposeMessage(`\n\n---------- Forwarded message ----------\nFrom: ${m.selected.email}\nSubject: ${m.selected.subject}\n\n${m.selected.message}`);
+	};
 
 	return (
 		<div className="font-['Archivo'] text-[var(--tx)]">
@@ -85,6 +93,7 @@ function InboxContent() {
 						/>
 						<MessageReadingPane
 							selected={m.selected}
+							conversation={m.conversation}
 							reply={m.reply}
 							onReplyChange={m.onReplyChange}
 							onSend={m.sendReply}
@@ -100,6 +109,7 @@ function InboxContent() {
 							onSaveDraft={m.saveDraft}
 							savingDraft={m.savingDraft}
 							onClose={m.closeReading}
+								onForward={openForward}
 						/>
 					</>
 				)}

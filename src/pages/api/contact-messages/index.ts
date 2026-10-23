@@ -50,6 +50,7 @@ export const GET: APIRoute = async ({ request }) => {
     const [messages, total] = await Promise.all([
       prisma.contactMessage.findMany({
         where,
+        include: { attachments: { select: { id: true, filename: true, mimeType: true, size: true, contentId: true, scanStatus: true } } },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -108,6 +109,7 @@ export const POST: APIRoute = async ({ request }) => {
     const created = await prisma.contactMessage.create({
       data: { name, email, subject, message, ipAddress: ip, userAgent },
     });
+    await prisma.contactMessage.update({ where: { id: created.id }, data: { threadId: created.id } });
 
     // Send emails via QStash (with inline fallback)
     const sendNotification = () =>
@@ -192,6 +194,7 @@ export const PATCH: APIRoute = async ({ request }) => {
       starred?: boolean;
       folder?: string;
       spamAt?: Date | null;
+      archivedAt?: Date | null;
     } = {};
     if (data.read !== undefined) updateData.read = Boolean(data.read);
     if (data.trashed !== undefined) {
@@ -203,10 +206,15 @@ export const PATCH: APIRoute = async ({ request }) => {
       updateData.draftReply = draft.trim() ? draft.slice(0, 5000) : null;
     }
     if (data.starred !== undefined) updateData.starred = Boolean(data.starred);
-    if (data.folder !== undefined && ['INBOX', 'SPAM', 'TRASH', 'SENT'].includes(String(data.folder))) {
+    if (data.folder !== undefined && ['INBOX', 'SPAM', 'TRASH', 'SENT', 'DRAFT', 'ARCHIVE'].includes(String(data.folder))) {
       updateData.folder = String(data.folder);
       updateData.trashedAt = String(data.folder) === 'TRASH' ? new Date() : null;
       updateData.spamAt = String(data.folder) === 'SPAM' ? new Date() : null;
+      updateData.archivedAt = String(data.folder) === 'ARCHIVE' ? new Date() : null;
+    }
+    if (data.archived !== undefined) {
+      updateData.folder = data.archived ? 'ARCHIVE' : 'INBOX';
+      updateData.archivedAt = data.archived ? new Date() : null;
     }
 
     const message = await prisma.contactMessage.update({

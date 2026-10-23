@@ -7,6 +7,7 @@ export interface Message {
 	email: string;
 	subject: string;
 	message: string;
+	htmlBody?: string | null;
 	read: boolean;
 	repliedAt: string | null;
 	repliedBy?: string | null;
@@ -21,12 +22,26 @@ export interface Message {
 	spamAt?: string | null;
 	sentAt?: string | null;
 	threadId?: string | null;
+	attachments?: MessageAttachment[];
+	deliveryStatus?: string;
+	failureReason?: string | null;
+	archivedAt?: string | null;
+	inReplyTo?: string | null;
+}
+
+export interface MessageAttachment {
+	id: string;
+	filename: string;
+	mimeType: string;
+	size: number;
+	contentId?: string | null;
+	scanStatus: string;
 }
 
 export type MessageStatus = "unread" | "read" | "replied";
-export type MessageFilter = "All" | "Unread" | "Read" | "Replied" | "Sent" | "Spam" | "Trash";
+export type MessageFilter = "All" | "Unread" | "Read" | "Replied" | "Sent" | "Drafts" | "Spam" | "Archive" | "Trash";
 
-export const MESSAGE_FILTERS: MessageFilter[] = ["All", "Unread", "Read", "Replied", "Sent", "Spam", "Trash"];
+export const MESSAGE_FILTERS: MessageFilter[] = ["All", "Unread", "Read", "Replied", "Sent", "Drafts", "Spam", "Archive", "Trash"];
 
 /** A replied message is the strongest state, then read, then unread. */
 export function messageStatus(m: Message): MessageStatus {
@@ -50,7 +65,10 @@ export function matchesFilter(m: Message, filter: MessageFilter): boolean {
 	if (filter === "Trash") return isTrashed(m);
 	if (filter === "Spam") return m.folder === "SPAM" && !isTrashed(m);
 	if (filter === "Sent") return m.direction === "OUTBOUND" && !isTrashed(m);
+	if (filter === "Drafts") return m.folder === "DRAFT" && !isTrashed(m);
+	if (filter === "Archive") return m.folder === "ARCHIVE" && !isTrashed(m);
 	if (isTrashed(m) || m.folder === "SPAM") return false;
+	if (m.folder === "ARCHIVE") return false;
 	switch (filter) {
 		case "Unread":
 			return !m.read;
