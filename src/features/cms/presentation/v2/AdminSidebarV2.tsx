@@ -16,6 +16,7 @@ export default function AdminSidebarV2() {
   const activePath = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingRegistrationCount, setPendingRegistrationCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,14 +45,28 @@ export default function AdminSidebarV2() {
       }
     };
 
+    const loadNotificationCount = async () => {
+      try {
+        const response = await fetch('/api/notifications?unread=true');
+        if (!response.ok) return;
+        const body = await response.json().catch(() => []);
+        if (!cancelled) setNotificationCount(Array.isArray(body) ? body.length : 0);
+      } catch {
+        // Supplemental navigation UI.
+      }
+    };
+
     void loadUnreadCount();
     void loadPendingRegistrationCount();
+    void loadNotificationCount();
     const timer = window.setInterval(loadUnreadCount, 30_000);
     const registrationTimer = window.setInterval(loadPendingRegistrationCount, 30_000);
+    const notificationTimer = window.setInterval(loadNotificationCount, 30_000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
       window.clearInterval(registrationTimer);
+      window.clearInterval(notificationTimer);
     };
   }, []);
 
@@ -154,6 +169,11 @@ export default function AdminSidebarV2() {
                         aria-label={`${pendingRegistrationCount} pending registration${pendingRegistrationCount === 1 ? '' : 's'}`}
                       >
                         {pendingRegistrationCount > 99 ? '99+' : pendingRegistrationCount}
+                      </span>
+                    )}
+                    {item.badge === 'notifications' && notificationCount > 0 && (
+                      <span className={`min-w-[20px] rounded-full px-1.5 py-0.5 text-center font-['Space_Mono'] text-[9px] font-bold leading-none ${active ? 'bg-white text-[var(--brand)]' : 'bg-[var(--brand)] text-white'}`} aria-label={`${notificationCount} unread notifications`}>
+                        {notificationCount > 99 ? '99+' : notificationCount}
                       </span>
                     )}
                   </a>

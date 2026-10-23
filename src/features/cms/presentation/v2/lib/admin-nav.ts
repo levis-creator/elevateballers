@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   MessageSquare,
   Mail,
+  Bell,
 } from 'lucide-react';
 
 /**
@@ -34,7 +35,7 @@ export interface AdminNavItem {
   /** Requires ANY of these permissions. */
   permissionsAny?: string[];
   /** Marks the item to show a live unread-count badge (contact messages). */
-  badge?: 'messages' | 'registrations';
+  badge?: 'messages' | 'registrations' | 'notifications';
 }
 
 export interface AdminNavGroup {
@@ -132,6 +133,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: '/admin/subscribers',
         icon: Mail,
         permission: 'subscribers:read',
+      },
+      {
+        label: 'Notifications',
+        href: '/admin/notifications',
+        icon: Bell,
+        permission: 'notifications:read',
+        badge: 'notifications',
       },
     ],
   },

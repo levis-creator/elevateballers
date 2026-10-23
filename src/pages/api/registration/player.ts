@@ -9,6 +9,7 @@ import { processRegistrationEmailJob } from '../../../features/registration/appl
 import { findSubmission, submitPlayerRegistration } from '../../../features/registration/data/datasources/public-submission';
 import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, releasePublicRegistrationLimit, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
 import { registrationWindow, resolvePublicRegistrationSettings, siteSettingsService } from '../../../features/settings';
+import { createOperationalNotification } from '../../../features/cms/lib/adminNotifications';
 
 export const prerender = false;
 
@@ -55,7 +56,15 @@ export const POST: APIRoute = async ({ request }) => {
     if (data.teamName) teamId = (await prisma.team.findUnique({ where: { name: data.teamName }, select: { id: true } }))?.id;
     const duplicateEmail = await prisma.player.findFirst({ where: { email: data.email }, select: { id: true } });
     const duplicateName = await prisma.player.findFirst({ where: { firstName: data.firstName, lastName: data.lastName, ...(teamId ? { teamId } : {}) }, select: { id: true } });
-    if (duplicateEmail || duplicateName) return genericRegistrationResponse();
+    if (duplicateEmail || duplicateName) {
+      await createOperationalNotification({
+        type: 'REGISTRATION_DUPLICATE',
+        message: `Possible duplicate player registration for ${data.firstName} ${data.lastName}`.trim(),
+        severity: 'warning',
+        metadata: { email: data.email, action: 'REVIEW_DUPLICATE' },
+      }).catch((notificationError) => console.warn('[registration] duplicate notification failed:', notificationError));
+      return genericRegistrationResponse();
+    }
 
     const result = await submitPlayerRegistration({ idempotencyKey, firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, position: data.position, jerseyNumber: data.jerseyNumber, height: data.height, weight: data.weight, teamName: data.teamName, teamId, additionalInfo: data.additionalInfo, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee });
     consumedLimit = null;

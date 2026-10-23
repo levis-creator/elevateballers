@@ -28,6 +28,7 @@ import {
   resolvePublicRegistrationSettings,
   siteSettingsService,
 } from '../../../features/settings';
+import { createOperationalNotification } from '../../../features/cms/lib/adminNotifications';
 
 export const prerender = false;
 
@@ -175,7 +176,15 @@ export const POST: APIRoute = async ({ request }) => {
       where: { name: data.name },
       select: { id: true },
     });
-    if (existingTeam) return genericRegistrationResponse();
+    if (existingTeam) {
+      await createOperationalNotification({
+        type: 'REGISTRATION_DUPLICATE',
+        message: `Possible duplicate team registration for ${data.name}`,
+        severity: 'warning',
+        metadata: { teamName: data.name, contactEmail: data.contactEmail, action: 'REVIEW_DUPLICATE' },
+      }).catch((notificationError) => console.warn('[registration] duplicate notification failed:', notificationError));
+      return genericRegistrationResponse();
+    }
     let leagueName: string | undefined;
     if (data.leagueId)
       leagueName = (

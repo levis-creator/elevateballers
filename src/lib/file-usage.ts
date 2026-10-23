@@ -21,11 +21,23 @@ export async function findMediaByUrl(url: string | null | undefined): Promise<st
     });
     
     if (media) return media.id;
+
+    // Rich-text editors commonly append cache-busting query strings or
+    // fragments to otherwise canonical media URLs.
+    const canonicalUrl = url.split(/[?#]/, 1)[0];
+    if (canonicalUrl !== url) {
+      media = await prisma.media.findFirst({
+        where: { url: canonicalUrl },
+        select: { id: true },
+      });
+
+      if (media) return media.id;
+    }
     
     // Try matching by filePath if URL is a local path
     if (url.startsWith('/uploads/') || url.startsWith('/api/uploads/')) {
       // Extract file path from URL
-      const filePath = url.replace(/^\/api\/uploads\//, 'uploads/').replace(/^\//, '');
+      const filePath = canonicalUrl.replace(/^\/api\/uploads\//, 'uploads/').replace(/^\//, '');
       media = await prisma.media.findFirst({
         where: { filePath },
         select: { id: true },
@@ -234,7 +246,7 @@ export async function reconcileFileUsage() {
     prisma.player.findMany({ where: { image: { not: null } }, select: { id: true, image: true } }),
     prisma.team.findMany({ where: { logo: { not: null } }, select: { id: true, logo: true } }),
     prisma.staff.findMany({ where: { image: { not: null } }, select: { id: true, image: true } }),
-    prisma.newsArticle.findMany({ where: { image: { not: null } }, select: { id: true, image: true } }),
+    prisma.newsArticle.findMany({ select: { id: true, image: true, content: true } }),
     prisma.league.findMany({ where: { logo: { not: null } }, select: { id: true, logo: true } }),
   ]);
 
@@ -242,7 +254,11 @@ export async function reconcileFileUsage() {
   for (const row of players) if (row.image) references.push({ url: row.image, entityType: 'PLAYER', entityId: row.id, fieldName: 'image' });
   for (const row of teams) if (row.logo) references.push({ url: row.logo, entityType: 'TEAM', entityId: row.id, fieldName: 'logo' });
   for (const row of staff) if (row.image) references.push({ url: row.image, entityType: 'STAFF', entityId: row.id, fieldName: 'image' });
-  for (const row of articles) if (row.image) references.push({ url: row.image, entityType: 'NEWS_ARTICLE', entityId: row.id, fieldName: 'image' });
+  for (const row of articles) {
+    if (row.image) references.push({ url: row.image, entityType: 'NEWS_ARTICLE', entityId: row.id, fieldName: 'image' });
+    const richTextUrls = [...String(row.content || '').matchAll(/(?:src|href)=["']([^"']+)["']/gi)].map((match) => match[1]);
+    for (const url of new Set(richTextUrls)) references.push({ url, entityType: 'NEWS_ARTICLE', entityId: row.id, fieldName: 'content' });
+  }
   for (const row of leagues) if (row.logo) references.push({ url: row.logo, entityType: 'LEAGUE', entityId: row.id, fieldName: 'logo' });
 
   const resolved = [];

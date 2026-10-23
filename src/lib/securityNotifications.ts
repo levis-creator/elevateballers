@@ -1,5 +1,6 @@
 import { getAdminRecipientEmails, sendTransactionalEmail, emailWrapper } from './email/core';
 import { resolveSecuritySettings, siteSettingsService, type SecurityAlertSettingKey } from '../features/settings';
+import { createOperationalNotification } from '../features/cms/lib/adminNotifications';
 
 const EVENT_TO_SETTING: Record<string, SecurityAlertSettingKey> = {
   security_settings_changed: 'security_alertSettingsChanges',
@@ -21,6 +22,12 @@ export async function notifySecurityAdmins(event: string, title: string, details
     if (!settingKey) return;
     const settings = resolveSecuritySettings(await siteSettingsService.list('security').catch(() => []));
     if (!settings[settingKey]) return;
+    await createOperationalNotification({
+      type: 'SECURITY_ALERT',
+      message: `${title}: ${details}`,
+      severity: 'critical',
+      metadata: { event, action: 'REVIEW_SECURITY' },
+    });
     const recipients = await getAdminRecipientEmails(event as Parameters<typeof getAdminRecipientEmails>[0]);
     if (!recipients.length) return;
     await sendTransactionalEmail({

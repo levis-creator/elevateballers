@@ -90,6 +90,10 @@ export function useAdminNotifications(enabled: boolean) {
 			if (n.team) navigate(`/admin/teams/${n.team.id}`);
 			else if (n.player) navigate(`/admin/players/${n.player.id}`);
 			else if (n.metadata?.contactMessageId) navigate(`/admin/messages?id=${n.metadata.contactMessageId}`);
+			else if (n.type === 'ATTACHMENT_BLOCKED') navigate('/admin/media');
+			else if (n.type === 'MAILBOX_SYNC_FAILED' || n.type === 'EMAIL_DELIVERY_FAILED') navigate('/admin/messages');
+			else if (n.type === 'REGISTRATION_DUPLICATE') navigate('/admin/registrations');
+			else if (n.type === 'SECURITY_ALERT') navigate('/admin/settings');
 			else navigate("/admin/notifications");
 		},
 		[markRead],
