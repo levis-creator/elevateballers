@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { sendContactReplyEmail } from '@/lib/email';
 import { checkAuth } from '@/features/cms/lib/auth-astro';
 import { appendSentMessage } from '@/features/messages/application/imap-mailbox';
+import { createOperationalNotification } from '@/features/cms/lib/adminNotifications';
 
 export const prerender = false;
 
@@ -69,7 +70,17 @@ export const POST: APIRoute = async ({ request, params }) => {
     } else {
       // Production: a delivery failure means the reply didn't send — surface it
       // and do NOT mark the message replied.
-      await send;
+      try {
+        await send;
+      } catch (error) {
+        await createOperationalNotification({
+          type: 'EMAIL_DELIVERY_FAILED',
+          message: `Reply to ${message.email} could not be delivered.`,
+          severity: 'critical',
+          metadata: { contactMessageId: id, action: 'RETRY_EMAIL', error: error instanceof Error ? error.message : String(error) },
+        }).catch((notificationError) => console.warn('[messages] delivery notification failed:', notificationError));
+        throw error;
+      }
     }
 
     const updated = await prisma.contactMessage.update({

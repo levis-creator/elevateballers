@@ -10,6 +10,7 @@ import { prisma } from '../../../lib/prisma';
 import { siteSettingsService } from '../../settings';
 import { sanitizeHtml } from '../../../lib/sanitize';
 import { readFile, saveFile } from '../../../lib/file-storage';
+import { createOperationalNotification } from '../../cms/lib/adminNotifications';
 
 type MailboxConfig = { host?: string; port?: string | number; username?: string; password?: string; mailbox?: string; secure?: string | boolean };
 type ImapFolder = 'INBOX' | 'SPAM' | 'TRASH' | 'SENT' | 'DRAFT';
@@ -209,6 +210,14 @@ export async function syncImapMailbox() {
     console.warn('[messages] attachment scan failed:', error);
     return { clean: 0, blocked: 0, pending: 0 };
   });
+  if (attachmentScan.blocked > 0) {
+    await createOperationalNotification({
+      type: 'ATTACHMENT_BLOCKED',
+      message: `${attachmentScan.blocked} mailbox attachment${attachmentScan.blocked === 1 ? '' : 's'} blocked after security scanning.`,
+      severity: 'critical',
+      metadata: { blockedCount: attachmentScan.blocked, action: 'REVIEW_ATTACHMENTS' },
+    }).catch((error) => console.warn('[messages] attachment notification failed:', error));
+  }
   return { imported, updated, mailbox: config.mailbox, attachmentScan };
 }
 

@@ -5,7 +5,21 @@ import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermiss
 import { useAdminShell } from '@/features/cms/presentation/components/AdminShellContext';
 import { ADMIN_NAV } from './lib/admin-nav';
 import { useAdminTheme } from './hooks/useAdminTheme';
-import { useAdminNotifications } from './hooks/useAdminNotifications';
+import { useAdminNotifications, type AdminNotification } from './hooks/useAdminNotifications';
+
+function notificationPresentation(notification: AdminNotification) {
+  if (notification.type === 'TEAM_REGISTERED') return { title: 'New team registration', priority: 'Needs review', action: 'Review team', tone: 'text-emerald-500' };
+  if (notification.type === 'PLAYER_REGISTERED') return { title: 'New player registration', priority: 'Needs review', action: 'Review player', tone: 'text-emerald-500' };
+  if (notification.type === 'PLAYER_AUTO_LINKED') return { title: 'Player linked automatically', priority: 'Informational', action: 'View player', tone: 'text-sky-500' };
+  if (notification.type === 'CONTACT_MESSAGE') return { title: 'New contact message', priority: 'Needs attention', action: 'Open message', tone: 'text-[var(--brand)]' };
+  if (notification.type === 'MAILBOX_SYNC_FAILED') return { title: 'Mailbox sync failed', priority: 'Critical', action: 'Retry sync', tone: 'text-rose-500' };
+  if (notification.type === 'ATTACHMENT_BLOCKED') return { title: 'Attachment blocked', priority: 'Critical', action: 'Review attachment', tone: 'text-rose-500' };
+  if (notification.type === 'EMAIL_DELIVERY_FAILED') return { title: 'Email delivery failed', priority: 'Critical', action: 'Retry email', tone: 'text-rose-500' };
+  if (notification.type === 'JOB_FAILED') return { title: 'Scheduled job failed', priority: 'Critical', action: 'Review job', tone: 'text-rose-500' };
+  if (notification.type === 'SECURITY_ALERT') return { title: 'Security alert', priority: 'Critical', action: 'Review alert', tone: 'text-rose-500' };
+  if (notification.type === 'REGISTRATION_DUPLICATE') return { title: 'Possible duplicate registration', priority: 'Needs review', action: 'Review duplicate', tone: 'text-amber-500' };
+  return { title: 'Admin notification', priority: 'Needs attention', action: 'Open notification', tone: 'text-[var(--brand)]' };
+}
 
 /**
  * v2 admin topbar. Presentation + light local UI state (open menus). Reuses the
@@ -124,18 +138,26 @@ export default function AdminHeaderV2() {
                     <p className="mt-1 font-['Space_Mono'] text-[9px] uppercase tracking-[0.08em] text-[var(--faint)]">No unread notifications</p>
                   </div>
                 ) : notifications.map((notification) => (
-                  <button
-                    type="button"
-                    key={notification.id}
-                    onClick={() => { openNotification(notification); setMenu(null); }}
-                    className="w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[var(--hov)]"
-                  >
-                    <span className="block font-['Space_Mono'] text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--brandsoft)]">
-                      {notification.type.replaceAll('_', ' ')}
-                    </span>
-                    <span className="mt-1 block font-['Archivo'] text-[12px] font-semibold leading-4 text-[var(--tx)]">{notification.message}</span>
-                    <span className="mt-1 block font-['Space_Mono'] text-[9px] text-[var(--txm)]">{new Date(notification.createdAt).toLocaleDateString()}</span>
-                  </button>
+                  (() => {
+                    const presentation = notificationPresentation(notification);
+                    const related = notification.team?.name || (notification.player ? `${notification.player.firstName} ${notification.player.lastName}`.trim() : null);
+                    return <button
+                      type="button"
+                      key={notification.id}
+                      onClick={() => { openNotification(notification); setMenu(null); }}
+                      className="w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[var(--hov)]"
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-['Archivo'] text-[12px] font-bold text-[var(--tx)]">{presentation.title}</span>
+                        <span className={`font-['Space_Mono'] text-[8px] font-bold uppercase tracking-[0.06em] ${presentation.tone}`}>{presentation.priority}</span>
+                      </span>
+                      <span className="mt-1 block font-['Archivo'] text-[11.5px] leading-4 text-[var(--txd)]">{notification.message}</span>
+                      <span className="mt-1.5 flex items-center justify-between gap-2 font-['Space_Mono'] text-[9px] text-[var(--txm)]">
+                        <span>{related || 'Admin activity'} · {new Date(notification.createdAt).toLocaleString()}</span>
+                        <span className="font-bold text-[var(--brand)]">{presentation.action} →</span>
+                      </span>
+                    </button>;
+                  })()
                 ))}
               </div>
               <div className="flex gap-2 border-t border-[var(--bord2)] px-3 py-3">
