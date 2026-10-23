@@ -15,12 +15,18 @@ export interface Message {
 	trashedAt: string | null;
 	createdAt: string;
 	source?: string;
+	direction?: string;
+	folder?: string;
+	starred?: boolean;
+	spamAt?: string | null;
+	sentAt?: string | null;
+	threadId?: string | null;
 }
 
 export type MessageStatus = "unread" | "read" | "replied";
-export type MessageFilter = "All" | "Unread" | "Read" | "Replied" | "Trash";
+export type MessageFilter = "All" | "Unread" | "Read" | "Replied" | "Sent" | "Spam" | "Trash";
 
-export const MESSAGE_FILTERS: MessageFilter[] = ["All", "Unread", "Read", "Replied", "Trash"];
+export const MESSAGE_FILTERS: MessageFilter[] = ["All", "Unread", "Read", "Replied", "Sent", "Spam", "Trash"];
 
 /** A replied message is the strongest state, then read, then unread. */
 export function messageStatus(m: Message): MessageStatus {
@@ -29,7 +35,7 @@ export function messageStatus(m: Message): MessageStatus {
 }
 
 export function isTrashed(m: Message): boolean {
-	return !!m.trashedAt;
+	return !!m.trashedAt || m.folder === "TRASH";
 }
 
 export function hasDraft(m: Message): boolean {
@@ -42,7 +48,9 @@ export function hasDraft(m: Message): boolean {
  */
 export function matchesFilter(m: Message, filter: MessageFilter): boolean {
 	if (filter === "Trash") return isTrashed(m);
-	if (isTrashed(m)) return false;
+	if (filter === "Spam") return m.folder === "SPAM" && !isTrashed(m);
+	if (filter === "Sent") return m.direction === "OUTBOUND" && !isTrashed(m);
+	if (isTrashed(m) || m.folder === "SPAM") return false;
 	switch (filter) {
 		case "Unread":
 			return !m.read;

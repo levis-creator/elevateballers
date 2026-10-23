@@ -46,15 +46,33 @@ export function useMessages() {
 		load();
 	}, [load]);
 
+	const syncMailbox = useCallback(async () => {
+		try {
+			const res = await fetch("/api/contact-messages/sync", { method: "POST" });
+			if (!res.ok) return false;
+			await load();
+			return true;
+		} catch {
+			return false;
+		}
+	}, [load]);
+
+	useEffect(() => {
+		const timer = window.setInterval(() => { void syncMailbox(); }, 120_000);
+		return () => window.clearInterval(timer);
+	}, [syncMailbox]);
+
 	const filtered = useMemo(() => messages.filter((m) => matchesFilter(m, filter) && matchesSearch(m, search)), [messages, filter, search]);
 
 	const counts = useMemo(() => {
-		const c = { All: 0, Unread: 0, Read: 0, Replied: 0, Trash: 0 } as Record<MessageFilter, number>;
+		const c = { All: 0, Unread: 0, Read: 0, Replied: 0, Sent: 0, Spam: 0, Trash: 0 } as Record<MessageFilter, number>;
 		for (const m of messages) {
 			if (m.trashedAt) {
 				c.Trash++;
 				continue;
 			}
+			if (m.folder === "SPAM") { c.Spam++; continue; }
+			if (m.direction === "OUTBOUND") c.Sent++;
 			c.All++;
 			if (!m.read) c.Unread++;
 			if (m.read && !m.repliedAt) c.Read++;
@@ -109,9 +127,18 @@ export function useMessages() {
 
 	// ── Trash (soft delete) ──────────────────────────────────────────────
 	const setTrashed = useCallback(async (id: string, trashed: boolean) => {
-		patchLocal(id, { trashedAt: trashed ? new Date().toISOString() : null });
+		patchLocal(id, { trashedAt: trashed ? new Date().toISOString() : null, folder: trashed ? "TRASH" : "INBOX" });
 		try {
 			await patchMessage(id, { trashed });
+		} catch {
+			load();
+		}
+	}, [load]);
+
+	const setFolder = useCallback(async (id: string, folder: string) => {
+		patchLocal(id, { folder, spamAt: folder === "SPAM" ? new Date().toISOString() : null });
+		try {
+			await patchMessage(id, { folder });
 		} catch {
 			load();
 		}
@@ -146,7 +173,7 @@ export function useMessages() {
 	const toggleCheck = useCallback((id: string) => {
 		setChecked((prev) => {
 			const n = new Set(prev);
-			n.has(id) ? n.delete(id) : n.add(id);
+			if (n.has(id)) n.delete(id); else n.add(id);
 			return n;
 		});
 	}, []);
@@ -251,6 +278,7 @@ export function useMessages() {
 		deleteForever,
 		rowSetRead: setRead,
 		rowTrash: setTrashed,
+		rowFolder: setFolder,
 		rowDelete,
 		toggleCheck,
 		clearChecked,
@@ -260,5 +288,6 @@ export function useMessages() {
 		savingDraft,
 		sendReply,
 		refresh: load,
+		syncMailbox,
 	};
 }

@@ -1309,6 +1309,14 @@ model ContactMessage {
   userAgent  String?   @map("user_agent")
   source     String    @default("CONTACT")
   externalId String?   @unique @map("external_id")
+  direction  String    @default("INBOUND")
+  folder     String    @default("INBOX")
+  starred    Boolean   @default(false)
+  spamAt    DateTime?  @map("spam_at")
+  sentAt    DateTime?  @map("sent_at")
+  threadId  String?    @map("thread_id")
+  imapUid   Int?      @map("imap_uid")
+  imapFolder String?  @map("imap_folder")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
@@ -1318,6 +1326,10 @@ model ContactMessage {
   @@index([createdAt])
   @@index([email])
   @@index([source])
+  @@index([folder])
+  @@index([direction])
+  @@index([threadId])
+  @@index([imapFolder, imapUid])
   @@map("contact_messages")
 }
 

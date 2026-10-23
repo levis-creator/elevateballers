@@ -44,6 +44,7 @@ function InboxContent() {
 				</div>
 				<div className="flex items-center gap-2">
 					<button type="button" onClick={() => setComposeOpen(true)} className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--brand)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-white hover:opacity-90">New message</button>
+					<button type="button" onClick={() => void m.syncMailbox()} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]">Sync inbox</button>
 					<button type="button" onClick={m.markAllRead} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 py-2 font-['Archivo'] text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
 						<CheckCheck className="h-[14px] w-[14px]" />Mark all read
 					</button>
@@ -79,6 +80,7 @@ function InboxContent() {
 							onBulkTrash={m.bulkTrash}
 							rowSetRead={m.rowSetRead}
 							rowTrash={m.rowTrash}
+							rowFolder={m.rowFolder}
 							rowDelete={m.rowDelete}
 						/>
 						<MessageReadingPane

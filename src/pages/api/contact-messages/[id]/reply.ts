@@ -6,6 +6,7 @@ import { handleApiError } from '@/lib/apiError';
 import { prisma } from '@/lib/prisma';
 import { sendContactReplyEmail } from '@/lib/email';
 import { checkAuth } from '@/features/cms/lib/auth-astro';
+import { appendSentMessage } from '@/features/messages/application/imap-mailbox';
 
 export const prerender = false;
 
@@ -50,6 +51,7 @@ export const POST: APIRoute = async ({ request, params }) => {
       /* ignore */
     }
 
+    const outboundMessageId = `reply-${crypto.randomUUID()}@elevateballers.com`;
     const send = sendContactReplyEmail({
       name: message.name,
       email: message.email,
@@ -75,6 +77,21 @@ export const POST: APIRoute = async ({ request, params }) => {
       // Store the sent reply so it shows in the thread; clear any saved draft.
       data: { repliedAt: new Date(), repliedBy, replyBody: reply, read: true, draftReply: null },
     });
+
+    await prisma.contactMessage.create({ data: {
+      name: message.name,
+      email: message.email,
+      subject: `Re: ${message.subject}`,
+      message: reply,
+      read: true,
+      source: 'ADMIN',
+      direction: 'OUTBOUND',
+      folder: 'SENT',
+      sentAt: new Date(),
+      externalId: outboundMessageId,
+      threadId: message.threadId ?? message.id,
+    } });
+    await appendSentMessage({ to: message.email, subject: `Re: ${message.subject}`, text: reply, messageId: outboundMessageId }).catch((error) => console.warn('[messages] sent-mail append failed:', error));
 
     await markContactNotificationsRead([id]);
     // The reply text stays on the message row; the log records who replied and when.

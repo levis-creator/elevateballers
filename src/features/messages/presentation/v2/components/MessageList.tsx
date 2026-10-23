@@ -30,6 +30,7 @@ interface Props {
 	onBulkTrash: () => void;
 	rowSetRead: (id: string, read: boolean) => void;
 	rowTrash: (id: string, trashed: boolean) => void;
+	rowFolder: (id: string, folder: string) => void;
 	rowDelete: (id: string) => void;
 }
 
@@ -91,7 +92,7 @@ export default function MessageList(p: Props) {
 			<div ref={listRef} className="eb-scroll min-h-0 flex-1 overflow-y-auto">
 				{p.filtered.map((m) => {
 					const unread = !m.trashedAt && messageStatus(m) === "unread";
-					const active = m.id === selectedRowId(p, m);
+							const active = m.id === selectedRowId(p);
 					const isChecked = p.checked.has(m.id);
 					const trashed = isTrashed(m);
 					return (
@@ -135,6 +136,8 @@ export default function MessageList(p: Props) {
 										) : (
 											<>
 												<MenuItem label={m.read ? "Mark as unread" : "Mark as read"} onClick={() => { p.rowSetRead(m.id, !m.read); setMenuId(null); }} />
+																{m.folder === "SPAM" && <MenuItem label="Move to inbox" onClick={() => { p.rowFolder(m.id, "INBOX"); setMenuId(null); }} />}
+													<MenuItem label="Mark as spam" onClick={() => { p.rowFolder(m.id, "SPAM"); setMenuId(null); }} />
 												<MenuItem label="Move to trash" onClick={() => { p.rowTrash(m.id, true); setMenuId(null); }} />
 											</>
 										)}
@@ -169,6 +172,6 @@ function MenuItem({ label, onClick, danger }: { label: string; onClick: () => vo
 }
 
 // selectedId is passed via prop `selectedId`; small helper keeps the row map tidy.
-function selectedRowId(p: Props, _m: Message): string | null {
+function selectedRowId(p: Props): string | null {
 	return p.selectedId;
 }

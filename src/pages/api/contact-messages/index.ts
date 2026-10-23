@@ -14,6 +14,7 @@ import {
   resolvePublicContactSettings,
   siteSettingsService,
 } from '../../../features/settings';
+import { updateImapMessageState } from '../../../features/messages/application/imap-mailbox';
 
 export const prerender = false;
 
@@ -188,18 +189,34 @@ export const PATCH: APIRoute = async ({ request }) => {
       read?: boolean;
       trashedAt?: Date | null;
       draftReply?: string | null;
+      starred?: boolean;
+      folder?: string;
+      spamAt?: Date | null;
     } = {};
     if (data.read !== undefined) updateData.read = Boolean(data.read);
-    if (data.trashed !== undefined) updateData.trashedAt = data.trashed ? new Date() : null;
+    if (data.trashed !== undefined) {
+      updateData.trashedAt = data.trashed ? new Date() : null;
+      updateData.folder = data.trashed ? 'TRASH' : 'INBOX';
+    }
     if (data.draftReply !== undefined) {
       const draft = data.draftReply == null ? '' : String(data.draftReply);
       updateData.draftReply = draft.trim() ? draft.slice(0, 5000) : null;
+    }
+    if (data.starred !== undefined) updateData.starred = Boolean(data.starred);
+    if (data.folder !== undefined && ['INBOX', 'SPAM', 'TRASH', 'SENT'].includes(String(data.folder))) {
+      updateData.folder = String(data.folder);
+      updateData.trashedAt = String(data.folder) === 'TRASH' ? new Date() : null;
+      updateData.spamAt = String(data.folder) === 'SPAM' ? new Date() : null;
     }
 
     const message = await prisma.contactMessage.update({
       where: { id: data.id },
       data: updateData,
     });
+
+    if (message.source === 'IMAP') {
+      await updateImapMessageState({ read: data.read === undefined ? undefined : message.read, folder: data.folder ? message.folder : undefined, imapFolder: message.imapFolder, imapUid: message.imapUid }).catch((error) => console.warn('[messages] IMAP state update failed:', error));
+    }
 
     if (message.read || message.trashedAt) await markContactNotificationsRead([message.id]);
 
