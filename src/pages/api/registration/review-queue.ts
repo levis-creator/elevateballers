@@ -18,7 +18,7 @@ const json = (body: unknown, status = 200) =>
 
 export const GET: APIRoute = async ({ url, request }) => {
   try {
-    await requireAnyPermission(request, ['players:update', 'teams:update']);
+    await requireAnyPermission(request, ['players:read', 'teams:read', 'players:update', 'teams:update']);
     const page = Math.max(1, Number(url.searchParams.get('page') || 1));
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || 25)));
     return json(

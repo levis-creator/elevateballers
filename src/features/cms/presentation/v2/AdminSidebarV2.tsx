@@ -15,6 +15,7 @@ export default function AdminSidebarV2() {
   const { sidebarShown, isMobile, setSidebarOpen } = useAdminShell();
   const activePath = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingRegistrationCount, setPendingRegistrationCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,11 +32,26 @@ export default function AdminSidebarV2() {
       }
     };
 
+    const loadPendingRegistrationCount = async () => {
+      try {
+        const response = await fetch('/api/registration/review-queue?status=PENDING&limit=1');
+        if (!response.ok) return;
+        const body = await response.json().catch(() => null);
+        const count = Number(body?.total ?? 0);
+        if (!cancelled) setPendingRegistrationCount(Number.isFinite(count) ? count : 0);
+      } catch {
+        // The badge is supplemental navigation UI; leave the last known value.
+      }
+    };
+
     void loadUnreadCount();
+    void loadPendingRegistrationCount();
     const timer = window.setInterval(loadUnreadCount, 30_000);
+    const registrationTimer = window.setInterval(loadPendingRegistrationCount, 30_000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.clearInterval(registrationTimer);
     };
   }, []);
 
@@ -128,6 +144,16 @@ export default function AdminSidebarV2() {
                         aria-label={`${unreadCount} unread message${unreadCount === 1 ? '' : 's'}`}
                       >
                         {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                    {item.badge === 'registrations' && pendingRegistrationCount > 0 && (
+                      <span
+                        className={`min-w-[20px] rounded-full px-1.5 py-0.5 text-center font-['Space_Mono'] text-[9px] font-bold leading-none ${
+                          active ? 'bg-white text-[var(--brand)]' : 'bg-[var(--brand)] text-white'
+                        }`}
+                        aria-label={`${pendingRegistrationCount} pending registration${pendingRegistrationCount === 1 ? '' : 's'}`}
+                      >
+                        {pendingRegistrationCount > 99 ? '99+' : pendingRegistrationCount}
                       </span>
                     )}
                   </a>

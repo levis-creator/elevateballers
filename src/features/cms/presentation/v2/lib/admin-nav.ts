@@ -34,7 +34,7 @@ export interface AdminNavItem {
   /** Requires ANY of these permissions. */
   permissionsAny?: string[];
   /** Marks the item to show a live unread-count badge (contact messages). */
-  badge?: 'messages';
+  badge?: 'messages' | 'registrations';
 }
 
 export interface AdminNavGroup {
@@ -83,6 +83,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: '/admin/registrations',
         icon: ClipboardCheck,
         permission: 'players:read',
+        badge: 'registrations',
       },
       { label: 'Staff', href: '/admin/staff', icon: Briefcase, permission: 'staff:read' },
       {
