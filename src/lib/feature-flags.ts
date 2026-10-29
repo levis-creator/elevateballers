@@ -303,7 +303,9 @@ function getFeatureFlagsFromEnv(): Partial<Record<FeatureFlag, boolean>> {
   const flags: Partial<Record<FeatureFlag, boolean>> = {};
   
   // Check for JSON configuration
-  const jsonConfig = import.meta.env.FEATURE_FLAGS;
+  // Read at runtime: since Astro 6, import.meta.env is fixed at build time.
+  const runtimeValue = typeof process !== 'undefined' ? process.env.FEATURE_FLAGS : undefined;
+  const jsonConfig = runtimeValue ?? import.meta.env.FEATURE_FLAGS;
   if (jsonConfig) {
     try {
       const parsed = typeof jsonConfig === 'string' ? JSON.parse(jsonConfig) : jsonConfig;

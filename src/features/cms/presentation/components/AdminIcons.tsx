@@ -8,7 +8,7 @@ import {
   Settings, 
   ExternalLink, 
   LogOut,
-  Basketball
+  Dribbble
 } from 'lucide-react';
 
 interface IconProps {
@@ -28,7 +28,8 @@ export default function AdminIcon({ name, size = 20, className = '' }: IconProps
     'settings': Settings,
     'external-link': ExternalLink,
     'log-out': LogOut,
-    'basketball': Basketball,
+    // lucide-react has no basketball icon; Dribbble is its ball icon.
+    'basketball': Dribbble,
   };
 
   const IconComponent = icons[name];

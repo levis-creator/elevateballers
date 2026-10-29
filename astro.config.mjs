@@ -1,7 +1,6 @@
 // @ts-check
 import { defineConfig, envField } from 'astro/config';
 import react from '@astrojs/react';
-import tailwind from '@astrojs/tailwind';
 import alpinejs from '@astrojs/alpinejs';
 import node from '@astrojs/node';
 import vercel from '@astrojs/vercel';
@@ -12,13 +11,27 @@ import { resolve } from 'path';
 // Set DEPLOY_TARGET=vercel for Vercel, or DEPLOY_TARGET=cpanel (or unset) for cPanel
 const deployTarget = process.env.DEPLOY_TARGET || 'cpanel';
 
+// Injects the site-wide Tailwind layers into every page, as the retired
+// @astrojs/tailwind integration did. Tailwind itself runs from postcss.config.mjs.
+const tailwindBaseStyles = {
+  name: 'tailwind-base-styles',
+  hooks: {
+    'astro:config:setup': ({ injectScript }) => {
+      injectScript('page-ssr', "import '/src/styles/tailwind-base.css';");
+    },
+  },
+};
+
 // https://astro.build/config
 export default defineConfig({
   site: 'https://elevateballers.com',
   // Sitemap generation is runtime-managed by src/pages/sitemap.xml.ts so the
   // Site Settings → SEO switch and excluded paths are always respected.
-  integrations: [react(), tailwind(), alpinejs()],
+  integrations: [react(), tailwindBaseStyles, alpinejs()],
   output: 'server',
+  // Astro 7 defaults to JSX-style whitespace collapsing, which would join
+  // adjacent inline elements; keep the previous HTML compression.
+  compressHTML: true,
   // Enable link prefetching so `data-astro-prefetch` hints actually fetch.
   // Default strategy is hover; the admin uses <ClientRouter /> for SPA-style nav.
   prefetch: true,

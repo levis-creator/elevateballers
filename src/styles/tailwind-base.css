@@ -1,0 +1,10 @@
+/*
+ * Site-wide Tailwind layers built from tailwind.config.mjs, injected into every
+ * page by the tailwindBaseStyles integration in astro.config.mjs. It replaces the
+ * base styles the @astrojs/tailwind integration used to inject (it does not
+ * support Astro 6+). Pages outside the v2 folders, such as src/pages/cookies.astro,
+ * rely on these utilities.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -16,17 +16,18 @@
  * Checks both import.meta.env (Astro) and process.env (Node.js)
  */
 export function getEnv(key: string, defaultValue?: string): string | undefined {
-  // Try import.meta.env first (Astro's way)
-  const astroEnv = (import.meta as ImportMeta & {
-    env?: Record<string, string | undefined>;
-  }).env;
-  let value = astroEnv?.[key];
-  
-  // Fallback to process.env for server-side code (important for production)
-  if (value === undefined && typeof process !== 'undefined' && process.env) {
-    value = process.env[key];
+  // The runtime environment wins on the server: since Astro 6, import.meta.env
+  // is fixed at build time and no longer reads process.env.
+  let value = typeof process !== 'undefined' && process.env ? process.env[key] : undefined;
+
+  // Fall back to Astro's build-time values (the only source in the browser).
+  if (value === undefined) {
+    const astroEnv = (import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>;
+    }).env;
+    value = astroEnv?.[key];
   }
-  
+
   return value ?? defaultValue;
 }
 
