@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bell, CheckCheck, Loader2, RefreshCw } from 'lucide-react';
 import { useAdminNotifications, type AdminNotification } from './hooks/useAdminNotifications';
-import { usePermissions } from '@/features/rbac/usePermissions';
+import { PermissionProvider, usePermissions } from '@/features/rbac/usePermissions';
 
 function presentation(notification: AdminNotification) {
   const labels: Record<string, [string, string]> = {
@@ -19,7 +19,7 @@ function presentation(notification: AdminNotification) {
   return labels[notification.type] ?? ['Admin notification', 'Review notification'];
 }
 
-export default function NotificationsPageV2() {
+function NotificationsContent() {
   const { can } = usePermissions();
   const { markRead, markAllRead, open } = useAdminNotifications(can('notifications:read'));
   const [items, setItems] = useState<AdminNotification[]>([]);
@@ -57,4 +57,13 @@ export default function NotificationsPageV2() {
     <div className="mb-4 flex gap-2"><button type="button" onClick={() => setFilter('ALL')} className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${filter === 'ALL' ? 'bg-[var(--brand)] text-white' : 'border border-[var(--bord)] bg-[var(--surf2)] text-[var(--txm)]'}`}>All</button><button type="button" onClick={() => setFilter('UNREAD')} className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${filter === 'UNREAD' ? 'bg-[var(--brand)] text-white' : 'border border-[var(--bord)] bg-[var(--surf2)] text-[var(--txm)]'}`}>Unread</button></div>
     <section className="overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)]">{loading ? <div className="flex justify-center gap-2 p-12 text-[13px] text-[var(--txm)]"><Loader2 className="h-5 w-5 animate-spin" /> Loading notifications…</div> : error ? <div className="p-12 text-center text-[13px] text-[var(--brand)]">{error}</div> : !items.length ? <div className="p-12 text-center"><Bell className="mx-auto mb-2 h-6 w-6 text-[var(--faint)]" /><p className="text-[13px] font-semibold text-[var(--txd)]">No notifications found</p></div> : <div>{items.map((item) => { const [title, action] = presentation(item); const related = item.team?.name || (item.player ? `${item.player.firstName} ${item.player.lastName}` : 'Admin activity'); return <article key={item.id} className={`border-b border-[var(--bord2)] p-4 last:border-0 ${item.read ? '' : 'bg-[var(--surf2)]'}`}><div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--chip)] text-[var(--brand)]"><Bell className="h-4 w-4" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="text-[13px] font-bold">{title}</h2>{!item.read && <span className="rounded-full bg-[var(--brand)] px-2 py-0.5 font-['Space_Mono'] text-[8px] font-bold uppercase text-white">Unread</span>}</div><p className="mt-1 text-[12.5px] leading-5 text-[var(--txd)]">{item.message}</p><div className="mt-1.5 font-['Space_Mono'] text-[9px] text-[var(--txm)]">{related} · {new Date(item.createdAt).toLocaleString()}</div></div><div className="flex flex-wrap justify-end gap-2">{!item.read && <button type="button" onClick={() => void markItemRead(item)} className="rounded-md border border-[var(--bord)] px-2.5 py-1.5 text-[10px] font-bold text-[var(--txd)]">Mark read</button>}<button type="button" onClick={() => { open(item); }} className="rounded-md bg-[var(--brand)] px-2.5 py-1.5 text-[10px] font-bold text-white">{action}</button></div></div></article>; })}</div>}</section>
   </div>;
+}
+
+/** Establishes its own PermissionProvider (matches the other admin islands). */
+export default function NotificationsPageV2() {
+  return (
+    <PermissionProvider>
+      <NotificationsContent />
+    </PermissionProvider>
+  );
 }
