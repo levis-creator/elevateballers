@@ -9,6 +9,8 @@ export const GET: APIRoute = ({ site, url }) => {
         'Disallow: /api/',
         'Disallow: /login',
         'Disallow: /team-portal/',
+        'Disallow: /unauthorized',
+        'Disallow: /unsubscribe',
         `Sitemap: ${baseUrl}/sitemap.xml`,
         '',
     ].join('\n');

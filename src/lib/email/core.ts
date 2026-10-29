@@ -128,14 +128,18 @@ async function sendWithProvider(provider: RuntimeProvider, message: ProviderMess
   if (name === 'resend') {
     const resend = getResend(credential);
     if (!resend) throw new Error('Resend is not configured');
+    // Resend needs a body: HTML (with optional plain text) or plain text alone.
+    const body =
+      message.html !== undefined
+        ? { html: message.html, ...(message.text !== undefined ? { text: message.text } : {}) }
+        : { text: message.text ?? '' };
     const { data, error } = await resend.emails.send({
       from: message.from,
       to: message.to,
       bcc: message.bcc,
       replyTo: message.replyTo,
       subject: message.subject,
-      html: message.html,
-      text: message.text,
+      ...body,
     });
     if (error) throw new Error(error.message);
     return data?.id ?? null;

@@ -2,6 +2,7 @@
 import { createRequire } from 'node:module';
 import type { PrismaClient as PrismaClientInstance } from '@prisma/client';
 import dotenv from 'dotenv';
+import { dbSslOptions } from './db-ssl';
 
 const require = createRequire(import.meta.url);
 const { PrismaClient } = require('@prisma/client') as { PrismaClient: new (args?: object) => PrismaClientInstance };
@@ -39,6 +40,8 @@ function getAdapter() {
             connectTimeout: 30000,
             acquireTimeout: 30000,
             allowPublicKeyRetrieval,
+            // Encrypted only when DB_SSL is set; see db-ssl.ts.
+            ssl: dbSslOptions(),
         };
 
         adapter = new PrismaMariaDb(poolConfig);

@@ -3,7 +3,7 @@ import { PUBLIC_TURNSTILE_SITE_KEY } from 'astro:env/client';
 import TurnstileWidget from '../../../../components/TurnstileWidget';
 import { isRegistrationOpen, registrationClosedMessage } from '../../../../lib/registration';
 import { trackEvent } from '../../../../lib/analytics';
-import { registrationToken, type PublicRegistrationSettings } from '../../../settings';
+import { registrationToken, type PublicRegistrationSettings } from '../../../settings/application/registrationSettings';
 import { PRIVACY_POLICY_PATH, privacyConsentLabelParts, type PublicPrivacyPolicySettings } from '../../../settings/application/privacyPolicySettings';
 
 interface League {

@@ -158,7 +158,6 @@ export async function compressImage(
     
     switch (format) {
       case 'jpeg':
-      case 'jpg':
         compressedBuffer = await pipeline
           .jpeg({ quality: Math.round(opts.quality * 100) })
           .toBuffer();

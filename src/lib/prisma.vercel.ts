@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import type { PrismaClient as PrismaClientInstance } from '@prisma/client';
 import dotenv from 'dotenv';
+import { dbSslOptions, type DbSslOptions } from './db-ssl';
 
 // Load environment variables
 dotenv.config();
@@ -38,6 +39,7 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
             idleTimeout?: number;
             connectTimeout?: number;
             allowPublicKeyRetrieval?: boolean;
+            ssl?: DbSslOptions;
         };
 
         try {
@@ -62,6 +64,8 @@ function getAdapter(): InstanceType<typeof PrismaMariaDb> {
                 connectTimeout: 30000,
                 acquireTimeout: 30000,
                 allowPublicKeyRetrieval,
+                // Encrypted only when DB_SSL is set; see db-ssl.ts.
+                ssl: dbSslOptions(),
             };
         } catch (error) {
             throw new Error(
