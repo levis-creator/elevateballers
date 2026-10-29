@@ -226,6 +226,7 @@ export async function startGame(matchId: string, gameRulesId?: string): Promise<
         clockSecondsAtStart: periodLengthSeconds,
         team1Score: 0,
         team2Score: 0,
+        scoreSource: 'PLAY_BY_PLAY',
         team1Fouls: 0,
         team2Fouls: 0,
         team1Timeouts: rules?.timeouts60Second ?? 6,

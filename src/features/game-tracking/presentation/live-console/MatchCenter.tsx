@@ -54,8 +54,11 @@ function TeamBadge({ name, logo, side }: { name: string; logo: string | null | u
   );
 }
 
-async function postAction(url: string): Promise<string | null> {
-  const res = await fetch(url, { method: 'POST' }).catch(() => null);
+async function postAction(url: string, body?: object): Promise<string | null> {
+  const init: RequestInit = body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : { method: 'POST' };
+  const res = await fetch(url, init).catch(() => null);
   if (res?.ok) return null;
   const data = await res?.json().catch(() => null);
   return data?.error || 'Something went wrong — try again';
@@ -93,9 +96,9 @@ export default function MatchCenter(props: Props) {
     return () => clearInterval(id);
   }, [upcoming]);
 
-  const run = async (kind: 'start' | 'publish' | 'reopen', url: string, after?: () => void) => {
+  const run = async (kind: 'start' | 'publish' | 'reopen', url: string, after?: () => void, body?: object) => {
     setBusy(kind);
-    const error = await postAction(url);
+    const error = await postAction(url, body);
     setBusy(null);
     if (error) {
       lc.flash(error);
@@ -106,7 +109,15 @@ export default function MatchCenter(props: Props) {
     await props.onMatchChanged();
   };
   const published = !!match.resultPublishedAt;
-  const startGame = () => run('start', `/api/games/${match.id}/start`);
+  const manualScore = match.scoreSource === 'MANUAL';
+  const startGame = () => {
+    if (manualScore) {
+      const typed = `${match.team1Score ?? 0}–${match.team2Score ?? 0}`;
+      if (!window.confirm(`This match has a manually entered score (${typed}).\n\nStarting play-by-play resets it to 0–0. Continue?`)) return;
+      return run('start', `/api/games/${match.id}/start`, undefined, { replaceManualScore: true });
+    }
+    return run('start', `/api/games/${match.id}/start`);
+  };
   const publish = () => run('publish', `/api/matches/${match.id}/publish-final`, () => lc.flash('Final result published'));
   const reopen = () =>
     run('reopen', `/api/games/${match.id}/reopen`, () => {
@@ -499,6 +510,7 @@ export default function MatchCenter(props: Props) {
           onPublish={publish}
           reopening={busy === 'reopen'}
           onReopen={reopen}
+          manualScore={manualScore}
           onManageImages={() => setTab('images')}
         />
       )}

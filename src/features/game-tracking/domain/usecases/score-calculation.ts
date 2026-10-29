@@ -4,7 +4,64 @@
  */
 
 import type { PrismaClient } from '@prisma/client';
-import type { MatchEventType } from '@prisma/client';
+import type { MatchEventType, ScoreSource } from '@prisma/client';
+
+/**
+ * Score source after an admin types a score into the match form. A
+ * play-by-play match stays play-by-play (its events remain the record);
+ * otherwise any entered score makes it MANUAL and clearing both resets it.
+ */
+export function scoreSourceAfterManualEdit(
+  current: ScoreSource | null | undefined,
+  team1Score: number | null | undefined,
+  team2Score: number | null | undefined,
+): ScoreSource {
+  if (current === 'PLAY_BY_PLAY') return 'PLAY_BY_PLAY';
+  return team1Score != null || team2Score != null ? 'MANUAL' : 'NONE';
+}
+
+/** What an existing match's event log says about how its score was recorded. */
+export interface ScoreSourceEvidence {
+  status: string;
+  team1Score: number | null;
+  team2Score: number | null;
+  /** Non-undone made shots. */
+  scoringEvents: number;
+  /** Non-undone events of any other type. */
+  otherEvents: number;
+  /** Points per side summed from the scoring events. */
+  eventTeam1Score: number;
+  eventTeam2Score: number;
+}
+
+/**
+ * Classify a match recorded before scoreSource existed. Any made shot in the
+ * log means play-by-play; a stored score without one means it was typed in.
+ * `review` explains rows a person should check before trusting the label.
+ */
+export function classifyScoreSource(m: ScoreSourceEvidence): { source: ScoreSource; review: string | null } {
+  const hasScore = m.team1Score != null || m.team2Score != null;
+  const stored = `${m.team1Score ?? 0}–${m.team2Score ?? 0}`;
+
+  if (m.scoringEvents > 0) {
+    const fromEvents = `${m.eventTeam1Score}–${m.eventTeam2Score}`;
+    const matches = (m.team1Score ?? 0) === m.eventTeam1Score && (m.team2Score ?? 0) === m.eventTeam2Score;
+    return {
+      source: 'PLAY_BY_PLAY',
+      review: matches ? null : `stored ${stored} but events add up to ${fromEvents}`,
+    };
+  }
+  if (hasScore) {
+    return {
+      source: 'MANUAL',
+      review: m.otherEvents > 0 ? `score ${stored} has no made shots logged but ${m.otherEvents} other events` : null,
+    };
+  }
+  return {
+    source: 'NONE',
+    review: m.status === 'COMPLETED' ? 'completed with no score and no scoring events' : null,
+  };
+}
 
 /**
  * Get points value for a scoring event type
@@ -106,6 +163,9 @@ export async function calculateScoresFromEvents(
  * scoreboard the courtside scorekeeper saw is the source of truth; events lost
  * to offline-queue drops or failed POSTs would otherwise snap the final score
  * back to 0-0 at end of game.
+ *
+ * A MANUAL score is left alone: events logged against a typed-in result must
+ * not overwrite it.
  */
 export async function updateMatchScoresFromEvents(
   matchId: string,
@@ -113,12 +173,13 @@ export async function updateMatchScoresFromEvents(
   options: { preservePersistedIfHigher?: boolean } = {}
 ): Promise<boolean> {
   try {
-    const scores = await calculateScoresFromEvents(matchId, prismaClient);
-
     const match = await prismaClient.match.findUnique({
       where: { id: matchId },
-      select: { status: true, team1Score: true, team2Score: true },
+      select: { status: true, team1Score: true, team2Score: true, scoreSource: true },
     });
+    if (match?.scoreSource === 'MANUAL') return true;
+
+    const scores = await calculateScoresFromEvents(matchId, prismaClient);
 
     let { team1Score, team2Score } = scores;
 

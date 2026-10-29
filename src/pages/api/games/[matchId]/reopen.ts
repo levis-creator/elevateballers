@@ -30,11 +30,15 @@ export const POST: APIRoute = async ({ params, request }) => {
         resultPublishedAt: true,
         nextWinnerMatchId: true,
         nextLoserMatchId: true,
+        scoreSource: true,
       },
     });
     if (!match) return json({ error: 'Match not found' }, 404);
     if (match.status !== 'COMPLETED') {
       return json({ error: 'Only completed matches can be reopened' }, 409);
+    }
+    if (match.scoreSource === 'MANUAL') {
+      return json({ error: 'This result was entered manually — correct it from Edit match' }, 409);
     }
 
     const nextIds = [match.nextWinnerMatchId, match.nextLoserMatchId].filter((id): id is string => !!id);

@@ -12,6 +12,12 @@ import {
 
 export type ViewMode = 'list' | 'grid';
 export type StatusFilter = 'all' | 'upcoming' | 'live' | 'completed';
+export type SourceFilter = 'all' | 'manual' | 'play_by_play';
+
+const SOURCE_OF: Record<Exclude<SourceFilter, 'all'>, ListMatch['scoreSource']> = {
+  manual: 'MANUAL',
+  play_by_play: 'PLAY_BY_PLAY',
+};
 
 /** Matches shown per page. Grouping by date happens within the current page. */
 export const MATCHES_PER_PAGE = 12;
@@ -48,6 +54,7 @@ export function useMatchListData() {
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
+  const [source, setSource] = useState<SourceFilter>('all');
   const [seasonId, setSeasonId] = useState('all');
   const [leagueId, setLeagueId] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -84,23 +91,30 @@ export function useMatchListData() {
     fetchList<NamedOption>('/api/leagues').then(setLeagues).catch(() => setLeagues([]));
   }, []);
 
-  // Client-side text search, then order newest-first so page 1 holds the most
-  // recent matches (and each page's date groups read latest → oldest).
+  // Client-side text search and score-source filter, then order newest-first so
+  // page 1 holds the most recent matches (and each page's date groups read
+  // latest → oldest).
   const filtered = useMemo(
-    () => sortByDate(matches.filter((m) => matchesQuery(m, search)), 'desc'),
-    [matches, search],
+    () =>
+      sortByDate(
+        matches.filter(
+          (m) => matchesQuery(m, search) && (source === 'all' || m.scoreSource === SOURCE_OF[source]),
+        ),
+        'desc',
+      ),
+    [matches, search, source],
   );
 
   const stats: MatchStats = useMemo(() => computeStats(matches), [matches]);
 
   const hasActiveFilters =
-    Boolean(search.trim()) || status !== 'all' || seasonId !== 'all' || leagueId !== 'all';
+    Boolean(search.trim()) || status !== 'all' || source !== 'all' || seasonId !== 'all' || leagueId !== 'all';
 
   // Pagination — reset to page 1 whenever the result set changes, and clamp the
   // active page so it can never point past the last page (e.g. after a delete).
   useEffect(() => {
     setPage(1);
-  }, [search, status, seasonId, leagueId]);
+  }, [search, status, source, seasonId, leagueId]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / MATCHES_PER_PAGE));
   const currentPage = Math.min(page, pageCount);
@@ -214,6 +228,8 @@ export function useMatchListData() {
     setSearch,
     status,
     setStatus,
+    source,
+    setSource,
     seasonId,
     setSeasonId,
     leagueId,

@@ -17,6 +17,8 @@ interface PostMatchProps {
   reopening: boolean;
   onReopen: () => void;
   onManageImages: () => void;
+  /** The final was typed in, so corrections go through Edit match, not reopen. */
+  manualScore: boolean;
 }
 
 const LEADER_CATS: Array<[string, (l: PlayerLine) => number]> = [
@@ -25,7 +27,7 @@ const LEADER_CATS: Array<[string, (l: PlayerLine) => number]> = [
   ['Assists', (l) => l.ast],
 ];
 
-export default function PostMatch({ lc, published, publishing, onPublish, reopening, onReopen, onManageImages }: PostMatchProps) {
+export default function PostMatch({ lc, published, publishing, onPublish, reopening, onReopen, onManageImages, manualScore }: PostMatchProps) {
   const [photos, setPhotos] = useState<number | null>(null);
   const [reopenAsk, setReopenAsk] = useState(false);
 
@@ -180,6 +182,20 @@ export default function PostMatch({ lc, published, publishing, onPublish, reopen
           </div>
         </div>
 
+        {manualScore ? (
+          <div className={`${card} px-4 py-3`}>
+            <div className="text-[13px] font-semibold">Score entered manually</div>
+            <div className="mt-0.5 text-[12px] text-[var(--txd)]">
+              This result was typed in, not tracked play-by-play, so events don’t change it. Correct it from Edit match.
+            </div>
+            <a
+              href={`/admin/matches/${lc.matchId}`}
+              className="mt-2.5 inline-flex h-9 items-center rounded-lg border border-[var(--bord)] px-3 text-[12px] font-semibold text-[var(--txd)] no-underline hover:border-[var(--tx)] hover:text-[var(--tx)]"
+            >
+              Edit match
+            </a>
+          </div>
+        ) : (
         <div className={`${card} px-4 py-3`}>
           <div className="text-[13px] font-semibold">Need to fix the record?</div>
           <div className="mt-0.5 text-[12px] text-[var(--txd)]">
@@ -220,6 +236,7 @@ export default function PostMatch({ lc, published, publishing, onPublish, reopen
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

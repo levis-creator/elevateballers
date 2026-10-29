@@ -3,6 +3,7 @@ import { getEnvBoolean } from '../../../../../lib/env';
 import { ensureMatchSlug } from '../../../../matches/lib/slug';
 import type { CreateMatchInput, UpdateMatchInput, Match } from '../../../types';
 import { resolveLeagueSeasonScope } from '../../../../seasons/data/league-season-scope';
+import { scoreSourceAfterManualEdit } from '../../../../game-tracking/domain/usecases/score-calculation';
 import {
   FixtureScopeError,
   fixtureSchedulingError,
@@ -69,6 +70,7 @@ export async function createMatch(data: CreateMatchInput): Promise<Match> {
     date: new Date(data.date),
     team1Score: data.team1Score,
     team2Score: data.team2Score,
+    scoreSource: scoreSourceAfterManualEdit('NONE', data.team1Score, data.team2Score),
     status: data.status || 'UPCOMING',
     resultPublishedAt: data.resultPublishedAt ?? null,
   };
@@ -221,9 +223,20 @@ export async function updateMatch(id: string, data: UpdateMatchInput): Promise<M
         team2Id: true,
         team1Name: true,
         team2Name: true,
+        team1Score: true,
+        team2Score: true,
+        scoreSource: true,
       },
     });
     if (!currentMatch) return null;
+
+    if (data.team1Score !== undefined || data.team2Score !== undefined) {
+      updateData.scoreSource = scoreSourceAfterManualEdit(
+        currentMatch.scoreSource,
+        data.team1Score !== undefined ? data.team1Score : currentMatch.team1Score,
+        data.team2Score !== undefined ? data.team2Score : currentMatch.team2Score,
+      );
+    }
 
     const competitionValidationNeeded =
       data.leagueSeasonId !== undefined ||

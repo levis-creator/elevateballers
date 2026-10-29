@@ -450,7 +450,8 @@ model Match {
   team2Fouls            Int               @default(0) @map("team2_fouls")
   duration              Int?              @map("duration")
   trackingMode          GameTrackingMode  @default(BOTH) @map("tracking_mode")
-  winnerId              String?           @map("winner_id")
+  scoreSource           ScoreSource       @default(NONE) @map("score_source")
+  winnerId             String?           @map("winner_id")
   nextWinnerMatchId     String?           @map("next_winner_match_id")
   nextLoserMatchId      String?           @map("next_loser_match_id")
   bracketPosition       Int?              @map("bracket_position")
@@ -482,6 +483,7 @@ model Match {
   @@index([resultPublishedAt])
   @@index([status, date], map: "matches_status_date_idx")
   @@index([status, resultPublishedAt, date], map: "matches_results_feed_idx")
+  @@index([scoreSource])
   @@index([stage])
   @@index([team1Id])
   @@index([team2Id])
@@ -1803,6 +1805,14 @@ enum GameTrackingMode {
   TEAM
   INDIVIDUAL
   BOTH
+}
+
+/// Where a match's stored score came from. MANUAL scores were typed in and are
+/// never recalculated from events; PLAY_BY_PLAY scores are derived from them.
+enum ScoreSource {
+  NONE
+  MANUAL
+  PLAY_BY_PLAY
 }
 
 enum TimeoutType {

@@ -75,6 +75,22 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+/** How the score was recorded; nothing for matches without one yet. */
+function ScoreSourceTag({ source }: { source: ListMatch['scoreSource'] }) {
+  if (source !== 'MANUAL' && source !== 'PLAY_BY_PLAY') return null;
+  const manual = source === 'MANUAL';
+  return (
+    <span
+      title={manual ? 'Score typed in — no play-by-play stats' : 'Score tracked from play-by-play events'}
+      className={`inline-flex items-center rounded-md border px-2 py-[3px] font-['Space_Mono'] text-[9.5px] font-bold uppercase tracking-[0.08em] ${
+        manual ? 'border-[var(--bord)] text-[var(--txm)]' : 'border-[var(--brand)]/40 text-[var(--brandsoft)]'
+      }`}
+    >
+      {manual ? 'Manual' : 'Play-by-play'}
+    </span>
+  );
+}
+
 /** Compact accent checkbox that inherits the v2 brand colour. */
 function Check({
   checked,
@@ -281,6 +297,7 @@ function MatchListCard({
       <div className="relative flex items-center gap-3 border-b border-[var(--bord2)] px-4 py-2.5">
         <Check checked={selected} onChange={onSelect} label={`Select ${team1} vs ${team2}`} />
         <StatusPill status={match.status} />
+        <ScoreSourceTag source={match.scoreSource} />
         {league && (
           <span className="flex items-center gap-1.5 font-['Space_Mono'] text-[11px] text-[var(--txm)]">
             <span className="h-[5px] w-[5px] rounded-full" style={{ background: avatarTint(league) }} />
@@ -356,6 +373,7 @@ function MatchGridCard({
       <div className="flex items-center justify-between gap-2 border-b border-[var(--bord2)] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <StatusPill status={match.status} />
+          <ScoreSourceTag source={match.scoreSource} />
           {league && <span className="truncate font-['Space_Mono'] text-[11px] text-[var(--txm)]">{league}</span>}
         </div>
         <RowMenu matchId={match.id} canEdit={canEdit} canDelete={canDelete} onDelete={onDelete} />
@@ -542,6 +560,11 @@ function MatchListContent() {
           <option value="upcoming">Scheduled</option>
           <option value="live">Live</option>
           <option value="completed">Completed</option>
+        </FilterSelect>
+        <FilterSelect value={d.source} onChange={(v) => d.setSource(v as typeof d.source)} label="Filter by score source">
+          <option value="all">All Scores</option>
+          <option value="manual">Manual</option>
+          <option value="play_by_play">Play-by-play</option>
         </FilterSelect>
         <FilterSelect value={d.seasonId} onChange={d.setSeasonId} label="Filter by season">
           <option value="all">All Seasons</option>
