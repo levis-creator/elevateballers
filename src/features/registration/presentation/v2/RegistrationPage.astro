@@ -7,10 +7,11 @@ import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import RegistrationFormV2 from "./RegistrationFormV2.tsx";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
-import { registrationDeadlines, registrationHeroFacts, registrationWindow, type PublicRegistrationSettings } from "@/features/settings";
+import { registrationDeadlines, registrationHeroFacts, registrationWindow, type PublicPrivacyPolicySettings, type PublicRegistrationSettings } from "@/features/settings";
 
-interface Props { settings: PublicRegistrationSettings }
-const { settings } = Astro.props;
+interface Props { settings: PublicRegistrationSettings; privacy: PublicPrivacyPolicySettings }
+const { settings, privacy } = Astro.props;
+const formPrivacy = { version: privacy.version, consentLabel: privacy.consentLabel, consentError: privacy.consentError };
 const footer = await getFooterData();
 const formVisible = registrationWindow(settings).open;
 const heroFacts = registrationHeroFacts(settings);
@@ -62,7 +63,7 @@ const c = footer.contact;
 	<section id="form" class="mx-auto grid max-w-[1280px] grid-cols-[1.25fr_0.75fr] gap-12 px-8 py-[56px] max-[960px]:grid-cols-1 max-[960px]:gap-10 max-[960px]:px-6 max-[960px]:py-10">
 		<div>
 			{formVisible ? (
-				<RegistrationFormV2 settings={settings} registrationOpen={formVisible} client:load />
+				<RegistrationFormV2 settings={settings} privacy={formPrivacy} registrationOpen={formVisible} client:load />
 			) : (
 				<div class="rounded-2xl border border-black/10 bg-white p-9 shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] max-[600px]:p-6">
 					<div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand">

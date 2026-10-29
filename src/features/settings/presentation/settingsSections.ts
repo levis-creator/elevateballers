@@ -1,4 +1,8 @@
 import { RULES_DEFAULTS } from '@/features/rules/lib/rules-content';
+import {
+  DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS,
+  PRIVACY_POLICY_PATH,
+} from '../application/privacyPolicySettings';
 
 export type SettingRecord = {
   id: string;
@@ -1265,6 +1269,58 @@ export const SECTIONS: Section[] = [
         ],
       },
     ]
+  ),
+  siteWide(
+    'privacy',
+    'Privacy Policy',
+    'The public Privacy Policy page and the consent checkbox on the registration form. The default text is a template: have it reviewed by a qualified adviser before relying on it. It is not legal advice.',
+    [
+      {
+        label: 'Page',
+        fields: [
+          f('privacy_eyebrow', 'Eyebrow', 'Red mono label above the title.', {
+            defaultValue: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.eyebrow,
+          }),
+          f('privacy_title', 'Page title', 'Set in Anton.', {
+            defaultValue: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.title,
+          }),
+          f('privacy_intro', 'Intro', 'One or two sentences under the title.', {
+            type: 'area',
+            defaultValue: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.intro,
+          }),
+          f(
+            'privacy_version',
+            'Last updated',
+            'Shown on the page and saved with every registration consent. Change it whenever the policy changes, for example 2026-11-15.',
+            { defaultValue: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.version }
+          ),
+          f(
+            'privacy_body',
+            'Policy text',
+            'Start a line with "## " for a heading and "- " for a bullet. Leave a blank line between paragraphs. Template wording: have it reviewed before relying on it.',
+            { type: 'area', defaultValue: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.body }
+          ),
+        ],
+      },
+      {
+        label: 'Registration consent',
+        fields: [
+          f(
+            'privacy_consentLabel',
+            'Checkbox label',
+            'Required on the registration form. Wrap the link text in [square brackets]; it links to the policy page.',
+            { type: 'area', defaultValue: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.consentLabel }
+          ),
+          f(
+            'privacy_consentError',
+            'Missing consent message',
+            'Shown when someone submits without ticking the box.',
+            { defaultValue: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.consentError }
+          ),
+        ],
+      },
+    ],
+    PRIVACY_POLICY_PATH
   ),
   siteWide(
     'security',

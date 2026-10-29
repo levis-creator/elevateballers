@@ -1216,6 +1216,24 @@ model PublicRegistrationSubmission {
   @@map("public_registration_submissions")
 }
 
+/// Proof that a public registrant accepted the Privacy Policy: when, which
+/// policy version and the exact checkbox wording. Kept apart from the
+/// short-lived submission record so it outlives the idempotency window.
+model RegistrationConsent {
+  id            String   @id @default(cuid())
+  kind          String
+  entityId      String   @map("entity_id")
+  email         String
+  submissionKey String   @map("submission_key")
+  policyVersion String   @map("policy_version")
+  consentText   String   @map("consent_text") @db.Text
+  consentedAt   DateTime @default(now()) @map("consented_at")
+
+  @@index([kind, entityId])
+  @@index([email])
+  @@map("registration_consents")
+}
+
 /// One row per (event, recipient) an email has gone to. Sends that carry an
 /// idempotency key claim their recipients here first, so a retry, a replayed
 /// job or a repeated event never mails the same person twice.

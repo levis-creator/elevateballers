@@ -25,9 +25,11 @@ import {
 } from '../../../lib/publicRegistrationSecurity';
 import {
   registrationWindow,
+  resolvePublicPrivacyPolicySettings,
   resolvePublicRegistrationSettings,
   siteSettingsService,
 } from '../../../features/settings';
+import { checkPrivacyConsent } from '../../../features/registration/application/privacy-consent';
 import { createOperationalNotification } from '../../../features/cms/lib/adminNotifications';
 
 export const prerender = false;
@@ -49,6 +51,14 @@ async function loadRegistrationSettings() {
     return resolvePublicRegistrationSettings(await siteSettingsService.list('registration'));
   } catch {
     return resolvePublicRegistrationSettings([]);
+  }
+}
+
+async function loadPrivacyPolicySettings() {
+  try {
+    return resolvePublicPrivacyPolicySettings(await siteSettingsService.list('privacy'));
+  } catch {
+    return resolvePublicPrivacyPolicySettings([]);
   }
 }
 
@@ -101,6 +111,12 @@ export const POST: APIRoute = async ({ request }) => {
     if (validationError)
       return new Response(JSON.stringify({ error: validationError }), {
         status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    const privacyConsent = checkPrivacyConsent(rawData, await loadPrivacyPolicySettings());
+    if (!privacyConsent.ok)
+      return new Response(JSON.stringify({ error: privacyConsent.error }), {
+        status: privacyConsent.status,
         headers: { 'Content-Type': 'application/json' },
       });
     if (!(await allowPublicRegistration('team', ip, data.contactEmail)))
@@ -204,6 +220,7 @@ export const POST: APIRoute = async ({ request }) => {
       leagueName,
       requireApproval: registrationSettings.approval,
       entryFee: registrationSettings.fee,
+      consent: privacyConsent.consent,
     });
     consumedLimit = null;
     await logAudit(request, 'TEAM_REGISTRATION_SUBMITTED', {

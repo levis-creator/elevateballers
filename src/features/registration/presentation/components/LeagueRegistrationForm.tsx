@@ -4,6 +4,7 @@ import TurnstileWidget from '../../../../components/TurnstileWidget';
 import { isRegistrationOpen, registrationClosedMessage } from '../../../../lib/registration';
 import { trackEvent } from '../../../../lib/analytics';
 import { registrationToken, type PublicRegistrationSettings } from '../../../settings';
+import { PRIVACY_POLICY_PATH, privacyConsentLabelParts, type PublicPrivacyPolicySettings } from '../../../settings/application/privacyPolicySettings';
 
 interface League {
   id: string;
@@ -58,7 +59,7 @@ interface PlayerFormData {
 
 type TabType = 'team' | 'player';
 
-export default function LeagueRegistrationForm({ settings, registrationOpen }: { settings: PublicRegistrationSettings; registrationOpen: boolean }) {
+export default function LeagueRegistrationForm({ settings, privacy, registrationOpen }: { settings: PublicRegistrationSettings; privacy: Pick<PublicPrivacyPolicySettings, 'version' | 'consentLabel' | 'consentError'>; registrationOpen: boolean }) {
   const [activeTab, setActiveTab] = useState<TabType>('team');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +72,8 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
   const [playerTurnstileToken, setPlayerTurnstileToken] = useState<string | null>(null);
   const [teamTurnstileReset, setTeamTurnstileReset] = useState(0);
   const [playerTurnstileReset, setPlayerTurnstileReset] = useState(0);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const privacyLabel = privacyConsentLabelParts(privacy.consentLabel);
 
   useEffect(() => {
     if (!settings.playerMode && activeTab === 'player') setActiveTab('team');
@@ -192,6 +195,10 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
       return;
     }
 
+    if (!privacyAgreed) {
+      setError(privacy.consentError);
+      return;
+    }
     if (!teamTurnstileToken) {
       setError('Please complete the security check before submitting.');
       return;
@@ -218,6 +225,8 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
           leagueSeasonId: selectedCompetition?.id,
           additionalInfo: teamFormData.additionalInfo.trim() || undefined,
           'cf-turnstile-token': teamTurnstileToken,
+          privacyConsent: privacyAgreed,
+          privacyPolicyVersion: privacy.version,
         }),
       });
 
@@ -257,6 +266,10 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
       return;
     }
 
+    if (!privacyAgreed) {
+      setError(privacy.consentError);
+      return;
+    }
     if (!playerTurnstileToken) {
       setError('Please complete the security check before submitting.');
       return;
@@ -285,6 +298,8 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
           teamName: playerFormData.teamName.trim() || undefined,
           additionalInfo: playerFormData.additionalInfo.trim() || undefined,
           'cf-turnstile-token': playerTurnstileToken,
+          privacyConsent: privacyAgreed,
+          privacyPolicyVersion: privacy.version,
         }),
       });
 
@@ -591,6 +606,13 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
             onError={() => setTeamTurnstileToken(null)}
           />
 
+          <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '20px', fontFamily: 'Rubik', fontSize: '14px', cursor: 'pointer' }}>
+            <input type="checkbox" name="privacyConsent" checked={privacyAgreed} onChange={(e) => setPrivacyAgreed(e.target.checked)} required style={{ marginTop: '3px' }} />
+            <span>
+              {privacyLabel.before}<a href={PRIVACY_POLICY_PATH} target="_blank" rel="noopener">{privacyLabel.link}</a>{privacyLabel.after} <span style={{ color: '#dd3333' }}>*</span>
+            </span>
+          </label>
+
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button
               type="submit"
@@ -793,6 +815,13 @@ export default function LeagueRegistrationForm({ settings, registrationOpen }: {
             onExpire={() => setPlayerTurnstileToken(null)}
             onError={() => setPlayerTurnstileToken(null)}
           />
+
+          <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginTop: '20px', fontFamily: 'Rubik', fontSize: '14px', cursor: 'pointer' }}>
+            <input type="checkbox" name="privacyConsent" checked={privacyAgreed} onChange={(e) => setPrivacyAgreed(e.target.checked)} required style={{ marginTop: '3px' }} />
+            <span>
+              {privacyLabel.before}<a href={PRIVACY_POLICY_PATH} target="_blank" rel="noopener">{privacyLabel.link}</a>{privacyLabel.after} <span style={{ color: '#dd3333' }}>*</span>
+            </span>
+          </label>
 
           <div style={{ textAlign: 'center', marginTop: '30px' }}>
             <button

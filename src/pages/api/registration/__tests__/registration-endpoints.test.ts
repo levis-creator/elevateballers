@@ -75,6 +75,12 @@ vi.mock('../../../../lib/prisma', () => ({
 
 import { POST as postTeam } from '../team';
 import { POST as postPlayer } from '../player';
+import { DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS } from '../../../../features/settings/application/privacyPolicySettings';
+
+const consentPayload = {
+  privacyConsent: true,
+  privacyPolicyVersion: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.version,
+};
 
 function request(
   body: Record<string, unknown>,
@@ -95,6 +101,7 @@ const teamPayload = {
   contactPhone: ' (+254) 700-000-000 ',
   leagueId: 'league-1',
   'cf-turnstile-token': 'token',
+  ...consentPayload,
 };
 const playerPayload = {
   firstName: '  Asha ',
@@ -103,6 +110,7 @@ const playerPayload = {
   phone: ' (+254) 700-000-000 ',
   position: ' PG ',
   'cf-turnstile-token': 'token',
+  ...consentPayload,
 };
 
 describe('public registration endpoints', () => {
@@ -208,6 +216,58 @@ describe('public registration endpoints', () => {
         seasonId: 'season-1',
         leagueSeasonId: 'league-season-1',
         idempotencyKey: 'test-idempotency-key',
+      })
+    );
+  });
+
+  it('rejects a team registration without privacy consent before any checks', async () => {
+    const { privacyConsent: _omitted, ...withoutConsent } = teamPayload;
+    const response = await postTeam({ request: request(withoutConsent) } as any);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS.consentError,
+    });
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
+    expect(mocks.verifyTurnstile).not.toHaveBeenCalled();
+    expect(mocks.submitTeamRegistration).not.toHaveBeenCalled();
+  });
+
+  it('rejects a player registration whose consent is not literally true', async () => {
+    const response = await postPlayer({
+      request: request({ ...playerPayload, privacyConsent: 'on' }),
+    } as any);
+    expect(response.status).toBe(400);
+    expect(mocks.submitPlayerRegistration).not.toHaveBeenCalled();
+  });
+
+  it('asks for a fresh review when the policy changed after the form loaded', async () => {
+    const response = await postPlayer({
+      request: request({ ...playerPayload, privacyPolicyVersion: '2020-01-01' }),
+    } as any);
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toContain('Privacy Policy has been updated');
+    expect(mocks.submitPlayerRegistration).not.toHaveBeenCalled();
+  });
+
+  it('stores the policy version and wording that were accepted', async () => {
+    mocks.siteSettingFindMany.mockResolvedValue([
+      { key: 'registration_open', value: 'true' },
+      { key: 'registration_opens', value: '2020-01-01' },
+      { key: 'registration_closes', value: '2099-12-31' },
+      { key: 'registration_playerMode', value: 'true' },
+      { key: 'privacy_version', value: 'v3 · 2026-11-01' },
+      { key: 'privacy_consentLabel', value: 'I accept the [privacy terms] and media use.' },
+    ]);
+    const response = await postPlayer({
+      request: request({ ...playerPayload, privacyPolicyVersion: 'v3 · 2026-11-01' }),
+    } as any);
+    expect(response.status).toBe(201);
+    expect(mocks.submitPlayerRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        consent: {
+          policyVersion: 'v3 · 2026-11-01',
+          consentText: 'I accept the privacy terms and media use.',
+        },
       })
     );
   });

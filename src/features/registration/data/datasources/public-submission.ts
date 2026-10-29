@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { prisma } from '../../../../lib/prisma';
 import { createPlayer } from '../../../cms/lib/mutations';
 import { createStaff, createTeam, assignStaffToTeam } from '../../../cms/lib/mutations';
+import type { RegistrationConsentInput } from '../../application/privacy-consent';
 
 const EXPIRY_DAYS = 30;
 // Prisma's interactive-transaction default is 5s. Public registration performs
@@ -31,6 +32,7 @@ export type TeamSubmissionInput = {
   leagueName?: string;
   requireApproval: boolean;
   entryFee: number;
+  consent: RegistrationConsentInput;
 };
 
 export type PlayerSubmissionInput = {
@@ -48,6 +50,7 @@ export type PlayerSubmissionInput = {
   additionalInfo?: string;
   requireApproval: boolean;
   entryFee: number;
+  consent: RegistrationConsentInput;
 };
 
 export async function findSubmission(idempotencyKey: string): Promise<any | null> {
@@ -207,6 +210,16 @@ export async function submitTeamRegistration(
         expiresAt: expiresAt(),
       },
     });
+    await db.registrationConsent.create({
+      data: {
+        kind: 'TEAM',
+        entityId: team.id,
+        email: input.contactEmail,
+        submissionKey: submission.idempotencyKey,
+        policyVersion: input.consent.policyVersion,
+        consentText: input.consent.consentText,
+      },
+    });
     const jobs = await Promise.all([
       db.publicRegistrationEmailJob.create({
         data: {
@@ -335,6 +348,16 @@ export async function submitPlayerRegistration(
         entityId: player.id,
         response,
         expiresAt: expiresAt(),
+      },
+    });
+    await db.registrationConsent.create({
+      data: {
+        kind: 'PLAYER',
+        entityId: player.id,
+        email: input.email,
+        submissionKey: submission.idempotencyKey,
+        policyVersion: input.consent.policyVersion,
+        consentText: input.consent.consentText,
       },
     });
     const jobs = await Promise.all([

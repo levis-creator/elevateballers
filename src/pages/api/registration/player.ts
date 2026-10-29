@@ -8,7 +8,8 @@ import { publishToJob } from '../../../lib/qstash';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 import { findSubmission, submitPlayerRegistration } from '../../../features/registration/data/datasources/public-submission';
 import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, releasePublicRegistrationLimit, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
-import { registrationWindow, resolvePublicRegistrationSettings, siteSettingsService } from '../../../features/settings';
+import { registrationWindow, resolvePublicPrivacyPolicySettings, resolvePublicRegistrationSettings, siteSettingsService } from '../../../features/settings';
+import { checkPrivacyConsent } from '../../../features/registration/application/privacy-consent';
 import { createOperationalNotification } from '../../../features/cms/lib/adminNotifications';
 
 export const prerender = false;
@@ -24,6 +25,14 @@ async function loadRegistrationSettings() {
     return resolvePublicRegistrationSettings(await siteSettingsService.list('registration'));
   } catch {
     return resolvePublicRegistrationSettings([]);
+  }
+}
+
+async function loadPrivacyPolicySettings() {
+  try {
+    return resolvePublicPrivacyPolicySettings(await siteSettingsService.list('privacy'));
+  } catch {
+    return resolvePublicPrivacyPolicySettings([]);
   }
 }
 
@@ -46,6 +55,8 @@ export const POST: APIRoute = async ({ request }) => {
     const data = { ...rawData, firstName: normalizeText(rawData.firstName), lastName: normalizeText(rawData.lastName), email: normalizeEmail(rawData.email), phone: normalizePhone(rawData.phone), position: normalizeText(rawData.position), jerseyNumber, height: normalizeOptionalText(rawData.height), weight: normalizeOptionalText(rawData.weight), teamName: normalizeOptionalText(rawData.teamName), leagueId: normalizeId(rawData.leagueId), seasonId: normalizeId(rawData.seasonId), leagueSeasonId: normalizeId(rawData.leagueSeasonId), additionalInfo: normalizeOptionalText(rawData.additionalInfo) };
     const validationError = validatePlayerRegistration(data);
     if (validationError) return new Response(JSON.stringify({ error: validationError }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    const privacyConsent = checkPrivacyConsent(rawData, await loadPrivacyPolicySettings());
+    if (!privacyConsent.ok) return new Response(JSON.stringify({ error: privacyConsent.error }), { status: privacyConsent.status, headers: { 'Content-Type': 'application/json' } });
     if (!await allowPublicRegistration('player', ip, data.email)) return genericRegistrationResponse(429);
     consumedLimit = { ip, email: data.email };
     const turnstileToken = String(data['cf-turnstile-token'] ?? '').trim();
@@ -66,7 +77,7 @@ export const POST: APIRoute = async ({ request }) => {
       return genericRegistrationResponse();
     }
 
-    const result = await submitPlayerRegistration({ idempotencyKey, firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, position: data.position, jerseyNumber: data.jerseyNumber, height: data.height, weight: data.weight, teamName: data.teamName, teamId, additionalInfo: data.additionalInfo, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee });
+    const result = await submitPlayerRegistration({ idempotencyKey, firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, position: data.position, jerseyNumber: data.jerseyNumber, height: data.height, weight: data.weight, teamName: data.teamName, teamId, additionalInfo: data.additionalInfo, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee, consent: privacyConsent.consent });
     consumedLimit = null;
     await logAudit(request, 'PLAYER_REGISTRATION_SUBMITTED', { playerId: result.playerId, name: `${data.firstName} ${data.lastName}`.trim() });
     for (const jobId of result.jobIds) {

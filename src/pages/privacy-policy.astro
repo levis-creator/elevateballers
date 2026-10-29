@@ -1,0 +1,87 @@
+---
+export const prerender = false;
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { PRIVACY_POLICY_PATH, privacyPolicySections, resolvePublicPrivacyPolicySettings, siteSettingsService } from "@/features/settings";
+
+const [footer, privacyRecords] = await Promise.all([
+	getFooterData(),
+	siteSettingsService.list("privacy").catch(() => []),
+]);
+const privacy = resolvePublicPrivacyPolicySettings(privacyRecords);
+const sections = privacyPolicySections(privacy.body);
+---
+
+<LayoutV2
+	title={`${privacy.title} - Elevate Ballers`}
+	description={privacy.intro}
+	canonicalURL={`${Astro.url.origin}${PRIVACY_POLICY_PATH}/`}
+	type="website"
+>
+	<div class="min-h-screen bg-paper font-body text-ink2">
+		<Header />
+		<main class="mx-auto max-w-[880px] px-8 py-16 max-[720px]:px-6">
+			<p class="font-mono text-[12px] uppercase tracking-[0.14em] text-brand">{privacy.eyebrow}</p>
+			<h1 class="mt-3 font-display text-[56px] uppercase leading-[0.9] text-ink max-[640px]:text-[42px]">
+				{privacy.title}
+			</h1>
+			<p class="mt-5 max-w-[680px] text-[17px] leading-[1.7] text-muted">{privacy.intro}</p>
+			<p class="mt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted2">Last updated · {privacy.version}</p>
+
+			{sections.map((section) => (
+				<section class="privacy-policy-section">
+					{section.heading && <h2>{section.heading}</h2>}
+					{section.blocks.map((block) =>
+						block.type === "list" ? (
+							<ul>{block.items.map((item) => <li>{item}</li>)}</ul>
+						) : (
+							<p>{block.text}</p>
+						)
+					)}
+				</section>
+			))}
+		</main>
+		<Footer footer={footer} />
+	</div>
+</LayoutV2>
+
+<style>
+	.privacy-policy-section {
+		margin-top: 34px;
+		padding-top: 26px;
+		border-top: 1px solid rgba(20, 16, 9, 0.12);
+	}
+
+	.privacy-policy-section h2 {
+		margin: 0 0 10px;
+		font-family: Anton, Impact, sans-serif;
+		font-size: 28px;
+		font-weight: 400;
+		text-transform: uppercase;
+		color: #141009;
+	}
+
+	.privacy-policy-section p,
+	.privacy-policy-section li {
+		color: #6f665c;
+		font-size: 16px;
+		line-height: 1.7;
+	}
+
+	.privacy-policy-section p {
+		margin: 0 0 12px;
+	}
+
+	.privacy-policy-section ul {
+		margin: 0 0 12px;
+		padding-left: 22px;
+		list-style: disc;
+	}
+
+	.privacy-policy-section li + li {
+		margin-top: 6px;
+	}
+</style>

@@ -6,6 +6,7 @@ export * from './application/siteSettingsService';
 export * from './application/seoSettings';
 export * from './application/contactSettings';
 export * from './application/consentSettings';
+export * from './application/privacyPolicySettings';
 export * from './application/systemSettings';
 export * from './application/homeSettings';
 export * from './application/aboutSettings';

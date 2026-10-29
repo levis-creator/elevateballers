@@ -8,6 +8,11 @@ import {
   type PublicRegistrationSettings,
 } from '@/features/settings/application/registrationSettings';
 import {
+  PRIVACY_POLICY_PATH,
+  privacyConsentLabelParts,
+  type PublicPrivacyPolicySettings,
+} from '@/features/settings/application/privacyPolicySettings';
+import {
   Users,
   User,
   Shield,
@@ -106,9 +111,11 @@ function SelectChevron() {
 
 export default function RegistrationFormV2({
   settings,
+  privacy,
   registrationOpen,
 }: {
   settings: PublicRegistrationSettings;
+  privacy: Pick<PublicPrivacyPolicySettings, 'version' | 'consentLabel' | 'consentError'>;
   registrationOpen: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<TabType>('team');
@@ -126,6 +133,7 @@ export default function RegistrationFormV2({
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonsLoading, setSeasonsLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
   useEffect(() => {
     if (!settings.playerMode && activeTab === 'player') setActiveTab('team');
   }, [activeTab, settings.playerMode]);
@@ -253,6 +261,10 @@ export default function RegistrationFormV2({
       setError(registrationClosedMessage(registrationStatus));
       return;
     }
+    if (!privacyAgreed) {
+      setError(privacy.consentError);
+      return;
+    }
     if (!teamTurnstileToken) {
       setError('Please complete the security check before submitting.');
       return;
@@ -275,6 +287,8 @@ export default function RegistrationFormV2({
           leagueSeasonId: selectedCompetition?.id,
           additionalInfo: teamFormData.additionalInfo.trim() || undefined,
           'cf-turnstile-token': teamTurnstileToken,
+          privacyConsent: privacyAgreed,
+          privacyPolicyVersion: privacy.version,
         }),
       });
       if (!response.ok) {
@@ -296,6 +310,7 @@ export default function RegistrationFormV2({
       });
       setTeamTurnstileToken(null);
       setAgreed(false);
+      setPrivacyAgreed(false);
       setSuccess(registrationToken(settings.successBody, 'team'));
       trackEvent('team_registration_submitted');
     } catch (err) {
@@ -312,6 +327,10 @@ export default function RegistrationFormV2({
     e.preventDefault();
     if (!settings.playerMode || !registrationOpen) {
       setError(settings.closedBody);
+      return;
+    }
+    if (!privacyAgreed) {
+      setError(privacy.consentError);
       return;
     }
     if (!playerTurnstileToken) {
@@ -340,6 +359,8 @@ export default function RegistrationFormV2({
           teamName: playerFormData.teamName.trim() || undefined,
           additionalInfo: playerFormData.additionalInfo.trim() || undefined,
           'cf-turnstile-token': playerTurnstileToken,
+          privacyConsent: privacyAgreed,
+          privacyPolicyVersion: privacy.version,
         }),
       });
       if (!response.ok) {
@@ -360,6 +381,7 @@ export default function RegistrationFormV2({
       });
       setPlayerTurnstileToken(null);
       setAgreed(false);
+      setPrivacyAgreed(false);
       setSuccess(registrationToken(settings.successBody, 'player'));
       trackEvent('player_registration_submitted');
     } catch (err) {
@@ -426,9 +448,15 @@ export default function RegistrationFormV2({
     );
   }
 
-  const canSubmitTeam = !submitting && !!teamTurnstileToken && !registrationBlocked && agreed;
+  const canSubmitTeam =
+    !submitting && !!teamTurnstileToken && !registrationBlocked && agreed && privacyAgreed;
   const canSubmitPlayer =
-    !submitting && !!playerTurnstileToken && agreed && registrationOpen && settings.playerMode;
+    !submitting &&
+    !!playerTurnstileToken &&
+    agreed &&
+    privacyAgreed &&
+    registrationOpen &&
+    settings.playerMode;
   const submitCls =
     'col-span-full mt-2 inline-flex items-center justify-center gap-2 justify-self-start rounded-lg bg-brand px-9 py-4 font-body text-[13px] font-extrabold uppercase tracking-[0.05em] text-brandfg transition-colors hover:bg-brandlt disabled:cursor-not-allowed disabled:bg-[#b9b3aa] disabled:opacity-70 max-[600px]:w-full';
 
@@ -634,6 +662,11 @@ export default function RegistrationFormV2({
                 />
               </div>
               <Consent agreed={agreed} setAgreed={setAgreed} />
+              <PrivacyConsent
+                label={privacy.consentLabel}
+                agreed={privacyAgreed}
+                setAgreed={setPrivacyAgreed}
+              />
               <button type="submit" disabled={!canSubmitTeam} className={submitCls}>
                 {submitting
                   ? 'Submitting…'
@@ -812,6 +845,11 @@ export default function RegistrationFormV2({
                 />
               </div>
               <Consent agreed={agreed} setAgreed={setAgreed} />
+              <PrivacyConsent
+                label={privacy.consentLabel}
+                agreed={privacyAgreed}
+                setAgreed={setPrivacyAgreed}
+              />
               <button type="submit" disabled={!canSubmitPlayer} className={submitCls}>
                 {submitting ? 'Submitting…' : 'Submit Registration'}
               </button>
@@ -838,6 +876,42 @@ function Consent({ agreed, setAgreed }: { agreed: boolean; setAgreed: (v: boolea
           league rules
         </a>{' '}
         and code of conduct.
+      </span>
+    </label>
+  );
+}
+
+function PrivacyConsent({
+  label,
+  agreed,
+  setAgreed,
+}: {
+  label: string;
+  agreed: boolean;
+  setAgreed: (v: boolean) => void;
+}) {
+  const { before, link, after } = privacyConsentLabelParts(label);
+  return (
+    <label className="col-span-full flex cursor-pointer items-start gap-3">
+      <input
+        type="checkbox"
+        name="privacyConsent"
+        checked={agreed}
+        onChange={(e) => setAgreed(e.target.checked)}
+        required
+        className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 accent-brand"
+      />
+      <span className="text-[13px] leading-[1.55] text-muted">
+        {before}
+        <a
+          href={PRIVACY_POLICY_PATH}
+          target="_blank"
+          rel="noopener"
+          className="font-semibold text-ink2 underline underline-offset-2"
+        >
+          {link}
+        </a>
+        {after} <span className="text-brand">*</span>
       </span>
     </label>
   );

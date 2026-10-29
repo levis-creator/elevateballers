@@ -14,8 +14,10 @@ import Footer from "../features/layout/components/Footer.astro";
 import Spacing from "../shared/components/ui/Spacing.astro";
 import LeagueRegistrationForm from "../features/registration/components/LeagueRegistrationForm";
 import PageLoader from "../components/PageLoader";
-import { registrationDeadlines, registrationHeroFacts, registrationWindow, resolvePublicRegistrationSettings, siteSettingsService } from "../features/settings";
+import { registrationDeadlines, registrationHeroFacts, registrationWindow, resolvePublicPrivacyPolicySettings, resolvePublicRegistrationSettings, siteSettingsService } from "../features/settings";
 const settings = resolvePublicRegistrationSettings(await siteSettingsService.list("registration").catch(() => []));
+const privacy = resolvePublicPrivacyPolicySettings(await siteSettingsService.list("privacy").catch(() => []));
+const formPrivacy = { version: privacy.version, consentLabel: privacy.consentLabel, consentError: privacy.consentError };
 const formVisible = registrationWindow(settings).open;
 const heroFacts = registrationHeroFacts(settings);
 const deadlines = registrationDeadlines(settings);
@@ -110,7 +112,7 @@ const deadlines = registrationDeadlines(settings);
 
                     <div class="registration-form-wrapper">
                       {formVisible ? (
-                        <LeagueRegistrationForm settings={settings} registrationOpen={formVisible} client:load />
+                        <LeagueRegistrationForm settings={settings} privacy={formPrivacy} registrationOpen={formVisible} client:load />
                       ) : (
                         <div class="registration-closed"><h2>{settings.closedTitle}</h2><p>{settings.closedBody}</p></div>
                       )}

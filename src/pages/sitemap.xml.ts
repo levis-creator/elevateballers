@@ -55,6 +55,7 @@ export const GET: APIRoute = async ({ site }) => {
             { path: '/contacts',         priority: '0.5', freq: 'monthly' },
             { path: '/rules',            priority: '0.5', freq: 'monthly' },
             { path: '/league-registration', priority: '0.5', freq: 'monthly' },
+            { path: '/privacy-policy',   priority: '0.3', freq: 'yearly'  },
             { path: '/staff',            priority: '0.4', freq: 'monthly' },
         ].filter(({ path }) => isIncluded(path || '/'));
 
