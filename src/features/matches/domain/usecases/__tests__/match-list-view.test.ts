@@ -9,6 +9,7 @@ import {
   formatMatchTime,
   avatarTint,
   matchesQuery,
+  initialSeasonFilter,
 } from '../match-list-view';
 
 // UTC keeps day boundaries predictable in the assertions below.
@@ -147,5 +148,29 @@ describe('matchesQuery', () => {
   it('returns true for empty query and false for a miss', () => {
     expect(matchesQuery(m, '   ')).toBe(true);
     expect(matchesQuery(m, 'lions')).toBe(false);
+  });
+});
+
+describe('initialSeasonFilter', () => {
+  const seasons = [
+    { id: 's-2025', active: false },
+    { id: 's-2026', active: true },
+  ];
+
+  it('opens on the active season by default', () => {
+    expect(initialSeasonFilter(null, seasons)).toBe('s-2026');
+  });
+
+  it('keeps a season or "all" chosen in the URL', () => {
+    expect(initialSeasonFilter('s-2025', seasons)).toBe('s-2025');
+    expect(initialSeasonFilter('all', seasons)).toBe('all');
+  });
+
+  it('ignores a season that no longer exists', () => {
+    expect(initialSeasonFilter('deleted', seasons)).toBe('s-2026');
+  });
+
+  it('shows all seasons when none is active', () => {
+    expect(initialSeasonFilter(null, [{ id: 's-2025', active: false }])).toBe('all');
   });
 });

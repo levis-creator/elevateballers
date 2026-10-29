@@ -185,3 +185,20 @@ export function matchesQuery(match: ListMatch, query: string): boolean {
   ];
   return haystacks.some((h) => h.toLowerCase().includes(q));
 }
+
+/** Query parameter that keeps the Matches page's season filter across reloads and shared links. */
+export const SEASON_QUERY_PARAM = 'season';
+
+/**
+ * The season filter the Matches page opens with: the season named in the URL
+ * when it still exists (or "all"), otherwise the active season, otherwise all
+ * seasons. Opening on one season keeps the list inside its fetch limit.
+ */
+export function initialSeasonFilter(
+  requested: string | null | undefined,
+  seasons: { id: string; active?: boolean }[],
+): string {
+  if (requested === 'all') return 'all';
+  if (requested && seasons.some((season) => season.id === requested)) return requested;
+  return seasons.find((season) => season.active)?.id ?? 'all';
+}

@@ -4,7 +4,9 @@ import type { ListMatch } from '../../../domain/usecases/match-list-view';
 import {
   computeStats,
   groupByDate,
+  initialSeasonFilter,
   matchesQuery,
+  SEASON_QUERY_PARAM,
   sortByDate,
   type MatchDateGroup,
   type MatchStats,
@@ -25,7 +27,11 @@ export const MATCHES_PER_PAGE = 12;
 interface NamedOption {
   id: string;
   name: string;
+  active?: boolean;
 }
+
+const seasonInUrl = () =>
+  typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get(SEASON_QUERY_PARAM);
 
 /** Tolerate the various admin list response envelopes (`[]`, `{data:[]}`). */
 async function fetchList<T = any>(url: string): Promise<T[]> {
@@ -55,7 +61,8 @@ export function useMatchListData() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [source, setSource] = useState<SourceFilter>('all');
-  const [seasonId, setSeasonId] = useState('all');
+  // null until the season list arrives and the default (the active season) is known.
+  const [seasonId, setSeasonId] = useState<string | null>(null);
   const [leagueId, setLeagueId] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [page, setPage] = useState(1);
@@ -64,6 +71,7 @@ export function useMatchListData() {
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchMatches = useCallback(async () => {
+    if (seasonId === null) return;
     setLoading(true);
     setError('');
     try {
@@ -85,9 +93,18 @@ export function useMatchListData() {
     fetchMatches();
   }, [fetchMatches]);
 
-  // Option lists for the filter dropdowns — loaded once.
+  // Option lists for the filter dropdowns — loaded once. The season list also
+  // decides which season the page opens on.
   useEffect(() => {
-    fetchList<NamedOption>('/api/seasons').then(setSeasons).catch(() => setSeasons([]));
+    fetchList<NamedOption>('/api/seasons')
+      .then((list) => {
+        setSeasons(list);
+        setSeasonId(initialSeasonFilter(seasonInUrl(), list));
+      })
+      .catch(() => {
+        setSeasons([]);
+        setSeasonId(initialSeasonFilter(seasonInUrl(), []));
+      });
     fetchList<NamedOption>('/api/leagues').then(setLeagues).catch(() => setLeagues([]));
   }, []);
 
@@ -108,7 +125,19 @@ export function useMatchListData() {
   const stats: MatchStats = useMemo(() => computeStats(matches), [matches]);
 
   const hasActiveFilters =
-    Boolean(search.trim()) || status !== 'all' || source !== 'all' || seasonId !== 'all' || leagueId !== 'all';
+    Boolean(search.trim()) ||
+    status !== 'all' ||
+    source !== 'all' ||
+    (seasonId ?? 'all') !== 'all' ||
+    leagueId !== 'all';
+
+  // Keep the season choice in the address so a reload or a shared link reopens it.
+  useEffect(() => {
+    if (seasonId === null || seasonInUrl() === seasonId) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set(SEASON_QUERY_PARAM, seasonId);
+    window.history.replaceState(window.history.state, '', url);
+  }, [seasonId]);
 
   // Pagination — reset to page 1 whenever the result set changes, and clamp the
   // active page so it can never point past the last page (e.g. after a delete).
@@ -230,7 +259,7 @@ export function useMatchListData() {
     setStatus,
     source,
     setSource,
-    seasonId,
+    seasonId: seasonId ?? 'all',
     setSeasonId,
     leagueId,
     setLeagueId,
