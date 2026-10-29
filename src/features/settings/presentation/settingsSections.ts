@@ -2195,10 +2195,9 @@ export const SECTIONS: Section[] = [
           f(
             'rules_pdf',
             'Rulebook file',
-            'Upload the signed PDF. Replacing it updates every public rulebook link.',
+            'Upload the signed PDF. Replacing it updates every public rulebook link. The size limit is set in Security → Uploads & Integrations → Document upload max size.',
             {
               type: 'file',
-              placeholder: 'PDF up to 25 MB',
               defaultValue: '/documents/elevate-ballers-league-rules-2026.pdf',
             }
           ),

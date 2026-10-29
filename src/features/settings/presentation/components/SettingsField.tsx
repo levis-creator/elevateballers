@@ -12,6 +12,8 @@ type Props = {
   onChange: (key: string, value: string) => void;
   onReset: (field: Field) => void;
   onAction?: (field: Field) => void;
+  /** Largest rulebook PDF the upload endpoint accepts, from Security settings. */
+  documentMaxMB?: number;
 };
 
 export default function SettingsField({
@@ -22,6 +24,7 @@ export default function SettingsField({
   onChange,
   onReset,
   onAction,
+  documentMaxMB,
 }: Props) {
   const validPreviewColor = /^#[0-9a-f]{6}$/i.test(value.trim());
 
@@ -45,7 +48,7 @@ export default function SettingsField({
             {field.label}
           </button>
         ) : field.type === 'file' ? (
-          <SettingsFileControl field={field} value={value} canManage={canManage} onChange={onChange} />
+          <SettingsFileControl field={field} value={value} canManage={canManage} onChange={onChange} maxSizeMB={documentMaxMB} />
         ) : field.type === 'image' ? (
           <SettingsImageControl
             field={field}

@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { SECTIONS, type Section, type SettingRecord, type Field } from '../settingsSections';
+import { resolveSecuritySettings } from '../../application/securitySettings';
 import SettingsField from './SettingsField';
 import SettingsHeaderPreview from './SettingsHeaderPreview';
 import SettingsSeoPreview from './SettingsSeoPreview';
@@ -87,6 +88,10 @@ export default function SettingsSection({
     setActiveGroupLabel(section.groups[0]?.label ?? '');
   }, [section.id]);
 
+  // The saved limit is the one the upload endpoint enforces, so unsaved edits don't apply yet.
+  const documentMaxMB = resolveSecuritySettings(
+    Object.values(settings).filter((setting) => setting.key === 'security_documentUploadMaxSizeMB')
+  ).security_documentUploadMaxSizeMB;
   const valueFor = (field: Field) =>
     draft[field.key] ?? settings[field.key]?.value ?? field.defaultValue ?? '';
   const valueForKey = (key: string) => {
@@ -189,6 +194,7 @@ export default function SettingsSection({
                         onChange={onChange}
                         onReset={onReset}
                         onAction={onRestoreSection}
+                        documentMaxMB={documentMaxMB}
                       />
                     ))}
                   </div>

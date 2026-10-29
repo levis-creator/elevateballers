@@ -3,9 +3,9 @@ import { FileText, Trash2, Upload } from 'lucide-react';
 import type { Field } from '../settingsSections';
 import { looksLikePdf } from '@/lib/pdf-upload';
 
-type Props = { field: Field; value: string; canManage: boolean; onChange: (key: string, value: string) => void };
+type Props = { field: Field; value: string; canManage: boolean; onChange: (key: string, value: string) => void; maxSizeMB?: number };
 
-export default function SettingsFileControl({ field, value, canManage, onChange }: Props) {
+export default function SettingsFileControl({ field, value, canManage, onChange, maxSizeMB = 25 }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -13,7 +13,7 @@ export default function SettingsFileControl({ field, value, canManage, onChange 
   const upload = async (file?: File) => {
     if (!file) return;
     if (!looksLikePdf(file)) { setError('Only PDF files are allowed.'); return; }
-    if (file.size > 25 * 1024 * 1024) { setError('The PDF must be 25 MB or smaller.'); return; }
+    if (file.size > maxSizeMB * 1024 * 1024) { setError(`The PDF must be ${maxSizeMB} MB or smaller.`); return; }
     setUploading(true); setError('');
     try {
       const body = new FormData(); body.append('file', file);
@@ -37,7 +37,7 @@ export default function SettingsFileControl({ field, value, canManage, onChange 
     <div className="eb-settings-image-preview"><FileText size={24} /></div>
     <div className="eb-settings-image-details">
       <strong>{value ? value.split('/').pop() : 'No rulebook uploaded'}</strong>
-      <span>{error || field.placeholder || 'PDF up to 25 MB'}</span>
+      <span>{error || field.placeholder || `PDF up to ${maxSizeMB} MB`}</span>
       <div>
         <button type="button" disabled={!canManage || uploading} onClick={() => input.current?.click()}><Upload size={13} /> {uploading ? 'Uploading…' : value ? 'Replace file' : 'Upload file'}</button>
         {value && <button type="button" className="danger" disabled={!canManage || uploading} onClick={() => onChange(field.key, '')}><Trash2 size={13} /> Remove</button>}
