@@ -1,10 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
+import { prisma } from '../../../../lib/prisma';
 import { getMatchWithFullDetails } from '../../../cms/lib/queries';
+import { formatMinutes, secondsPlayed, type MinutesEvent } from '../../../game-tracking/domain/live-console/minutes';
+import { toConsoleRules } from '../../../game-tracking/domain/live-console/rules';
 import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import { calculatePlayerMatchStats, type PlayerMatchStatistics } from '../../../player/lib/playerStats';
-import { siteSettingsService, resolvePublicBrandSettings } from '../../../settings';
+import { siteSettingsService, resolvePublicBrandSettings, resolvePublicHeaderSettings } from '../../../settings';
 import type { PublicBrandSettings } from '../../../settings/application/brandSettings';
 import {
   STAT_SHEET_FONT_FILES,
@@ -106,23 +109,53 @@ export async function loadStatSheetFonts(typefaces: Pick<PublicBrandSettings, 'd
 
 // ---------- data building ----------
 
+type SheetPlayer = {
+  playerId: string;
+  started: boolean;
+  jerseyNumber: number | null;
+  minutesPlayed?: number | null;
+  player: { firstName?: string | null; lastName?: string | null };
+};
+
+/**
+ * Seconds per player from the substitution log, or null when it can't be
+ * trusted: no substitutions were logged yet a bench player has stats, which
+ * means the scorer tracked the game without recording subs.
+ */
+function minutesFromEvents(
+  players: SheetPlayer[],
+  events: Array<MinutesEvent & { eventType: any }>,
+  rules: ReturnType<typeof toConsoleRules>,
+): Map<string, number> | null {
+  const live = events.filter((e) => !e.isUndone);
+  const subs = live.some((e) => e.eventType === 'SUBSTITUTION_IN' || e.eventType === 'SUBSTITUTION_OUT');
+  if (!subs) {
+    const bench = new Set(players.filter((p) => !p.started).map((p) => p.playerId));
+    if (live.some((e) => e.playerId && bench.has(e.playerId))) return null;
+  }
+  return secondsPlayed(players, live, rules);
+}
+
 function buildTeamRows(
   teamName: string,
-  players: Array<{
-    playerId: string;
-    started: boolean;
-    jerseyNumber: number | null;
-    player: { firstName?: string | null; lastName?: string | null };
-  }>,
-  safeEvents: Array<{ playerId: string | null; isUndone?: boolean; eventType: any }>
+  players: SheetPlayer[],
+  safeEvents: Array<{ playerId: string | null; isUndone?: boolean; eventType: any }>,
+  seconds: Map<string, number> | null,
 ): { rows: PlayerStatRow[]; totals: TeamTotalsRow } {
-  const rows = players.map((matchPlayer) => {
+  // An admin-entered minutesPlayed wins over the event-log figure.
+  const secondsFor = (p: SheetPlayer) =>
+    p.minutesPlayed != null ? p.minutesPlayed * 60 : seconds?.get(p.playerId) ?? null;
+  const known = players.map(secondsFor);
+  const teamSeconds = known.every((s) => s != null) && known.length ? known.reduce((a, s) => a! + s!, 0) : null;
+
+  const rows = players.map((matchPlayer, i) => {
     const stats = calculatePlayerMatchStats(matchPlayer.playerId, safeEvents);
     return {
       team: teamName,
       player: `${matchPlayer.player.firstName || ''} ${matchPlayer.player.lastName || ''}`.trim() || 'Unknown Player',
       jerseyNumber: matchPlayer.jerseyNumber === null ? '-' : String(matchPlayer.jerseyNumber),
       starterLabel: matchPlayer.started ? 'Starter' : 'Bench',
+      minutes: formatMinutes(known[i]),
       points: stats.points,
       fieldGoals: `${stats.fieldGoalsMade}/${stats.fieldGoalsAttempted}`,
       threePointers: `${stats.threePointersMade}/${stats.threePointersAttempted}`,
@@ -156,6 +189,7 @@ function buildTeamRows(
     rows,
     totals: {
       team: teamName,
+      minutes: teamSeconds == null ? '' : formatMinutes(teamSeconds),
       points: totals.points,
       fieldGoals: `${totals.fieldGoalsMade}/${totals.fieldGoalsAttempted}`,
       fieldGoalPercentage: formatPercentage(totals.fieldGoalsMade, totals.fieldGoalsAttempted),
@@ -192,8 +226,15 @@ async function buildStatSheetData(matchId: string): Promise<MatchStatSheetData> 
   const team1Players = sortPlayers(match.matchPlayers.filter((p) => p.teamId === match.team1Id));
   const team2Players = sortPlayers(match.matchPlayers.filter((p) => p.teamId === match.team2Id));
 
-  const team1Stats = buildTeamRows(team1Name, team1Players, safeEvents);
-  const team2Stats = buildTeamRows(team2Name, team2Players, safeEvents);
+  const gameRules = match.gameRulesId
+    ? await prisma.gameRules.findUnique({ where: { id: match.gameRulesId } }).catch(() => null)
+    : null;
+  const rules = toConsoleRules(gameRules);
+  const teamSeconds = (players: SheetPlayer[], teamId: string | null) =>
+    minutesFromEvents(players, safeEvents.filter((e) => e.teamId === teamId), rules);
+
+  const team1Stats = buildTeamRows(team1Name, team1Players, safeEvents, teamSeconds(team1Players, match.team1Id));
+  const team2Stats = buildTeamRows(team2Name, team2Players, safeEvents, teamSeconds(team2Players, match.team2Id));
 
   return {
     fileName: `${playedOnIso}_${sanitizeFileSegment(team1Name) || 'team-1'}_vs_${sanitizeFileSegment(team2Name) || 'team-2'}_stat-sheet.pdf`,
@@ -217,14 +258,57 @@ async function buildStatSheetData(matchId: string): Promise<MatchStatSheetData> 
   };
 }
 
+// ---------- logo ----------
+
+const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+const logoCache = new Map<string, Uint8Array | null>();
+
+/**
+ * The site header logo as bytes. Local paths are read from public/ when the
+ * file is on disk (dev, cPanel) and otherwise fetched from the site itself
+ * (on Vercel, public/ is served by the CDN, not the function). Returns null
+ * when it can't be loaded, so the sheet falls back to the site name.
+ */
+async function loadLogo(path: string, origin: string | undefined): Promise<Uint8Array | null> {
+  if (logoCache.has(path)) return logoCache.get(path)!;
+  let bytes: Uint8Array | null = null;
+  const absolute = /^https?:\/\//.test(path) ? path : path.startsWith('//') ? `https:${path}` : null;
+
+  if (!absolute) {
+    const publicDir = resolve(process.cwd(), 'public');
+    const file = resolve(publicDir, `.${decodeURIComponent(path.split(/[?#]/)[0])}`);
+    if (file.startsWith(publicDir + sep)) {
+      bytes = await readFile(file).then((b) => new Uint8Array(b)).catch(() => null);
+    }
+  }
+  const url = absolute ?? (origin ? new URL(path, origin).href : null);
+  if (!bytes && url) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const length = Number(res.headers.get('content-length') ?? 0);
+      if (res.ok && length <= MAX_LOGO_BYTES) {
+        const body = new Uint8Array(await res.arrayBuffer());
+        if (body.length <= MAX_LOGO_BYTES) bytes = body;
+      }
+    } catch (error) {
+      console.warn('Stat sheet logo could not be fetched:', error);
+    }
+  }
+  if (bytes) logoCache.set(path, bytes);
+  return bytes;
+}
+
 // ---------- render ----------
 
-export async function generateMatchStatSheetPDF(matchId: string): Promise<{ pdf: Uint8Array; fileName: string }> {
-  const [data, brandRecords] = await Promise.all([
+/** `origin` is the site's own origin, used to fetch a logo stored under public/. */
+export async function generateMatchStatSheetPDF(matchId: string, origin?: string): Promise<{ pdf: Uint8Array; fileName: string }> {
+  const [data, settings] = await Promise.all([
     buildStatSheetData(matchId),
-    siteSettingsService.list('brand').catch(() => []),
+    siteSettingsService.list().catch(() => []),
   ]);
-  const brand = resolvePublicBrandSettings(brandRecords);
-  const pdf = await renderStatSheetPdf(data, buildStatSheetTheme(brand), await loadStatSheetFonts(brand));
+  const brand = resolvePublicBrandSettings(settings);
+  const header = resolvePublicHeaderSettings(settings);
+  const [fonts, logo] = await Promise.all([loadStatSheetFonts(brand), loadLogo(header.logo, origin)]);
+  const pdf = await renderStatSheetPdf(data, buildStatSheetTheme(brand), fonts, logo);
   return { pdf, fileName: data.fileName };
 }

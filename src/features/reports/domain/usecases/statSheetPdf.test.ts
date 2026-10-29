@@ -27,7 +27,7 @@ async function fonts() {
 }
 
 const totals = (team: string, points: number): TeamTotalsRow => ({
-  team, points,
+  team, points, minutes: '200',
   fieldGoals: '30/70', fieldGoalPercentage: '42.9%',
   threePointers: '8/24', threePointPercentage: '33.3%',
   freeThrows: '12/16', freeThrowPercentage: '75.0%',
@@ -35,7 +35,7 @@ const totals = (team: string, points: number): TeamTotalsRow => ({
 });
 
 const player = (team: string, i: number): PlayerStatRow => ({
-  team, player: `Player ${i}`, jerseyNumber: String(i), starterLabel: i < 5 ? 'Starter' : 'Bench',
+  team, player: `Player ${i}`, jerseyNumber: String(i), starterLabel: i < 5 ? 'Starter' : 'Bench', minutes: '17',
   points: 8, fieldGoals: '3/7', threePointers: '1/3', freeThrows: '1/2',
   rebounds: 4, assists: 2, steals: 1, blocks: 0, turnovers: 1, fouls: 2,
 });
@@ -58,6 +58,13 @@ describe('renderStatSheetPdf', () => {
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(2);
     expect(doc.getTitle()).toContain('Home Side vs Away Side');
+  });
+
+  it('embeds a PNG logo and ignores a file that is not an image', async () => {
+    const logo = new Uint8Array(await readFile(join(process.cwd(), 'public/logo/Elevate_Logo.png')));
+    const withLogo = await renderStatSheetPdf(data(), theme, await fonts(), logo);
+    const without = await renderStatSheetPdf(data(), theme, await fonts(), new Uint8Array([1, 2, 3, 4]));
+    expect(withLogo.length).toBeGreaterThan(without.length);
   });
 
   it('renders a single result page for a manually entered score', async () => {

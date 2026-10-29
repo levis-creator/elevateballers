@@ -17,9 +17,9 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const { pdf, fileName } = await generateMatchStatSheetPDF(matchId);
+    const { pdf, fileName } = await generateMatchStatSheetPDF(matchId, new URL(request.url).origin);
 
-    return new Response(pdf, {
+    return new Response(new Uint8Array(pdf), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

@@ -6,7 +6,7 @@
  * Pure apart from pdf-lib: takes the sheet data, a theme and font bytes, so it
  * can be rendered with test data (no database or filesystem).
  */
-import { PDFDocument, degrees, rgb, setCharacterSpacing, type PDFFont, type PDFPage, type RGB } from 'pdf-lib';
+import { PDFDocument, degrees, rgb, setCharacterSpacing, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import {
   buildThemeColorPalette,
@@ -18,6 +18,8 @@ export type PlayerStatRow = {
   player: string;
   jerseyNumber: string;
   starterLabel: string;
+  /** Whole minutes on court, or "—" when unknown. */
+  minutes: string;
   points: number;
   fieldGoals: string;
   threePointers: string;
@@ -32,6 +34,8 @@ export type PlayerStatRow = {
 
 export type TeamTotalsRow = {
   team: string;
+  /** Sum of player minutes, blank when any player's minutes are unknown. */
+  minutes: string;
   points: number;
   fieldGoals: string;
   fieldGoalPercentage: string;
@@ -174,6 +178,7 @@ class Sheet {
     private doc: PDFDocument,
     readonly fonts: Fonts,
     readonly t: StatSheetTheme,
+    readonly logo: PDFImage | null = null,
   ) {}
 
   newPage() {
@@ -275,22 +280,35 @@ function teamNameLines(sheet: Sheet, name: string, width: number): { lines: stri
 
 function drawHeader(sheet: Sheet, d: MatchStatSheetData) {
   const { t } = sheet;
-  const BAND_H = 176;
-  const base = H - BAND_H;
+  // A paper strip carrying the logo (as on the site header), then the night
+  // scoreboard band.
+  const STRIP_H = 58;
+  const BAND_H = 150;
+  const stripBase = H - STRIP_H;
+  const base = stripBase - BAND_H;
+  sheet.rect(0, stripBase, W, STRIP_H, t.paper);
+  sheet.rect(0, H - 3, W, 3, t.brand);
   sheet.rect(0, base, W, BAND_H, t.night);
-  sheet.rect(0, H - 4, W, 4, t.brand);
 
-  // Top strip: sheet title and competition.
-  const topY = H - 26;
-  sheet.label('Post-game stat sheet', M, topY, { font: 'labelBold', color: t.brandSoft });
-  sheet.label(`${d.leagueName}  /  ${d.seasonName}`, W - M, topY, { align: 'right', color: t.creamDim, maxWidth: CW - 170 });
-  sheet.line(M, topY - 10, W - M, topY - 10, t.nightBorder);
+  const LOGO_H = 36;
+  const LOGO_MAX_W = 170;
+  const logoY = stripBase + (STRIP_H - 3 - LOGO_H) / 2;
+  if (sheet.logo) {
+    const scale = Math.min(LOGO_H / sheet.logo.height, LOGO_MAX_W / sheet.logo.width);
+    const w = sheet.logo.width * scale;
+    const h = sheet.logo.height * scale;
+    sheet.page.drawImage(sheet.logo, { x: M, y: logoY + (LOGO_H - h) / 2, width: w, height: h });
+  } else {
+    sheet.text(t.siteName.toUpperCase(), M, logoY + 8, { font: 'display', size: 20, color: t.ink, maxWidth: LOGO_MAX_W });
+  }
+  sheet.label('Post-game stat sheet', W - M, logoY + 18, { font: 'labelBold', color: t.brand, align: 'right' });
+  sheet.label(`${d.leagueName}  /  ${d.seasonName}`, W - M, logoY + 5, { align: 'right', maxWidth: CW - LOGO_MAX_W - 20 });
 
   // Teams and score.
   const team1Won = d.team1Score > d.team2Score;
   const team2Won = d.team2Score > d.team1Score;
   const NAME_W = 148;
-  const nameTop = base + 118;
+  const nameTop = base + 124;
 
   const teamBlock = (name: string, side: 'home' | 'away', won: boolean) => {
     const right = side === 'away';
@@ -434,10 +452,11 @@ function drawShotSummary(sheet: Sheet, d: MatchStatSheetData) {
 
 // Player table columns; widths sum to CW (523).
 const ROSTER_COLS = [
-  { key: 'number', label: '#', width: 24, align: 'center' },
-  { key: 'player', label: 'Player', width: 152, align: 'left' },
-  { key: 'role', label: 'GS', width: 22, align: 'center' },
-  { key: 'pts', label: 'PTS', width: 32, align: 'right' },
+  { key: 'number', label: '#', width: 22, align: 'center' },
+  { key: 'player', label: 'Player', width: 132, align: 'left' },
+  { key: 'role', label: 'GS', width: 20, align: 'center' },
+  { key: 'min', label: 'MIN', width: 26, align: 'right' },
+  { key: 'pts', label: 'PTS', width: 30, align: 'right' },
   { key: 'fg', label: 'FG', width: 42, align: 'right' },
   { key: 'tp', label: '3PT', width: 40, align: 'right' },
   { key: 'ft', label: 'FT', width: 40, align: 'right' },
@@ -493,6 +512,7 @@ function drawRosterTable(sheet: Sheet, index: number, side: 'home' | 'away', tea
       number: r.jerseyNumber,
       player: r.player,
       role: r.starterLabel === 'Starter' ? 'S' : '',
+      min: r.minutes,
       pts: String(r.points),
       fg: r.fieldGoals,
       tp: r.threePointers,
@@ -520,6 +540,7 @@ function drawRosterTable(sheet: Sheet, index: number, side: 'home' | 'away', tea
     number: '',
     player: 'Totals',
     role: '',
+    min: totals.minutes,
     pts: String(totals.points),
     fg: totals.fieldGoals,
     tp: totals.threePointers,
@@ -550,22 +571,35 @@ function drawManualNote(sheet: Sheet) {
 function drawFooters(sheet: Sheet, d: MatchStatSheetData) {
   const { t } = sheet;
   const total = sheet.pages.length;
-  const legend = 'GS S = starter · FG field goals · 3PT three-pointers · FT free throws · REB rebounds · AST assists · STL steals · BLK blocks · TO turnovers · PF fouls';
+  const legend = 'GS S = starter · MIN minutes · FG field goals · 3PT three-pointers · FT free throws · REB rebounds · AST assists · STL steals · BLK blocks · TO turnovers · PF fouls';
   sheet.pages.forEach((page, i) => {
     sheet.page = page;
     sheet.line(M, M + 24, W - M, M + 24, t.border, 0.6);
     sheet.label(`${t.siteName}  ·  ${d.team1Name} vs ${d.team2Name}`, M, M + 13, { size: 6, color: t.muted, maxWidth: CW - 80 });
     sheet.label(`Page ${i + 1} / ${total}`, W - M, M + 13, { size: 6, color: t.muted, align: 'right', font: 'labelBold' });
-    if (!d.manualScore) sheet.label(legend, M, M + 3, { size: 5, tracking: 0.2, color: t.soft, maxWidth: CW });
+    if (!d.manualScore) sheet.label(legend, M, M + 3, { size: 5, tracking: 0, color: t.soft, maxWidth: CW });
   });
 }
 
 // ---------- render ----------
 
+/** Embeds a PNG or JPEG logo; anything else (SVG, WebP) or a bad file is skipped. */
+async function embedLogo(doc: PDFDocument, bytes: Uint8Array | null | undefined): Promise<PDFImage | null> {
+  if (!bytes || bytes.length < 4) return null;
+  try {
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return await doc.embedPng(bytes);
+    if (bytes[0] === 0xff && bytes[1] === 0xd8) return await doc.embedJpg(bytes);
+  } catch (error) {
+    console.warn('Stat sheet logo could not be embedded:', error);
+  }
+  return null;
+}
+
 export async function renderStatSheetPdf(
   d: MatchStatSheetData,
   theme: StatSheetTheme,
   fontBytes: StatSheetFontBytes,
+  logoBytes?: Uint8Array | null,
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -582,7 +616,7 @@ export async function renderStatSheetPdf(
   doc.setAuthor(theme.siteName);
   doc.setCreator(theme.siteName);
 
-  const sheet = new Sheet(doc, { display, body, bodyBold, label, labelBold }, theme);
+  const sheet = new Sheet(doc, { display, body, bodyBold, label, labelBold }, theme, await embedLogo(doc, logoBytes));
   sheet.newPage();
   drawHeader(sheet, d);
   if (d.manualScore) {
