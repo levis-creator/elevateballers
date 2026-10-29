@@ -5,7 +5,8 @@ import { getUserWithPermissions } from '../../../features/rbac/permissions';
 import { handleApiError } from '../../../lib/apiError';
 import { withoutResolvedNotifications } from '../../../features/cms/lib/notificationCleanup';
 import { getPendingRosterRequests } from '../../../features/registration/data/datasources/review-queue';
-import { seasonStage } from '../../../features/seasons/domain/entities/season';
+import { seriesAwareProgress } from '../../../features/seasons/domain/entities/season';
+import { knockoutGamesBySeason, loadSeriesFormat } from '../../../features/seasons/data/datasources/series-progress';
 
 export const prerender = false;
 
@@ -103,10 +104,13 @@ export const GET: APIRoute = async ({ request }) => {
           _count: { _all: true },
         })).map((row) => ({ stage: row.stage, status: row.status, count: row._count._all }))
       : [];
-    const totalMatches = seasonTallies.reduce((sum, row) => sum + row.count, 0);
-    const completedMatches = seasonTallies
-      .filter((row) => row.status === 'COMPLETED')
-      .reduce((sum, row) => sum + row.count, 0);
+    // Knockout rounds count as series: game 3 of a tie won 2–0 is not still to play.
+    const [knockoutGames, seriesFormat] = seasonTallies.length && activeSeason
+      ? [(await knockoutGamesBySeason({ seasonId: activeSeason.id })).get(activeSeason.id) ?? [], await loadSeriesFormat()]
+      : [[], { QF: 1, SF: 1, F: 1 }];
+    const progress = seriesAwareProgress(seasonTallies, knockoutGames, seriesFormat);
+    const totalMatches = progress.matches;
+    const completedMatches = progress.completed;
     const start = activeSeason?.startDate?.getTime() ?? now.getTime();
     const end = activeSeason?.endDate?.getTime() ?? start + DAY;
     const weeks = Math.max(1, Math.ceil((end - start) / (7 * DAY)));
@@ -196,7 +200,7 @@ export const GET: APIRoute = async ({ request }) => {
         played: completedMatches,
         total: totalMatches,
         pct: totalMatches ? Math.round((completedMatches / totalMatches) * 100) : 0,
-        stage: seasonStage(seasonTallies),
+        stage: progress.stage,
         nextLabel: matchList[0]?.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) || 'No upcoming fixtures',
       },
       fixtures: matchList.map((match) => ({

@@ -104,6 +104,9 @@ export type SeasonWithCounts = Season & {
   };
   /** Matches already played in this season. Only resolved on request. */
   completedMatches?: number;
+  /** Matches that count toward progress: all of them, less unplayed games of
+   *  decided playoff series. Resolved with completedMatches. */
+  countedMatches?: number;
   /** Regular season or the knockout round in play. Resolved with completedMatches. */
   stage?: SeasonStage | null;
 };

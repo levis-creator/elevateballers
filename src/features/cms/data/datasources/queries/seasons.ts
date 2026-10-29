@@ -1,6 +1,7 @@
 import { prisma } from '../../../../../lib/prisma';
 import type { SeasonWithCounts } from '../../../types';
-import { seasonStage, type SeasonStageTally } from '../../../../seasons/domain/entities/season';
+import { seriesAwareProgress, type SeasonStageTally } from '../../../../seasons/domain/entities/season';
+import { knockoutGamesBySeason, loadSeriesFormat } from '../../../../seasons/data/datasources/series-progress';
 
 const SEASON_INCLUDE = {
   include: {
@@ -67,14 +68,19 @@ export async function getSeasons(
   if (!withCompletedCounts) return seasons;
 
   const tallies = await getStageTalliesBySeason();
+  const knockout = await knockoutGamesBySeason({});
+  const format = await loadSeriesFormat();
   return seasons.map((season) => {
-    const rows = tallies.get(season.id) ?? [];
+    const progress = seriesAwareProgress(
+      tallies.get(season.id) ?? [],
+      knockout.get(season.id) ?? [],
+      format,
+    );
     return {
       ...season,
-      completedMatches: rows
-        .filter((row) => row.status === 'COMPLETED')
-        .reduce((sum, row) => sum + row.count, 0),
-      stage: seasonStage(rows),
+      countedMatches: progress.matches,
+      completedMatches: progress.completed,
+      stage: progress.stage,
     };
   });
 }

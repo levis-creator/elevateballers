@@ -120,6 +120,94 @@ export function seasonStage(tallies: SeasonStageTally[]): SeasonStage | null {
 	return current ? current[1] : "Season complete";
 }
 
+/** Games per knockout tie by round, from the Fixtures "Playoff format" setting. */
+export interface SeriesFormat {
+	QF: number;
+	SF: number;
+	F: number;
+}
+
+/** One knockout game, enough to tell which series it belongs to and who won it. */
+export interface KnockoutGame {
+	stage: string | null;
+	status: string;
+	team1Id: string | null;
+	team2Id: string | null;
+	team1Score: number | null;
+	team2Score: number | null;
+	winnerId: string | null;
+}
+
+const SERIES_ROUNDS: Record<string, keyof SeriesFormat> = {
+	QUARTER_FINALS: "QF",
+	SEMI_FINALS: "SF",
+	CHAMPIONSHIP: "F",
+};
+/** The stages played as series; fetch these games for `seriesAwareProgress`. */
+export const SERIES_STAGES = Object.keys(SERIES_ROUNDS) as ("QUARTER_FINALS" | "SEMI_FINALS" | "CHAMPIONSHIP")[];
+
+function gameWinner(game: KnockoutGame): string | null {
+	if (game.status !== "COMPLETED") return null;
+	if (game.winnerId) return game.winnerId;
+	if (game.team1Score == null || game.team2Score == null || game.team1Score === game.team2Score) return null;
+	return game.team1Score > game.team2Score ? game.team1Id : game.team2Id;
+}
+
+/**
+ * Unplayed games in series that are already decided — game 3 of a quarterfinal
+ * won 2–0 — as tallies. Games are grouped into a series by round and the two
+ * teams; a game with a team still TBD is never part of a decided series.
+ */
+export function decidedSeriesLeftovers(games: KnockoutGame[], format: SeriesFormat): SeasonStageTally[] {
+	const series = new Map<string, KnockoutGame[]>();
+	for (const game of games) {
+		if (!game.stage || !SERIES_ROUNDS[game.stage] || !game.team1Id || !game.team2Id) continue;
+		const key = `${game.stage}|${[game.team1Id, game.team2Id].sort().join("|")}`;
+		series.set(key, [...(series.get(key) ?? []), game]);
+	}
+
+	const leftovers = new Map<string, SeasonStageTally>();
+	for (const ties of series.values()) {
+		const needed = Math.floor(format[SERIES_ROUNDS[ties[0].stage!]] / 2) + 1;
+		const wins = new Map<string, number>();
+		for (const game of ties) {
+			const winner = gameWinner(game);
+			if (winner) wins.set(winner, (wins.get(winner) ?? 0) + 1);
+		}
+		if (![...wins.values()].some((count) => count >= needed)) continue;
+		for (const game of ties) {
+			if (game.status === "COMPLETED") continue;
+			const key = `${game.stage}|${game.status}`;
+			const row = leftovers.get(key) ?? { stage: game.stage, status: game.status, count: 0 };
+			row.count += 1;
+			leftovers.set(key, row);
+		}
+	}
+	return [...leftovers.values()];
+}
+
+/**
+ * Progress and stage with knockout rounds counted as series: once a team has
+ * the wins its round needs, that series' unplayed games no longer count toward
+ * the total and no longer hold the season in that round.
+ */
+export function seriesAwareProgress(
+	tallies: SeasonStageTally[],
+	knockoutGames: KnockoutGame[],
+	format: SeriesFormat
+): { matches: number; completed: number; stage: SeasonStage | null } {
+	const leftovers = decidedSeriesLeftovers(knockoutGames, format);
+	const counted = tallies.map((row) => {
+		const surplus = leftovers.find((left) => left.stage === row.stage && left.status === row.status);
+		return surplus ? { ...row, count: Math.max(0, row.count - surplus.count) } : row;
+	});
+	return {
+		matches: counted.reduce((sum, row) => sum + row.count, 0),
+		completed: counted.filter((row) => row.status === "COMPLETED").reduce((sum, row) => sum + row.count, 0),
+		stage: seasonStage(counted),
+	};
+}
+
 export type SeasonFilter = "All" | "Live" | "Upcoming" | "Completed";
 export const SEASON_FILTERS: SeasonFilter[] = ["All", "Live", "Upcoming", "Completed"];
 

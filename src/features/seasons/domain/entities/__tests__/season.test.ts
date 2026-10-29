@@ -10,6 +10,9 @@ import {
 	matchesSearch,
 	seasonProgress,
 	seasonStage,
+	decidedSeriesLeftovers,
+	seriesAwareProgress,
+	type KnockoutGame,
 	seasonStatus,
 } from '../season';
 
@@ -215,5 +218,89 @@ describe('seasonStage', () => {
 			seasonStage([t('SEMI_FINALS', 'UPCOMING', 2), t('EXHIBITION', 'UPCOMING', 1), t('PRESEASON', 'UPCOMING', 1)])
 		).toBe('Semifinals');
 		expect(seasonStage([t('EXHIBITION', 'COMPLETED', 2)])).toBeNull();
+	});
+});
+
+describe('series-aware progress', () => {
+	const format = { QF: 3, SF: 3, F: 1 };
+	const game = (stage: string, status: string, a: string | null, b: string | null, winner: string | null = null): KnockoutGame => ({
+		stage,
+		status,
+		team1Id: a,
+		team2Id: b,
+		team1Score: null,
+		team2Score: null,
+		winnerId: winner,
+	});
+	// Two quarterfinal series scheduled as full best-of-3s.
+	const quarterfinals = (thirdA: string, thirdB: string) => [
+		game('QUARTER_FINALS', 'COMPLETED', 'a', 'b', 'a'),
+		game('QUARTER_FINALS', 'COMPLETED', 'b', 'a', 'a'),
+		game('QUARTER_FINALS', thirdA, 'a', 'b'),
+		game('QUARTER_FINALS', 'COMPLETED', 'c', 'd', 'c'),
+		game('QUARTER_FINALS', 'COMPLETED', 'd', 'c', 'd'),
+		game('QUARTER_FINALS', thirdB, 'c', 'd'),
+	];
+
+	it('drops the unplayed game of a series already won 2–0', () => {
+		expect(decidedSeriesLeftovers(quarterfinals('UPCOMING', 'UPCOMING'), format)).toEqual([
+			{ stage: 'QUARTER_FINALS', status: 'UPCOMING', count: 1 },
+		]);
+	});
+
+	it('keeps the round open while a series is level, then moves on once all are decided', () => {
+		const tallies = [
+			{ stage: 'REGULAR_SEASON', status: 'COMPLETED', count: 20 },
+			{ stage: 'QUARTER_FINALS', status: 'COMPLETED', count: 4 },
+			{ stage: 'QUARTER_FINALS', status: 'UPCOMING', count: 2 },
+			{ stage: 'SEMI_FINALS', status: 'UPCOMING', count: 3 },
+		];
+		expect(seriesAwareProgress(tallies, quarterfinals('UPCOMING', 'UPCOMING'), format)).toEqual({
+			matches: 28,
+			completed: 24,
+			stage: 'Quarterfinals',
+		});
+
+		const decided = [
+			...tallies.slice(0, 1),
+			{ stage: 'QUARTER_FINALS', status: 'COMPLETED', count: 5 },
+			{ stage: 'QUARTER_FINALS', status: 'UPCOMING', count: 1 },
+			tallies[3],
+		];
+		const games = quarterfinals('UPCOMING', 'COMPLETED');
+		games[5] = { ...games[5], status: 'COMPLETED', team1Score: 70, team2Score: 64 };
+		expect(seriesAwareProgress(decided, games, format)).toEqual({
+			matches: 28,
+			completed: 25,
+			stage: 'Semifinals',
+		});
+	});
+
+	it('reaches 100% when the only unplayed games are surplus series games', () => {
+		const tallies = [
+			{ stage: 'QUARTER_FINALS', status: 'COMPLETED', count: 2 },
+			{ stage: 'QUARTER_FINALS', status: 'UPCOMING', count: 1 },
+		];
+		const games = quarterfinals('UPCOMING', 'UPCOMING').slice(0, 3);
+		expect(seriesAwareProgress(tallies, games, format)).toEqual({
+			matches: 2,
+			completed: 2,
+			stage: 'Season complete',
+		});
+	});
+
+	it('never treats games with a TBD team as a decided series', () => {
+		const games = [
+			game('SEMI_FINALS', 'COMPLETED', 'a', null, 'a'),
+			game('SEMI_FINALS', 'COMPLETED', 'a', null, 'a'),
+			game('SEMI_FINALS', 'UPCOMING', 'a', null),
+		];
+		expect(decidedSeriesLeftovers(games, format)).toEqual([]);
+	});
+
+	it('uses the configured length: a single-game final is decided by one win', () => {
+		const games = [game('CHAMPIONSHIP', 'COMPLETED', 'a', 'c', 'a'), game('CHAMPIONSHIP', 'UPCOMING', 'a', 'c')];
+		expect(decidedSeriesLeftovers(games, format)).toEqual([{ stage: 'CHAMPIONSHIP', status: 'UPCOMING', count: 1 }]);
+		expect(decidedSeriesLeftovers(games, { ...format, F: 3 })).toEqual([]);
 	});
 });

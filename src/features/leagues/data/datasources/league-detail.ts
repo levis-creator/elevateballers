@@ -8,7 +8,8 @@ import type {
 	LeagueTeamSummary,
 } from "@/features/leagues/domain/entities/league-detail";
 import type { AdminLeague } from "@/features/leagues/domain/entities/league";
-import { seasonStage, type SeasonStageTally } from "@/features/seasons/domain/entities/season";
+import { seriesAwareProgress, type SeasonStageTally } from "@/features/seasons/domain/entities/season";
+import { knockoutGamesBySeason, loadSeriesFormat } from "@/features/seasons/data/datasources/series-progress";
 
 const RECENT_MATCH_LIMIT = 6;
 
@@ -71,29 +72,35 @@ export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail | 
 	]);
 
 	// ── Per-season match tallies ──────────────────────────────────────────
-	const matchesBySeason = new Map<string, number>();
-	const completedBySeason = new Map<string, number>();
 	const stagesBySeason = new Map<string, SeasonStageTally[]>();
 	let completedMatches = 0;
 
 	for (const group of matchGroups) {
 		const count = group._count._all;
 		const key = group.seasonId ?? "";
-		matchesBySeason.set(key, (matchesBySeason.get(key) ?? 0) + count);
 		stagesBySeason.set(key, [
 			...(stagesBySeason.get(key) ?? []),
 			{ stage: group.stage, status: group.status, count },
 		]);
-		if (group.status === "COMPLETED") {
-			completedBySeason.set(key, (completedBySeason.get(key) ?? 0) + count);
-			completedMatches += count;
-		}
+		if (group.status === "COMPLETED") completedMatches += count;
 	}
 
 	const teamsBySeason = new Map<string, number>();
 	for (const group of teamGroups) {
 		teamsBySeason.set(group.seasonId, group._count._all);
 	}
+
+	// Knockout rounds count as series, so a decided tie's unplayed games drop out.
+	const [knockoutGames, seriesFormat] = await Promise.all([
+		knockoutGamesBySeason({ leagueId }),
+		loadSeriesFormat(),
+	]);
+	const progressBySeason = new Map(
+		links.map(({ season }) => [
+			season.id,
+			seriesAwareProgress(stagesBySeason.get(season.id) ?? [], knockoutGames.get(season.id) ?? [], seriesFormat),
+		])
+	);
 
 	const seasons: LeagueSeasonSummary[] = links.map(({ season }) => ({
 		id: season.id,
@@ -103,9 +110,9 @@ export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail | 
 		active: season.active,
 		bracketType: season.bracketType,
 		teams: teamsBySeason.get(season.id) ?? 0,
-		matches: matchesBySeason.get(season.id) ?? 0,
-		completed: completedBySeason.get(season.id) ?? 0,
-		stage: seasonStage(stagesBySeason.get(season.id) ?? []),
+		matches: progressBySeason.get(season.id)?.matches ?? 0,
+		completed: progressBySeason.get(season.id)?.completed ?? 0,
+		stage: progressBySeason.get(season.id)?.stage ?? null,
 	}));
 
 	// The season the league is "on" now: the active one, else the most recent.

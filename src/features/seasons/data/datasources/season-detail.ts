@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getStandings } from "@/features/standings/lib/getStandings";
-import { seasonStage, type AdminSeason } from "@/features/seasons/domain/entities/season";
+import { seriesAwareProgress, type AdminSeason } from "@/features/seasons/domain/entities/season";
+import { knockoutGamesBySeason, loadSeriesFormat } from "@/features/seasons/data/datasources/series-progress";
 import type {
 	SeasonConferenceOption,
 	SeasonDetail,
@@ -73,9 +74,11 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 		status: group.status,
 		count: group._count._all,
 	}));
-	const completed = stageTallies
-		.filter((row) => row.status === "COMPLETED")
-		.reduce((sum, row) => sum + row.count, 0);
+	const [knockoutGames, seriesFormat] = await Promise.all([
+		knockoutGamesBySeason({ seasonId }),
+		loadSeriesFormat(),
+	]);
+	const progress = seriesAwareProgress(stageTallies, knockoutGames.get(seasonId) ?? [], seriesFormat);
 
 	const adminSeason: AdminSeason = {
 		id: season.id,
@@ -87,9 +90,9 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 		active: season.active,
 		bracketType: season.bracketType,
 		leagues: season.leagueSeasons.map((link) => ({ id: link.league.id, name: link.league.name })),
-		matches: season._count.matches,
-		completed,
-		stage: seasonStage(stageTallies),
+		matches: progress.matches,
+		completed: progress.completed,
+		stage: progress.stage,
 	};
 
 	const fixtures: SeasonFixture[] = fixtureRows.map((match) => ({

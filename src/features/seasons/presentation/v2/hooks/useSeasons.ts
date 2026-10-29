@@ -24,6 +24,7 @@ interface SeasonResponse {
 	leagueSeasons?: { league: { id: string; name: string } }[];
 	_count?: { matches: number };
 	completedMatches?: number;
+	countedMatches?: number;
 	stage?: SeasonStage | null;
 }
 
@@ -38,7 +39,7 @@ function toAdminSeason(row: SeasonResponse): AdminSeason {
 		active: row.active,
 		bracketType: row.bracketType,
 		leagues: (row.leagueSeasons ?? []).map((ls) => ({ id: ls.league.id, name: ls.league.name })),
-		matches: row._count?.matches ?? 0,
+		matches: row.countedMatches ?? row._count?.matches ?? 0,
 		completed: row.completedMatches ?? 0,
 		stage: row.stage ?? null,
 	};
