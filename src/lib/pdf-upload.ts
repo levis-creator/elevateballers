@@ -27,3 +27,18 @@ export function hasPdfSignature(bytes: Uint8Array): boolean {
   const signature = [0x25, 0x50, 0x44, 0x46, 0x2d];
   return signature.every((byte, index) => bytes[index] === byte);
 }
+
+/**
+ * Large PDFs travel in pieces of this size: hosting platforms cap a single
+ * request body (Vercel at about 4.5 MB), so a rulebook bigger than one piece is
+ * uploaded piece by piece and joined on the server.
+ */
+export const UPLOAD_PART_BYTES = 2 * 1024 * 1024;
+
+/** The browser names each piecewise upload with a random UUID. */
+export function isUploadId(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+/** Where a piece waits in storage until the upload is completed. */
+export const uploadPartKey = (uploadId: string, index: number) => `tmp/rules-uploads/${uploadId}/${index}`;

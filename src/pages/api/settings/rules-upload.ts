@@ -1,26 +1,13 @@
 import type { APIRoute } from 'astro';
 import { requirePermission } from '@/features/rbac/middleware';
-import { saveFile } from '@/lib/file-storage';
 import { prisma } from '@/lib/prisma';
-import { getFolderByName } from '@/lib/folder-access';
 import { handleApiError } from '@/lib/apiError';
 import { enforceRateLimit } from '@/lib/rateLimit';
 import { resolveSecuritySettings } from '../../../features/settings/application/securitySettings';
-import { logAudit } from '@/features/cms/lib/audit';
 import { hasPdfSignature, looksLikePdf } from '@/lib/pdf-upload';
+import { storeRulesDocument } from '@/lib/rules-document';
 
 export const prerender = false;
-
-function createPdfFileName(originalName: string): string {
-  const baseName = originalName.replace(/\.pdf$/i, '');
-  const slug = baseName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'rules-document';
-
-  return `${slug}-${Date.now()}.pdf`;
-}
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -69,60 +56,11 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const fileName = createPdfFileName(file.name);
-    const pdf = new File([bytes], fileName, { type: 'application/pdf' });
-    const { publicUrl, filePath } = await saveFile('documents', pdf, false, fileName);
-    let folder = await getFolderByName('documents');
-
-    if (!folder) {
-      folder = await prisma.folder.create({
-        data: {
-          name: 'documents',
-          path: 'public/documents',
-          isPrivate: false,
-          description: 'Public documents and PDFs',
-          createdBy: user.id,
-        },
-      });
-    }
-
-    const media = await prisma.media.create({
-      data: {
-        title: file.name,
-        url: publicUrl,
-        filePath,
-        folderId: folder.id,
-        type: 'DOCUMENT',
-        size: file.size,
-        originalSize: file.size,
-        compressionRatio: 0,
-        mimeType: 'application/pdf',
-        isPrivate: false,
-        uploadedBy: user.id,
-        tags: ['rules', 'pdf'],
-      },
-      include: {
-        folder: true,
-      },
+    const stored = await storeRulesDocument(request, user.id, bytes, file.name);
+    return new Response(JSON.stringify(stored), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
-    logAudit(request, 'SETTING_RULES_DOCUMENT_UPLOADED', { mediaId: media.id, fileName, filePath });
-
-    return new Response(
-      JSON.stringify({
-        url: publicUrl,
-        filePath,
-        fileName,
-        mediaId: media.id,
-        folder: {
-          id: folder.id,
-          name: folder.name,
-        },
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
   } catch (error: any) {
     console.error('Error uploading rules PDF:', error);
     return handleApiError(error, 'upload rules PDF', request);
