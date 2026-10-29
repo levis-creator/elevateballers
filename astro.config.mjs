@@ -40,7 +40,13 @@ export default defineConfig({
       // OG image generation (src/pages/api/matches/[id]/og.png.ts) reads
       // these font files at runtime via fs.readFile, so they must be bundled
       // into the serverless function output.
-      includeFiles: ['./src/assets/fonts/Rubik-Regular.ttf', './src/assets/fonts/Rubik-SemiBold.ttf', './src/assets/fonts/Rubik-Bold.ttf', './src/assets/fonts/Rubik-ExtraBold.ttf', './src/assets/fonts/Rubik-Black.ttf'],
+      includeFiles: ['./src/assets/fonts/Rubik-Regular.ttf', './src/assets/fonts/Rubik-SemiBold.ttf', './src/assets/fonts/Rubik-Bold.ttf', './src/assets/fonts/Rubik-ExtraBold.ttf', './src/assets/fonts/Rubik-Black.ttf', ...[
+        'anton-latin-400-normal.woff', 'archivo-black-latin-400-normal.woff',
+        'archivo-latin-400-normal.woff', 'archivo-latin-700-normal.woff',
+        'inter-latin-400-normal.woff', 'inter-latin-700-normal.woff',
+        'space-mono-latin-400-normal.woff', 'space-mono-latin-700-normal.woff',
+        'ibm-plex-mono-latin-400-normal.woff', 'ibm-plex-mono-latin-700-normal.woff',
+      ].map((file) => `./src/assets/fonts/stat-sheet/${file}`)],
     })
     : node({
       mode: 'standalone'
