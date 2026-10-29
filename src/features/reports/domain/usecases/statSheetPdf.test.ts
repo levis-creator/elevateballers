@@ -44,6 +44,12 @@ const data = (over: Partial<MatchStatSheetData> = {}): MatchStatSheetData => ({
   fileName: 'x.pdf', matchTitle: 'Home Side vs Away Side', playedOn: 'Sat, Oct 25, 2026',
   leagueName: 'League', seasonName: '2026', resultLabel: 'Home Side won by 4',
   team1Name: 'Home Side', team2Name: 'Away Side', team1Score: 80, team2Score: 76, manualScore: false,
+  shots: {
+    home: [{ x: 0.5, y: 0.27, zone: 'PAINT', made: true, three: false, playerId: 'p1' }, { x: 0.5, y: 0.72, zone: 'TOP_3', made: false, three: true, playerId: 'p1' }],
+    away: [{ x: 0.13, y: 0.5, zone: 'LEFT_WING_3', made: true, three: true, playerId: 'p2' }],
+    homeAttempts: 70,
+    awayAttempts: 66,
+  },
   team1Totals: totals('Home Side', 80), team2Totals: totals('Away Side', 76),
   team1Rows: Array.from({ length: 12 }, (_, i) => player('Home Side', i)),
   team2Rows: Array.from({ length: 12 }, (_, i) => player('Away Side', i)),
@@ -71,7 +77,7 @@ describe('renderStatSheetPdf', () => {
     const full = await PDFDocument.load(await renderStatSheetPdf(data(), theme, await fonts()));
     const headerOnly = await PDFDocument.load(
       await renderStatSheetPdf(data(), theme, await fonts(), null, {
-        comparison: false, shooting: false, boxScores: false, minutes: false, watermark: false, footerNote: 'Official result',
+        comparison: false, shooting: false, shotChart: false, boxScores: false, minutes: false, watermark: false, footerNote: 'Official result',
       }),
     );
     expect(full.getPageCount()).toBeGreaterThan(1);

@@ -5,6 +5,7 @@ import { prisma } from '../../../../lib/prisma';
 import { getMatchWithFullDetails } from '../../../cms/lib/queries';
 import { formatMinutes, secondsPlayed, type MinutesEvent } from '../../../game-tracking/domain/live-console/minutes';
 import { toConsoleRules } from '../../../game-tracking/domain/live-console/rules';
+import { collectShots, fieldGoalAttempts } from '../../../game-tracking/domain/live-console/shotChart';
 import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import { calculatePlayerMatchStats, type PlayerMatchStatistics } from '../../../player/lib/playerStats';
 import {
@@ -256,6 +257,12 @@ async function buildStatSheetData(matchId: string): Promise<MatchStatSheetData> 
     team1Score,
     team2Score,
     manualScore: match.scoreSource === 'MANUAL',
+    shots: {
+      home: collectShots(safeEvents, match.team1Id),
+      away: collectShots(safeEvents, match.team2Id),
+      homeAttempts: fieldGoalAttempts(safeEvents, match.team1Id),
+      awayAttempts: fieldGoalAttempts(safeEvents, match.team2Id),
+    },
     team1Totals: team1Stats.totals,
     team2Totals: team2Stats.totals,
     team1Rows: team1Stats.rows,

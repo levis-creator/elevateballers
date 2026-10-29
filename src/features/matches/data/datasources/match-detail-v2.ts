@@ -12,6 +12,7 @@ import { getTeamPlayerStats } from "@/features/player/lib/queries";
 import { calculatePlayerMatchStats, type PlayerMatchStatistics } from "@/features/player/domain/usecases/playerStats";
 import { formatMatchDate, formatMatchTime, getZonedDateParts } from "@/features/matches/domain/usecases/utils";
 import { getDisplayImageUrl } from "@/lib/asset-url";
+import { collectShots, fieldGoalAttempts } from "@/features/game-tracking/domain/live-console/shotChart";
 import type {
 	MatchView,
 	MatchState,
@@ -25,6 +26,7 @@ import type {
 	H2HRow,
 	WatchCard,
 	LineupPlayer,
+	TeamShots,
 } from "@/features/matches/domain/entities/match-detail-v2";
 
 const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -527,6 +529,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 				performers: [],
 				comparison: [],
 				box: { home: [], away: [] },
+				shots: { home: { shots: [], attempts: 0 }, away: { shots: [], attempts: 0 } },
 				pbpPeriods: [],
 				pbpByPeriod: {},
 				timeline: [],
@@ -593,6 +596,16 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 					};
 				});
 		const box = { home: boxFor(team1Id), away: boxFor(team2Id) };
+
+		// Shot chart: field goals the scorer placed on the court.
+		const shooter = new Map<string, string>(
+			players.map((mp) => [mp.playerId, `${mp.jerseyNumber != null ? `#${mp.jerseyNumber} ` : ""}${playerName(mp.player)}`]),
+		);
+		const shotsFor = (teamId?: string): TeamShots => ({
+			shots: collectShots(events, teamId).map((s) => ({ ...s, player: (s.playerId && shooter.get(s.playerId)) || "Unknown player" })),
+			attempts: fieldGoalAttempts(events, teamId),
+		});
+		const shots = { home: shotsFor(team1Id), away: shotsFor(team2Id) };
 
 		// --- Match timeline: subs + fouls + quarter/half/final markers + runs ---
 		const subsRaw: any[] = Array.isArray((match as any).substitutions) ? (match as any).substitutions : [];
@@ -819,6 +832,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			performers,
 			comparison,
 			box,
+			shots,
 			pbpPeriods,
 			pbpByPeriod,
 			timeline,

@@ -2844,6 +2844,10 @@ export const SECTIONS: Section[] = [
             type: 'toggle',
             defaultValue: 'true',
           }),
+          f('match_sheetShotChart', 'Shot chart', 'Both teams’ located shots on a half-court. Printed only when the match has shot locations.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
           f('match_sheetBoxScores', 'Box scores', 'One player table per team.', {
             type: 'toggle',
             defaultValue: 'true',

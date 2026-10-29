@@ -16,6 +16,14 @@ import {
   DEFAULT_STAT_SHEET_SETTINGS,
   type StatSheetSettings,
 } from '../../../settings/application/statSheetSettings';
+import {
+  CHART_H,
+  CHART_W,
+  chartPoint,
+  courtPaths,
+  summariseShots,
+  type ChartShot,
+} from '../../../game-tracking/domain/live-console/shotChart';
 
 /** Which parts of the sheet to draw (Match Page → Stat sheet PDF settings). */
 export type StatSheetOptions = Omit<StatSheetSettings, 'logo'>;
@@ -71,6 +79,8 @@ export type MatchStatSheetData = {
   team2Score: number;
   /** A typed-in result has no play-by-play, so the sheet shows the final only. */
   manualScore: boolean;
+  /** Located field goals per team, and all field goals attempted. */
+  shots: { home: ChartShot[]; away: ChartShot[]; homeAttempts: number; awayAttempts: number };
   team1Totals: TeamTotalsRow;
   team2Totals: TeamTotalsRow;
   team1Rows: PlayerStatRow[];
@@ -469,6 +479,70 @@ function drawShotSummary(sheet: Sheet, d: MatchStatSheetData) {
   sheet.y -= 22;
 }
 
+const COURT = courtPaths();
+
+/** One team's half-court with its located shots; (x, top) is the court's top-left. */
+function drawCourtChart(sheet: Sheet, x: number, top: number, width: number, shots: ChartShot[], color: RGB) {
+  const { t } = sheet;
+  const scale = width / CHART_W;
+  const height = CHART_H * scale;
+  sheet.rect(x, top - height, width, height, t.zebra);
+  const svg = (path: string, o: { fill?: RGB; stroke?: RGB; w?: number }) =>
+    sheet.page.drawSvgPath(path, {
+      x,
+      y: top,
+      scale,
+      color: o.fill,
+      borderColor: o.stroke,
+      borderWidth: o.stroke ? o.w ?? 0.6 : undefined,
+    });
+  svg(`${COURT.key} Z`, { fill: t.panel });
+  for (const path of [COURT.key, COURT.ftCircle, COURT.three, COURT.restricted, COURT.rim]) svg(path, { stroke: t.soft });
+  svg(COURT.backboard, { stroke: t.soft, w: 1.2 });
+  svg(COURT.outline, { stroke: t.border });
+
+  // Misses first so makes sit on top where they overlap.
+  for (const s of [...shots.filter((s) => !s.made), ...shots.filter((s) => s.made)]) {
+    const { cx, cy } = chartPoint(s);
+    const at = { x: x + cx * scale, y: top - cy * scale };
+    if (s.made) sheet.page.drawCircle({ ...at, size: 2.9, color, borderColor: rgb(1, 1, 1), borderWidth: 0.5 });
+    else sheet.page.drawCircle({ ...at, size: 2.4, borderColor: color, borderWidth: 1, opacity: 0, borderOpacity: 0.85 });
+  }
+  return height;
+}
+
+function drawShotCharts(sheet: Sheet, d: MatchStatSheetData) {
+  const { t } = sheet;
+  const GAP = 21;
+  const width = (CW - GAP) / 2;
+  const courtH = CHART_H * (width / CHART_W);
+  const blockH = 16 + courtH + 48;
+  drawSectionHeader(sheet, sheet.nextSection(), 'Shot chart', 'Located field goals · filled = made · ring = missed', blockH);
+
+  const top = sheet.y - 4;
+  const teams: Array<{ name: string; shots: ChartShot[]; attempts: number; color: RGB }> = [
+    { name: d.team1Name, shots: d.shots.home, attempts: d.shots.homeAttempts, color: t.home },
+    { name: d.team2Name, shots: d.shots.away, attempts: d.shots.awayAttempts, color: t.away },
+  ];
+  teams.forEach((team, i) => {
+    const x = M + i * (width + GAP);
+    sheet.rect(x, top - 9, 6, 6, team.color);
+    sheet.text(team.name, x + 11, top - 9, { font: 'bodyBold', size: 8.5, maxWidth: width - 11 });
+    const h = drawCourtChart(sheet, x, top - 16, width, team.shots, team.color);
+
+    const made = team.shots.filter((s) => s.made).length;
+    const statsY = top - 16 - h - 14;
+    sheet.text(`${made}/${team.shots.length}`, x, statsY, { font: 'bodyBold', size: 10 });
+    const located = team.attempts > team.shots.length ? `${team.shots.length} of ${team.attempts} located` : 'All field goals located';
+    sheet.label(located, x + width, statsY + 1, { align: 'right', size: 5.5 });
+    const zones = summariseShots(team.shots)
+      .map((z) => `${z.group} ${z.made}/${z.attempts}${z.pct != null ? ` ${z.pct}%` : ''}`)
+      .join('  ·  ');
+    sheet.label(zones, x, statsY - 13, { size: 6, tracking: 0.3, color: t.ink, maxWidth: width });
+  });
+  sheet.y = top - blockH - 18;
+}
+
 // Player table columns; widths sum to CW (523).
 const ROSTER_COLS = [
   { key: 'number', label: '#', width: 22, align: 'center' },
@@ -654,6 +728,7 @@ export async function renderStatSheetPdf(
   } else {
     if (options.comparison) drawTeamComparison(sheet, d);
     if (options.shooting) drawShotSummary(sheet, d);
+    if (options.shotChart && (d.shots.home.length || d.shots.away.length)) drawShotCharts(sheet, d);
     if (options.boxScores) {
       drawRosterTable(sheet, 'home', d.team1Name, d.team1Totals, d.team1Rows);
       drawRosterTable(sheet, 'away', d.team2Name, d.team2Totals, d.team2Rows);

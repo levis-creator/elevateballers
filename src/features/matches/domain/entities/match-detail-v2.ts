@@ -4,6 +4,7 @@
  * from match events, and formats dates in the league timezone, so the React
  * island only picks tabs and renders.
  */
+import type { ChartShot } from "@/features/game-tracking/domain/live-console/shotChart";
 
 export type MatchState = "upcoming" | "live" | "final";
 
@@ -68,6 +69,15 @@ export interface BoxRow {
 	pf: number;
 	/** Ejected from the game. */
 	ejected: boolean;
+}
+
+/** A located field goal for the shot chart, with who took it ("#7 Name"). */
+export type PublicShot = ChartShot & { player: string };
+
+export interface TeamShots {
+	shots: PublicShot[];
+	/** All field goals attempted, located or not. */
+	attempts: number;
 }
 
 /** One player in a submitted match-day lineup. */
@@ -166,6 +176,8 @@ export interface MatchView {
 	performers: PerformerCard[];
 	comparison: ComparisonRow[];
 	box: { home: BoxRow[]; away: BoxRow[] };
+	/** Field goals with a recorded location (empty when none were tracked). */
+	shots: { home: TeamShots; away: TeamShots };
 	pbpPeriods: string[]; // period keys present, e.g. ["Q1","Q2",…]
 	pbpByPeriod: Record<string, PbpEvent[]>;
 	/** Narrative match timeline: subs, fouls, quarter/half/final markers, runs. */

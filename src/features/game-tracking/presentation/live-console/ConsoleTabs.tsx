@@ -5,6 +5,7 @@ import { INCIDENTS, MADE_SHOTS, POINTS, TURNOVER_TYPES, UNTYPED_TURNOVER } from 
 import { jersey } from './roster';
 import { mmss } from './useConsoleClock';
 import type { LiveConsole } from './useLiveConsole';
+import ConsoleShotChart from './ConsoleShotChart';
 
 const sideOf = (lc: LiveConsole, teamId: string | null): Side => (teamId === lc.awayId ? 'away' : 'home');
 
@@ -202,6 +203,7 @@ export function BoxScoreTab({ lc, final = false }: { lc: LiveConsole; final?: bo
           );
         })}
       </div>
+      <ConsoleShotChart lc={lc} />
     </>
   );
 }

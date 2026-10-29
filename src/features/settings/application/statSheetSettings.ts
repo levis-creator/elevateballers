@@ -6,6 +6,8 @@ export type StatSheetSettings = {
   logo: string;
   comparison: boolean;
   shooting: boolean;
+  /** Half-court charts of located shots; only printed when the match has some. */
+  shotChart: boolean;
   boxScores: boolean;
   minutes: boolean;
   watermark: boolean;
@@ -17,6 +19,7 @@ export const DEFAULT_STAT_SHEET_SETTINGS: StatSheetSettings = {
   logo: '',
   comparison: true,
   shooting: true,
+  shotChart: true,
   boxScores: true,
   minutes: true,
   watermark: true,
@@ -39,6 +42,7 @@ export function resolveStatSheetSettings(settings: SiteSetting[]): StatSheetSett
     logo: assetPath(values.match_sheetLogo),
     comparison: bool(values.match_sheetComparison, d.comparison),
     shooting: bool(values.match_sheetShooting, d.shooting),
+    shotChart: bool(values.match_sheetShotChart, d.shotChart),
     boxScores: bool(values.match_sheetBoxScores, d.boxScores),
     minutes: bool(values.match_sheetMinutes, d.minutes),
     watermark: bool(values.match_sheetWatermark, d.watermark),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMatchViewStore } from "@/features/matches/presentation/stores/v2/useMatchViewStore";
 import TeamName from "@/features/teams/presentation/components/TeamName";
+import MatchShotChart from "./MatchShotChart";
 import type { LineupPlayer, MatchView } from "@/features/matches/domain/entities/match-detail-v2";
 import { LIVE_REFRESH_MIN_SECONDS, resolveMatchTabs, type MatchTabKind, type PublicMatchPageSettings } from "@/features/settings/application/matchPageSettings";
 
@@ -294,6 +295,9 @@ export default function MatchDetailBoard({ view: initialView, settings, canViewB
 							</div>
 						</section>
 					)}
+
+					{/* SHOT CHART */}
+					{activeTab === "box" && <MatchShotChart view={view} />}
 
 					{/* BOX SCORES */}
 					{activeTab === "box" && (view.box.home.length > 0 || view.box.away.length > 0) && (
