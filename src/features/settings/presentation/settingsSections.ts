@@ -2790,7 +2790,7 @@ export const SECTIONS: Section[] = [
             'match_shotLocations',
             'Ask for shot location',
             'After a 2PT or 3PT shot, the live console asks where it was taken (tap the court or press zone 1–9). Scorers can always skip. Turning it off keeps locations already recorded.',
-            { type: 'toggle', defaultValue: 'false' }
+            { type: 'toggle', defaultValue: 'true' }
           ),
           f(
             'match_lineupDeadlineHours',

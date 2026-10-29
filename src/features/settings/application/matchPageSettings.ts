@@ -36,7 +36,7 @@ export const DEFAULT_PUBLIC_MATCH_PAGE_SETTINGS: PublicMatchPageSettings = {
   video: true,
   delay: 5,
   autoPublish: false,
-  shotLocations: false,
+  shotLocations: true,
   lineupDeadlineHours: 2,
   liveBadge: 'LIVE',
   autoShareCards: true,
