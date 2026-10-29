@@ -139,7 +139,7 @@ export default function SeasonCard({
 				<div className="flex w-[168px] flex-shrink-0 flex-col items-end gap-2 max-[600px]:w-full max-[600px]:flex-row max-[600px]:items-center max-[600px]:justify-between">
 					<div className="w-full max-[600px]:max-w-[200px]">
 						<div className="mb-1 flex items-baseline justify-between font-['Space_Mono'] text-[10px] uppercase tracking-[0.08em] text-[var(--txm)]">
-							<span>Played</span>
+							<span>{season.stage ?? "Played"}</span>
 							<span className="font-['Anton'] text-[14px] tracking-normal text-[var(--tx)]">{progress}%</span>
 						</div>
 						<div className="h-1.5 overflow-hidden rounded-full bg-[var(--chip)]">

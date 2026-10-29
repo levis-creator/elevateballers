@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getStandings } from "@/features/standings/lib/getStandings";
-import type { AdminSeason } from "@/features/seasons/domain/entities/season";
+import { seasonStage, type AdminSeason } from "@/features/seasons/domain/entities/season";
 import type {
 	SeasonConferenceOption,
 	SeasonDetail,
@@ -33,7 +33,7 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 
 	const [matchGroups, fixtureRows, teamRows, table] = await Promise.all([
 		prisma.match.groupBy({
-			by: ["status"],
+			by: ["stage", "status"],
 			where: { seasonId },
 			_count: { _all: true },
 		}),
@@ -68,7 +68,14 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 			: Promise.resolve([]),
 	]);
 
-	const completed = matchGroups.find((group) => group.status === "COMPLETED")?._count._all ?? 0;
+	const stageTallies = matchGroups.map((group) => ({
+		stage: group.stage,
+		status: group.status,
+		count: group._count._all,
+	}));
+	const completed = stageTallies
+		.filter((row) => row.status === "COMPLETED")
+		.reduce((sum, row) => sum + row.count, 0);
 
 	const adminSeason: AdminSeason = {
 		id: season.id,
@@ -82,6 +89,7 @@ export async function getSeasonDetail(seasonId: string): Promise<SeasonDetail | 
 		leagues: season.leagueSeasons.map((link) => ({ id: link.league.id, name: link.league.name })),
 		matches: season._count.matches,
 		completed,
+		stage: seasonStage(stageTallies),
 	};
 
 	const fixtures: SeasonFixture[] = fixtureRows.map((match) => ({

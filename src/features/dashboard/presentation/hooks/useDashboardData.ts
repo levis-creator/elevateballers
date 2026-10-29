@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePermissions } from "@/features/rbac/usePermissions";
+import { seasonStage, type SeasonStage } from "@/features/seasons/domain/entities/season";
 
 /** Keep the list returned for the dashboard so it is not fetched a second time. */
 async function countOf(url: string, allowed: boolean): Promise<{ count: number; items: any[] }> {
@@ -83,6 +84,8 @@ export interface SeasonPulse {
 	played: number;
 	total: number;
 	pct: number;
+	/** Regular season or the knockout round in play; null with no matches. */
+	stage?: SeasonStage | null;
 	nextLabel: string;
 }
 export interface Storage {
@@ -106,9 +109,15 @@ function deriveSeason(seasons: any[], matches: any[]): SeasonPulse {
 		withRange.find((s) => new Date(s.startDate).getTime() <= now && now <= new Date(s.endDate).getTime()) ||
 		withRange.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
 
-	const total = matches.length;
-	const played = matches.filter((m) => String(m.status).toUpperCase() === "COMPLETED").length;
+	// Progress covers the chosen season only, when the match payload says which season each is in.
+	const seasonMatches =
+		active?.id && matches.some((m) => m && "seasonId" in m) ? matches.filter((m) => m?.seasonId === active.id) : matches;
+	const total = seasonMatches.length;
+	const played = seasonMatches.filter((m) => String(m.status).toUpperCase() === "COMPLETED").length;
 	const pct = total ? Math.round((played / total) * 100) : 0;
+	const stage = seasonStage(
+		seasonMatches.map((m) => ({ stage: m?.stage ?? null, status: String(m?.status).toUpperCase(), count: 1 }))
+	);
 
 	let week = 1;
 	let weeks = 1;
@@ -136,7 +145,7 @@ function deriveSeason(seasons: any[], matches: any[]): SeasonPulse {
 		? new Date(next.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
 		: "No upcoming fixtures";
 
-	return { name, week, weeks, gamesThisWeek, played, total, pct, nextLabel };
+	return { name, week, weeks, gamesThisWeek, played, total, pct, stage, nextLabel };
 }
 
 export function useDashboardData() {

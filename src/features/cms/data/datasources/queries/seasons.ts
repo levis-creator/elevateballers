@@ -1,5 +1,6 @@
 import { prisma } from '../../../../../lib/prisma';
 import type { SeasonWithCounts } from '../../../types';
+import { seasonStage, type SeasonStageTally } from '../../../../seasons/domain/entities/season';
 
 const SEASON_INCLUDE = {
   include: {
@@ -24,21 +25,25 @@ const SEASON_INCLUDE = {
 } as const;
 
 /**
- * Completed matches per season, in one grouped query rather than one per season.
- * Matches with no season are excluded — they belong to a league, not a season.
+ * Matches per season bucketed by stage and status, in one grouped query rather
+ * than one per season. Matches with no season are excluded — they belong to a
+ * league, not a season.
  */
-async function getCompletedCountsBySeason(): Promise<Map<string, number>> {
+async function getStageTalliesBySeason(): Promise<Map<string, SeasonStageTally[]>> {
   const rows = await prisma.match.groupBy({
-    by: ['seasonId'],
-    where: { status: 'COMPLETED', seasonId: { not: null } },
+    by: ['seasonId', 'stage', 'status'],
+    where: { seasonId: { not: null } },
     _count: { _all: true },
   });
 
-  const counts = new Map<string, number>();
+  const tallies = new Map<string, SeasonStageTally[]>();
   for (const row of rows) {
-    if (row.seasonId) counts.set(row.seasonId, row._count._all);
+    if (!row.seasonId) continue;
+    const list = tallies.get(row.seasonId) ?? [];
+    list.push({ stage: row.stage, status: row.status, count: row._count._all });
+    tallies.set(row.seasonId, list);
   }
-  return counts;
+  return tallies;
 }
 
 /**
@@ -61,8 +66,17 @@ export async function getSeasons(
 
   if (!withCompletedCounts) return seasons;
 
-  const completed = await getCompletedCountsBySeason();
-  return seasons.map((season) => ({ ...season, completedMatches: completed.get(season.id) ?? 0 }));
+  const tallies = await getStageTalliesBySeason();
+  return seasons.map((season) => {
+    const rows = tallies.get(season.id) ?? [];
+    return {
+      ...season,
+      completedMatches: rows
+        .filter((row) => row.status === 'COMPLETED')
+        .reduce((sum, row) => sum + row.count, 0),
+      stage: seasonStage(rows),
+    };
+  });
 }
 
 /** Small option payload for the match form, scoped to one league. */

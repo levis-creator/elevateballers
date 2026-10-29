@@ -128,6 +128,7 @@ export default function SeasonHero({ season, stats, canUpdate, canCreateMatch }:
 					/>
 				</div>
 				<div className="mt-1.5 font-['Space_Mono'] text-[10px] tracking-[0.06em] text-[var(--faint)]">
+					{season.stage ? `${season.stage} · ` : ""}
 					{progress}% complete · {stats.remaining} {stats.remaining === 1 ? "match" : "matches"} remaining
 				</div>
 			</div>

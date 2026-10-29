@@ -3,6 +3,7 @@ import { usePermissions } from "@/features/rbac/usePermissions";
 import {
 	type AdminSeason,
 	type SeasonFilter,
+	type SeasonStage,
 	SEASON_FILTERS,
 	computeStats,
 	countByFilter,
@@ -23,6 +24,7 @@ interface SeasonResponse {
 	leagueSeasons?: { league: { id: string; name: string } }[];
 	_count?: { matches: number };
 	completedMatches?: number;
+	stage?: SeasonStage | null;
 }
 
 function toAdminSeason(row: SeasonResponse): AdminSeason {
@@ -38,6 +40,7 @@ function toAdminSeason(row: SeasonResponse): AdminSeason {
 		leagues: (row.leagueSeasons ?? []).map((ls) => ({ id: ls.league.id, name: ls.league.name })),
 		matches: row._count?.matches ?? 0,
 		completed: row.completedMatches ?? 0,
+		stage: row.stage ?? null,
 	};
 }
 

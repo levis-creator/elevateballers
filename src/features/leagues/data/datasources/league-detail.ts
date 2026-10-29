@@ -8,6 +8,7 @@ import type {
 	LeagueTeamSummary,
 } from "@/features/leagues/domain/entities/league-detail";
 import type { AdminLeague } from "@/features/leagues/domain/entities/league";
+import { seasonStage, type SeasonStageTally } from "@/features/seasons/domain/entities/season";
 
 const RECENT_MATCH_LIMIT = 6;
 
@@ -35,7 +36,7 @@ export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail | 
 		}),
 		// Matches of THIS league, bucketed by season + status.
 		prisma.match.groupBy({
-			by: ["seasonId", "status"],
+			by: ["seasonId", "stage", "status"],
 			where: { leagueId },
 			_count: { _all: true },
 		}),
@@ -72,12 +73,17 @@ export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail | 
 	// ── Per-season match tallies ──────────────────────────────────────────
 	const matchesBySeason = new Map<string, number>();
 	const completedBySeason = new Map<string, number>();
+	const stagesBySeason = new Map<string, SeasonStageTally[]>();
 	let completedMatches = 0;
 
 	for (const group of matchGroups) {
 		const count = group._count._all;
 		const key = group.seasonId ?? "";
 		matchesBySeason.set(key, (matchesBySeason.get(key) ?? 0) + count);
+		stagesBySeason.set(key, [
+			...(stagesBySeason.get(key) ?? []),
+			{ stage: group.stage, status: group.status, count },
+		]);
 		if (group.status === "COMPLETED") {
 			completedBySeason.set(key, (completedBySeason.get(key) ?? 0) + count);
 			completedMatches += count;
@@ -99,6 +105,7 @@ export async function getLeagueDetail(leagueId: string): Promise<LeagueDetail | 
 		teams: teamsBySeason.get(season.id) ?? 0,
 		matches: matchesBySeason.get(season.id) ?? 0,
 		completed: completedBySeason.get(season.id) ?? 0,
+		stage: seasonStage(stagesBySeason.get(season.id) ?? []),
 	}));
 
 	// The season the league is "on" now: the active one, else the most recent.

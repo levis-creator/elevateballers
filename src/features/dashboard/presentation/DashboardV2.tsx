@@ -121,7 +121,7 @@ function DashboardContent() {
 					<div>
 						<div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--bord)] bg-[var(--surf2)] py-1 pl-2.5 pr-3 font-['Space_Mono'] text-[10px] uppercase tracking-[0.14em] text-[var(--txd)]">
 							<span className="relative flex h-[6px] w-[6px]"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--brand)] opacity-75" /><span className="relative inline-flex h-[6px] w-[6px] rounded-full bg-[var(--brand)]" /></span>
-							{d.season.name || "Season"} · Regular Season · Live
+							{d.season.name || "Season"}{d.season.stage ? ` · ${d.season.stage}` : ""} · Live
 						</div>
 						<h2 className="mb-1 font-['Anton'] text-[46px] uppercase leading-[0.85] text-[var(--tx)] max-[600px]:text-[36px]">Matchday {d.season.week}</h2>
 						<p className="mb-5 font-['Archivo'] text-[14px] text-[var(--txd)]">{d.season.nextLabel} · {d.season.gamesThisWeek} games scheduled this week</p>

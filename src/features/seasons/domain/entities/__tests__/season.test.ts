@@ -9,6 +9,7 @@ import {
 	matchesFilter,
 	matchesSearch,
 	seasonProgress,
+	seasonStage,
 	seasonStatus,
 } from '../season';
 
@@ -169,5 +170,50 @@ describe('formatRange', () => {
 
 	it('shows an em dash for an unparseable bound instead of "Invalid Date"', () => {
 		expect(formatRange('nope', '2026-12-31T00:00:00Z')).toBe('— – Dec 31, 2026');
+	});
+});
+
+describe('seasonStage', () => {
+	const t = (stage: string | null, status: string, count: number) => ({ stage, status, count });
+
+	it('has no stage without matches', () => {
+		expect(seasonStage([])).toBeNull();
+		expect(seasonStage([t('REGULAR_SEASON', 'UPCOMING', 0)])).toBeNull();
+	});
+
+	it('stays in the regular season while any regular game is unplayed', () => {
+		expect(seasonStage([t('REGULAR_SEASON', 'COMPLETED', 20), t(null, 'UPCOMING', 1)])).toBe('Regular season');
+		// A bracket generated early does not skip the remaining regular games.
+		expect(
+			seasonStage([t('REGULAR_SEASON', 'LIVE', 1), t('QUARTER_FINALS', 'UPCOMING', 4)])
+		).toBe('Regular season');
+	});
+
+	it('reports the regular season complete before a bracket exists', () => {
+		expect(seasonStage([t('REGULAR_SEASON', 'COMPLETED', 30)])).toBe('Regular season complete');
+	});
+
+	it('follows the earliest knockout round with games left', () => {
+		const bracket = (qf: string, sf: string, final: string) => [
+			t('REGULAR_SEASON', 'COMPLETED', 30),
+			t('QUARTER_FINALS', qf, 4),
+			t('SEMI_FINALS', sf, 2),
+			t('CHAMPIONSHIP', final, 1),
+		];
+		expect(seasonStage(bracket('UPCOMING', 'UPCOMING', 'UPCOMING'))).toBe('Quarterfinals');
+		expect(seasonStage(bracket('COMPLETED', 'UPCOMING', 'UPCOMING'))).toBe('Semifinals');
+		expect(seasonStage(bracket('COMPLETED', 'COMPLETED', 'LIVE'))).toBe('Final');
+		expect(seasonStage(bracket('COMPLETED', 'COMPLETED', 'COMPLETED'))).toBe('Season complete');
+	});
+
+	it('names an opening round before the quarterfinals as Playoffs', () => {
+		expect(seasonStage([t('PLAYOFF', 'UPCOMING', 8), t('QUARTER_FINALS', 'UPCOMING', 4)])).toBe('Playoffs');
+	});
+
+	it('ignores exhibition and preseason games', () => {
+		expect(
+			seasonStage([t('SEMI_FINALS', 'UPCOMING', 2), t('EXHIBITION', 'UPCOMING', 1), t('PRESEASON', 'UPCOMING', 1)])
+		).toBe('Semifinals');
+		expect(seasonStage([t('EXHIBITION', 'COMPLETED', 2)])).toBeNull();
 	});
 });

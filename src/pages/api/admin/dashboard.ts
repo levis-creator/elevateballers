@@ -5,6 +5,7 @@ import { getUserWithPermissions } from '../../../features/rbac/permissions';
 import { handleApiError } from '../../../lib/apiError';
 import { withoutResolvedNotifications } from '../../../features/cms/lib/notificationCleanup';
 import { getPendingRosterRequests } from '../../../features/registration/data/datasources/review-queue';
+import { seasonStage } from '../../../features/seasons/domain/entities/season';
 
 export const prerender = false;
 
@@ -84,20 +85,28 @@ export const GET: APIRoute = async ({ request }) => {
         })
       : Promise.resolve([]);
 
-    const totalMatches = can('matches:read') ? matches : 0;
-    const completedMatchesPromise = can('matches:read')
-      ? prisma.match.count({ where: { status: 'COMPLETED' } })
-      : Promise.resolve(0);
     const seasonsPromise = can('seasons:read') || can('matches:read')
       ? prisma.season.findMany({
           where: { active: true },
-          select: { name: true, startDate: true, endDate: true },
+          select: { id: true, name: true, startDate: true, endDate: true },
           orderBy: { startDate: 'desc' },
           take: 1,
         })
       : Promise.resolve([]);
-    const [matchList, completedMatches, seasons] = await Promise.all([matchListPromise, completedMatchesPromise, seasonsPromise]);
+    const [matchList, seasons] = await Promise.all([matchListPromise, seasonsPromise]);
     const activeSeason = seasons[0];
+    // Season progress counts the active season's matches only, not every match ever played.
+    const seasonTallies = can('matches:read') && activeSeason
+      ? (await prisma.match.groupBy({
+          by: ['stage', 'status'],
+          where: { seasonId: activeSeason.id },
+          _count: { _all: true },
+        })).map((row) => ({ stage: row.stage, status: row.status, count: row._count._all }))
+      : [];
+    const totalMatches = seasonTallies.reduce((sum, row) => sum + row.count, 0);
+    const completedMatches = seasonTallies
+      .filter((row) => row.status === 'COMPLETED')
+      .reduce((sum, row) => sum + row.count, 0);
     const start = activeSeason?.startDate?.getTime() ?? now.getTime();
     const end = activeSeason?.endDate?.getTime() ?? start + DAY;
     const weeks = Math.max(1, Math.ceil((end - start) / (7 * DAY)));
@@ -187,6 +196,7 @@ export const GET: APIRoute = async ({ request }) => {
         played: completedMatches,
         total: totalMatches,
         pct: totalMatches ? Math.round((completedMatches / totalMatches) * 100) : 0,
+        stage: seasonStage(seasonTallies),
         nextLabel: matchList[0]?.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) || 'No upcoming fixtures',
       },
       fixtures: matchList.map((match) => ({

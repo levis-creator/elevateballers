@@ -70,7 +70,7 @@ export default function LeagueSeasonsTab({ seasons }: { seasons: LeagueSeasonSum
 							<div className="text-center">
 								<div className="font-['Anton'] text-[20px] leading-none text-[var(--tx)]">{progress}%</div>
 								<div className="mt-1 font-['Space_Mono'] text-[9px] uppercase tracking-[0.08em] text-[var(--txm)]">
-									Played
+									{season.stage ?? "Played"}
 								</div>
 							</div>
 							<a

@@ -3,6 +3,7 @@
  * The DTO mirrors `GET /api/leagues/[leagueId]/overview` exactly.
  */
 import type { AdminLeague } from "./league";
+import type { SeasonStage } from "@/features/seasons/domain/entities/season";
 
 // A season's status and progress are the seasons feature's rules, not the
 // leagues feature's. Re-exported here so this page's components keep one import,
@@ -22,6 +23,8 @@ export interface LeagueSeasonSummary {
 	/** Matches of this league in this season. */
 	matches: number;
 	completed: number;
+	/** Regular season or the knockout round in play for this league's games. */
+	stage?: SeasonStage | null;
 }
 
 export interface LeagueTeamSummary {

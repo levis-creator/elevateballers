@@ -39,6 +39,7 @@ import type {
   Sponsor,
   MatchStage,
 } from '@prisma/client';
+import type { SeasonStage } from '../../../seasons/domain/entities/season';
 
 // Re-export Prisma types
 export type {
@@ -103,6 +104,8 @@ export type SeasonWithCounts = Season & {
   };
   /** Matches already played in this season. Only resolved on request. */
   completedMatches?: number;
+  /** Regular season or the knockout round in play. Resolved with completedMatches. */
+  stage?: SeasonStage | null;
 };
 
 // DTO for API responses that include additional computed fields

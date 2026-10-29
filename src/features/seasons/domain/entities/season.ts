@@ -25,6 +25,8 @@ export interface AdminSeason {
 	leagues: AdminSeasonLeague[];
 	matches: number;
 	completed: number;
+	/** Regular season or the knockout round in play; null when unknown or no matches. */
+	stage?: SeasonStage | null;
 }
 
 /** The shape any status rule needs — so both features can pass their own DTO. */
@@ -70,6 +72,52 @@ export function seasonStatus(season: SeasonTiming, now: Date = new Date()): Seas
 export function seasonProgress(season: SeasonTally): number {
 	if (season.matches <= 0) return 0;
 	return Math.round((season.completed / season.matches) * 100);
+}
+
+/** Matches of one season bucketed by stage and status, as a `groupBy` returns them. */
+export interface SeasonStageTally {
+	stage: string | null;
+	status: string;
+	count: number;
+}
+
+export type SeasonStage =
+	| "Regular season"
+	| "Regular season complete"
+	| "Playoffs"
+	| "Quarterfinals"
+	| "Semifinals"
+	| "Final"
+	| "Season complete";
+
+// Knockout rounds in the order they are played. A generated bracket creates
+// every round up front with TBD teams, so later rounds exist before they start.
+const PLAYOFF_ROUNDS: ReadonlyArray<readonly [string, SeasonStage]> = [
+	["PLAYOFF", "Playoffs"],
+	["QUARTER_FINALS", "Quarterfinals"],
+	["SEMI_FINALS", "Semifinals"],
+	["CHAMPIONSHIP", "Final"],
+];
+const isRegular = (stage: string | null) => stage === null || stage === "REGULAR_SEASON";
+const isPlayoff = (stage: string | null) => PLAYOFF_ROUNDS.some(([round]) => round === stage);
+
+/**
+ * Where a season is: the regular season while any of its games are unplayed,
+ * then the earliest knockout round with a game still to play. Preseason,
+ * exhibition and other one-off games never decide the stage. No matches → null.
+ */
+export function seasonStage(tallies: SeasonStageTally[]): SeasonStage | null {
+	const rows = tallies.filter((row) => row.count > 0);
+	if (!rows.length) return null;
+	const open = (match: (stage: string | null) => boolean) =>
+		rows.some((row) => match(row.stage) && row.status !== "COMPLETED");
+
+	if (open(isRegular)) return "Regular season";
+	if (!rows.some((row) => isPlayoff(row.stage))) {
+		return rows.some((row) => isRegular(row.stage)) ? "Regular season complete" : null;
+	}
+	const current = PLAYOFF_ROUNDS.find(([round]) => open((stage) => stage === round));
+	return current ? current[1] : "Season complete";
 }
 
 export type SeasonFilter = "All" | "Live" | "Upcoming" | "Completed";
