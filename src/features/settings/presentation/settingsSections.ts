@@ -2787,6 +2787,12 @@ export const SECTIONS: Section[] = [
             { type: 'toggle', defaultValue: 'false' }
           ),
           f(
+            'match_shotLocations',
+            'Ask for shot location',
+            'After a 2PT or 3PT shot, the live console asks where it was taken (tap the court or press zone 1–9). Scorers can always skip. Turning it off keeps locations already recorded.',
+            { type: 'toggle', defaultValue: 'false' }
+          ),
+          f(
             'match_lineupDeadlineHours',
             'Lineup deadline (hours before tip-off)',
             'Coaches can submit and edit lineups in the Team Portal until this many hours before the scheduled start (0–48; 0 = until tip-off). Admins can still change lineups after.',

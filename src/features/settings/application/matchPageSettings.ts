@@ -17,6 +17,8 @@ export type PublicMatchPageSettings = {
   video: boolean;
   delay: number;
   autoPublish: boolean;
+  /** Live console asks where each 2PT / 3PT shot was taken (always skippable). */
+  shotLocations: boolean;
   /** Hours before tip-off that Team Portal lineups close (0 = at tip-off). */
   lineupDeadlineHours: number;
   liveBadge: string;
@@ -34,6 +36,7 @@ export const DEFAULT_PUBLIC_MATCH_PAGE_SETTINGS: PublicMatchPageSettings = {
   video: true,
   delay: 5,
   autoPublish: false,
+  shotLocations: false,
   lineupDeadlineHours: 2,
   liveBadge: 'LIVE',
   autoShareCards: true,
@@ -70,6 +73,7 @@ export function resolvePublicMatchPageSettings(settings: SiteSetting[]): PublicM
     video: bool(values.match_video, defaults.video),
     delay: integer(values.match_delay, defaults.delay, LIVE_REFRESH_MIN_SECONDS, 300),
     autoPublish: bool(values.match_autoPublish, defaults.autoPublish),
+    shotLocations: bool(values.match_shotLocations, defaults.shotLocations),
     lineupDeadlineHours: integer(values.match_lineupDeadlineHours, defaults.lineupDeadlineHours, 0, 48),
     liveBadge: values.match_liveBadge === undefined ? defaults.liveBadge : values.match_liveBadge.trim(),
     autoShareCards: bool(values.match_autoShareCards, defaults.autoShareCards),

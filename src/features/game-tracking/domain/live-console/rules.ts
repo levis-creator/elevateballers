@@ -23,6 +23,8 @@ export interface ConsoleRules {
   unsportsToDQ: number;
   teamFoulsCarryIntoOT: boolean;
   trackTurnoverTypes: boolean;
+  /** From Match Page settings, not GameRules: prompt for 2PT / 3PT shot locations. */
+  askShotLocation: boolean;
 }
 
 export const FIBA = {
@@ -46,7 +48,7 @@ type RulesSource = Partial<
     | 'foulsToFoulOut'
     | 'trackTurnoverTypes'
   >
->;
+> & { askShotLocation?: boolean };
 
 export function toConsoleRules(source: RulesSource | null | undefined): ConsoleRules {
   const r = source ?? {};
@@ -65,6 +67,7 @@ export function toConsoleRules(source: RulesSource | null | undefined): ConsoleR
     unsportsToDQ: FIBA.unsportsToDQ,
     teamFoulsCarryIntoOT: FIBA.teamFoulsCarryIntoOT,
     trackTurnoverTypes: r.trackTurnoverTypes ?? true,
+    askShotLocation: r.askShotLocation ?? false,
   };
 }
 

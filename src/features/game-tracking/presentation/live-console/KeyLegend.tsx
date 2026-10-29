@@ -10,6 +10,7 @@ export const KEY_LEGEND = (homeName: string, awayShort: string): KeyItem[] => [
   { k: 'Y U I O P', d: `${awayShort} on floor` },
   { k: '2 · 3 · M', d: 'Made 2 / 3 / FT' },
   { k: '⇧ + 2 · 3 · M', d: 'Missed 2 / 3 / FT' },
+  { k: '1–9 · ↵', d: 'Shot location zone · skip (when asked)', was: 'new' },
   { k: 'A', d: 'Assist' },
   { k: 'X', d: 'Off. rebound', was: 'was O' },
   { k: 'D', d: 'Def. rebound' },

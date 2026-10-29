@@ -1,12 +1,14 @@
 import type { APIRoute } from 'astro';
 import { getMatchWithGameState } from '../../../../features/game-tracking/lib/queries';
+import { siteSettingsService, resolvePublicMatchPageSettings } from '../../../../features/settings';
 
 import { handleApiError } from '../../../../lib/apiError';
 export const prerender = false;
 
 /**
  * GET /api/games/[matchId]/rules
- * Get game rules for a match
+ * Get game rules for a match, plus the console options that come from site
+ * settings (askShotLocation).
  */
 export const GET: APIRoute = async ({ params, request }) => {
   try {
@@ -18,7 +20,10 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const match = await getMatchWithGameState(matchId);
+    const [match, matchSettings] = await Promise.all([
+      getMatchWithGameState(matchId),
+      siteSettingsService.list('match').catch(() => []),
+    ]);
 
     if (!match) {
       return new Response(JSON.stringify({ error: 'Match not found' }), {
@@ -27,7 +32,8 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    return new Response(JSON.stringify(match.gameRules), {
+    const askShotLocation = resolvePublicMatchPageSettings(matchSettings).shotLocations;
+    return new Response(JSON.stringify({ ...(match.gameRules ?? {}), askShotLocation }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {

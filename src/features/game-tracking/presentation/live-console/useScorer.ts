@@ -8,14 +8,19 @@
  * types on, V opens the type picker (1–9, the stealer's key, or ↵ untyped);
  * with them off, V logs the turnover and asks who stole it.
  *
+ * With "Ask for shot location" on (Match Page settings), a 2PT / 3PT shot is
+ * logged at once and then asks where it was taken: tap the court or press
+ * zone 1–9; ↵ or Esc skips. The assist / rebound prompt follows either way.
+ *
  * Keyboard: Q–T / Y–P pick the floor slots, 2 · 3 · M made shots (⇧ for a
  * miss), A X D assist and rebounds, B V block / turnover, F G H J
  * personal / technical / unsportsmanlike / ejection, K L bench and coach
  * technicals, Space the clock, ← → possession, Esc skip, ⌘Z / Ctrl+Z undo.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TURNOVER_TYPES, EVENT_LABEL, type TurnoverType } from '../../domain/live-console/model';
+import { TURNOVER_TYPES, EVENT_LABEL, type ConsoleEvent, type TurnoverType } from '../../domain/live-console/model';
 import { disqualification, emptyLine, lineOf } from '../../domain/live-console/derive';
+import { isThreeAt, locationForZone, type ShotLocation } from '../../domain/live-console/shotZones';
 import type { LiveConsole } from './useLiveConsole';
 import { tag } from './roster';
 
@@ -39,6 +44,7 @@ export type Action =
   | 'FOUL_COACH_TECHNICAL';
 
 export type Prompt =
+  | { kind: 'loc'; event: ConsoleEvent; three: boolean; label: string; next: Prompt | null }
   | { kind: 'ast'; parentCid: string; team: string; pid: string; label: string }
   | { kind: 'reb'; parentCid: string; team: string; pid: string; label: string }
   | { kind: 'stl'; parentCid: string; team: string; label: string }
@@ -115,6 +121,10 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
   const promptPick = useCallback(
     (team: string, pid: string) => {
       if (!prompt) return;
+      if (prompt.kind === 'loc') {
+        setHint('Tap where the shot was taken, press 1–9, or ↵ to skip.');
+        return;
+      }
       if (prompt.kind === 'ast') {
         if (team !== prompt.team || pid === prompt.pid) {
           setHint('Assist must come from a teammate on the floor.');
@@ -206,14 +216,21 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
       const e = lc.post({ eventType: type, teamId: team, playerId: pid });
       const p = lc.players.get(pid);
       const label = `${EVENT_LABEL[type]} · ${tag(p)}`;
+      let next: Prompt | null = null;
       if (type === 'TWO_POINT_MADE' || type === 'THREE_POINT_MADE') {
         lc.setPossession(lc.opp(team));
         const mates = (lc.floor[team] ?? []).filter((x) => x !== pid && !isOut(x));
-        if (mates.length) setPrompt({ kind: 'ast', parentCid: e.cid!, team, pid, label });
+        if (mates.length) next = { kind: 'ast', parentCid: e.cid!, team, pid, label };
       }
       if (type === 'REBOUND_DEFENSIVE') lc.setPossession(team);
       if (type === 'TWO_POINT_MISSED' || type === 'THREE_POINT_MISSED' || type === 'FREE_THROW_MISSED') {
-        setPrompt({ kind: 'reb', parentCid: e.cid!, team, pid, label });
+        next = { kind: 'reb', parentCid: e.cid!, team, pid, label };
+      }
+      const fieldGoal = ['TWO_POINT_MADE', 'TWO_POINT_MISSED', 'THREE_POINT_MADE', 'THREE_POINT_MISSED'].includes(type);
+      if (fieldGoal && lc.rules.askShotLocation) {
+        setPrompt({ kind: 'loc', event: e, three: type.startsWith('THREE'), label, next });
+      } else if (next) {
+        setPrompt(next);
       }
       if (['FOUL_PERSONAL', 'FOUL_TECHNICAL', 'FOUL_UNSPORTSMANLIKE', 'EJECTION'].includes(type)) {
         const next = { ...emptyLine(), ...lineOf(lc.d, pid) };
@@ -264,14 +281,37 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
     setPrompt(null);
   }, [prompt, lc]);
 
+  /** Records where the pending shot was taken, then moves on to its assist / rebound prompt. */
+  const pickLocation = useCallback(
+    (loc: ShotLocation) => {
+      if (prompt?.kind !== 'loc') return;
+      lc.setShotLocation(prompt.event, loc);
+      if (isThreeAt(loc.x, loc.y) !== prompt.three) {
+        lc.flash(`That spot is ${prompt.three ? 'inside' : 'behind'} the arc — kept as ${prompt.three ? '3PT' : '2PT'}`);
+      }
+      setPrompt(prompt.next);
+      setHint(null);
+    },
+    [prompt, lc],
+  );
+
+  const pickZone = useCallback(
+    (i: number) => {
+      const loc = locationForZone(i);
+      if (loc) pickLocation(loc);
+    },
+    [pickLocation],
+  );
+
+  // Skipping a shot location still asks for the assist / rebound that follows.
   const skipPrompt = useCallback(() => {
-    setPrompt(null);
+    setPrompt((p) => (p?.kind === 'loc' ? p.next : null));
     setHint(null);
   }, []);
 
   // ---- keyboard ------------------------------------------------------------
-  const ref = useRef({ act, pickSlot, pickTurnover, logUntypedTurnover, pickBench, teamRebound, skipPrompt, prompt, consoleTabActive, enabled, lc });
-  ref.current = { act, pickSlot, pickTurnover, logUntypedTurnover, pickBench, teamRebound, skipPrompt, prompt, consoleTabActive, enabled, lc };
+  const ref = useRef({ act, pickSlot, pickTurnover, logUntypedTurnover, pickBench, teamRebound, skipPrompt, pickZone, prompt, consoleTabActive, enabled, lc });
+  ref.current = { act, pickSlot, pickTurnover, logUntypedTurnover, pickBench, teamRebound, skipPrompt, pickZone, prompt, consoleTabActive, enabled, lc };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -311,6 +351,11 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
         r.pickSlot(...KEY_SLOTS[c]);
         return;
       }
+      if (pr?.kind === 'loc' && /^Digit[1-9]$/.test(c)) return r.pickZone(Number(c.slice(5)) - 1);
+      if (pr?.kind === 'loc' && (c === 'Enter' || c === 'NumpadEnter')) {
+        e.preventDefault();
+        return r.skipPrompt();
+      }
       if (pr?.kind === 'tov' && /^Digit[1-9]$/.test(c)) return r.pickTurnover(Number(c.slice(5)) - 1);
       if (pr?.kind === 'tov' && (c === 'Enter' || c === 'NumpadEnter')) {
         e.preventDefault();
@@ -341,6 +386,8 @@ export function useScorer(lc: LiveConsole, consoleTabActive: boolean, enabled = 
     pickBench,
     teamRebound,
     skipPrompt,
+    pickLocation,
+    pickZone,
     sub,
     setSub,
   };

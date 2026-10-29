@@ -355,14 +355,7 @@ export default function GameRulesEditor({ rulesId, onSave }: GameRulesEditorProp
               onCheckedChange={(checked) => handleChange('trackPlayingTime', checked)}
             />
           </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="recordShotLocations">Record Shot Locations</Label>
-            <Switch
-              id="recordShotLocations"
-              checked={formData.recordShotLocations}
-              onCheckedChange={(checked) => handleChange('recordShotLocations', checked)}
-            />
-          </div>
+          {/* Shot locations are switched on site-wide in Settings → Match Page → Live. */}
         </CardContent>
       </Card>
 

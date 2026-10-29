@@ -8,6 +8,7 @@ import type { Action, Scorer } from './useScorer';
 import { jersey, tag } from './roster';
 import { KEY_LEGEND, KeyLegend } from './KeyLegend';
 import { buildLogRows } from './ConsoleLog';
+import ShotLocationPicker from './ShotLocationPicker';
 
 const KEYS: Record<Side, string[]> = { home: ['Q', 'W', 'E', 'R', 'T'], away: ['Y', 'U', 'I', 'O', 'P'] };
 
@@ -161,7 +162,11 @@ function ActionPad({ lc, sc }: Props) {
   let promptSkip = 'Skip';
   let opts: Opt[] = [];
   if (prompt) {
-    if (prompt.kind === 'ast') {
+    if (prompt.kind === 'loc') {
+      promptSub = prompt.label;
+      promptTitle = 'Where was the shot?';
+      promptSkip = 'No location';
+    } else if (prompt.kind === 'ast') {
       promptSub = prompt.label;
       promptTitle = 'Assisted by?';
       promptSkip = 'No assist';
@@ -262,6 +267,15 @@ function ActionPad({ lc, sc }: Props) {
                 {promptSkip} <kbd className={kbdCls}>Esc</kbd>
               </button>
             </div>
+            {prompt.kind === 'loc' && (
+              <div className="mt-2.5">
+                <ShotLocationPicker three={prompt.three} onPick={sc.pickLocation} />
+                <div className="mt-1.5 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--txm)]">
+                  Tap the court · or press 1–9 · <kbd className={kbdCls}>↵</kbd> skip
+                </div>
+              </div>
+            )}
+            {sc.hint && <div className="mt-1 text-[12px] font-semibold text-[var(--warn)]">{sc.hint}</div>}
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {opts.map((o) => {
                 const p = o.pid ? lc.players.get(o.pid) : undefined;

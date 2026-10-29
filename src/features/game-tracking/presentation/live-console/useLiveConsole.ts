@@ -30,6 +30,7 @@ import {
   type ConsoleEventMeta,
 } from '../../domain/live-console/model';
 import { derive } from '../../domain/live-console/derive';
+import type { ShotLocation } from '../../domain/live-console/shotZones';
 import { applySwaps, reconcileSlots } from '../../domain/live-console/floor';
 import { baseFloor, teamShort, toRosterPlayer, tag, type RosterPlayer } from './roster';
 import { clockNow, useClockWorker } from './useConsoleClock';
@@ -519,6 +520,20 @@ export function useLiveConsole(match: MatchWithFullDetails, onRosterChanged: () 
     [send, matchId],
   );
 
+  /** Adds a shot location to an event already posted (queued until it's saved). */
+  const setShotLocation = useCallback(
+    (e: ConsoleEvent, shot: ShotLocation) =>
+      send({
+        kind: 'patch',
+        url: `/api/matches/${matchId}/events/:id`,
+        method: 'PUT',
+        body: { metadata: { ...e.metadata, shot } },
+        refId: e.id,
+        refCid: e.cid,
+      }),
+    [send, matchId],
+  );
+
   const undo = useCallback(
     (target: ConsoleEvent, players: Map<string, RosterPlayer>) => {
       if (isSubstitution(target)) {
@@ -682,6 +697,7 @@ export function useLiveConsole(match: MatchWithFullDetails, onRosterChanged: () 
     eventsLoaded,
     d,
     post,
+    setShotLocation,
     undo,
     undoLast: (pl: Map<string, RosterPlayer>) => {
       const target = lastUndoable(events);
