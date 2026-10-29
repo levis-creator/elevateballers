@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { FileText, Trash2, Upload } from 'lucide-react';
 import type { Field } from '../settingsSections';
+import { looksLikePdf } from '@/lib/pdf-upload';
 
 type Props = { field: Field; value: string; canManage: boolean; onChange: (key: string, value: string) => void };
 
@@ -11,15 +12,20 @@ export default function SettingsFileControl({ field, value, canManage, onChange 
 
   const upload = async (file?: File) => {
     if (!file) return;
-    if (file.type !== 'application/pdf') { setError('Only PDF files are allowed.'); return; }
+    if (!looksLikePdf(file)) { setError('Only PDF files are allowed.'); return; }
     if (file.size > 25 * 1024 * 1024) { setError('The PDF must be 25 MB or smaller.'); return; }
     setUploading(true); setError('');
     try {
       const body = new FormData(); body.append('file', file);
       const response = await fetch('/api/settings/rules-upload', { method: 'POST', body });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || 'Upload failed.');
-      onChange(field.key, String(result.url || result.filePath || ''));
+      if (!response.ok) {
+        // A platform or proxy error has no JSON body; say what happened instead of a bare failure.
+        const reason = response.status === 413 ? 'the file is larger than the server accepts' : `error ${response.status}`;
+        throw new Error(result.error || `Upload failed (${reason}).`);
+      }
+      if (!result.url && !result.filePath) throw new Error('Upload finished but no file address came back.');
+      onChange(field.key, String(result.url || result.filePath));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Upload failed.');
     } finally {

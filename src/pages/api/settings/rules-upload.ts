@@ -7,6 +7,7 @@ import { handleApiError } from '@/lib/apiError';
 import { enforceRateLimit } from '@/lib/rateLimit';
 import { resolveSecuritySettings } from '../../../features/settings/application/securitySettings';
 import { logAudit } from '@/features/cms/lib/audit';
+import { hasPdfSignature, looksLikePdf } from '@/lib/pdf-upload';
 
 export const prerender = false;
 
@@ -43,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    if (file.type !== 'application/pdf') {
+    if (!looksLikePdf(file)) {
       return new Response(JSON.stringify({ error: 'Only PDF files are allowed' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -58,8 +59,19 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    // Browsers report PDFs inconsistently, so the bytes decide, and the stored
+    // object is always served as application/pdf.
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (!hasPdfSignature(bytes)) {
+      return new Response(JSON.stringify({ error: 'This file is not a valid PDF.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const fileName = createPdfFileName(file.name);
-    const { publicUrl, filePath } = await saveFile('documents', file, false, fileName);
+    const pdf = new File([bytes], fileName, { type: 'application/pdf' });
+    const { publicUrl, filePath } = await saveFile('documents', pdf, false, fileName);
     let folder = await getFolderByName('documents');
 
     if (!folder) {
@@ -84,7 +96,7 @@ export const POST: APIRoute = async ({ request }) => {
         size: file.size,
         originalSize: file.size,
         compressionRatio: 0,
-        mimeType: file.type,
+        mimeType: 'application/pdf',
         isPrivate: false,
         uploadedBy: user.id,
         tags: ['rules', 'pdf'],

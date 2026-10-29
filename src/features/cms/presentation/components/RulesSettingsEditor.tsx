@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermissions } from '@/features/rbac/usePermissions';
+import { looksLikePdf } from '@/lib/pdf-upload';
 
 interface SiteSetting {
   id: string;
@@ -161,7 +162,7 @@ export default function RulesSettingsEditor() {
       return;
     }
 
-    if (file.type !== 'application/pdf') {
+    if (!looksLikePdf(file)) {
       alert('Please upload a PDF file.');
       event.target.value = '';
       return;
@@ -178,10 +179,10 @@ export default function RulesSettingsEditor() {
         body: formData,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to upload PDF');
+        throw new Error(data.error || `Failed to upload PDF (error ${response.status})`);
       }
 
       if (data.url) {
@@ -257,7 +258,7 @@ export default function RulesSettingsEditor() {
 
             <div className="space-y-1.5">
               <Label htmlFor="rules-pdf-upload">Upload New PDF</Label>
-              <Input id="rules-pdf-upload" type="file" accept="application/pdf" onChange={handleFileUpload} disabled={!canManage || uploading} />
+              <Input id="rules-pdf-upload" type="file" accept="application/pdf,.pdf" onChange={handleFileUpload} disabled={!canManage || uploading} />
               {uploading && <p className="text-sm text-gray-500">Uploading PDF...</p>}
               <p className="text-xs text-gray-400">Uploading will automatically update the URL field above.</p>
             </div>
