@@ -67,6 +67,17 @@ describe('renderStatSheetPdf', () => {
     expect(withLogo.length).toBeGreaterThan(without.length);
   });
 
+  it('leaves out turned-off sections', async () => {
+    const full = await PDFDocument.load(await renderStatSheetPdf(data(), theme, await fonts()));
+    const headerOnly = await PDFDocument.load(
+      await renderStatSheetPdf(data(), theme, await fonts(), null, {
+        comparison: false, shooting: false, boxScores: false, minutes: false, watermark: false, footerNote: 'Official result',
+      }),
+    );
+    expect(full.getPageCount()).toBeGreaterThan(1);
+    expect(headerOnly.getPageCount()).toBe(1);
+  });
+
   it('renders a single result page for a manually entered score', async () => {
     const bytes = await renderStatSheetPdf(data({ manualScore: true }), theme, await fonts());
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);

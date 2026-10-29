@@ -12,6 +12,13 @@ import {
   buildThemeColorPalette,
   type PublicBrandSettings,
 } from '../../../settings/application/brandSettings';
+import {
+  DEFAULT_STAT_SHEET_SETTINGS,
+  type StatSheetSettings,
+} from '../../../settings/application/statSheetSettings';
+
+/** Which parts of the sheet to draw (Match Page → Stat sheet PDF settings). */
+export type StatSheetOptions = Omit<StatSheetSettings, 'logo'>;
 
 export type PlayerStatRow = {
   team: string;
@@ -162,7 +169,6 @@ const W = 595;
 const H = 842;
 const M = 36;
 const CW = W - M * 2;
-const FOOTER_H = 34;
 
 type Fonts = { display: PDFFont; body: PDFFont; bodyBold: PDFFont; label: PDFFont; labelBold: PDFFont };
 type FontKey = keyof Fonts;
@@ -173,24 +179,36 @@ class Sheet {
   page!: PDFPage;
   y = 0;
   pages: PDFPage[] = [];
+  private section = 0;
 
   constructor(
     private doc: PDFDocument,
     readonly fonts: Fonts,
     readonly t: StatSheetTheme,
-    readonly logo: PDFImage | null = null,
+    readonly logo: PDFImage | null,
+    readonly opts: StatSheetOptions,
   ) {}
+
+  /** Footer band height; a footer note adds a line above it. */
+  get footerH() {
+    return this.opts.footerNote ? 46 : 34;
+  }
+
+  /** Sections are numbered in the order they're drawn, skipping turned-off ones. */
+  nextSection() {
+    return ++this.section;
+  }
 
   newPage() {
     this.page = this.doc.addPage([W, H]);
     this.pages.push(this.page);
-    this.watermark();
+    if (this.opts.watermark) this.watermark();
     this.y = H - M;
   }
 
   /** Starts a new page when `height` doesn't fit above the footer. Returns true if it did. */
   ensure(height: number): boolean {
-    if (this.y - height >= M + FOOTER_H) return false;
+    if (this.y - height >= M + this.footerH) return false;
     this.newPage();
     return true;
   }
@@ -344,9 +362,10 @@ function drawHeader(sheet: Sheet, d: MatchStatSheetData) {
   sheet.y = base - 22;
 }
 
-function drawSectionHeader(sheet: Sheet, index: number, title: string, subtitle?: string) {
+/** `keepWith` is the height of content that must stay on the same page as the heading. */
+function drawSectionHeader(sheet: Sheet, index: number, title: string, subtitle?: string, keepWith = 0) {
   const { t } = sheet;
-  sheet.ensure(subtitle ? 70 : 58);
+  sheet.ensure((subtitle ? 38 : 24) + keepWith);
   const y = sheet.y;
   sheet.label(String(index).padStart(2, '0'), M, y - 8, { font: 'labelBold', color: t.brand });
   sheet.text(sheet.heading(title), M + 22, y - 12, { font: 'display', size: 16, color: t.ink, maxWidth: CW - 22 });
@@ -370,7 +389,7 @@ function drawTableHead(sheet: Sheet, height: number, accent: RGB | null, draw: (
 
 function drawTeamComparison(sheet: Sheet, d: MatchStatSheetData) {
   const { t } = sheet;
-  drawSectionHeader(sheet, 1, 'Team comparison');
+  drawSectionHeader(sheet, sheet.nextSection(), 'Team comparison', undefined, 22 + 10 * 19);
 
   const a = d.team1Totals;
   const b = d.team2Totals;
@@ -416,7 +435,7 @@ function drawTeamComparison(sheet: Sheet, d: MatchStatSheetData) {
 
 function drawShotSummary(sheet: Sheet, d: MatchStatSheetData) {
   const { t } = sheet;
-  drawSectionHeader(sheet, 2, 'Shooting');
+  drawSectionHeader(sheet, sheet.nextSection(), 'Shooting', undefined, 3 * 30 + 8);
 
   const rows = [
     { label: 'Field goals', a: d.team1Totals.fieldGoals, ap: d.team1Totals.fieldGoalPercentage, b: d.team2Totals.fieldGoals, bp: d.team2Totals.fieldGoalPercentage },
@@ -469,10 +488,18 @@ const ROSTER_COLS = [
 ] as const;
 
 type RosterKey = (typeof ROSTER_COLS)[number]['key'];
+type RosterCol = { key: RosterKey; label: string; width: number; align: Align };
+
+/** The roster columns; without minutes the player column takes the MIN width. */
+function rosterCols(minutes: boolean): RosterCol[] {
+  if (minutes) return [...ROSTER_COLS];
+  const min = ROSTER_COLS.find((c) => c.key === 'min')!.width;
+  return ROSTER_COLS.filter((c) => c.key !== 'min').map((c) => (c.key === 'player' ? { ...c, width: c.width + min } : c));
+}
 
 function drawRosterRow(sheet: Sheet, row: Record<RosterKey, string>, baseline: number, o: { bold?: boolean; color?: RGB } = {}) {
   let x = M;
-  for (const col of ROSTER_COLS) {
+  for (const col of rosterCols(sheet.opts.minutes)) {
     const value = row[col.key];
     const font: FontKey = o.bold || col.key === 'pts' ? 'bodyBold' : 'body';
     const at = col.align === 'right' ? x + col.width - 6 : col.align === 'center' ? x + col.width / 2 : x + 4;
@@ -481,20 +508,19 @@ function drawRosterRow(sheet: Sheet, row: Record<RosterKey, string>, baseline: n
   }
 }
 
-function drawRosterTable(sheet: Sheet, index: number, side: 'home' | 'away', teamName: string, totals: TeamTotalsRow, rows: PlayerStatRow[]) {
+function drawRosterTable(sheet: Sheet, side: 'home' | 'away', teamName: string, totals: TeamTotalsRow, rows: PlayerStatRow[]) {
   const { t } = sheet;
   const accent = side === 'home' ? t.home : t.away;
   const subtitle = `${totals.points} pts  ·  FG ${totals.fieldGoals} ${totals.fieldGoalPercentage}  ·  3PT ${totals.threePointers} ${totals.threePointPercentage}  ·  FT ${totals.freeThrows} ${totals.freeThrowPercentage}`;
-  drawSectionHeader(sheet, index, `${teamName} box score`, subtitle);
-
   const HEAD_H = 20;
   const ROW_H = 18;
   const TOTALS_H = 20;
+  drawSectionHeader(sheet, sheet.nextSection(), `${teamName} box score`, subtitle, HEAD_H + ROW_H * 2 + TOTALS_H);
 
   const head = () =>
     drawTableHead(sheet, HEAD_H, accent, (by) => {
       let x = M;
-      for (const col of ROSTER_COLS) {
+      for (const col of rosterCols(sheet.opts.minutes)) {
         const at = col.align === 'right' ? x + col.width - 6 : col.align === 'center' ? x + col.width / 2 : x + 4;
         sheet.label(col.label, at, by, { font: 'labelBold', size: 6, tracking: 0.6, align: col.align });
         x += col.width;
@@ -558,7 +584,7 @@ function drawRosterTable(sheet: Sheet, index: number, side: 'home' | 'away', tea
 
 function drawManualNote(sheet: Sheet) {
   const { t } = sheet;
-  drawSectionHeader(sheet, 1, 'Result only');
+  drawSectionHeader(sheet, sheet.nextSection(), 'Result only', undefined, 72);
   const boxH = 46;
   const top = sheet.y - 6;
   sheet.rect(M, top - boxH, CW, boxH, t.panel);
@@ -571,13 +597,16 @@ function drawManualNote(sheet: Sheet) {
 function drawFooters(sheet: Sheet, d: MatchStatSheetData) {
   const { t } = sheet;
   const total = sheet.pages.length;
-  const legend = 'GS S = starter · MIN minutes · FG field goals · 3PT three-pointers · FT free throws · REB rebounds · AST assists · STL steals · BLK blocks · TO turnovers · PF fouls';
+  const legend = `GS S = starter · ${sheet.opts.minutes ? 'MIN minutes · ' : ''}FG field goals · 3PT three-pointers · FT free throws · REB rebounds · AST assists · STL steals · BLK blocks · TO turnovers · PF fouls`;
   sheet.pages.forEach((page, i) => {
     sheet.page = page;
+    if (sheet.opts.footerNote) {
+      sheet.text(sheet.opts.footerNote, M, M + 31, { size: 7, color: t.muted, maxWidth: CW });
+    }
     sheet.line(M, M + 24, W - M, M + 24, t.border, 0.6);
     sheet.label(`${t.siteName}  ·  ${d.team1Name} vs ${d.team2Name}`, M, M + 13, { size: 6, color: t.muted, maxWidth: CW - 80 });
     sheet.label(`Page ${i + 1} / ${total}`, W - M, M + 13, { size: 6, color: t.muted, align: 'right', font: 'labelBold' });
-    if (!d.manualScore) sheet.label(legend, M, M + 3, { size: 5, tracking: 0, color: t.soft, maxWidth: CW });
+    if (!d.manualScore && sheet.opts.boxScores) sheet.label(legend, M, M + 3, { size: 5, tracking: 0, color: t.soft, maxWidth: CW });
   });
 }
 
@@ -600,6 +629,7 @@ export async function renderStatSheetPdf(
   theme: StatSheetTheme,
   fontBytes: StatSheetFontBytes,
   logoBytes?: Uint8Array | null,
+  options: StatSheetOptions = DEFAULT_STAT_SHEET_SETTINGS,
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -616,16 +646,18 @@ export async function renderStatSheetPdf(
   doc.setAuthor(theme.siteName);
   doc.setCreator(theme.siteName);
 
-  const sheet = new Sheet(doc, { display, body, bodyBold, label, labelBold }, theme, await embedLogo(doc, logoBytes));
+  const sheet = new Sheet(doc, { display, body, bodyBold, label, labelBold }, theme, await embedLogo(doc, logoBytes), options);
   sheet.newPage();
   drawHeader(sheet, d);
   if (d.manualScore) {
     drawManualNote(sheet);
   } else {
-    drawTeamComparison(sheet, d);
-    drawShotSummary(sheet, d);
-    drawRosterTable(sheet, 3, 'home', d.team1Name, d.team1Totals, d.team1Rows);
-    drawRosterTable(sheet, 4, 'away', d.team2Name, d.team2Totals, d.team2Rows);
+    if (options.comparison) drawTeamComparison(sheet, d);
+    if (options.shooting) drawShotSummary(sheet, d);
+    if (options.boxScores) {
+      drawRosterTable(sheet, 'home', d.team1Name, d.team1Totals, d.team1Rows);
+      drawRosterTable(sheet, 'away', d.team2Name, d.team2Totals, d.team2Rows);
+    }
   }
   drawFooters(sheet, d);
 

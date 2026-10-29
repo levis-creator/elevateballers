@@ -7,7 +7,12 @@ import { formatMinutes, secondsPlayed, type MinutesEvent } from '../../../game-t
 import { toConsoleRules } from '../../../game-tracking/domain/live-console/rules';
 import { MATCH_TIMEZONE } from '../../../matches/domain/usecases/utils';
 import { calculatePlayerMatchStats, type PlayerMatchStatistics } from '../../../player/lib/playerStats';
-import { siteSettingsService, resolvePublicBrandSettings, resolvePublicHeaderSettings } from '../../../settings';
+import {
+  siteSettingsService,
+  resolvePublicBrandSettings,
+  resolvePublicHeaderSettings,
+  resolveStatSheetSettings,
+} from '../../../settings';
 import type { PublicBrandSettings } from '../../../settings/application/brandSettings';
 import {
   STAT_SHEET_FONT_FILES,
@@ -307,8 +312,9 @@ export async function generateMatchStatSheetPDF(matchId: string, origin?: string
     siteSettingsService.list().catch(() => []),
   ]);
   const brand = resolvePublicBrandSettings(settings);
-  const header = resolvePublicHeaderSettings(settings);
-  const [fonts, logo] = await Promise.all([loadStatSheetFonts(brand), loadLogo(header.logo, origin)]);
-  const pdf = await renderStatSheetPdf(data, buildStatSheetTheme(brand), fonts, logo);
+  const { logo: sheetLogo, ...options } = resolveStatSheetSettings(settings);
+  const logoPath = sheetLogo || resolvePublicHeaderSettings(settings).logo;
+  const [fonts, logo] = await Promise.all([loadStatSheetFonts(brand), loadLogo(logoPath, origin)]);
+  const pdf = await renderStatSheetPdf(data, buildStatSheetTheme(brand), fonts, logo, options);
   return { pdf, fileName: data.fileName };
 }

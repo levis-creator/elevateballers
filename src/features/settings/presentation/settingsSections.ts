@@ -2820,6 +2820,46 @@ export const SECTIONS: Section[] = [
           ),
         ],
       },
+      {
+        label: 'Stat sheet PDF',
+        description: 'The post-game stat sheet admins download for completed matches. Colours and fonts follow Brand settings.',
+        fields: [
+          f(
+            'match_sheetLogo',
+            'Logo',
+            'PNG or JPG, printed on a light strip at the top. Leave empty to use the header logo.',
+            { type: 'image', placeholder: 'Logo' }
+          ),
+          f('match_sheetComparison', 'Team comparison', 'Side-by-side team totals.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('match_sheetShooting', 'Shooting', 'Field goal, 3-point and free throw bars.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f('match_sheetBoxScores', 'Box scores', 'One player table per team.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f(
+            'match_sheetMinutes',
+            'Minutes column',
+            'Game-clock minutes from logged substitutions. Turn off if scorers don’t log subs.',
+            { type: 'toggle', defaultValue: 'true' }
+          ),
+          f('match_sheetWatermark', 'Watermark', 'Faint site name across each page.', {
+            type: 'toggle',
+            defaultValue: 'true',
+          }),
+          f(
+            'match_sheetFooterNote',
+            'Footer note',
+            'One line above the page footer, e.g. “Official result — subject to league review”. Up to 160 characters.',
+            { placeholder: 'Official result — subject to league review', counter: 160 }
+          ),
+        ],
+      },
     ],
     '/matches'
   ),
