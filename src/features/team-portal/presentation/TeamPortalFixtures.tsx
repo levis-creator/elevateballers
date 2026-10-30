@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, CalendarDays } from 'lucide-react';
-import { Skeleton, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type Fixture = {
   id: string;
@@ -47,6 +47,7 @@ export default function TeamPortalFixtures({
   const [data, setData] = useState<FixturesData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
   const [tab, setTab] = useState<'upcoming' | 'results'>('upcoming');
 
   useEffect(() => {
@@ -88,7 +89,7 @@ export default function TeamPortalFixtures({
           {error}
         </div>
       )}
-      {loading ? (
+      <div className={loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
         <section className="portal-fixtures-card rounded-2xl border p-5 text-[13px] text-[#8a817a]">
           <SkeletonRegion label="Loading fixtures">{Array.from({ length: 4 }, (_, i) => <div key={i} className="eb-skel-row" style={{ justifyContent: 'space-between' }}><div className="eb-skel-stack" style={{ maxWidth: 90 }}><Skeleton w={60} h={9} /><Skeleton w={44} h={9} /></div><div className="eb-skel-row" style={{ flex: 1, justifyContent: 'center' }}><Skeleton w="28%" h={12} /><Skeleton w={52} h={22} style={{ borderRadius: 7 }} /><Skeleton w="28%" h={12} /></div><Skeleton w={64} h={20} round /></div>)}</SkeletonRegion>
         </section>
@@ -147,7 +148,7 @@ export default function TeamPortalFixtures({
             )}
           </section>
         </div>
-      )}
+      )}</div>
     </div>
   );
 }

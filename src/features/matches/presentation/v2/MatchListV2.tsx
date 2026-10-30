@@ -37,7 +37,7 @@ import {
   type ListMatch,
 } from '../../domain/usecases/match-list-view';
 import { useMatchListData } from './hooks/useMatchListData';
-import { Skeleton, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 /* -------------------------------------------------------------------------- */
 /* Small shared primitives                                                    */
@@ -492,6 +492,7 @@ function Pagination({
 
 function MatchListContent() {
   const d = useMatchListData();
+  const firstLoad = useFirstLoad(d.loading);
   const canCreate = d.can('matches:create');
   const canEdit = d.can('matches:update');
   const canDelete = d.can('matches:delete');
@@ -634,7 +635,7 @@ function MatchListContent() {
       )}
 
       {/* body */}
-      {d.loading ? (
+      <div className={d.loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
         <SkeletonRegion label="Loading matches" style={{ gap: 26 }}>
           {[3, 2].map((count, group) => (
             <div key={group} className="eb-skel-region" style={{ gap: 10 }}>
@@ -696,7 +697,7 @@ function MatchListContent() {
             />
           ))}
         </div>
-      )}
+      )}</div>
 
       {/* pagination */}
       {!d.loading && d.filtered.length > 0 && d.pageCount > 1 && (

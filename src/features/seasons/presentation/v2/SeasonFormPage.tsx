@@ -5,12 +5,13 @@ import { useSeasonForm } from "./hooks/useSeasonForm";
 import SeasonDetailsCard from "./components/SeasonDetailsCard";
 import LeagueSeasonPanels from "./components/LeagueSeasonPanels";
 import SeasonPreviewRail from "./components/SeasonPreviewRail";
-import { Skeleton, SkeletonForm, SkeletonHeader, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
+import { Skeleton, SkeletonForm, SkeletonHeader, SkeletonRegion, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 function SeasonFormContent({ seasonId }: { seasonId?: string }) {
 	const v = useSeasonForm(seasonId);
+	const firstLoad = useFirstLoad(v.loading);
 
-	if (v.loading) {
+	if (firstLoad) {
 		return <SkeletonRegion label="Loading season"><Skeleton w={120} h={11} /><SkeletonHeader /><SkeletonForm panels={2} /></SkeletonRegion>;
 	}
 

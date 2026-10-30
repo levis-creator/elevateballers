@@ -8,7 +8,7 @@ import {
   Send,
   Trophy,
 } from 'lucide-react';
-import { Skeleton, SkeletonRegion, SkeletonText } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, SkeletonText, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type Option = {
   id: string;
@@ -56,6 +56,7 @@ export default function TeamSeasonRegistration({
   const [editionId, setEditionId] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<{
@@ -214,7 +215,7 @@ export default function TeamSeasonRegistration({
             <span>{error}</span>
           </div>
         )}
-        {loading ? (
+        <div className={loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
           <section className="portal-registration-card rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-6 text-[13px] text-[#8a817a]">
             <SkeletonRegion label="Loading the season entry window"><Skeleton w={200} h={14} /><SkeletonText lines={2} /><div className="eb-skel-row"><Skeleton w={130} h={36} style={{ borderRadius: 9 }} /><Skeleton w={90} h={36} style={{ borderRadius: 9 }} /></div></SkeletonRegion>
           </section>
@@ -258,7 +259,7 @@ export default function TeamSeasonRegistration({
               />
             </div>
           </div>
-        )}
+        )}</div>
       </>
     </div>
   );

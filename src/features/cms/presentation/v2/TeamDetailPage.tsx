@@ -10,13 +10,14 @@ import {
   RosterSection,
   StaffSection,
 } from './TeamDetailSections';
-import { Skeleton, SkeletonDetail, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonDetail, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 export default function TeamDetailPage({ teamId }: { teamId: string }) {
   const data = useTeamDetail(teamId);
+  const firstLoad = useFirstLoad(data.loading);
   const [tab, setTab] = useState<DetailTab>('roster');
   const [registrationRequested, setRegistrationRequested] = useState(false);
-  if (data.loading)
+  if (firstLoad)
     return (
       <SkeletonRegion label="Loading team">
         <Skeleton w={160} h={11} />

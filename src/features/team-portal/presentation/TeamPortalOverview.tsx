@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowRight, CircleAlert, CircleCheck, Clock } from 'lucide-react';
 import type { NeedsYouItem, NeedsYouTarget } from '../domain/entities/needs-you';
-import { Skeleton, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type NextFixture = {
   id: string;
@@ -49,6 +49,7 @@ export default function TeamPortalOverview({
   const [data, setData] = useState<OverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
 
   useEffect(() => {
     setLoading(true);
@@ -111,7 +112,7 @@ export default function TeamPortalOverview({
                 </span>
               )}
             </div>
-            {loading ? (
+            {firstLoad ? (
               <SkeletonRegion label="Loading next match" className="text-[#8a817a]"><Skeleton w={110} h={9} /><div className="eb-skel-row"><Skeleton w="35%" h={16} /><Skeleton w={30} h={10} /><Skeleton w="35%" h={16} /></div><Skeleton w="60%" h={10} /></SkeletonRegion>
             ) : next ? (
               <>

@@ -6,10 +6,11 @@ import { useLeagues } from "./hooks/useLeagues";
 import LeagueKpis from "./components/LeagueKpis";
 import LeagueCard from "./components/LeagueCard";
 import type { LeagueFilter } from "@/features/leagues/domain/entities/league";
-import { SkeletonCards, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
+import { SkeletonCards, SkeletonRegion, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 function LeaguesContent() {
 	const v = useLeagues();
+	const firstLoad = useFirstLoad(v.loading);
 	const [menuId, setMenuId] = useState<string | null>(null);
 
 	// Close an open kebab menu on any click outside of one.
@@ -123,7 +124,7 @@ function LeaguesContent() {
 			)}
 
 			{/* body */}
-			{v.loading ? (
+			<div className={v.loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
 				<SkeletonRegion label="Loading leagues">
 					<SkeletonCards count={4} min={380} />
 				</SkeletonRegion>
@@ -168,7 +169,7 @@ function LeaguesContent() {
 						/>
 					))}
 				</div>
-			)}
+			)}</div>
 		</div>
 	);
 }

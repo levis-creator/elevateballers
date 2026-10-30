@@ -18,7 +18,7 @@ import {
   type AuditLogEntry,
 } from '../../domain/usecases/audit-log-view';
 import { useAuditLogsData, TIME_RANGE_LABEL, type OutcomeFilter, type TimeRangeFilter } from './hooks/useAuditLogsData';
-import { Skeleton, SkeletonList, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonList, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 /* -------------------------------------------------------------------------- */
 /* Small shared primitives                                                    */
@@ -302,6 +302,7 @@ function AuditLogsContent() {
   const { can } = usePermissions();
   const canManage = can('audit_logs:manage');
   const d = useAuditLogsData();
+  const firstLoad = useFirstLoad(d.loading);
   const [exportOpen, setExportOpen] = useState(false);
 
   return (
@@ -542,7 +543,7 @@ function AuditLogsContent() {
 
       {/* timeline */}
       <div className="overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf)]">
-        {d.loading ? (
+        <div className={d.loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
           <SkeletonRegion label="Loading audit logs" style={{ padding: 16 }}>
             <Skeleton w={130} h={10} />
             <SkeletonList rows={8} bare />
@@ -568,7 +569,7 @@ function AuditLogsContent() {
               ))}
             </div>
           ))
-        )}
+        )}</div>
       </div>
 
       <p className="mt-3 px-1 font-['Archivo'] text-[11.5px] text-[var(--faint)]">

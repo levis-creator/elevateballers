@@ -3,7 +3,7 @@ import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Shield, Users, Calendar, Images, Newspaper, Handshake, Inbox, CalendarDays, Check, Trophy, Activity as ActivityIcon, Plus, HardDrive } from "lucide-react";
 import { useDashboardData, type Approval, type Fixture, type LineupStatus } from "./hooks/useDashboardData";
-import { SkeletonHeader, SkeletonList, SkeletonPanel, SkeletonRegion, SkeletonStats } from "@/shared/components/skeleton/Skeleton";
+import { SkeletonHeader, SkeletonList, SkeletonPanel, SkeletonRegion, SkeletonStats, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 const KPI_ICONS: Record<string, typeof Shield> = {
 	teams: Shield,
@@ -75,6 +75,7 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
 
 function DashboardContent() {
 	const d = useDashboardData();
+	const firstLoad = useFirstLoad(d.loading);
 	const [tab, setTab] = useState<Approval["tab"]>("Players");
 
 	const tabs: Approval["tab"][] = ["Players", "Teams", "Roster", "Messages"];
@@ -85,7 +86,7 @@ function DashboardContent() {
 	}, [d.approvals]);
 	const visible = d.approvals.filter((a) => a.tab === tab);
 
-	if (d.loading) {
+	if (firstLoad) {
 		return (
 			<SkeletonRegion label="Loading dashboard">
 				<SkeletonHeader action={false} />

@@ -25,7 +25,7 @@ import {
 import type { NewsArticleDTO } from '../../../cms/types';
 import { reverseCategoryMap } from '../../../cms/types';
 import './admin-news.css';
-import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type ViewMode = 'list' | 'grid';
 type Status = 'published' | 'draft' | 'scheduled';
@@ -142,7 +142,8 @@ export default function AdminNewsListV2() {
       <div className="eb-news-heading-actions"><a className="eb-news-quiet" href="/admin/media"><ImageIcon size={15} /> Media library</a><a className="eb-news-primary" href="/admin/news/new"><Plus size={15} /> New article</a></div>
     </header>
   );
-  if (loading) return <section className="eb-news-page">{heading}<SkeletonRegion label="Loading articles"><SkeletonStats count={5} min={150} /><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={8} columns={3} /></SkeletonRegion></section>;
+  const firstLoad = useFirstLoad(loading);
+  if (firstLoad) return <section className="eb-news-page">{heading}<SkeletonRegion label="Loading articles"><SkeletonStats count={5} min={150} /><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={8} columns={3} /></SkeletonRegion></section>;
   if (error) return <div className="eb-news-error"><Newspaper size={28} /><strong>Could not load articles</strong><span>{error}</span><button onClick={() => void load()}><RefreshCw size={14} /> Try again</button></div>;
 
   return <section className="eb-news-page">

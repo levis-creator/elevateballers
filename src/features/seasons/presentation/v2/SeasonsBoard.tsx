@@ -6,10 +6,11 @@ import { useSeasons } from "./hooks/useSeasons";
 import SeasonKpis from "./components/SeasonKpis";
 import SeasonCard from "./components/SeasonCard";
 import type { SeasonFilter } from "@/features/seasons/domain/entities/season";
-import { SkeletonCards, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
+import { SkeletonCards, SkeletonRegion, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 function SeasonsContent() {
 	const v = useSeasons();
+	const firstLoad = useFirstLoad(v.loading);
 	const [menuId, setMenuId] = useState<string | null>(null);
 
 	// Close an open kebab menu on any click outside of one.
@@ -123,7 +124,7 @@ function SeasonsContent() {
 			)}
 
 			{/* body */}
-			{v.loading ? (
+			<div className={v.loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
 				<SkeletonRegion label="Loading seasons">
 					<SkeletonCards count={3} min={900} />
 				</SkeletonRegion>
@@ -173,7 +174,7 @@ function SeasonsContent() {
 						Showing {v.filtered.length} of {v.seasons.length}
 					</div>
 				</>
-			)}
+			)}</div>
 		</div>
 	);
 }

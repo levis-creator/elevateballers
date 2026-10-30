@@ -16,7 +16,7 @@ import type {
 import { staffHistoryApi } from '@/features/staff/data/datasources/staff-history-api';
 import { STAFF_ROLES, staffRoleLabel } from '@/features/staff/domain/entities/staff-management';
 import type { StaffRole } from '@prisma/client';
-import { SkeletonDetail, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { SkeletonDetail, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type Tab = 'overview' | 'history' | 'matches' | 'account' | 'activity';
 type PortalUser = {
@@ -72,6 +72,7 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
   const [error, setError] = useState('');
   useEffect(() => {
     Promise.all([
@@ -115,7 +116,7 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
   // Keep closed assignments in the response so a transfer never erases the
   // outgoing club from the staff member's historical record.
   const historyRows = assignments;
-  if (loading)
+  if (firstLoad)
     return (
       <Shell>
         <SkeletonRegion label="Loading staff member">

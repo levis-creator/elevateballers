@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Briefcase, ChevronLeft, ChevronRight, KeyRound, Mail, MoreHorizontal, Plus, Search, ShieldAlert } from "lucide-react";
 import { staffApi, type StaffListRow } from "@/features/staff/data/datasources/staff-api";
 import { STAFF_ROLES, staffRoleLabel } from "@/features/staff/domain/entities/staff-management";
-import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable } from "@/shared/components/skeleton/Skeleton";
+import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 const PAGE_SIZE = 12;
 type Access = "all" | "active" | "invited" | "none";
@@ -12,6 +12,7 @@ const accessOf = (person: StaffListRow): Exclude<Access, "all"> => !person.user 
 
 export default function StaffList() {
   const [staff, setStaff] = useState<StaffListRow[]>([]); const [query, setQuery] = useState(""); const [role, setRole] = useState("all"); const [team, setTeam] = useState("all"); const [access, setAccess] = useState<Access>("all"); const [flagged, setFlagged] = useState(false); const [letter, setLetter] = useState<string | null>(null); const [page, setPage] = useState(1); const [selected, setSelected] = useState<Set<string>>(new Set()); const [menu, setMenu] = useState<string | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
+  const firstLoad = useFirstLoad(loading);
   const load = () => { setLoading(true); staffApi.list().then(setStaff).catch((e) => setError(e.message || "Unable to load staff")).finally(() => setLoading(false)); }; useEffect(load, []);
   const teams = useMemo(() => Array.from(new Set(staff.flatMap((person) => person.teams.map((assignment) => assignment.team.name)))).sort(), [staff]);
   const currentTeams = (person: StaffListRow) => { const now = new Date(); return person.teams.filter((assignment) => assignment.effectiveFrom <= now && (!assignment.effectiveTo || assignment.effectiveTo > now)); };
@@ -21,7 +22,7 @@ export default function StaffList() {
   const heading = (
     <header className="mb-5 flex flex-wrap items-end justify-between gap-4"><div><div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--brand)]">People &amp; operations</div><h1 className="font-display text-[34px] uppercase leading-none">Staff</h1><p className="mt-2 text-[13px] text-[var(--txm)]">Coaches, managers and operations staff across every club.</p></div><a href="/admin/staff/new" className="inline-flex items-center rounded-lg bg-[var(--brand)] px-3.5 py-2.5 text-[12px] font-extrabold text-white no-underline hover:opacity-90"><Plus className="mr-2 h-4 w-4" />Add staff</a></header>
   );
-  if (loading) return <div className="min-h-full bg-[var(--bg)] px-4 py-5 font-body text-[var(--tx)] sm:px-6 lg:px-8"><div className="mx-auto max-w-[1500px]">{heading}<SkeletonRegion label="Loading staff"><SkeletonStats count={4} /><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={10} columns={3} /></SkeletonRegion></div></div>;
+  if (firstLoad) return <div className="min-h-full bg-[var(--bg)] px-4 py-5 font-body text-[var(--tx)] sm:px-6 lg:px-8"><div className="mx-auto max-w-[1500px]">{heading}<SkeletonRegion label="Loading staff"><SkeletonStats count={4} /><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={10} columns={3} /></SkeletonRegion></div></div>;
   return <div className="min-h-full bg-[var(--bg)] px-4 py-5 font-body text-[var(--tx)] sm:px-6 lg:px-8"><div className="mx-auto max-w-[1500px]">
     {heading}
     {error && <p role="alert" className="mb-4 rounded-lg border border-[var(--brand)]/40 bg-[var(--brand)]/10 p-3 text-sm text-[var(--brand)]">{error}</p>}

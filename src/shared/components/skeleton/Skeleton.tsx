@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import './skeleton.css';
 
 /**
@@ -6,6 +6,18 @@ import './skeleton.css';
  * header and filters on screen and put one of these where the data will appear,
  * so nothing jumps when it arrives.
  */
+
+/**
+ * True only while a page's first load is in progress. Later reloads (after a
+ * save, a filter change, a refresh) keep the current content on screen instead
+ * of swapping it back to a skeleton; give that content `eb-refreshing` while
+ * `loading` is still true to show it is updating.
+ */
+export function useFirstLoad(loading: boolean): boolean {
+  const [loadedOnce, setLoadedOnce] = useState(!loading);
+  if (!loading && !loadedOnce) setLoadedOnce(true);
+  return loading && !loadedOnce;
+}
 
 type Size = number | string;
 const px = (value: Size | undefined) => (typeof value === 'number' ? `${value}px` : value);

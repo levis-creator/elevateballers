@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Textarea } from "@/components/ui/textarea";
 import { MediaLibraryPicker } from "@/features/cms/presentation/components/MediaLibraryPicker";
 import { leagueStaffApi, type LeagueStaffRecord } from "@/features/staff/data/datasources/league-staff-api";
-import { SkeletonRegion, SkeletonTable } from "@/shared/components/skeleton/Skeleton";
+import { SkeletonRegion, SkeletonTable, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 /** Org-wide league staff record (mirrors the LeagueStaff model). */
 type LeagueStaff = LeagueStaffRecord;
@@ -38,6 +38,7 @@ const EMPTY: FormState = { name: "", role: "", department: "", email: "", photo:
 export default function LeagueStaffManager() {
 	const [staff, setStaff] = useState<LeagueStaff[]>([]);
 	const [loading, setLoading] = useState(true);
+	const firstLoad = useFirstLoad(loading);
 	const [error, setError] = useState("");
 	const [open, setOpen] = useState(false);
 	const [form, setForm] = useState<FormState>(EMPTY);
@@ -137,7 +138,7 @@ export default function LeagueStaffManager() {
 
 			{error && <div className="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
 
-			{loading ? (
+			<div className={loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
 				<SkeletonRegion label="Loading staff"><SkeletonTable rows={4} columns={2} /></SkeletonRegion>
 			) : staff.length === 0 ? (
 				<Card>
@@ -183,7 +184,7 @@ export default function LeagueStaffManager() {
 						</div>
 					);
 				})
-			)}
+			)}</div>
 
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent>

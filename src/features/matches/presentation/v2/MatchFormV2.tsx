@@ -7,7 +7,7 @@ import { getTeamInitials } from '../../domain/usecases/team-helpers';
 import { stageOptions, stageLabel, scoresUnlocked } from '../../domain/usecases/match-form';
 import { useMatchForm, type DraftRosterPlayer, type TeamOption } from './hooks/useMatchForm';
 import MatchRoster from './MatchRoster';
-import { SkeletonForm, SkeletonHeader, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { SkeletonForm, SkeletonHeader, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 const HOME = '#e4002b';
 const AWAY = '#2a6fdb';
@@ -168,12 +168,13 @@ function whenText(date: string): string {
 function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: string }) {
   const [draftRoster, setDraftRoster] = useState<DraftRosterPlayer[]>([]);
   const f = useMatchForm({ matchId, seasonId, draftRoster });
+  const firstLoad = useFirstLoad(f.loading);
   const { form } = f;
   const leagueName = f.leagues.find((l) => l.id === form.leagueId)?.name ?? '—';
   const status = statusMeta(form.status);
   const unlocked = scoresUnlocked(form.status);
 
-  if (f.loading) {
+  if (firstLoad) {
     return (
       <SkeletonRegion label="Loading match">
         <SkeletonHeader />

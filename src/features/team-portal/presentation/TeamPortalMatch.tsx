@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowLeft, ExternalLink } from 'lucide-react';
-import { Skeleton, SkeletonRegion, SkeletonTable, SkeletonText } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, SkeletonTable, SkeletonText, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type BoxRow = {
   playerId: string;
@@ -81,6 +81,7 @@ export default function TeamPortalMatch({
   const [data, setData] = useState<MatchData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
 
   useEffect(() => {
     setLoading(true);
@@ -120,7 +121,7 @@ export default function TeamPortalMatch({
           {error}
         </div>
       )}
-      {loading ? (
+      <div className={loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
         <section className="portal-match-card rounded-2xl border p-5 text-[13px] text-[#8a817a]">
           <SkeletonRegion label="Loading match"><div className="eb-skel-row" style={{ justifyContent: 'space-between' }}><div className="eb-skel-row" style={{ flex: 1 }}><Skeleton w={44} h={44} round /><Skeleton w="50%" h={16} /></div><Skeleton w={96} h={34} style={{ borderRadius: 9 }} /><div className="eb-skel-row" style={{ flex: 1, justifyContent: 'flex-end' }}><Skeleton w="50%" h={16} /><Skeleton w={44} h={44} round /></div></div><SkeletonText lines={2} /><SkeletonTable rows={6} columns={3} pill={false} bare /></SkeletonRegion>
         </section>
@@ -364,7 +365,7 @@ export default function TeamPortalMatch({
             )}
           </section>
         </div>
-      ) : null}
+      ) : null}</div>
     </div>
   );
 }

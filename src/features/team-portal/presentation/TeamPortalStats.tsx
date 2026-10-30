@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowDown, ChartNoAxesCombined } from 'lucide-react';
-import { SkeletonRegion, SkeletonStats, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
+import { SkeletonRegion, SkeletonStats, SkeletonTable, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type PlayerLine = {
   id: string;
@@ -71,6 +71,7 @@ export default function TeamPortalStats({
   const [data, setData] = useState<StatsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
   const [sortKey, setSortKey] = useState<SortKey>('ppg');
 
   useEffect(() => {
@@ -136,7 +137,7 @@ export default function TeamPortalStats({
           {error}
         </div>
       )}
-      {loading ? (
+      <div className={loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
         <section className="portal-stats-card rounded-2xl border p-5 text-[13px] text-[#8a817a]">
           <SkeletonRegion label="Loading team stats"><SkeletonStats count={4} min={130} /><SkeletonTable rows={8} columns={4} pill={false} bare /></SkeletonRegion>
         </section>
@@ -260,7 +261,7 @@ export default function TeamPortalStats({
             )}
           </section>
         </div>
-      ) : null}
+      ) : null}</div>
     </div>
   );
 }

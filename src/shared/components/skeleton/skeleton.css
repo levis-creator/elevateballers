@@ -11,6 +11,17 @@
 	gap: 14px;
 	min-width: 0;
 }
+/* Held back briefly, so a load that finishes quickly never flashes a skeleton. */
+.eb-skel-region[role="status"] {
+	opacity: 0;
+	animation: eb-skel-in 0.2s ease-out 0.15s forwards;
+}
+
+/* A reload keeps the current content on screen, slightly faded, until new data arrives. */
+.eb-refreshing {
+	opacity: 0.55;
+	transition: opacity 0.2s ease;
+}
 
 .eb-skel {
 	display: block;
@@ -48,6 +59,9 @@
 	.eb-skel-hide-sm { display: none; }
 }
 
+@keyframes eb-skel-in {
+	to { opacity: 1; }
+}
 @keyframes eb-skel-shimmer {
 	from { background-position: 100% 0; }
 	to { background-position: -100% 0; }
@@ -55,4 +69,6 @@
 
 @media (prefers-reduced-motion: reduce) {
 	.eb-skel { animation: none; background: var(--skel-shine); }
+	.eb-skel-region[role="status"] { animation: eb-skel-in 0s 0.15s forwards; }
+	.eb-refreshing { transition: none; }
 }

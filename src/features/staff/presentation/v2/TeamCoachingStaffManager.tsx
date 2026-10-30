@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaLibraryPicker } from "@/features/cms/presentation/components/MediaLibraryPicker";
 import { teamCoachingStaffApi, type TeamCoachingStaffRecord } from "@/features/staff/data/datasources/team-coaching-staff-api";
-import { SkeletonRegion, SkeletonTable } from "@/shared/components/skeleton/Skeleton";
+import { SkeletonRegion, SkeletonTable, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 type CoachType = TeamCoachingStaffRecord["type"];
 type CoachingStaff = TeamCoachingStaffRecord;
@@ -41,6 +41,7 @@ interface Props {
 export default function TeamCoachingStaffManager({ teamId }: Props) {
 	const [staff, setStaff] = useState<CoachingStaff[]>([]);
 	const [loading, setLoading] = useState(true);
+	const firstLoad = useFirstLoad(loading);
 	const [error, setError] = useState("");
 	const [open, setOpen] = useState(false);
 	const [form, setForm] = useState<FormState>(EMPTY);
@@ -125,7 +126,7 @@ export default function TeamCoachingStaffManager({ teamId }: Props) {
 
 			{error && <div className="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
 
-			{loading ? (
+			<div className={loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
 				<SkeletonRegion label="Loading staff"><SkeletonTable rows={4} columns={2} /></SkeletonRegion>
 			) : ordered.length === 0 ? (
 				<Card>
@@ -157,7 +158,7 @@ export default function TeamCoachingStaffManager({ teamId }: Props) {
 						</Card>
 					))}
 				</div>
-			)}
+			)}</div>
 
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent>

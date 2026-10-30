@@ -7,7 +7,7 @@ import { useSubscribers } from "./hooks/useSubscribers";
 import SubscriberKpis from "./components/SubscriberKpis";
 import AddSubscriberModal from "./components/AddSubscriberModal";
 import type { SubscriberFilter } from "@/features/subscribers/domain/entities/subscriber";
-import { SkeletonRegion, SkeletonTable } from "@/shared/components/skeleton/Skeleton";
+import { SkeletonRegion, SkeletonTable, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 const dateFmt = (iso: string) => {
 	const d = new Date(iso);
@@ -16,6 +16,7 @@ const dateFmt = (iso: string) => {
 
 function SubscribersContent() {
 	const v = useSubscribers();
+	const firstLoad = useFirstLoad(v.loading);
 	const [showAdd, setShowAdd] = useState(false);
 	const [menuId, setMenuId] = useState<string | null>(null);
 	const bodyRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ function SubscribersContent() {
 
 				{/* table */}
 				<div ref={bodyRef} className="overflow-x-auto">
-					{v.loading ? (
+					<div className={v.loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
 						<SkeletonRegion label="Loading subscribers" ><SkeletonTable rows={8} columns={2} bare /></SkeletonRegion>
 					) : v.error ? (
 						<div className="flex flex-col items-center gap-2 py-16 text-center"><AlertCircle className="h-6 w-6 text-[var(--brand)]" /><p className="font-['Archivo'] text-[13px] text-[var(--txm)]">{v.error}</p></div>
@@ -146,7 +147,7 @@ function SubscribersContent() {
 								})}
 							</tbody>
 						</table>
-					)}
+					)}</div>
 				</div>
 
 				{/* footer / pagination */}

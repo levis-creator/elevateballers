@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { AlertCircle, Check, Users, X } from 'lucide-react';
-import { SkeletonRegion, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
+import { SkeletonRegion, SkeletonTable, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type Player = {
   id: string;
@@ -46,6 +46,7 @@ export default function TeamPortalRoster({
   const [data, setData] = useState<RosterData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
   const [filter, setFilter] = useState<'all' | 'cleared' | 'pending' | 'docs'>('all');
   const [proposalOpen, setProposalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Player | null>(null);
@@ -221,7 +222,7 @@ Injury note (optional, shown publicly):`,
           {error}
         </div>
       )}
-      {loading ? (
+      <div className={loading && !firstLoad ? 'eb-refreshing' : undefined}>{firstLoad ? (
         <section className="portal-roster-card rounded-2xl border p-5 text-[13px] text-[#8a817a]">
           <SkeletonRegion label="Loading roster"><SkeletonTable rows={8} columns={3} bare /></SkeletonRegion>
         </section>
@@ -454,7 +455,7 @@ Injury note (optional, shown publicly):`,
             )}
           </section>
         </div>
-      )}
+      )}</div>
     </div>
   );
 }

@@ -16,10 +16,11 @@ import {
 import { useUsersDirectory } from './hooks/useUsersDirectory';
 import UserFormDrawer from './UserFormDrawer';
 import { Presence } from '@/shared/components/motion/Presence';
-import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 export default function UsersPageV2() {
 	const directory = useUsersDirectory();
+	const firstLoad = useFirstLoad(directory.loading);
 
 	const heading = (
 		<header className="eb-users-heading">
@@ -31,7 +32,7 @@ export default function UsersPageV2() {
 			<button className="eb-primary-button" onClick={directory.openCreate}><UserPlus size={14} /> Invite user</button>
 		</header>
 	);
-	if (directory.loading) return <div className="eb-users-page">{heading}<SkeletonRegion label="Loading users"><SkeletonStats count={5} min={150} /><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={8} columns={3} /></SkeletonRegion></div>;
+	if (firstLoad) return <div className="eb-users-page">{heading}<SkeletonRegion label="Loading users"><SkeletonStats count={5} min={150} /><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={8} columns={3} /></SkeletonRegion></div>;
 	if (directory.error) {
 		return (
 			<div className="eb-users-error">

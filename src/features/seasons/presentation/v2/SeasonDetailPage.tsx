@@ -6,12 +6,13 @@ import SeasonHero from "./components/SeasonHero";
 import SeasonScheduleTab from "./components/SeasonScheduleTab";
 import SeasonStandingsTab from "./components/SeasonStandingsTab";
 import SeasonTeamsTab from "./components/SeasonTeamsTab";
-import { Skeleton, SkeletonDetail, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
+import { Skeleton, SkeletonDetail, SkeletonRegion, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 function SeasonDetailContent({ seasonId }: { seasonId: string }) {
 	const v = useSeasonDetail(seasonId);
+	const firstLoad = useFirstLoad(v.loading);
 
-	if (v.loading) {
+	if (firstLoad) {
 		return <SkeletonRegion label="Loading season"><Skeleton w={120} h={11} /><SkeletonDetail tabs={4} avatar={false} /></SkeletonRegion>;
 	}
 

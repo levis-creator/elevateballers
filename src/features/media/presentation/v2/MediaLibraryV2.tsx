@@ -36,7 +36,7 @@ import { MEDIA_FOLDERS } from '../../domain/entities/mediaFolders';
 import type { MediaLibraryRow, MediaStats } from '../../domain/entities';
 import type { MediaFolderRow, MediaPageResponse } from './mediaLibraryTypes';
 import './MediaLibraryV2.css';
-import { SkeletonCards, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
+import { SkeletonCards, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 type ViewMode = 'grid' | 'list';
 type TypeFilter = 'ALL' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
@@ -148,6 +148,7 @@ export default function MediaLibraryV2() {
     untagged: 0,
   });
   const [loading, setLoading] = useState(true);
+  const firstLoad = useFirstLoad(loading);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<MediaLibraryRow | null>(null);
@@ -527,7 +528,7 @@ export default function MediaLibraryV2() {
               )}
               {error ? (
                 <ErrorState message={error} onRetry={() => void load()} />
-              ) : loading ? (
+              ) : firstLoad ? (
                 <LoadingState />
               ) : page.items.length === 0 ? (
                 <EmptyState

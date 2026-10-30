@@ -6,14 +6,15 @@ import ActionDialog from '../../../cms/presentation/v2/ActionDialog';
 import RowMenu from '../../../cms/presentation/v2/RowMenu';
 import TransferDialog from './TransferDialog';
 import { Presence } from '@/shared/components/motion/Presence';
-import { Skeleton, SkeletonRegion, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
+import { Skeleton, SkeletonRegion, SkeletonTable, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
 
 export default function PlayersPageV2() {
   const directory = usePlayersDirectory();
+  const firstLoad = useFirstLoad(directory.loading);
   const heading = (
     <header className="eb-players-heading"><div><div className="eb-players-eyebrow">Personnel</div><h1>Players</h1><p>Player profiles across the league. Scope the list to a competition edition to see who is registered, or switch to the full directory to manage every profile on record.</p></div><div className="eb-players-actions"><button><Upload size={14} /> Import CSV</button><button onClick={() => directory.exportCsv(directory.filtered.map((player) => player.id))} title="Download the players currently shown as CSV"><Download size={14} /> Export</button><a href="/admin/players/new">＋ New Player</a></div></header>
   );
-  if (directory.loading) return <div className="eb-players-page">{heading}<ScopeBar {...directory} /><SkeletonRegion label="Loading players"><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={10} columns={4} /></SkeletonRegion></div>;
+  if (firstLoad) return <div className="eb-players-page">{heading}<ScopeBar {...directory} /><SkeletonRegion label="Loading players"><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={10} columns={4} /></SkeletonRegion></div>;
   if (directory.error) return <div className="eb-players-error"><strong>Unable to load players</strong><span>{directory.error}</span><button onClick={directory.load}>Try again</button></div>;
   const letters = ['All', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
   const presentLetters = new Set(directory.base.map((player) => getPlayerName(player)[0]?.toUpperCase()));

@@ -7,7 +7,7 @@ import LeagueOverviewTab from "./components/LeagueOverviewTab";
 import LeagueSeasonsTab from "./components/LeagueSeasonsTab";
 import LeagueTeamsTab from "./components/LeagueTeamsTab";
 import type { LeagueTab } from "@/features/leagues/domain/entities/league-detail";
-import { Skeleton, SkeletonDetail, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
+import { Skeleton, SkeletonDetail, SkeletonRegion, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 function BackLink() {
 	return (
@@ -23,8 +23,9 @@ function BackLink() {
 
 function LeagueDetailContent({ leagueId }: { leagueId: string }) {
 	const v = useLeagueDetail(leagueId);
+	const firstLoad = useFirstLoad(v.loading);
 
-	if (v.loading) {
+	if (firstLoad) {
 		return <SkeletonRegion label="Loading league"><Skeleton w={120} h={11} /><SkeletonDetail tabs={4} /></SkeletonRegion>;
 	}
 

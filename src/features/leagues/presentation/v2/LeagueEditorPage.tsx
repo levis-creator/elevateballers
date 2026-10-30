@@ -6,12 +6,13 @@ import LeagueInfoCard from "./components/LeagueInfoCard";
 import LeagueRegistrationCard from "./components/LeagueRegistrationCard";
 import LeagueSeasonsCard from "./components/LeagueSeasonsCard";
 import SeasonsPlaceholderCard from "./components/SeasonsPlaceholderCard";
-import { Skeleton, SkeletonForm, SkeletonHeader, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
+import { Skeleton, SkeletonForm, SkeletonHeader, SkeletonRegion, useFirstLoad } from "@/shared/components/skeleton/Skeleton";
 
 function LeagueEditorContent({ leagueId }: { leagueId?: string }) {
 	const v = useLeagueEditor(leagueId);
+	const firstLoad = useFirstLoad(v.loading);
 
-	if (v.loading) {
+	if (firstLoad) {
 		return <SkeletonRegion label="Loading league"><Skeleton w={120} h={11} /><SkeletonHeader /><SkeletonForm panels={2} /></SkeletonRegion>;
 	}
 
