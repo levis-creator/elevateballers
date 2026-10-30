@@ -5,6 +5,7 @@ import { buildHomeJsonLd } from './structured-data';
 const potw = (overrides: Partial<Potw>): Potw => ({
   slotLabel: 'Clutch',
   slotDescription: 'Clutch conference, EBL',
+  leagueLabel: 'Elevate Ballers League',
   name: 'Jane Doe',
   teamName: 'City Hawks',
   teamLabel: 'City Hawks · #7',

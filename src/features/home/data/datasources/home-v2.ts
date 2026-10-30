@@ -330,6 +330,7 @@ function toPotwCard(
 		slotDescription: slot
 			? slot.conferenceId ? `${slot.label} conference, ${leagueShortName(slot.leagueLabel)}` : slot.leagueLabel
 			: null,
+		leagueLabel: slot ? slot.leagueLabel.replace(/\s*\([^)]*\)\s*$/, "") : null,
 		name,
 		teamName: p.team?.name ?? null,
 		awardedAt: new Date(potw.createdAt).toISOString(),

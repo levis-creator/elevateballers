@@ -108,6 +108,8 @@ export interface Potw {
 	slotLabel: string | null;
 	/** Longer slot name for alt text / structured data, e.g. "Clutch conference, EBL". */
 	slotDescription: string | null;
+	/** League the slot belongs to, without its code — "Elevate Ballers League". */
+	leagueLabel: string | null;
 	name: string;
 	/** Team name alone (teamLabel also carries the jersey number). */
 	teamName: string | null;
