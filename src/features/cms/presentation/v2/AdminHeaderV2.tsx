@@ -26,7 +26,7 @@ function notificationPresentation(notification: AdminNotification) {
  * mirrors the existing flow.
  */
 export default function AdminHeaderV2() {
-  const { user, can } = usePermissions();
+  const { user, can, loading: accountLoading } = usePermissions();
   const { toggleSidebar } = useAdminShell();
   const { theme, toggle: toggleTheme } = useAdminTheme();
   const { notifications, unreadCount: notificationCount, markAllRead, open: openNotification } = useAdminNotifications(can('notifications:read'));
@@ -80,6 +80,9 @@ export default function AdminHeaderV2() {
           <Plus className="h-[14px] w-[14px]" />
           <span className="max-[600px]:hidden">Create</span>
         </a>
+
+        {/* Hold the bell's place until we know whether this account can read notifications. */}
+        {accountLoading && !user && <span aria-hidden="true" className="h-9 w-9 flex-shrink-0 animate-pulse rounded-lg border border-[var(--bord)] bg-[var(--surf2)]" />}
 
         {can('notifications:read') && (
           <div className="relative">
@@ -170,12 +173,22 @@ export default function AdminHeaderV2() {
             onClick={() => setMenu((m) => (m === 'user' ? null : 'user'))}
             className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] py-1.5 pl-1.5 pr-3 hover:border-[var(--brand)]"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] font-['Anton'] text-[13px] leading-none text-[var(--brandfg)]">
-              {initial}
-            </span>
-            <span className="font-['Archivo'] text-[12.5px] font-bold text-[var(--tx)] max-[600px]:hidden">
-              {user?.name?.split(' ')[0] || 'User'}
-            </span>
+            {accountLoading && !user ? (
+              <>
+                <span aria-hidden="true" className="h-7 w-7 animate-pulse rounded-full bg-[var(--chip)]" />
+                <span aria-hidden="true" className="h-2.5 w-14 animate-pulse rounded bg-[var(--chip)] max-[600px]:hidden" />
+                <span className="sr-only">Loading account</span>
+              </>
+            ) : (
+              <>
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] font-['Anton'] text-[13px] leading-none text-[var(--brandfg)]">
+                  {initial}
+                </span>
+                <span className="font-['Archivo'] text-[12.5px] font-bold text-[var(--tx)] max-[600px]:hidden">
+                  {user?.name?.split(' ')[0] || 'User'}
+                </span>
+              </>
+            )}
             <ChevronDown className="h-3 w-3 text-[var(--txm)]" />
           </button>
           {menu === 'user' && (
