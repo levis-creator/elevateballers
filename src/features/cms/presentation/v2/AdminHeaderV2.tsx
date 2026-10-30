@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { navigate } from 'astro:transitions/client';
-import { Menu, Search, Plus, Sun, Moon, ChevronDown, Bell } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Menu, Plus, Sun, Moon, ChevronDown, Bell } from 'lucide-react';
 import { usePermissions, clearPermissionCache } from '@/features/rbac/usePermissions';
 import { useAdminShell } from '@/features/cms/presentation/components/AdminShellContext';
-import { ADMIN_NAV } from './lib/admin-nav';
+import AdminSearchV2 from './AdminSearchV2';
 import { useAdminTheme } from './hooks/useAdminTheme';
 import { useAdminNotifications, type AdminNotification } from './hooks/useAdminNotifications';
 
@@ -33,7 +32,6 @@ export default function AdminHeaderV2() {
   const { notifications, unreadCount: notificationCount, markAllRead, open: openNotification } = useAdminNotifications(can('notifications:read'));
 
   const [menu, setMenu] = useState<null | 'user' | 'notifications'>(null);
-  const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Close any open menu on outside click.
@@ -45,18 +43,6 @@ export default function AdminHeaderV2() {
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [menu]);
-
-  // Lightweight quick-nav: Enter jumps to the first nav item matching the query.
-  const onSearchKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter') return;
-    const q = query.trim().toLowerCase();
-    if (!q) return;
-    const match = ADMIN_NAV.flatMap((g) => g.items).find((i) => i.label.toLowerCase().includes(q));
-    if (match) {
-      setQuery('');
-      navigate(match.href);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -83,17 +69,7 @@ export default function AdminHeaderV2() {
         </span>
       </button>
 
-      <div className="flex min-w-0 max-w-[360px] flex-1 items-center gap-2.5 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 py-2 max-[720px]:hidden">
-        <Search className="h-[15px] w-[15px] flex-shrink-0 text-[var(--txm)]" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={onSearchKey}
-          placeholder="Jump to players, teams, articles…"
-          className="w-full border-none bg-transparent font-['Archivo'] text-[13px] text-[var(--tx)] outline-none placeholder:text-[var(--faint)]"
-        />
-      </div>
+      <AdminSearchV2 />
 
       <div className="ml-auto flex items-center gap-2.5">
         <a
