@@ -1,5 +1,6 @@
 ---
 import '@/styles/v2.css';
+import BasketballSeams from "@/components/BasketballSeams.astro";
 import '@fontsource/anton';
 import '@fontsource/archivo/400.css';
 import '@fontsource/archivo/600.css';
@@ -43,7 +44,7 @@ const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPa
 
       <main class="access-main">
         <section class="hero" aria-labelledby="blocked-title">
-          <div class="blocked-shot" aria-hidden="true"><div class="backboard"><span class="target"></span></div><div class="rim"></div><div class="rim-shadow"></div><div class="net"></div><div class="ball"><span></span><i></i></div><div class="block-bar"></div></div>
+          <div class="blocked-shot" aria-hidden="true"><div class="backboard"><span class="target"></span></div><div class="rim"></div><div class="rim-shadow"></div><div class="net"></div><div class="ball"><BasketballSeams /></div><svg class="impact" viewBox="0 0 40 40"><g><path d="M20 3v8M20 29v8M3 20h8M29 20h8M8 8l5 5M27 27l5 5M32 8l-5 5M13 27l-5 5" /></g></svg><svg class="hand" viewBox="0 0 34 64"><rect class="hand-skin" x="10" y="36" width="14" height="28" rx="4" /><rect class="hand-skin" x="6.5" y="9" width="5" height="16" rx="2.5" /><rect class="hand-skin" x="11.75" y="5" width="5" height="18" rx="2.5" /><rect class="hand-skin" x="17" y="6" width="5" height="17" rx="2.5" /><rect class="hand-skin" x="22.25" y="11" width="5" height="14" rx="2.5" /><rect class="hand-skin" x="0" y="22" width="6" height="15" rx="3" transform="rotate(-28 6 36)" /><rect class="hand-skin" x="6" y="17" width="22" height="22" rx="7" /><rect class="hand-band" x="9" y="38" width="16" height="7" rx="2" /></svg></div>
           <div class="eyebrow"><span></span>{signedIn ? 'Error 403 · Access denied' : 'Error 401 · Sign-in required'}<span></span></div>
           <h1 id="blocked-title">{signedIn ? 'Block' : 'Locked '}<span>{signedIn ? 'ed' : 'out'}</span></h1>
           <p class="hero-copy">{denialCopy} <em>{signedIn ? 'Nothing is wrong with your account — it simply does not reach this far.' : 'Sign in with your league account and you will land straight back here.'}</em></p>
@@ -51,7 +52,7 @@ const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPa
 
         <section class="details-grid" aria-label="Access details">
           <article class="detail-card"><p class="card-label">{signedIn ? 'Signed in as' : 'Session'}</p>{signedIn ? <><div class="identity"><span class="avatar">{initials}</span><div><strong>{displayName}</strong><small>{displayEmail}</small></div></div><span class="role-chip">{roleLabel}</span><p class="card-note">Your access is determined by your active role and team assignment.</p></> : <p class="signed-out-note">No active session on this browser. This page is behind the league sign-in.</p>}</article>
-          <article class="detail-card"><p class="card-label">This page requires</p><div class="requirement"><span class="lock" aria-hidden="true">⌑</span><strong>{requiredPermission}</strong></div><div class="held-by"><span>Held by</span><b>Admin</b>{requiredPermission !== 'Administrator access' && <b>League Staff</b>}</div><code>{pagePath}</code></article>
+          <article class="detail-card"><p class="card-label">This page requires</p><div class="requirement"><span class="lock" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M5 7V5a3 3 0 0 1 6 0v2" /><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M8 10v1.5" /></svg></span><strong>{requiredPermission}</strong></div><div class="held-by"><span>Held by</span><b>Admin</b>{requiredPermission !== 'Administrator access' && <b>League Staff</b>}</div><code>{pagePath}</code></article>
         </section>
 
         <div class="actions"><a class="button button-primary" href={primaryHref}>{primaryLabel}<span aria-hidden="true">→</span></a>{user && <a class="button button-outline" href="/contacts">Request access</a>}<a class="button button-outline" href={user ? '#' : '/'} id={user ? 'logout-link' : undefined}>{user ? 'Use another account' : 'Back to the site'}</a></div>
@@ -95,17 +96,19 @@ const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPa
   .blocked-shot { position: relative; z-index: 1; width: 180px; height: 138px; margin: 0 auto 28px; }
   .backboard { position: absolute; top: 7px; left: 15px; width: 150px; height: 92px; border: 3px solid #f3efe9; border-radius: 2px; background: rgba(255,255,255,.04); box-shadow: 0 0 0 1px rgba(255,255,255,.08); }
   .target { position: absolute; left: 50%; bottom: -1px; width: 56px; height: 40px; transform: translateX(-50%); border: 3px solid #e4002b; border-bottom: 0; }
-  .rim, .rim-shadow, .block-bar { position: absolute; left: 50%; transform: translateX(-50%); }
+  .rim, .rim-shadow { position: absolute; left: 50%; transform: translateX(-50%); }
   .rim { top: 92px; width: 60px; height: 8px; border: 3px solid #ff2d43; border-radius: 50%; background: #0c0b0a; }
   .rim-shadow { top: 101px; width: 48px; height: 18px; border-left: 2px solid #b8afa6; border-right: 2px solid #b8afa6; opacity: .65; }
   .net { position: absolute; top: 99px; left: 50%; width: 43px; height: 30px; transform: translateX(-50%); border-bottom: 1px solid rgba(243,239,233,.6); border-left: 1px solid rgba(243,239,233,.4); border-right: 1px solid rgba(243,239,233,.4); clip-path: polygon(0 0,100% 0,75% 100%,25% 100%); }
-  .ball { position: absolute; z-index: 3; left: 50%; top: 102px; width: 30px; height: 30px; border-radius: 50%; background: #e4002b; box-shadow: 0 3px 16px rgba(228,0,43,.5); animation: swat 4.5s infinite cubic-bezier(.45,.05,.55,.95); }
-  .ball::before, .ball::after, .ball span, .ball i { content: ''; position: absolute; border: 1px solid rgba(12,11,10,.75); }
-  .ball::before { top: -2px; left: 10px; width: 9px; height: 32px; border-radius: 50%; }
-  .ball::after { top: 10px; left: -2px; width: 32px; height: 9px; border-radius: 50%; }
-  .ball span { top: 1px; left: 13px; height: 28px; transform: rotate(45deg); }
-  .ball i { top: 1px; left: 13px; height: 28px; transform: rotate(-45deg); }
-  .block-bar { z-index: 4; top: 78px; width: 78px; height: 10px; border-radius: 4px; background: #f3efe9; box-shadow: 0 0 0 2px #0c0b0a; animation: blockbar 4.5s infinite cubic-bezier(.45,.05,.55,.95); }
+  /* A jump shot arcs in from the left and is swatted back out by a hand rising
+     from the right. Base styles are the moment of the block, which is what
+     reduced motion shows. */
+  .ball { position: absolute; z-index: 3; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: #e4002b; box-shadow: 0 3px 16px rgba(228,0,43,.5); transform: translate(58px,19px); animation: eb-shot 4.2s linear infinite; }
+  .hand { position: absolute; z-index: 4; left: 0; top: 0; width: 34px; height: 64px; overflow: visible; transform-origin: 17px 64px; transform: translate(103px,14px) rotate(-30deg); animation: eb-hand 4.2s infinite; }
+  .hand-skin { fill: #f3efe9; stroke: #0c0b0a; stroke-width: 1.5; }
+  .hand-band { fill: #e4002b; stroke: #0c0b0a; stroke-width: 1.5; }
+  .impact { position: absolute; z-index: 5; left: 66px; top: 16px; width: 40px; height: 40px; opacity: 0; animation: eb-impact 4.2s infinite; }
+  .impact path { fill: none; stroke: #f3efe9; stroke-width: 2.5; stroke-linecap: round; }
   .eyebrow, .section-kicker, .card-label { color: #b8afa6; font: 10px 'Space Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
   .eyebrow { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 13px; }
   .eyebrow span { width: 38px; height: 1px; background: rgba(255,255,255,.25); }
@@ -128,7 +131,8 @@ const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPa
   .held-by b { margin-top: 0; }
   .card-note { margin: 17px 0 0; line-height: 1.5; }
   .requirement { display: flex; align-items: center; gap: 12px; margin-top: 2px; font-size: 15px; }
-  .lock { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #ff2d43; color: #ff2d43; font-size: 20px; }
+  .lock { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #ff2d43; color: #ff2d43; }
+  .lock svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
   code { display: block; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); color: #8a817a; font: 11px 'Space Mono', monospace; word-break: break-all; }
   .actions { display: flex; width: fit-content; max-width: 100%; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 24px auto 48px; }
   .button { display: inline-flex; align-items: center; gap: 14px; min-height: 48px; padding: 0 25px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; transition: .2s ease; }
@@ -145,9 +149,48 @@ const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPa
   .reach-card small { grid-column: 1 / -1; color: #b8afa6; font-size: 11px; }
   .reach-card:hover { border-color: rgba(228,0,43,.7); }
   .access-footer { display: flex; justify-content: space-between; padding: 20px clamp(20px, 5vw, 72px); border-top: 1px solid rgba(255,255,255,.08); color: #746d66; font: 10px 'Space Mono', monospace; text-transform: uppercase; }
-  @keyframes swat { 0%{transform:translate(-50%,10px) scale(1) rotate(0);opacity:1} 38%{transform:translate(-50%,-58px) scale(1.02) rotate(-12deg);opacity:1} 46%{transform:translate(-38%,-62px) scale(.94) rotate(10deg);opacity:1} 72%{transform:translate(78%,-6px) scale(.9) rotate(140deg);opacity:.35} 73%,100%{transform:translate(-50%,10px) scale(1) rotate(0);opacity:0} }
-  @keyframes blockbar { 0%,30%{transform:translateX(-50%) rotate(-16deg) translateY(4px)} 44%{transform:translateX(-50%) rotate(-8deg) translateY(-3px)} 60%,100%{transform:translateX(-50%) rotate(-16deg) translateY(4px)} }
-  @media (prefers-reduced-motion: reduce) { .ball, .block-bar { animation: none; } }
+  @keyframes eb-shot {
+    0%{transform:translate(-35px,113px) rotate(0deg) scale(0.9);opacity:0}
+    4%{transform:translate(-35px,113px) rotate(-0deg) scale(1);opacity:1}
+    7%{transform:translate(-27px,91px) rotate(-23deg) scale(1);opacity:1}
+    10%{transform:translate(-20px,72px) rotate(-47deg) scale(1);opacity:1}
+    13%{transform:translate(-12px,55px) rotate(-70deg) scale(1);opacity:1}
+    16%{transform:translate(-4px,40px) rotate(-93deg) scale(1);opacity:1}
+    19%{transform:translate(3px,29px) rotate(-117deg) scale(1);opacity:1}
+    22%{transform:translate(11px,19px) rotate(-140deg) scale(1);opacity:1}
+    25%{transform:translate(19px,13px) rotate(-163deg) scale(1);opacity:1}
+    28%{transform:translate(26px,9px) rotate(-187deg) scale(1);opacity:1}
+    31%{transform:translate(34px,7px) rotate(-210deg) scale(1);opacity:1}
+    34%{transform:translate(42px,8px) rotate(-233deg) scale(1);opacity:1}
+    37%{transform:translate(49px,11px) rotate(-257deg) scale(1);opacity:1}
+    40%{transform:translate(57px,17px) rotate(-280deg) scale(1);opacity:1}
+    41.5%{transform:translate(58px,19px) rotate(-285deg) scale(0.86);opacity:1}
+    43%{transform:translate(57px,18px) rotate(-285deg) scale(1);opacity:1}
+    46%{transform:translate(41px,16px) rotate(-205deg) scale(1);opacity:1}
+    49%{transform:translate(25px,18px) rotate(-125deg) scale(1);opacity:1}
+    52%{transform:translate(10px,24px) rotate(-45deg) scale(1);opacity:1}
+    55%{transform:translate(-6px,32px) rotate(35deg) scale(1);opacity:1}
+    58%{transform:translate(-22px,45px) rotate(115deg) scale(1);opacity:1}
+    61%{transform:translate(-38px,60px) rotate(195deg) scale(1);opacity:0.83}
+    64%{transform:translate(-53px,79px) rotate(275deg) scale(1);opacity:0.56}
+    67%{transform:translate(-69px,102px) rotate(355deg) scale(1);opacity:0.28}
+    70%{transform:translate(-85px,128px) rotate(435deg) scale(1);opacity:0}
+    71%,100%{transform:translate(-35px,113px) rotate(0deg) scale(.9);opacity:0}
+  }
+  @keyframes eb-hand {
+    0%, 22% { transform: translate(122px,84px) rotate(-8deg); opacity: 0; animation-timing-function: ease-out; }
+    32% { transform: translate(108px,34px) rotate(-18deg); opacity: 1; animation-timing-function: cubic-bezier(.5,0,.75,.4); }
+    40% { transform: translate(103px,14px) rotate(-30deg); opacity: 1; animation-timing-function: cubic-bezier(.2,.8,.3,1); }
+    47% { transform: translate(86px,6px) rotate(-62deg); opacity: 1; animation-timing-function: ease-in-out; }
+    58% { transform: translate(92px,14px) rotate(-48deg); opacity: 1; animation-timing-function: ease-in; }
+    70%, 100% { transform: translate(122px,84px) rotate(-8deg); opacity: 0; }
+  }
+  @keyframes eb-impact {
+    0%, 40% { opacity: 0; transform: scale(.4) rotate(0deg); }
+    42% { opacity: 1; transform: scale(.9) rotate(8deg); }
+    52%, 100% { opacity: 0; transform: scale(1.35) rotate(14deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .ball, .hand, .impact { animation: none; } .impact { opacity: .8; } }
   @media (max-width: 760px) { .reach-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 650px) { .access-header { height: auto; min-height: 68px; gap: 12px; } .brand-chip img { height: 28px; } .account-chip { display: none; } .access-main { padding: 35px 20px 32px; } .details-grid, .reach-grid { grid-template-columns: 1fr; } .actions { align-items: stretch; flex-direction: column; } .button { justify-content: center; } .access-footer { gap: 10px; flex-direction: column; } }
 </style>

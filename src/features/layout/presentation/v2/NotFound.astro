@@ -1,4 +1,5 @@
 ---
+import BasketballSeams from "@/components/BasketballSeams.astro";
 import type { PublicSystemSettings } from '@/features/settings/application/systemSettings';
 import { DEFAULT_PUBLIC_SYSTEM_SETTINGS } from '@/features/settings/application/systemSettings';
 
@@ -36,10 +37,8 @@ const year = new Date().getFullYear();
 					<div class="absolute left-1/2 top-[26px] h-[42px] w-[54px] -translate-x-1/2 border-2 border-white/25"></div>
 				</div>
 				<div class="eb404-rim absolute left-1/2 top-[88px] h-[10px] w-[64px] rounded-b-full border-x-2 border-b-2 border-brand"></div>
-				<div class="eb404-ball absolute left-1/2 top-[92px] flex h-[46px] w-[46px] items-center justify-center rounded-full bg-brand">
-					<span class="absolute inset-0 rounded-full border-2 border-black/30"></span>
-					<span class="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-black/30"></span>
-					<span class="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-black/30"></span>
+				<div class="eb404-ball absolute left-1/2 top-[92px] h-[46px] w-[46px] rounded-full bg-brand">
+					<BasketballSeams />
 				</div>
 			</div>
 

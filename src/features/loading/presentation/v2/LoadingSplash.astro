@@ -4,6 +4,7 @@
 // animation; a tiny inline script handles the once-per-session guard + removal.
 // Render this at the top of <body> in the v2 Layout. Requires loading.css
 // (imported by the Layout) for the eb-* keyframes.
+import BasketballSeams from '@/components/BasketballSeams.astro';
 import type { PublicSystemSettings } from '@/features/settings/application/systemSettings';
 import { DEFAULT_PUBLIC_SYSTEM_SETTINGS } from '@/features/settings/application/systemSettings';
 interface Props { settings?: PublicSystemSettings }
@@ -27,11 +28,8 @@ const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
 		<!-- bouncing, spinning basketball + squashing shadow -->
 		<div class="relative flex h-[120px] w-[90px] items-end justify-center">
 			<div class="relative h-[64px] w-[64px]" style="animation:eb-bounce 0.75s cubic-bezier(.5,.05,.5,.95) infinite;">
-				<div class="h-full w-full rounded-full bg-brand" style="animation:eb-spin 1.1s linear infinite;">
-					<span class="absolute inset-0 rounded-full border-[2.5px] border-black/45"></span>
-					<span class="absolute bottom-0 left-1/2 top-0 w-[2.5px] -translate-x-1/2 bg-black/45"></span>
-					<span class="absolute left-0 right-0 top-1/2 h-[2.5px] -translate-y-1/2 bg-black/45"></span>
-					<span class="absolute left-1/2 top-1/2 h-[64px] w-[64px] rounded-full border-[2.5px] border-transparent" style="border-top-color:rgba(0,0,0,0.4);transform:translate(-50%,-50%) rotate(38deg);"></span>
+				<div class="relative h-full w-full rounded-full bg-brand" style="animation:eb-spin 1.1s linear infinite;">
+					<BasketballSeams />
 				</div>
 			</div>
 			<div class="absolute bottom-0 h-[10px] w-[52px] rounded-full bg-black/25 blur-[1px]" style="animation:eb-squash 0.75s cubic-bezier(.5,.05,.5,.95) infinite;"></div>

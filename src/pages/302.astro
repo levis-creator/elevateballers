@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import LayoutV2 from "@/layouts/v2/Layout.astro";
+import BasketballSeams from "@/components/BasketballSeams.astro";
 import { resolvePublicSystemSettings, siteSettingsService } from '@/features/settings';
 const systemSettings = resolvePublicSystemSettings(await siteSettingsService.list('system').catch(() => []));
 
@@ -44,7 +45,7 @@ const [redirectBefore, redirectAfter = ''] = systemSettings.redirectBody.split('
 		<header class="redirect-header">
 			<a href="/" class="redirect-brand" aria-label="Elevate Ballers home">
 				<span class="brand-ball" aria-hidden="true">
-					<span></span>
+					<BasketballSeams />
 				</span>
 				<span class="brand-wordmark">
 					Elevate<br />
@@ -61,7 +62,7 @@ const [redirectBefore, redirectAfter = ''] = systemSettings.redirectBody.split('
 					<circle cx="60" cy="60" r="52" class="redirect-ring-progress"></circle>
 				</svg>
 				<div class="redirect-ball">
-					<span></span>
+					<BasketballSeams />
 				</div>
 			</div>
 
@@ -213,43 +214,6 @@ const [redirectBefore, redirectAfter = ''] = systemSettings.redirectBody.split('
 	.brand-ball {
 		width: 38px;
 		height: 38px;
-	}
-
-	.brand-ball::before,
-	.brand-ball::after,
-	.brand-ball span,
-	.redirect-ball::before,
-	.redirect-ball::after,
-	.redirect-ball span {
-		position: absolute;
-		content: "";
-		background: rgba(0, 0, 0, 0.45);
-	}
-
-	.brand-ball::before,
-	.redirect-ball::before {
-		inset: 0;
-		border: 2px solid rgba(0, 0, 0, 0.45);
-		border-radius: inherit;
-		background: transparent;
-	}
-
-	.brand-ball::after,
-	.redirect-ball::after {
-		top: 0;
-		bottom: 0;
-		left: 50%;
-		width: 2px;
-		transform: translateX(-50%);
-	}
-
-	.brand-ball span,
-	.redirect-ball span {
-		top: 50%;
-		left: 0;
-		right: 0;
-		height: 2px;
-		transform: translateY(-50%);
 	}
 
 	.redirect-status {

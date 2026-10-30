@@ -1,0 +1,38 @@
+---
+/**
+ * Basketball seams and shading, laid over a round element that already has
+ * the ball colour (e.g. `rounded-full bg-brand`). Fills its parent, so the
+ * parent decides the size; strokes scale with it.
+ */
+// Each ball needs its own gradient id; several can share a page.
+const shade = `bb-shade-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<svg class="basketball-seams" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+	<defs>
+		<radialGradient id={shade} cx="34%" cy="28%" r="78%">
+			<stop offset="0" stop-color="#fff" stop-opacity="0.32"></stop>
+			<stop offset="0.5" stop-color="#fff" stop-opacity="0"></stop>
+			<stop offset="1" stop-color="#000" stop-opacity="0.35"></stop>
+		</radialGradient>
+	</defs>
+	<circle cx="50" cy="50" r="50" fill={`url(#${shade})`}></circle>
+	<g fill="none" stroke="#0c0b0a" stroke-opacity="0.75" stroke-width="3.5" stroke-linecap="round">
+		<path d="M50 0v100"></path>
+		<path d="M0 50h100"></path>
+		<path d="M20 10Q42 50 20 90"></path>
+		<path d="M80 10Q58 50 80 90"></path>
+		<circle cx="50" cy="50" r="48.25"></circle>
+	</g>
+</svg>
+
+<style>
+	.basketball-seams {
+		position: absolute;
+		inset: 0;
+		display: block;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+	}
+</style>
