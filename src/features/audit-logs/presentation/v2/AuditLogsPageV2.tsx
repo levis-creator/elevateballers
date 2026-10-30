@@ -19,6 +19,7 @@ import {
 } from '../../domain/usecases/audit-log-view';
 import { useAuditLogsData, TIME_RANGE_LABEL, type OutcomeFilter, type TimeRangeFilter } from './hooks/useAuditLogsData';
 import { Skeleton, SkeletonList, SkeletonRegion, useFirstLoad } from '@/shared/components/skeleton/Skeleton';
+import { Presence, backdropMotion, drawerMotion, m } from '@/shared/components/motion/Presence';
 
 /* -------------------------------------------------------------------------- */
 /* Small shared primitives                                                    */
@@ -203,8 +204,8 @@ function DetailDrawer({
 
   return (
     <div className="fixed inset-0 z-[60] flex justify-end">
-      <div className="absolute inset-0 bg-black/55" />
-      <div className="eb-scroll relative flex h-full w-[520px] max-w-full flex-col overflow-y-auto border-l border-[var(--bord)] bg-[var(--surf)] shadow-[0_0_60px_rgba(0,0,0,0.5)]">
+      <m.div {...backdropMotion} className="absolute inset-0 bg-black/55" onClick={onClose} />
+      <m.div {...drawerMotion} className="eb-scroll relative flex h-full w-[520px] max-w-full flex-col overflow-y-auto border-l border-[var(--bord)] bg-[var(--surf)] shadow-[0_0_60px_rgba(0,0,0,0.5)]">
         <div className="sticky top-0 z-10 flex items-start gap-3 border-b border-[var(--bord2)] bg-[var(--surf)] px-5 py-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -289,7 +290,7 @@ function DetailDrawer({
             </button>
           </div>
         </div>
-      </div>
+      </m.div>
     </div>
   );
 }
@@ -588,7 +589,7 @@ function AuditLogsContent() {
         </div>
       )}
 
-      {d.openEntry && (
+      <Presence>{d.openEntry && (
         <DetailDrawer
           entry={d.openEntry}
           related={d.relatedEntries}
@@ -596,7 +597,7 @@ function AuditLogsContent() {
           onFilterActor={d.filterByActor}
           onFilterAction={d.filterByAction}
         />
-      )}
+      )}</Presence>
     </div>
   );
 }

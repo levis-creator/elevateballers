@@ -1246,7 +1246,7 @@ function DetailsDrawer({
     }
   };
   return (
-    <m.div {...backdropMotion} className="fixed inset-0 z-50 flex justify-end bg-black/30">
+    <m.div {...backdropMotion} className="fixed inset-0 z-50 flex justify-end bg-black/30" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <m.aside {...drawerMotion} className="h-full w-full max-w-lg overflow-y-auto bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <div>
@@ -1492,7 +1492,7 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <m.div {...backdropMotion} className="modal-backdrop">
+    <m.div {...backdropMotion} className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <m.div {...dialogMotion} className="modal-card">
         <div className="flex items-center justify-between">
           <h2 className="font-anton text-2xl uppercase">{title}</h2>
