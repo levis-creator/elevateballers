@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { STANDARD_ACTIONS, humanizeAction, type MatrixRow } from '../../domain/entities/role-editor';
 import type { useRolesDirectory } from './hooks/useRolesDirectory';
+import { backdropMotion, drawerMotion, m } from '@/shared/components/motion/Presence';
 
 export default function RoleEditorDrawer({ directory }: { directory: ReturnType<typeof useRolesDirectory> }) {
 	const { draft, creating, editingRole, editorLoading } = directory;
@@ -8,8 +9,8 @@ export default function RoleEditorDrawer({ directory }: { directory: ReturnType<
 
 	return (
 		<div className="eb-roles-drawer-overlay">
-			<div className="eb-roles-drawer-scrim" onClick={directory.closeEditor} />
-			<div className="eb-roles-drawer">
+			<m.div {...backdropMotion} className="eb-roles-drawer-scrim" onClick={directory.closeEditor} />
+			<m.div {...drawerMotion} className="eb-roles-drawer">
 				<div className="eb-roles-drawer-head">
 					<div>
 						<div className="eb-kicker">{creating ? 'New role' : isSystem ? 'System role' : 'Custom role'}</div>
@@ -91,7 +92,7 @@ export default function RoleEditorDrawer({ directory }: { directory: ReturnType<
 						</div>
 					</>
 				)}
-			</div>
+			</m.div>
 		</div>
 	);
 }

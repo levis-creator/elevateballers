@@ -5,6 +5,7 @@ import { usePlayersDirectory } from './hooks/usePlayersDirectory';
 import ActionDialog from '../../../cms/presentation/v2/ActionDialog';
 import RowMenu from '../../../cms/presentation/v2/RowMenu';
 import TransferDialog from './TransferDialog';
+import { Presence } from '@/shared/components/motion/Presence';
 
 export default function PlayersPageV2() {
   const directory = usePlayersDirectory();
@@ -29,7 +30,7 @@ export default function PlayersPageV2() {
       <PlayerTable {...directory} />
       <footer className="eb-players-footer"><span>Showing {directory.filtered.length ? `${(directory.page - 1) * 10 + 1}–${Math.min(directory.page * 10, directory.filtered.length)}` : '0'} of {directory.filtered.length} players</span><div><button disabled={directory.page === 1} onClick={() => directory.setPage(Math.max(1, directory.page - 1))}>Prev</button>{Array.from({ length: directory.pageCount }, (_, index) => index + 1).slice(0, 7).map((number) => <button key={number} className={number === directory.page ? 'active' : ''} onClick={() => directory.setPage(number)}>{number}</button>)}<button disabled={directory.page === directory.pageCount} onClick={() => directory.setPage(Math.min(directory.pageCount, directory.page + 1))}>Next</button></div></footer>
     </section>
-    {directory.dialog && <PlayersDialog {...directory} />}
+    <Presence>{directory.dialog && <PlayersDialog {...directory} />}</Presence>
   </div>;
 }
 

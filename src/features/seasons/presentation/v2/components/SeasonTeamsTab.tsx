@@ -6,6 +6,7 @@ import type {
 	SeasonTeamSummary,
 } from "@/features/seasons/domain/entities/season-detail";
 import ConferenceModal from "./ConferenceModal";
+import { Presence } from "@/shared/components/motion/Presence";
 
 interface Props {
 	teams: SeasonTeamSummary[];
@@ -283,7 +284,7 @@ export default function SeasonTeamsTab({ teams, conferences, seasonId, canAssign
 			)}
 			{content}
 
-			{modal && (
+			<Presence>{modal && (
 				<ConferenceModal
 					seasonId={seasonId}
 					conference={modal.conference}
@@ -291,7 +292,7 @@ export default function SeasonTeamsTab({ teams, conferences, seasonId, canAssign
 					onClose={() => setModal(null)}
 					onSaved={onRefresh}
 				/>
-			)}
+			)}</Presence>
 		</div>
 	);
 }

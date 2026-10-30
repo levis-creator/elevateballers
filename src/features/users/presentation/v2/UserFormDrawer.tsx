@@ -1,5 +1,6 @@
 import { formatDate, formatLastActive, isAdminRole, isCoachRole, MAX_COACH_TEAMS } from '../../domain/entities/user-directory';
 import type { useUsersDirectory } from './hooks/useUsersDirectory';
+import { backdropMotion, drawerMotion, m } from '@/shared/components/motion/Presence';
 
 export default function UserFormDrawer({ directory }: { directory: ReturnType<typeof useUsersDirectory> }) {
 	const { draft, form, roles } = directory;
@@ -11,8 +12,8 @@ export default function UserFormDrawer({ directory }: { directory: ReturnType<ty
 
 	return (
 		<div className="eb-users-drawer-overlay">
-			<div className="eb-users-drawer-scrim" onClick={directory.closeForm} />
-			<div className="eb-users-drawer">
+			<m.div {...backdropMotion} className="eb-users-drawer-scrim" onClick={directory.closeForm} />
+			<m.div {...drawerMotion} className="eb-users-drawer">
 				<div className="eb-users-drawer-head">
 					<div>
 						<div className="eb-kicker">{isEdit ? 'Edit user' : 'New user'}</div>
@@ -153,7 +154,7 @@ export default function UserFormDrawer({ directory }: { directory: ReturnType<ty
 						<button className="eb-primary-button" disabled={!directory.canSave} onClick={directory.save}>{directory.saving ? 'Saving…' : isEdit ? 'Save changes' : 'Send invite'}</button>
 					</div>
 				</div>
-			</div>
+			</m.div>
 		</div>
 	);
 }

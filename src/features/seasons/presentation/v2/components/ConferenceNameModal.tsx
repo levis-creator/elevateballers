@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import EntityAvatar from "@/components/EntityAvatar";
 import type { FormTeam } from "../hooks/useSeasonForm";
+import { backdropMotion, dialogMotion, m } from "@/shared/components/motion/Presence";
 
 interface Props {
 	/** Prefilled name when editing; empty when adding. */
@@ -63,9 +64,9 @@ export default function ConferenceNameModal({
 
 	return (
 		<div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-			<div className="absolute inset-0 bg-black/60" onClick={onClose} />
+			<m.div {...backdropMotion} className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-			<div
+			<m.div {...dialogMotion}
 				role="dialog"
 				aria-modal="true"
 				aria-label={isEdit ? "Edit conference" : "Add conference"}
@@ -184,7 +185,7 @@ export default function ConferenceNameModal({
 						{isEdit ? "Save" : "Add"}
 					</button>
 				</div>
-			</div>
+			</m.div>
 		</div>
 	);
 }

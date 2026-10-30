@@ -4,6 +4,7 @@ import { PermissionProvider } from '@/features/rbac/usePermissions';
 import { ROLE_KIND_FILTERS, type RoleRow } from '../../domain/entities/role-editor';
 import { useRolesDirectory } from './hooks/useRolesDirectory';
 import RoleEditorDrawer from './RoleEditorDrawer';
+import { Presence } from '@/shared/components/motion/Presence';
 import PermissionSyncPanel from './PermissionSyncPanel';
 
 export default function RolesPageV2() {
@@ -57,7 +58,7 @@ function RolesPageContent() {
 
 			<p className="eb-roles-footnote">System roles ship with the CMS — their name can't be changed, but permissions can. Custom roles are yours to rename or remove.</p>
 
-			{directory.editing && <RoleEditorDrawer directory={directory} />}
+			<Presence>{directory.editing && <RoleEditorDrawer directory={directory} />}</Presence>
 			{directory.toast && <div className="eb-roles-toast">{directory.toast}</div>}
 		</div>
 	);

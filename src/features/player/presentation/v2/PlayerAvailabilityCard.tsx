@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import ActionDialog from '../../../cms/presentation/v2/ActionDialog';
+import { Presence } from '@/shared/components/motion/Presence';
 
 type Entry = {
   id: string;
@@ -132,7 +133,7 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
       </form>
       {error && <div className="eb-pd-record" style={{ color: 'var(--pd-brandsoft)' }}>{error}</div>}
       <RosterDropouts playerId={playerId} />
-      {resolving && (
+      <Presence>{resolving && (
         <ActionDialog
           eyebrow="Availability"
           title={resolving.type === 'SUSPENSION' ? 'Lift this suspension early?' : 'Mark this player fit?'}
@@ -149,7 +150,7 @@ export default function PlayerAvailabilityCard({ playerId }: { playerId: string 
             setResolving(null);
           }}
         />
-      )}
+      )}</Presence>
       {past.length > 0 && (
         <>
           <div className="eb-pd-eyebrow" style={{ marginTop: 18 }}>History</div>
@@ -230,9 +231,10 @@ function RosterDropouts({ playerId }: { playerId: string }) {
         </div>
       ))}
       {error && <div className="eb-pd-record" style={{ color: 'var(--pd-brandsoft)' }}>{error}</div>}
-      {confirming &&
+      <Presence>{confirming &&
         (confirming.droppedOut ? (
           <ActionDialog
+            key="reinstate"
             eyebrow="League participation"
             title={`Reinstate on ${confirming.teamName}?`}
             body="The player goes back on this roster. This fails if they have since joined another roster this season."
@@ -243,6 +245,7 @@ function RosterDropouts({ playerId }: { playerId: string }) {
           />
         ) : (
           <ActionDialog
+            key="drop-out"
             eyebrow="League participation"
             title="Mark as dropped out?"
             body={`The player comes off ${confirming.teamName}, which frees the spot, and leaves upcoming lineups. Their stats stay on record and you can reinstate them later.`}
@@ -253,7 +256,7 @@ function RosterDropouts({ playerId }: { playerId: string }) {
             onCancel={() => setConfirming(null)}
             onConfirm={(reason) => void act(confirming, reason || undefined)}
           />
-        ))}
+        ))}</Presence>
     </>
   );
 }

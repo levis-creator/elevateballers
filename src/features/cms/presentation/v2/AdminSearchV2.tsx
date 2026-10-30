@@ -3,6 +3,7 @@ import { navigate } from 'astro:transitions/client';
 import { Search, Users, Shield, Newspaper, Calendar, Briefcase, Loader2 } from 'lucide-react';
 import { usePermissions } from '@/features/rbac/usePermissions';
 import { ADMIN_NAV } from './lib/admin-nav';
+import { Presence, m, popoverMotion } from '@/shared/components/motion/Presence';
 import type { AdminSearchKind, AdminSearchResult } from '@/pages/api/admin/search';
 
 const KIND_META: Record<AdminSearchKind, { group: string; icon: ComponentType<{ className?: string }> }> = {
@@ -166,8 +167,9 @@ export default function AdminSearchV2() {
         <kbd className="flex-shrink-0 rounded border border-[var(--bord)] px-1.5 py-0.5 font-['Space_Mono'] text-[9px] text-[var(--faint)]">Ctrl K</kbd>
       </div>
 
-      {showPanel && (
-        <div
+      <Presence>{showPanel && (
+        <m.div
+          {...popoverMotion}
           id="admin-search-results"
           role="listbox"
           className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[420px] overflow-y-auto rounded-xl border border-[var(--bord)] bg-[var(--surf)] p-1.5 shadow-[0_14px_40px_rgba(0,0,0,0.45)]"
@@ -207,8 +209,8 @@ export default function AdminSearchV2() {
               {q.length < 2 ? 'Keep typing to search records…' : waiting ? 'Searching…' : `No results for “${q}”`}
             </div>
           )}
-        </div>
-      )}
+        </m.div>
+      )}</Presence>
     </div>
   );
 }

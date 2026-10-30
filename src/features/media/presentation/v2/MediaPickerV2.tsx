@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, UploadCloud, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react";
+import { Presence, backdropMotion, dialogMotion, m } from "@/shared/components/motion/Presence";
 
 interface MediaItem {
 	id: string;
@@ -81,8 +82,6 @@ export default function MediaPickerV2({
 		return () => document.removeEventListener("keydown", onKey);
 	}, [open, onOpenChange]);
 
-	if (!open) return null;
-
 	const upload = async (file: File) => {
 		setUploading(true);
 		setError("");
@@ -116,11 +115,13 @@ export default function MediaPickerV2({
 		onOpenChange(false);
 	};
 
+	// Always mounted so the picker can animate out when `open` turns false.
 	return (
+		<Presence>{open && (
 		<div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-			<div className="absolute inset-0 bg-black/60" onClick={() => onOpenChange(false)} />
+			<m.div {...backdropMotion} className="absolute inset-0 bg-black/60" onClick={() => onOpenChange(false)} />
 
-			<div
+			<m.div {...dialogMotion}
 				role="dialog"
 				aria-modal="true"
 				aria-label={title}
@@ -299,7 +300,8 @@ export default function MediaPickerV2({
 						Use selected
 					</button>
 				</div>
-			</div>
+			</m.div>
 		</div>
+		)}</Presence>
 	);
 }

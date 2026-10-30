@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { backdropMotion, dialogMotion, m } from '@/shared/components/motion/Presence';
 
 export type ActionDialogProps = {
   eyebrow?: string;
@@ -25,6 +26,7 @@ export type ActionDialogProps = {
 /**
  * In-page confirmation for admin actions. Replaces window.confirm/prompt,
  * which some embedded browsers block outright and which cannot be styled.
+ * Mount it inside `<Presence>` so it animates out as well as in.
  */
 export default function ActionDialog({
   eyebrow,
@@ -54,14 +56,16 @@ export default function ActionDialog({
   }, [busy, onCancel]);
 
   return (
-    <div
+    <m.div
+      {...backdropMotion}
       className="eb-dialog-backdrop"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onCancel();
       }}
     >
-      <form
+      <m.form
+        {...dialogMotion}
         className="eb-dialog"
         role="dialog"
         aria-modal="true"
@@ -104,7 +108,7 @@ export default function ActionDialog({
             {busy ? 'Working…' : confirmLabel}
           </button>
         </div>
-      </form>
-    </div>
+      </m.form>
+    </m.div>
   );
 }

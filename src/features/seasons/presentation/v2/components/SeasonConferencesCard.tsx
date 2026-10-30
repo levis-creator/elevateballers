@@ -4,6 +4,7 @@ import type { SeasonConferenceInput, SeasonFormErrors } from "@/features/seasons
 import type { FormTeam } from "../hooks/useSeasonForm";
 import FormCard, { FieldError } from "./FormCard";
 import ConferenceNameModal from "./ConferenceNameModal";
+import { Presence } from "@/shared/components/motion/Presence";
 
 interface Props {
 	conferences: SeasonConferenceInput[];
@@ -117,7 +118,7 @@ export default function SeasonConferencesCard({
 					: "Assign each team to one on the season's Teams tab."}
 			</p>
 
-			{modal && (
+			<Presence>{modal && (
 				<ConferenceNameModal
 					initialName={modal.index === null ? undefined : conferences[modal.index]?.name ?? ""}
 					existingNames={otherNames(modal.index)}
@@ -130,7 +131,7 @@ export default function SeasonConferencesCard({
 						else onUpdate(modal.index, name, teamIds);
 					}}
 				/>
-			)}
+			)}</Presence>
 		</FormCard>
 	);
 }

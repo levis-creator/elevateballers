@@ -7,6 +7,7 @@ import {
 } from "@/features/leagues/domain/entities/league-detail";
 import CardHeader from "./CardHeader";
 import LinkSeasonModal from "./LinkSeasonModal";
+import { Presence } from "@/shared/components/motion/Presence";
 
 const BADGE_STYLE: Record<SeasonStatus, { bg: string; fg: string; dot: string }> = {
 	Live: { bg: "rgba(31,157,85,0.16)", fg: "#1f9d55", dot: "#1f9d55" },
@@ -183,9 +184,9 @@ export default function LeagueSeasonsCard({
 				</div>
 			)}
 
-			{linkOpen && (
+			<Presence>{linkOpen && (
 				<LinkSeasonModal onClose={() => setLinkOpen(false)} fetchLinkable={fetchLinkable} onLink={onLink} />
-			)}
+			)}</Presence>
 		</div>
 	);
 }

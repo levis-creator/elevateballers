@@ -31,6 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { Presence, backdropMotion, dialogMotion, drawerMotion, m } from '@/shared/components/motion/Presence';
 import { MEDIA_FOLDERS } from '../../domain/entities/mediaFolders';
 import type { MediaLibraryRow, MediaStats } from '../../domain/entities';
 import type { MediaFolderRow, MediaPageResponse } from './mediaLibraryTypes';
@@ -578,15 +579,15 @@ export default function MediaLibraryV2() {
           </main>
         </div>
       </div>
-      {active && (
+      <Presence>{active && (
         <DetailsDrawer
           item={active}
           onClose={() => setActive(null)}
           onRefresh={load}
           onToast={(message) => addToast({ description: message, variant: 'success' })}
         />
-      )}
-      {folderDialog && (
+      )}</Presence>
+      <Presence>{folderDialog && (
         <FolderDialog
           mode={folderDialog.mode}
           name={folderName}
@@ -596,8 +597,8 @@ export default function MediaLibraryV2() {
           onClose={() => setFolderDialog(null)}
           onSave={() => void saveFolder()}
         />
-      )}
-      {urlDialog && (
+      )}</Presence>
+      <Presence>{urlDialog && (
         <UrlDialog
           title={urlTitle}
           url={urlValue}
@@ -606,7 +607,7 @@ export default function MediaLibraryV2() {
           onClose={() => setUrlDialog(false)}
           onSave={() => void addUrl()}
         />
-      )}
+      )}</Presence>
     </div>
   );
 }
@@ -1243,8 +1244,8 @@ function DetailsDrawer({
     }
   };
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <aside className="h-full w-full max-w-lg overflow-y-auto bg-white p-6 shadow-2xl">
+    <m.div {...backdropMotion} className="fixed inset-0 z-50 flex justify-end bg-black/30">
+      <m.aside {...drawerMotion} className="h-full w-full max-w-lg overflow-y-auto bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-brand-red">
@@ -1322,8 +1323,8 @@ function DetailsDrawer({
             ? 'legacy object remains in Supabase.'
             : 'R2 object is managed with the media row.'}
         </p>
-      </aside>
-    </div>
+      </m.aside>
+    </m.div>
   );
 }
 
@@ -1491,8 +1492,8 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
+    <m.div {...backdropMotion} className="modal-backdrop">
+      <m.div {...dialogMotion} className="modal-card">
         <div className="flex items-center justify-between">
           <h2 className="font-anton text-2xl uppercase">{title}</h2>
           <button onClick={onClose}>
@@ -1500,8 +1501,8 @@ function Modal({
           </button>
         </div>
         <div className="mt-5">{children}</div>
-      </div>
-    </div>
+      </m.div>
+    </m.div>
   );
 }
 function ModalActions({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {

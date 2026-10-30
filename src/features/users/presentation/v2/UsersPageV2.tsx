@@ -15,6 +15,7 @@ import {
 } from '../../domain/entities/user-directory';
 import { useUsersDirectory } from './hooks/useUsersDirectory';
 import UserFormDrawer from './UserFormDrawer';
+import { Presence } from '@/shared/components/motion/Presence';
 
 export default function UsersPageV2() {
 	const directory = useUsersDirectory();
@@ -109,7 +110,7 @@ export default function UsersPageV2() {
 
 			<UsersTable directory={directory} allSelected={allSelected} />
 
-			{directory.form && <UserFormDrawer directory={directory} />}
+			<Presence>{directory.form && <UserFormDrawer directory={directory} />}</Presence>
 			{directory.toast && <div className="eb-users-toast">{directory.toast}</div>}
 		</div>
 	);

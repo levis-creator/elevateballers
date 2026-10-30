@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Grid2X2, List, Plus, Search, Shield, Trophy, Users } from 'lucide-react';
 import type { TeamStaffWithStaff, TeamWithPlayers } from '../../types';
+import { Presence, backdropMotion, dialogMotion, m } from '@/shared/components/motion/Presence';
 
 function SectionHead({
   title,
@@ -137,7 +138,7 @@ export function RegistrationsSection({
           </table>
         </div>
       </div>
-      {dialogOpen && <div className="eb-detail-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialogOpen(false); }}><div className="eb-detail-dialog"><div className="eb-detail-dialog-head"><div><small>Team registration</small><h3>Register team in LeagueSeason</h3></div><button onClick={() => setDialogOpen(false)} aria-label="Close">×</button></div><label>League season<select value={selectedLeagueSeasonId} onChange={(event) => setSelectedLeagueSeasonId(event.target.value)}><option value="">Select a league season</option>{options.map(({ season, leagueSeason }: any) => <option value={leagueSeason.id} key={leagueSeason.id}>{season.name} · {leagueSeason.league?.name ?? 'League'}</option>)}</select></label>{!options.length && <p>This team is already registered in all available league seasons.</p>}{error && <p className="eb-detail-dialog-error">{error}</p>}<div className="eb-detail-dialog-actions"><button onClick={() => setDialogOpen(false)}>Cancel</button><button className="eb-detail-primary" onClick={() => void registerTeam()} disabled={saving || !options.length}>{saving ? 'Registering…' : 'Register team'}</button></div></div></div>}
+      <Presence>{dialogOpen && <m.div {...backdropMotion} className="eb-detail-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialogOpen(false); }}><m.div {...dialogMotion} className="eb-detail-dialog"><div className="eb-detail-dialog-head"><div><small>Team registration</small><h3>Register team in LeagueSeason</h3></div><button onClick={() => setDialogOpen(false)} aria-label="Close">×</button></div><label>League season<select value={selectedLeagueSeasonId} onChange={(event) => setSelectedLeagueSeasonId(event.target.value)}><option value="">Select a league season</option>{options.map(({ season, leagueSeason }: any) => <option value={leagueSeason.id} key={leagueSeason.id}>{season.name} · {leagueSeason.league?.name ?? 'League'}</option>)}</select></label>{!options.length && <p>This team is already registered in all available league seasons.</p>}{error && <p className="eb-detail-dialog-error">{error}</p>}<div className="eb-detail-dialog-actions"><button onClick={() => setDialogOpen(false)}>Cancel</button><button className="eb-detail-primary" onClick={() => void registerTeam()} disabled={saving || !options.length}>{saving ? 'Registering…' : 'Register team'}</button></div></m.div></m.div>}</Presence>
     </section>
   );
 }
@@ -530,15 +531,16 @@ export function StaffSection({ staff }: { staff: TeamStaffWithStaff[] }) {
           <strong>Add staff member</strong>
         </button>
       </div>
-      {editing && (
-        <div
+      <Presence>{editing && (
+        <m.div
+          {...backdropMotion}
           className="eb-detail-dialog-backdrop"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setEditing(null);
           }}
         >
-          <div className="eb-detail-dialog">
+          <m.div {...dialogMotion} className="eb-detail-dialog">
             <div className="eb-detail-dialog-head">
               <div>
                 <small>Team staff</small>
@@ -565,9 +567,9 @@ export function StaffSection({ staff }: { staff: TeamStaffWithStaff[] }) {
                 {saving ? 'Saving…' : 'Save role'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </m.div>
+        </m.div>
+      )}</Presence>
     </section>
   );
 }
