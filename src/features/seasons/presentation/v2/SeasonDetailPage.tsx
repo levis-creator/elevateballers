@@ -1,22 +1,18 @@
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useSeasonDetail } from "./hooks/useSeasonDetail";
 import SeasonHero from "./components/SeasonHero";
 import SeasonScheduleTab from "./components/SeasonScheduleTab";
 import SeasonStandingsTab from "./components/SeasonStandingsTab";
 import SeasonTeamsTab from "./components/SeasonTeamsTab";
+import { Skeleton, SkeletonDetail, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
 
 function SeasonDetailContent({ seasonId }: { seasonId: string }) {
 	const v = useSeasonDetail(seasonId);
 
 	if (v.loading) {
-		return (
-			<div className="flex items-center justify-center gap-2 py-24 text-[var(--txm)]">
-				<Loader2 className="h-5 w-5 animate-spin" />
-				Loading season…
-			</div>
-		);
+		return <SkeletonRegion label="Loading season"><Skeleton w={120} h={11} /><SkeletonDetail tabs={4} avatar={false} /></SkeletonRegion>;
 	}
 
 	if (v.error || !v.detail || !v.stats) {

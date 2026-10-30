@@ -53,11 +53,9 @@
 
 .eb-roles-row-actions { display: inline-flex; justify-content: flex-end; gap: 6px; }
 
-.eb-roles-empty, .eb-roles-loading, .eb-roles-error { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 220px; border: 1px solid var(--bord); border-radius: 14px; background: var(--surf); padding: 32px; color: var(--txm); text-align: center; }
+.eb-roles-empty, .eb-roles-error { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 220px; border: 1px solid var(--bord); border-radius: 14px; background: var(--surf); padding: 32px; color: var(--txm); text-align: center; }
 .eb-roles-empty strong, .eb-roles-error strong { color: var(--tx); font: 20px "Anton", sans-serif; text-transform: uppercase; }
 .eb-roles-error button { border: 1px solid var(--bord); border-radius: 6px; background: var(--surf2); color: var(--txd); padding: 7px 11px; cursor: pointer; }
-.eb-roles-loading div { height: 90px; border-radius: 14px; background: linear-gradient(90deg, var(--surf2), var(--chip), var(--surf2)); background-size: 200% 100%; animation: eb-roles-shimmer 1.2s infinite; }
-@keyframes eb-roles-shimmer { to { background-position: -200% 0; } }
 
 .eb-roles-footnote { margin: 12px 4px 0; color: var(--faint); font-size: 11.5px; }
 
@@ -88,9 +86,6 @@
 .eb-roles-drawer-note { margin-top: 6px; min-height: 15px; color: var(--txm); font-size: 12px; }
 
 .eb-roles-lock-notice { border-bottom: 1px solid var(--bord2); background: rgb(var(--site-brand-rgb) / .08); color: var(--brand); padding: 11px 20px; font-size: 12px; line-height: 1.4; }
-
-.eb-roles-drawer-loading { display: grid; gap: 12px; padding: 20px; }
-.eb-roles-drawer-loading div { height: 60px; border-radius: 12px; background: linear-gradient(90deg, var(--surf2), var(--chip), var(--surf2)); background-size: 200% 100%; animation: eb-roles-shimmer 1.2s infinite; }
 
 .eb-roles-drawer-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
 

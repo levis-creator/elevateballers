@@ -26,6 +26,7 @@ import SettingsUnavailable from './SettingsUnavailable';
 import SessionHistoryPanel from './SessionHistoryPanel';
 import SecurityAuditPanel from './SecurityAuditPanel';
 import IntegrationStatusPanel from './IntegrationStatusPanel';
+import { SkeletonPanel, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 type Props = {
   section: Section;
@@ -129,11 +130,10 @@ export default function SettingsSection({
         </a>
       </div>
       {loading ? (
-        <div className="eb-settings-loading">
-          <div />
-          <div />
-          <div />
-        </div>
+        <SkeletonRegion label="Loading settings">
+          <SkeletonPanel fields={3} />
+          <SkeletonPanel fields={2} />
+        </SkeletonRegion>
       ) : (
         <>
           {section.id === 'security' && (

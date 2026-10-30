@@ -8,6 +8,7 @@ import {
   Send,
   Trophy,
 } from 'lucide-react';
+import { Skeleton, SkeletonRegion, SkeletonText } from '@/shared/components/skeleton/Skeleton';
 
 type Option = {
   id: string;
@@ -215,7 +216,7 @@ export default function TeamSeasonRegistration({
         )}
         {loading ? (
           <section className="portal-registration-card rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-6 text-[13px] text-[#8a817a]">
-            Loading the active season entry window…
+            <SkeletonRegion label="Loading the season entry window"><Skeleton w={200} h={14} /><SkeletonText lines={2} /><div className="eb-skel-row"><Skeleton w={130} h={36} style={{ borderRadius: 9 }} /><Skeleton w={90} h={36} style={{ borderRadius: 9 }} /></div></SkeletonRegion>
           </section>
         ) : (
           <div className="grid items-start gap-4 min-[980px]:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">

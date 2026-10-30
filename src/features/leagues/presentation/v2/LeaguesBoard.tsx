@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Search, Plus, Trophy, Loader2, AlertCircle } from "lucide-react";
+import { Search, Plus, Trophy, AlertCircle } from "lucide-react";
 import { useLeagues } from "./hooks/useLeagues";
 import LeagueKpis from "./components/LeagueKpis";
 import LeagueCard from "./components/LeagueCard";
 import type { LeagueFilter } from "@/features/leagues/domain/entities/league";
+import { SkeletonCards, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
 
 function LeaguesContent() {
 	const v = useLeagues();
@@ -123,10 +124,9 @@ function LeaguesContent() {
 
 			{/* body */}
 			{v.loading ? (
-				<div className="flex items-center justify-center gap-2 py-20 text-[var(--txm)]">
-					<Loader2 className="h-5 w-5 animate-spin" />
-					Loading leagues…
-				</div>
+				<SkeletonRegion label="Loading leagues">
+					<SkeletonCards count={4} min={380} />
+				</SkeletonRegion>
 			) : v.error ? (
 				<div className="flex flex-col items-center gap-3 rounded-2xl border border-[var(--bord)] bg-[var(--surf)] py-16 text-center">
 					<AlertCircle className="h-6 w-6 text-[var(--brand)]" />

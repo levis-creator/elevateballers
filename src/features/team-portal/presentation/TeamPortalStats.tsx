@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowDown, ChartNoAxesCombined } from 'lucide-react';
+import { SkeletonRegion, SkeletonStats, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
 
 type PlayerLine = {
   id: string;
@@ -136,8 +137,8 @@ export default function TeamPortalStats({
         </div>
       )}
       {loading ? (
-        <section className="portal-stats-card rounded-2xl border px-5 py-8 text-[13px] text-[#8a817a]">
-          Loading team stats…
+        <section className="portal-stats-card rounded-2xl border p-5 text-[13px] text-[#8a817a]">
+          <SkeletonRegion label="Loading team stats"><SkeletonStats count={4} min={130} /><SkeletonTable rows={8} columns={4} pill={false} bare /></SkeletonRegion>
         </section>
       ) : data ? (
         <div className="grid gap-4">

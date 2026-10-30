@@ -64,13 +64,11 @@
 
 .eb-users-row-actions { display: flex; justify-content: flex-end; gap: 6px; }
 
-.eb-users-empty, .eb-users-loading, .eb-users-error { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 220px; border: 1px solid var(--bord); border-radius: 14px; background: var(--surf); padding: 32px; color: var(--txm); text-align: center; }
+.eb-users-empty, .eb-users-error { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 220px; border: 1px solid var(--bord); border-radius: 14px; background: var(--surf); padding: 32px; color: var(--txm); text-align: center; }
 .eb-users-empty strong, .eb-users-error strong { color: var(--tx); font: 20px "Anton", sans-serif; text-transform: uppercase; }
 .eb-users-empty span { max-width: 340px; }
 .eb-users-empty-actions { display: flex; gap: 8px; margin-top: 4px; }
 .eb-users-error button { border: 1px solid var(--bord); border-radius: 6px; background: var(--surf2); color: var(--txd); padding: 7px 11px; cursor: pointer; }
-.eb-users-loading div { height: 90px; border-radius: 14px; background: linear-gradient(90deg, var(--surf2), var(--chip), var(--surf2)); background-size: 200% 100%; animation: eb-users-shimmer 1.2s infinite; }
-@keyframes eb-users-shimmer { to { background-position: -200% 0; } }
 
 /* Create / edit drawer */
 .eb-users-drawer-overlay { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; }

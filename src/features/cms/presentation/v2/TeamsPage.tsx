@@ -6,6 +6,7 @@ import {
 import type { TeamWithPlayerCount } from '../../types';
 import { useTeams } from '../hooks/useTeams';
 import { findActiveSeason } from '../../../seasons/domain/entities/season';
+import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
 
 type Team = TeamWithPlayerCount & { nickname?: string | null };
 type Season = ReturnType<typeof useTeams>['seasons'][number];
@@ -104,15 +105,18 @@ export default function TeamsPage() {
     void runAction(`/api/teams/${id}`, { method: 'DELETE' });
   };
 
-  if (loading) return <div className="eb-teams-page"><div className="eb-teams-loading">Loading teams…</div></div>;
+  const heading = (
+    <div className="eb-teams-heading">
+      <div><div className="eb-kicker">Competition</div><h1>Teams</h1><p>Teams registered into a competition edition. Pick a season and league below — conference controls appear only when that edition uses them.</p></div>
+      <div className="eb-teams-heading-actions"><button className="eb-quiet-button" onClick={() => undefined}><Download size={iconSize} /> Export</button><a className="eb-primary-button" href="/admin/teams/new"><Plus size={iconSize} /> Create Team</a></div>
+    </div>
+  );
+  if (loading) return <section className="eb-teams-page">{heading}<SkeletonRegion label="Loading teams"><Skeleton h={48} style={{ borderRadius: 12 }} /><SkeletonStats count={4} /><SkeletonTable rows={8} columns={3} /></SkeletonRegion></section>;
   if (error) return <div className="eb-teams-page"><div className="eb-teams-error"><strong>Couldn’t load teams</strong><span>{error}</span><button onClick={() => void refresh()}>Try again</button></div></div>;
 
   return (
     <section className="eb-teams-page" onClick={() => menuId && setMenuId(null)}>
-      <div className="eb-teams-heading">
-        <div><div className="eb-kicker">Competition</div><h1>Teams</h1><p>Teams registered into a competition edition. Pick a season and league below — conference controls appear only when that edition uses them.</p></div>
-        <div className="eb-teams-heading-actions"><button className="eb-quiet-button" onClick={() => undefined}><Download size={iconSize} /> Export</button><a className="eb-primary-button" href="/admin/teams/new"><Plus size={iconSize} /> Create Team</a></div>
-      </div>
+      {heading}
 
       <div className="eb-context-bar"><span className="eb-context-label">Viewing</span><select value={seasonId} onChange={(event) => { setSeasonId(event.target.value); setLeagueId(''); setConference('All'); }} aria-label="Season"><option value="">All seasons</option>{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</select><span className="eb-context-arrow">›</span><div className="eb-league-pills">{seasonLeagues.map((league) => <button key={league.id} className={leagueId === league.id ? 'is-active' : ''} onClick={() => { setLeagueId(league.id); setConference('All'); }}>{league.name}</button>)}</div><div className="eb-context-details"><span className="eb-context-status"><i />{selectedLeagueSeason?.status ? String(selectedLeagueSeason.status).replaceAll('_', ' ') : 'Active'}</span><span className="eb-context-structure">{selectedLeagueSeason?.competitionStructure ? String(selectedLeagueSeason.competitionStructure).replaceAll('_', ' ') : 'Competition'}</span>{selectedSeason && <span className="eb-context-dates">{new Date(selectedSeason.startDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>}</div></div>
 

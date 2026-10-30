@@ -16,11 +16,22 @@ import {
 import { useUsersDirectory } from './hooks/useUsersDirectory';
 import UserFormDrawer from './UserFormDrawer';
 import { Presence } from '@/shared/components/motion/Presence';
+import { Skeleton, SkeletonRegion, SkeletonStats, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
 
 export default function UsersPageV2() {
 	const directory = useUsersDirectory();
 
-	if (directory.loading) return <div className="eb-users-loading"><div /><div /><div /></div>;
+	const heading = (
+		<header className="eb-users-heading">
+			<div>
+				<div className="eb-kicker">System</div>
+				<h1>Users</h1>
+				<p>People with access to the CMS. Roles decide what each one can reach — permissions themselves are defined in Roles &amp; Permissions.</p>
+			</div>
+			<button className="eb-primary-button" onClick={directory.openCreate}><UserPlus size={14} /> Invite user</button>
+		</header>
+	);
+	if (directory.loading) return <div className="eb-users-page">{heading}<SkeletonRegion label="Loading users"><SkeletonStats count={5} min={150} /><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={8} columns={3} /></SkeletonRegion></div>;
 	if (directory.error) {
 		return (
 			<div className="eb-users-error">
@@ -38,14 +49,7 @@ export default function UsersPageV2() {
 
 	return (
 		<div className="eb-users-page">
-			<header className="eb-users-heading">
-				<div>
-					<div className="eb-kicker">System</div>
-					<h1>Users</h1>
-					<p>People with access to the CMS. Roles decide what each one can reach — permissions themselves are defined in Roles &amp; Permissions.</p>
-				</div>
-				<button className="eb-primary-button" onClick={directory.openCreate}><UserPlus size={14} /> Invite user</button>
-			</header>
+			{heading}
 
 			<div className="eb-users-counts">
 				<CountCard label="Total" value={directory.counts.total} note="people with access" onClick={() => { updateFilter('role', ALL_ROLES_OPTION); updateFilter('status', ALL_STATUSES_OPTION); }} />

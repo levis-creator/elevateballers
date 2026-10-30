@@ -7,6 +7,7 @@ import type { NewsArticleWithAuthor } from '../../../cms/types';
 import { reverseCategoryMap } from '../../../cms/types';
 import './admin-news-detail.css';
 import './admin-news-detail-cards.css';
+import { Skeleton, SkeletonPanel, SkeletonRegion, SkeletonText } from '@/shared/components/skeleton/Skeleton';
 
 type Comment = { id: string; content: string; authorName?: string | null; authorEmail?: string | null; createdAt: string; approved: boolean; };
 type Metadata = { seoTitle?: string; seoDescription?: string; socialTitle?: string; socialDescription?: string; socialImage?: string; imageAlt?: string; };
@@ -96,7 +97,7 @@ export default function AdminNewsDetailV2({ articleId, initialArticle, initialBo
     if (response.ok) { await load(); setNotice('Revision restored'); }
   };
 
-  if (loading) return <div className="eb-news-detail-loading"><div /><div /><div /></div>;
+  if (loading) return <section className="eb-news-detail"><SkeletonRegion label="Loading article"><Skeleton w={320} h={12} /><div className="eb-skel-split"><div className="eb-skel-card flush"><Skeleton h={260} style={{ borderRadius: 0 }} /><div className="eb-skel-stack" style={{ padding: '4px 20px 22px', gap: 12 }}><Skeleton w="70%" h={26} /><SkeletonText lines={5} /><SkeletonText lines={4} /></div></div><div className="eb-skel-region"><SkeletonPanel lines={4} /><SkeletonPanel lines={3} /></div></div></SkeletonRegion></section>;
   if (error || !article) return <div className="eb-news-detail-error"><FileText size={28} /><strong>{error || 'Article not found'}</strong><button onClick={() => void load()}><RefreshCw size={14} /> Try again</button></div>;
 
   const articleStatus = status(article);

@@ -1,0 +1,58 @@
+/*
+ * Shared loading skeletons. Colours are mixed from the surrounding text colour,
+ * so the same pieces read correctly on the dark and light admin themes and in
+ * the team portal without any theme tokens.
+ */
+.eb-skel-region {
+	--skel-base: color-mix(in srgb, currentColor 7%, transparent);
+	--skel-shine: color-mix(in srgb, currentColor 14%, transparent);
+	--skel-line: color-mix(in srgb, currentColor 10%, transparent);
+	display: grid;
+	gap: 14px;
+	min-width: 0;
+}
+
+.eb-skel {
+	display: block;
+	flex-shrink: 0;
+	height: 12px;
+	border-radius: 6px;
+	background: linear-gradient(90deg, var(--skel-base) 0%, var(--skel-shine) 50%, var(--skel-base) 100%);
+	background-size: 200% 100%;
+	animation: eb-skel-shimmer 1.4s ease-in-out infinite;
+}
+.eb-skel.round { border-radius: 999px; }
+
+.eb-skel-card {
+	display: grid;
+	gap: 12px;
+	min-width: 0;
+	padding: 16px;
+	border: 1px solid var(--skel-line);
+	border-radius: 14px;
+}
+.eb-skel-card.flush { gap: 0; padding: 0; overflow: hidden; }
+.eb-skel-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.eb-skel-stack { display: grid; gap: 7px; flex: 1; min-width: 0; }
+.eb-skel-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(var(--skel-min, 240px), 1fr)); }
+.eb-skel-split { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+.eb-skel-table-row { display: flex; align-items: center; gap: 16px; padding: 13px 16px; border-top: 1px solid var(--skel-line); }
+.eb-skel-table-row:first-child { border-top: 0; }
+.eb-skel-table-head { display: flex; align-items: center; gap: 16px; padding: 12px 16px; }
+.eb-skel-tabs { display: flex; gap: 22px; padding-bottom: 12px; border-bottom: 1px solid var(--skel-line); }
+
+@media (max-width: 960px) {
+	.eb-skel-split { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+	.eb-skel-hide-sm { display: none; }
+}
+
+@keyframes eb-skel-shimmer {
+	from { background-position: 100% 0; }
+	to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.eb-skel { animation: none; background: var(--skel-shine); }
+}

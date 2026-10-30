@@ -36,6 +36,7 @@ import { MEDIA_FOLDERS } from '../../domain/entities/mediaFolders';
 import type { MediaLibraryRow, MediaStats } from '../../domain/entities';
 import type { MediaFolderRow, MediaPageResponse } from './mediaLibraryTypes';
 import './MediaLibraryV2.css';
+import { SkeletonCards, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 type ViewMode = 'grid' | 'list';
 type TypeFilter = 'ALL' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
@@ -1375,11 +1376,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 function LoadingState() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div className="h-64 animate-pulse rounded-xl bg-surf2" key={index} />
-      ))}
-    </div>
+    <SkeletonRegion label="Loading media">
+      <SkeletonCards count={8} min={220} media={150} footer={false} />
+    </SkeletonRegion>
   );
 }
 function EmptyState({ onClear, onUpload }: { onClear: () => void; onUpload: () => void }) {

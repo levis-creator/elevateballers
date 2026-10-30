@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MEDIA_FOLDERS } from '@/features/media/domain/entities/mediaFolders';
+import { Skeleton, SkeletonForm, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 type PlayerFormProps = { playerId?: string };
 type Team = { id: string; name: string; abbreviation?: string | null; logo?: string | null };
@@ -145,7 +146,7 @@ export default function PlayerFormV2({ playerId }: PlayerFormProps) {
     finally { setSaving(false); }
   };
 
-  if (loading) return <div className="eb-form-loading"><div /><div /><div /></div>;
+  if (loading) return <SkeletonRegion label="Loading player"><Skeleton w={260} h={11} /><SkeletonForm panels={3} /></SkeletonRegion>;
   return <div className="eb-player-form">
     <style>{styles}</style>
     <div className="pf-breadcrumb"><a href="/admin/players">Players</a><span>/</span>{playerId && <><a href={`/admin/players/${playerId}`}>{`${form.firstName} ${form.lastName}`.trim() || 'Player'}</a><span>/</span></>}<strong>{playerId ? 'Edit' : 'New'}</strong></div>

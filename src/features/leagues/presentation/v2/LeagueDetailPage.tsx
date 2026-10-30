@@ -1,12 +1,13 @@
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { useLeagueDetail } from "./hooks/useLeagueDetail";
 import LeagueHero from "./components/LeagueHero";
 import LeagueOverviewTab from "./components/LeagueOverviewTab";
 import LeagueSeasonsTab from "./components/LeagueSeasonsTab";
 import LeagueTeamsTab from "./components/LeagueTeamsTab";
 import type { LeagueTab } from "@/features/leagues/domain/entities/league-detail";
+import { Skeleton, SkeletonDetail, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
 
 function BackLink() {
 	return (
@@ -24,12 +25,7 @@ function LeagueDetailContent({ leagueId }: { leagueId: string }) {
 	const v = useLeagueDetail(leagueId);
 
 	if (v.loading) {
-		return (
-			<div className="flex items-center justify-center gap-2 py-24 text-[var(--txm)]">
-				<Loader2 className="h-5 w-5 animate-spin" />
-				Loading league…
-			</div>
-		);
+		return <SkeletonRegion label="Loading league"><Skeleton w={120} h={11} /><SkeletonDetail tabs={4} /></SkeletonRegion>;
 	}
 
 	if (v.error || !v.detail || !v.stats) {

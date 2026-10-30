@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaLibraryPicker } from "@/features/cms/presentation/components/MediaLibraryPicker";
 import { teamCoachingStaffApi, type TeamCoachingStaffRecord } from "@/features/staff/data/datasources/team-coaching-staff-api";
+import { SkeletonRegion, SkeletonTable } from "@/shared/components/skeleton/Skeleton";
 
 type CoachType = TeamCoachingStaffRecord["type"];
 type CoachingStaff = TeamCoachingStaffRecord;
@@ -125,7 +126,7 @@ export default function TeamCoachingStaffManager({ teamId }: Props) {
 			{error && <div className="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
 
 			{loading ? (
-				<p className="text-sm text-muted-foreground">Loading…</p>
+				<SkeletonRegion label="Loading staff"><SkeletonTable rows={4} columns={2} /></SkeletonRegion>
 			) : ordered.length === 0 ? (
 				<Card>
 					<CardContent className="py-8 text-center text-sm text-muted-foreground">No coaching staff yet. Add the head coach to get started.</CardContent>

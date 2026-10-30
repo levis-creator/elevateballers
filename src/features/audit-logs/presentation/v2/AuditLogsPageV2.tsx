@@ -18,6 +18,7 @@ import {
   type AuditLogEntry,
 } from '../../domain/usecases/audit-log-view';
 import { useAuditLogsData, TIME_RANGE_LABEL, type OutcomeFilter, type TimeRangeFilter } from './hooks/useAuditLogsData';
+import { Skeleton, SkeletonList, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 /* -------------------------------------------------------------------------- */
 /* Small shared primitives                                                    */
@@ -542,11 +543,10 @@ function AuditLogsContent() {
       {/* timeline */}
       <div className="overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf)]">
         {d.loading ? (
-          <div className="animate-pulse space-y-2 p-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-10 rounded-lg bg-[var(--surf2)]" />
-            ))}
-          </div>
+          <SkeletonRegion label="Loading audit logs" style={{ padding: 16 }}>
+            <Skeleton w={130} h={10} />
+            <SkeletonList rows={8} bare />
+          </SkeletonRegion>
         ) : d.groups.length === 0 ? (
           <div className="px-5 py-14 text-center font-['Archivo'] text-[13px] text-[var(--txm)]">
             No audit logs found for the current filters.

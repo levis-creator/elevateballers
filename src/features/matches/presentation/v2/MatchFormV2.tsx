@@ -7,6 +7,7 @@ import { getTeamInitials } from '../../domain/usecases/team-helpers';
 import { stageOptions, stageLabel, scoresUnlocked } from '../../domain/usecases/match-form';
 import { useMatchForm, type DraftRosterPlayer, type TeamOption } from './hooks/useMatchForm';
 import MatchRoster from './MatchRoster';
+import { SkeletonForm, SkeletonHeader, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 const HOME = '#e4002b';
 const AWAY = '#2a6fdb';
@@ -174,18 +175,13 @@ function MatchFormContent({ matchId, seasonId }: { matchId?: string; seasonId?: 
 
   if (f.loading) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-16 rounded-2xl bg-[var(--surf)]" />
-        <div className="grid grid-cols-[1.6fr_1fr] gap-5 max-[960px]:grid-cols-1">
-          <div className="space-y-4">
-            <div className="h-40 rounded-2xl bg-[var(--surf)]" />
-            <div className="h-52 rounded-2xl bg-[var(--surf)]" />
-          </div>
-          <div className="h-64 rounded-2xl bg-[var(--surf)]" />
-        </div>
-      </div>
+      <SkeletonRegion label="Loading match">
+        <SkeletonHeader />
+        <SkeletonForm panels={3} />
+      </SkeletonRegion>
     );
   }
+
 
   const checks = [
     { label: 'Both teams selected', ok: f.checklist.teams },

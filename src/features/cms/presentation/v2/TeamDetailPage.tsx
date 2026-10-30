@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useTeamDetail } from '../hooks/useTeamDetail';
 import CompetitionContext from './CompetitionContext';
 import TeamDetailHero from './TeamDetailHero';
@@ -10,6 +10,7 @@ import {
   RosterSection,
   StaffSection,
 } from './TeamDetailSections';
+import { Skeleton, SkeletonDetail, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 export default function TeamDetailPage({ teamId }: { teamId: string }) {
   const data = useTeamDetail(teamId);
@@ -17,9 +18,10 @@ export default function TeamDetailPage({ teamId }: { teamId: string }) {
   const [registrationRequested, setRegistrationRequested] = useState(false);
   if (data.loading)
     return (
-      <div className="eb-detail-loading">
-        <Loader2 size={22} className="eb-spin" /> Loading team detail…
-      </div>
+      <SkeletonRegion label="Loading team">
+        <Skeleton w={160} h={11} />
+        <SkeletonDetail tabs={5} />
+      </SkeletonRegion>
     );
   if (data.error || !data.team)
     return (

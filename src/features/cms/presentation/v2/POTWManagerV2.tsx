@@ -8,6 +8,7 @@ import ImageUpload from '@/components/ImageUpload';
 import { MediaLibraryPicker } from '../components/MediaLibraryPicker';
 import './potw-v2.css';
 import './potw-action-shot.css';
+import { Skeleton, SkeletonPanel, SkeletonRegion, SkeletonTable, SkeletonText } from '@/shared/components/skeleton/Skeleton';
 
 type SlotsResponse = { slots: PotwSlot[]; currentSlotKeys: string[]; active: PlayerOfTheWeekWithPlayer[] };
 
@@ -155,7 +156,10 @@ export default function POTWManagerV2() {
   };
   const remove = async (id: string) => { if (!window.confirm('Delete this Player of the Week record?')) return; await fetch(`/api/highlights/potw?id=${id}`, { method: 'DELETE' }); if (editing?.id === id) resetForm(); await fetchData(); };
 
-  if (loading) return <div className="eb-potw-v2-loading"><span /><span /><span /></div>;
+  const heading = (
+    <header className="eb-potw-v2-heading"><div><div className="eb-potw-eyebrow">Editorial</div><h1>Player of the Week</h1><p>One winner per slot — each conference, and each league that plays as a single table, shows side by side on the homepage. Publishing a slot only replaces that slot’s winner.</p></div><a href="/" className="eb-potw-site-link"><Eye size={14} /> View on site</a></header>
+  );
+  if (loading) return <section className="eb-potw-v2">{heading}<SkeletonRegion label="Loading Player of the Week"><Skeleton w={300} h={40} style={{ borderRadius: 10 }} /><div className="eb-skel-grid" style={{ ['--skel-min' as string]: '260px' }}><div className="eb-skel-card"><div className="eb-skel-row" style={{ justifyContent: 'space-between' }}><Skeleton w={110} h={9} /><Skeleton w={70} h={18} round /></div><div className="eb-skel-row"><Skeleton w={72} h={96} style={{ borderRadius: 10 }} /><SkeletonText lines={3} /></div></div><div className="eb-skel-card"><div className="eb-skel-row" style={{ justifyContent: 'space-between' }}><Skeleton w={110} h={9} /><Skeleton w={70} h={18} round /></div><div className="eb-skel-row"><Skeleton w={72} h={96} style={{ borderRadius: 10 }} /><SkeletonText lines={3} /></div></div><div className="eb-skel-card"><div className="eb-skel-row" style={{ justifyContent: 'space-between' }}><Skeleton w={110} h={9} /><Skeleton w={70} h={18} round /></div><div className="eb-skel-row"><Skeleton w={72} h={96} style={{ borderRadius: 10 }} /><SkeletonText lines={3} /></div></div></div><div className="eb-skel-split"><div className="eb-skel-region"><SkeletonTable rows={5} columns={1} pill={false} /><SkeletonPanel lines={4} /></div><div className="eb-skel-region"><SkeletonPanel lines={3} /><SkeletonPanel lines={4} /></div></div></SkeletonRegion></section>;
 
   const historyRows = history.filter((item) => filter === 'all' || keyOf(item) === filter);
   const draftName = !editing && selectedPlayer ? selectedPlayer.name : '';
@@ -167,7 +171,7 @@ export default function POTWManagerV2() {
   const liveInSeason = seasonSlots.filter((entry) => filledKeys.has(entry.key)).length;
 
   return <section className="eb-potw-v2">
-    <header className="eb-potw-v2-heading"><div><div className="eb-potw-eyebrow">Editorial</div><h1>Player of the Week</h1><p>One winner per slot — each conference, and each league that plays as a single table, shows side by side on the homepage. Publishing a slot only replaces that slot’s winner.</p></div><a href="/" className="eb-potw-site-link"><Eye size={14} /> View on site</a></header>
+    {heading}
     <div className="eb-potw-scope"><span>Season</span><select value={seasonId} onChange={(event) => chooseSeason(event.target.value)}>{!seasons.length && <option value="">No published seasons</option>}{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</select>{seasonSlots.length > 0 && <small><i className={liveInSeason === seasonSlots.length ? '' : 'empty'} />{liveInSeason} of {seasonSlots.length} slots live</small>}</div>
     {!slots.length && <div className="eb-potw-alert">No published league seasons yet. Publish a season under Seasons to start awarding Player of the Week.</div>}
     {seasonSlots.length > 0 && <div className="eb-potw-slot-grid" role="tablist" aria-label="Award slot">{seasonSlots.map((entry) => {

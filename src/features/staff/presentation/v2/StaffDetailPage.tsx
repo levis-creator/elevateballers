@@ -16,6 +16,7 @@ import type {
 import { staffHistoryApi } from '@/features/staff/data/datasources/staff-history-api';
 import { STAFF_ROLES, staffRoleLabel } from '@/features/staff/domain/entities/staff-management';
 import type { StaffRole } from '@prisma/client';
+import { SkeletonDetail, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 type Tab = 'overview' | 'history' | 'matches' | 'account' | 'activity';
 type PortalUser = {
@@ -117,10 +118,9 @@ export default function StaffDetailPage({ staffId }: { staffId: string }) {
   if (loading)
     return (
       <Shell>
-        <div className="animate-pulse space-y-4">
-          <div className="h-52 rounded-2xl bg-[var(--surf)]" />
-          <div className="h-80 rounded-2xl bg-[var(--surf)]" />
-        </div>
+        <SkeletonRegion label="Loading staff member">
+          <SkeletonDetail tabs={3} />
+        </SkeletonRegion>
       </Shell>
     );
   if (!record || error)

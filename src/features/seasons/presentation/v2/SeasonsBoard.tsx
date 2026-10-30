@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AlertCircle, CalendarDays, Loader2, Plus, Search } from "lucide-react";
+import { AlertCircle, CalendarDays, Plus, Search } from "lucide-react";
 import { useSeasons } from "./hooks/useSeasons";
 import SeasonKpis from "./components/SeasonKpis";
 import SeasonCard from "./components/SeasonCard";
 import type { SeasonFilter } from "@/features/seasons/domain/entities/season";
+import { SkeletonCards, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
 
 function SeasonsContent() {
 	const v = useSeasons();
@@ -123,10 +124,9 @@ function SeasonsContent() {
 
 			{/* body */}
 			{v.loading ? (
-				<div className="flex items-center justify-center gap-2 py-20 text-[var(--txm)]">
-					<Loader2 className="h-5 w-5 animate-spin" />
-					Loading seasons…
-				</div>
+				<SkeletonRegion label="Loading seasons">
+					<SkeletonCards count={3} min={900} />
+				</SkeletonRegion>
 			) : v.error ? (
 				<div className="flex flex-col items-center gap-3 rounded-2xl border border-[var(--bord)] bg-[var(--surf)] py-16 text-center">
 					<AlertCircle className="h-6 w-6 text-[var(--brand)]" />

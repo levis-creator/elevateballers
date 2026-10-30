@@ -3,6 +3,7 @@ import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Shield, Users, Calendar, Images, Newspaper, Handshake, Inbox, CalendarDays, Check, Trophy, Activity as ActivityIcon, Plus, HardDrive } from "lucide-react";
 import { useDashboardData, type Approval, type Fixture, type LineupStatus } from "./hooks/useDashboardData";
+import { SkeletonHeader, SkeletonList, SkeletonPanel, SkeletonRegion, SkeletonStats } from "@/shared/components/skeleton/Skeleton";
 
 const KPI_ICONS: Record<string, typeof Shield> = {
 	teams: Shield,
@@ -86,20 +87,23 @@ function DashboardContent() {
 
 	if (d.loading) {
 		return (
-			<div className="animate-pulse">
-				<div className="mb-4 h-28 rounded-2xl bg-[var(--surf)]" />
-				<div className="mb-6 grid grid-cols-6 gap-2.5 max-[900px]:grid-cols-3 max-[600px]:grid-cols-2">
-					{Array.from({ length: 6 }).map((_, i) => (
-						<div key={i} className="h-16 rounded-xl bg-[var(--surf)]" />
-					))}
+			<SkeletonRegion label="Loading dashboard">
+				<SkeletonHeader action={false} />
+				<SkeletonStats count={6} min={140} />
+				<div className="eb-skel-split">
+					<div className="eb-skel-region">
+						<SkeletonPanel lines={4} height={180} />
+						<SkeletonList rows={5} />
+					</div>
+					<div className="eb-skel-region">
+						<SkeletonPanel lines={5} />
+						<SkeletonList rows={4} avatar={false} />
+					</div>
 				</div>
-				<div className="grid grid-cols-[1.55fr_1fr] gap-5 max-[1100px]:grid-cols-1">
-					<div className="h-72 rounded-2xl bg-[var(--surf)]" />
-					<div className="h-72 rounded-2xl bg-[var(--surf)]" />
-				</div>
-			</div>
+			</SkeletonRegion>
 		);
 	}
+
 
 	return (
 		<div className="font-['Archivo'] text-[var(--tx)]">

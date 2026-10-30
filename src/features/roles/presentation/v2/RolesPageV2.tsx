@@ -6,6 +6,7 @@ import { useRolesDirectory } from './hooks/useRolesDirectory';
 import RoleEditorDrawer from './RoleEditorDrawer';
 import { Presence } from '@/shared/components/motion/Presence';
 import PermissionSyncPanel from './PermissionSyncPanel';
+import { Skeleton, SkeletonRegion, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
 
 export default function RolesPageV2() {
 	return (
@@ -18,7 +19,17 @@ export default function RolesPageV2() {
 function RolesPageContent() {
 	const directory = useRolesDirectory();
 
-	if (directory.loading) return <div className="eb-roles-loading"><div /><div /><div /></div>;
+	const heading = (
+		<header className="eb-roles-heading">
+			<div>
+				<div className="eb-kicker">System</div>
+				<h1>Roles &amp; Permissions</h1>
+				<p>A role is a named bundle of permissions. Change one and everyone holding it is affected immediately.</p>
+			</div>
+			<button className="eb-primary-button" onClick={directory.openCreate}><Plus size={14} /> Create role</button>
+		</header>
+	);
+	if (directory.loading) return <div className="eb-roles-page">{heading}<SkeletonRegion label="Loading roles"><Skeleton h={42} style={{ borderRadius: 10 }} /><SkeletonTable rows={6} columns={2} avatar={false} /></SkeletonRegion></div>;
 	if (directory.error) {
 		return (
 			<div className="eb-roles-error">
@@ -31,14 +42,7 @@ function RolesPageContent() {
 
 	return (
 		<div className="eb-roles-page">
-			<header className="eb-roles-heading">
-				<div>
-					<div className="eb-kicker">System</div>
-					<h1>Roles &amp; Permissions</h1>
-					<p>A role is a named bundle of permissions. Change one and everyone holding it is affected immediately.</p>
-				</div>
-				<button className="eb-primary-button" onClick={directory.openCreate}><Plus size={14} /> Create role</button>
-			</header>
+			{heading}
 
 			<div className="eb-roles-toolbar">
 				<label className="eb-roles-search">

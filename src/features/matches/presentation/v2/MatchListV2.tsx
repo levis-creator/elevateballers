@@ -37,6 +37,7 @@ import {
   type ListMatch,
 } from '../../domain/usecases/match-list-view';
 import { useMatchListData } from './hooks/useMatchListData';
+import { Skeleton, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 /* -------------------------------------------------------------------------- */
 /* Small shared primitives                                                    */
@@ -634,11 +635,20 @@ function MatchListContent() {
 
       {/* body */}
       {d.loading ? (
-        <div className="animate-pulse space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-32 rounded-xl bg-[var(--surf)]" />
+        <SkeletonRegion label="Loading matches" style={{ gap: 26 }}>
+          {[3, 2].map((count, group) => (
+            <div key={group} className="eb-skel-region" style={{ gap: 10 }}>
+              <Skeleton w={150} h={10} />
+              {Array.from({ length: count }, (_, i) => (
+                <div key={i} className="eb-skel-card eb-skel-row" style={{ justifyContent: 'space-between' }}>
+                  <div className="eb-skel-row" style={{ flex: 1 }}><Skeleton w={38} h={38} round /><Skeleton w="45%" h={13} /></div>
+                  <Skeleton w={74} h={26} style={{ borderRadius: 8 }} />
+                  <div className="eb-skel-row" style={{ flex: 1, justifyContent: 'flex-end' }}><Skeleton w="45%" h={13} /><Skeleton w={38} h={38} round /></div>
+                </div>
+              ))}
+            </div>
           ))}
-        </div>
+        </SkeletonRegion>
       ) : d.filtered.length === 0 ? (
         <EmptyState hasFilters={d.hasActiveFilters} canCreate={canCreate} onReset={() => d.refetch()} error={d.error} />
       ) : d.viewMode === 'list' ? (

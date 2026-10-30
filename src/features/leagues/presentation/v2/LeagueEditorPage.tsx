@@ -6,17 +6,13 @@ import LeagueInfoCard from "./components/LeagueInfoCard";
 import LeagueRegistrationCard from "./components/LeagueRegistrationCard";
 import LeagueSeasonsCard from "./components/LeagueSeasonsCard";
 import SeasonsPlaceholderCard from "./components/SeasonsPlaceholderCard";
+import { Skeleton, SkeletonForm, SkeletonHeader, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
 
 function LeagueEditorContent({ leagueId }: { leagueId?: string }) {
 	const v = useLeagueEditor(leagueId);
 
 	if (v.loading) {
-		return (
-			<div className="flex items-center justify-center gap-2 py-24 text-[var(--txm)]">
-				<Loader2 className="h-5 w-5 animate-spin" />
-				Loading league…
-			</div>
-		);
+		return <SkeletonRegion label="Loading league"><Skeleton w={120} h={11} /><SkeletonHeader /><SkeletonForm panels={2} /></SkeletonRegion>;
 	}
 
 	return (

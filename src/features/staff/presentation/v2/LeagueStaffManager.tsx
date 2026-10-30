@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Textarea } from "@/components/ui/textarea";
 import { MediaLibraryPicker } from "@/features/cms/presentation/components/MediaLibraryPicker";
 import { leagueStaffApi, type LeagueStaffRecord } from "@/features/staff/data/datasources/league-staff-api";
+import { SkeletonRegion, SkeletonTable } from "@/shared/components/skeleton/Skeleton";
 
 /** Org-wide league staff record (mirrors the LeagueStaff model). */
 type LeagueStaff = LeagueStaffRecord;
@@ -137,7 +138,7 @@ export default function LeagueStaffManager() {
 			{error && <div className="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
 
 			{loading ? (
-				<p className="text-sm text-muted-foreground">Loading…</p>
+				<SkeletonRegion label="Loading staff"><SkeletonTable rows={4} columns={2} /></SkeletonRegion>
 			) : staff.length === 0 ? (
 				<Card>
 					<CardContent className="py-10 text-center text-sm text-muted-foreground">

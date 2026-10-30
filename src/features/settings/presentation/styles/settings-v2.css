@@ -1066,22 +1066,7 @@
     11px 'Archivo',
     sans-serif;
 }
-.eb-settings-loading {
-  display: grid;
-  gap: 14px;
-}
-.eb-settings-loading div {
-  height: 150px;
-  border-radius: 14px;
-  background: linear-gradient(90deg, var(--surf2), var(--chip), var(--surf2));
-  background-size: 200% 100%;
-  animation: eb-settings-shimmer 1.2s infinite;
-}
-@keyframes eb-settings-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
+
 @media (max-width: 900px) {
   .eb-settings-v2 {
     padding: 24px 18px 100px;

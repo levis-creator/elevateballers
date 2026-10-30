@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, ListChecks, Lock } from 'lucide-react';
 import { duplicateJerseyMessage } from '@/features/team-portal/domain/entities/lineup';
+import { Skeleton, SkeletonRegion, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
 
 type MatchSummary = {
   id: string;
@@ -197,8 +198,8 @@ export default function TeamPortalLineup({
         </div>
       )}
       {loading && !data ? (
-        <section className="portal-lineup-card rounded-2xl border px-5 py-8 text-[13px] text-[#8a817a]">
-          Loading lineup…
+        <section className="portal-lineup-card rounded-2xl border p-5 text-[13px] text-[#8a817a]">
+          <SkeletonRegion label="Loading lineup"><Skeleton w={220} h={12} /><SkeletonTable rows={10} columns={2} bare /></SkeletonRegion>
         </section>
       ) : !data ? null : !data.registered ? (
         <EmptyState

@@ -6,10 +6,14 @@ import ActionDialog from '../../../cms/presentation/v2/ActionDialog';
 import RowMenu from '../../../cms/presentation/v2/RowMenu';
 import TransferDialog from './TransferDialog';
 import { Presence } from '@/shared/components/motion/Presence';
+import { Skeleton, SkeletonRegion, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
 
 export default function PlayersPageV2() {
   const directory = usePlayersDirectory();
-  if (directory.loading) return <div className="eb-players-loading"><div /><div /><div /></div>;
+  const heading = (
+    <header className="eb-players-heading"><div><div className="eb-players-eyebrow">Personnel</div><h1>Players</h1><p>Player profiles across the league. Scope the list to a competition edition to see who is registered, or switch to the full directory to manage every profile on record.</p></div><div className="eb-players-actions"><button><Upload size={14} /> Import CSV</button><button onClick={() => directory.exportCsv(directory.filtered.map((player) => player.id))} title="Download the players currently shown as CSV"><Download size={14} /> Export</button><a href="/admin/players/new">＋ New Player</a></div></header>
+  );
+  if (directory.loading) return <div className="eb-players-page">{heading}<ScopeBar {...directory} /><SkeletonRegion label="Loading players"><Skeleton h={46} style={{ borderRadius: 12 }} /><SkeletonTable rows={10} columns={4} /></SkeletonRegion></div>;
   if (directory.error) return <div className="eb-players-error"><strong>Unable to load players</strong><span>{directory.error}</span><button onClick={directory.load}>Try again</button></div>;
   const letters = ['All', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
   const presentLetters = new Set(directory.base.map((player) => getPlayerName(player)[0]?.toUpperCase()));
@@ -20,7 +24,7 @@ export default function PlayersPageV2() {
   const hasFilters = filtered.search || filtered.team !== 'All teams' || filtered.position !== 'All' || filtered.status !== 'All' || filtered.letter !== 'All' || filtered.participation !== 'all';
 
   return <div className="eb-players-page">
-    <header className="eb-players-heading"><div><div className="eb-players-eyebrow">Personnel</div><h1>Players</h1><p>Player profiles across the league. Scope the list to a competition edition to see who is registered, or switch to the full directory to manage every profile on record.</p></div><div className="eb-players-actions"><button><Upload size={14} /> Import CSV</button><button onClick={() => directory.exportCsv(directory.filtered.map((player) => player.id))} title="Download the players currently shown as CSV"><Download size={14} /> Export</button><a href="/admin/players/new">＋ New Player</a></div></header>
+    {heading}
     <ScopeBar {...directory} />
     {directory.scope === 'season' && <div className="eb-players-kpis"><Kpi value={directory.base.length} label="Registered Players" color="var(--brand)" /><Kpi value={approved} label="Approved" color="#1f8a5b" /><Kpi value={pending} label="Awaiting Review" color="#d98324" action={pending ? 'Review pending' : undefined} onAction={() => directory.updateFilter('status', 'pending')} /><Kpi value={incomplete} label="Incomplete Profiles" color="#2a6fdb" action={incomplete ? 'Show incomplete' : undefined} onAction={() => directory.updateFilter('status', 'incomplete')} /></div>}
     <section className="eb-players-card"><div className="eb-players-toolbar"><label><Search size={15} /><input value={filtered.search} onChange={(event) => directory.updateFilter('search', event.target.value)} placeholder="Name, team or jersey…" /></label><select value={filtered.team} onChange={(event) => directory.updateFilter('team', event.target.value)}>{directory.teamOptions.map((team) => <option key={team}>{team}</option>)}</select><select value={filtered.status} onChange={(event) => directory.updateFilter('status', event.target.value)}><option value="All">All status</option><option value="approved">Approved</option><option value="pending">Pending</option><option value="incomplete">Incomplete profile</option></select><div className="eb-segment eb-participation" role="group" aria-label="League participation">{([['all', 'All'], ['active', 'Active'], ['dropped', 'Dropped out']] as const).map(([value, label]) => <button key={value} className={filtered.participation === value ? 'active' : ''} onClick={() => directory.updateFilter('participation', value)}>{label}{value === 'dropped' && <b>{directory.droppedCount}</b>}</button>)}</div><div className="eb-position-pills">{['All', ...Object.keys(PLAYER_POSITIONS)].map((position) => <button key={position} className={filtered.position === position ? 'active' : ''} onClick={() => directory.updateFilter('position', position)}>{position === 'All' ? 'ALL' : position}</button>)}</div>{hasFilters && <button className="eb-reset" onClick={directory.resetFilters}>Reset</button>}</div>

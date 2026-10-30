@@ -1,11 +1,12 @@
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { CheckCheck, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import { CheckCheck, RefreshCw, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { Presence, backdropMotion, dialogMotion, m as motion } from "@/shared/components/motion/Presence";
 import { useMessages } from "./hooks/useMessages";
 import MessageList from "./components/MessageList";
 import MessageReadingPane from "./components/MessageReadingPane";
+import { Skeleton, SkeletonList, SkeletonRegion, SkeletonText } from "@/shared/components/skeleton/Skeleton";
 
 function InboxContent() {
 	const m = useMessages();
@@ -67,7 +68,7 @@ function InboxContent() {
 			{/* master-detail — contained inbox that fills the viewport height */}
 			<div className="flex h-[calc(100vh-190px)] min-h-[520px] overflow-hidden rounded-2xl border border-[var(--bord)] bg-[var(--surf)] max-[900px]:h-auto max-[900px]:min-h-0 max-[900px]:flex-col">
 				{m.loading && m.messages.length === 0 ? (
-					<div className="flex flex-1 items-center justify-center gap-2 py-20 text-[var(--txm)]"><Loader2 className="h-5 w-5 animate-spin" />Loading messages…</div>
+					<SkeletonRegion label="Loading messages" className="flex-1" style={{ padding: 16, gridTemplateColumns: 'minmax(0, 340px) minmax(0, 1fr)', alignItems: 'start' }}><SkeletonList rows={8} /><div className="eb-skel-card max-[900px]:hidden"><Skeleton w="50%" h={18} /><Skeleton w="30%" h={10} /><SkeletonText lines={6} /></div></SkeletonRegion>
 				) : m.error && m.messages.length === 0 ? (
 					<div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center"><AlertCircle className="h-6 w-6 text-[var(--brand)]" /><p className="font-['Archivo'] text-[13px] text-[var(--txm)]">{m.error}</p></div>
 				) : (

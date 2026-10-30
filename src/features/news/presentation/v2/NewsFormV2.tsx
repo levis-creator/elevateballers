@@ -7,6 +7,7 @@ import { generateSlug } from '../../../cms/lib/utils';
 import ImageUpload from '@/components/ImageUpload';
 import './news-form-v2.css';
 import './news-form-body.css';
+import { Skeleton, SkeletonForm, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 type Metadata = { seoTitle: string; seoDescription: string; socialTitle: string; socialDescription: string; imageAlt: string };
 type ArticleStatus = 'published' | 'scheduled' | 'draft';
@@ -101,7 +102,7 @@ export default function NewsFormV2({ articleId }: { articleId?: string }) {
     finally { setSaving(false); }
   };
 
-  if (loading) return <div className="eb-news-form-loading"><div /><div /><div /></div>;
+  if (loading) return <SkeletonRegion label="Loading article"><Skeleton h={54} style={{ borderRadius: 12 }} /><SkeletonForm panels={2} /></SkeletonRegion>;
 
   const seoTitle = metadata.seoTitle || form.title || 'Your article headline';
   const seoDescription = metadata.seoDescription || form.excerpt || 'Your article description will appear here.';

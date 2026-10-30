@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { PermissionProvider } from "@/features/rbac/usePermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import EntityAvatar from "@/components/EntityAvatar";
-import { Search, Download, Plus, Check, MoreVertical, Mail, Loader2, AlertCircle } from "lucide-react";
+import { Search, Download, Plus, Check, MoreVertical, Mail, AlertCircle } from "lucide-react";
 import { useSubscribers } from "./hooks/useSubscribers";
 import SubscriberKpis from "./components/SubscriberKpis";
 import AddSubscriberModal from "./components/AddSubscriberModal";
 import type { SubscriberFilter } from "@/features/subscribers/domain/entities/subscriber";
+import { SkeletonRegion, SkeletonTable } from "@/shared/components/skeleton/Skeleton";
 
 const dateFmt = (iso: string) => {
 	const d = new Date(iso);
@@ -82,7 +83,7 @@ function SubscribersContent() {
 				{/* table */}
 				<div ref={bodyRef} className="overflow-x-auto">
 					{v.loading ? (
-						<div className="flex items-center justify-center gap-2 py-16 text-[var(--txm)]"><Loader2 className="h-5 w-5 animate-spin" />Loading subscribers…</div>
+						<SkeletonRegion label="Loading subscribers" ><SkeletonTable rows={8} columns={2} bare /></SkeletonRegion>
 					) : v.error ? (
 						<div className="flex flex-col items-center gap-2 py-16 text-center"><AlertCircle className="h-6 w-6 text-[var(--brand)]" /><p className="font-['Archivo'] text-[13px] text-[var(--txm)]">{v.error}</p></div>
 					) : v.filtered.length === 0 ? (

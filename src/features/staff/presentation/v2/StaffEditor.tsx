@@ -3,7 +3,7 @@ import { navigate } from "astro:transitions/client";
 import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonForm, SkeletonHeader, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
 import type { StaffRole } from "@prisma/client";
 import { staffApi, type StaffFormData } from "@/features/staff/data/datasources/staff-api";
 import { StaffAssignments } from "./StaffAssignments";
@@ -26,7 +26,7 @@ export default function StaffEditor({ staffId }: { staffId?: string }) {
   const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
   async function submit(event: FormEvent) { event.preventDefault(); setSaving(true); setError(""); setSaved(false); try { if (staffId) await staffApi.update(staffId, form); else await staffApi.create(form); if (!staffId && saveAnother) { setForm(EMPTY); setInitialForm(EMPTY); setSaveAnother(false); setSaved(true); } else { setInitialForm(form); setSaved(true); window.setTimeout(() => navigate("/admin/staff"), 700); } } catch (e) { setError(e instanceof Error ? e.message : "Unable to save staff member"); } finally { setSaving(false); } }
   async function deleteStaff() { if (!staffId || !window.confirm("Delete this staff member permanently? This cannot be undone.")) return; setSaving(true); setError(""); try { await staffApi.remove(staffId); await navigate("/admin/staff"); } catch (e) { setError(e instanceof Error ? e.message : "Unable to delete staff member"); } finally { setSaving(false); } }
-  if (loading) return <div className="mx-auto max-w-[1240px] space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-20 w-full" /><Skeleton className="h-96 w-full" /></div>;
+  if (loading) return <div className="px-4 pb-8 pt-5 sm:px-6 sm:pt-6"><SkeletonRegion label="Loading staff member" className="mx-auto max-w-[1240px]"><Skeleton w={200} h={11} /><SkeletonHeader /><SkeletonForm panels={3} /></SkeletonRegion></div>;
   const isCreate = !staffId; const pageTitle = isCreate ? "Create staff member" : "Edit staff member";
   return <div className="relative min-h-full bg-[var(--bg)] px-4 pb-8 pt-5 font-body text-[var(--tx)] sm:px-6 sm:pt-6">
     <div className="mx-auto max-w-[1240px]"><div className="mb-4 flex flex-wrap items-center gap-2 font-mono text-[11px] text-[var(--txm)]"><a href="/admin/staff" className="no-underline hover:text-[var(--brand)]">Staff</a><span className="text-[var(--faint)]">/</span>{staffId && <><a href={`/admin/staff/${staffId}`} className="no-underline hover:text-[var(--brand)]">{form.firstName} {form.lastName}</a><span className="text-[var(--faint)]">/</span></>}<span className="text-[var(--txd)]">{pageTitle}</span></div>

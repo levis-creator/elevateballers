@@ -2,6 +2,7 @@ import { Search } from 'lucide-react';
 import { STANDARD_ACTIONS, humanizeAction, type MatrixRow } from '../../domain/entities/role-editor';
 import type { useRolesDirectory } from './hooks/useRolesDirectory';
 import { backdropMotion, drawerMotion, m } from '@/shared/components/motion/Presence';
+import { Skeleton, SkeletonPanel, SkeletonRegion, SkeletonTable } from '@/shared/components/skeleton/Skeleton';
 
 export default function RoleEditorDrawer({ directory }: { directory: ReturnType<typeof useRolesDirectory> }) {
 	const { draft, creating, editingRole, editorLoading } = directory;
@@ -39,7 +40,7 @@ export default function RoleEditorDrawer({ directory }: { directory: ReturnType<
 				)}
 
 				{editorLoading || !draft ? (
-					<div className="eb-roles-drawer-loading"><div /><div /><div /></div>
+					<SkeletonRegion label="Loading role"><SkeletonPanel fields={2} /><Skeleton h={38} style={{ borderRadius: 10 }} /><SkeletonTable rows={7} columns={4} avatar={false} pill={false} /></SkeletonRegion>
 				) : (
 					<>
 						<div className="eb-roles-drawer-body">

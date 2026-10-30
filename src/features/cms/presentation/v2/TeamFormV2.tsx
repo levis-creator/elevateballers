@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, Link2, Plus, RefreshCw, Save, Star, Trash2, Upload } from 'lucide-react';
+import { Skeleton, SkeletonForm, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 type Registration = {
   seasonId: string;
@@ -207,7 +208,7 @@ export default function TeamFormV2({ teamId }: { teamId?: string }) {
     ['Team colours are valid hex', !colorError],
   ] as Array<[string, boolean]>, [bioTooLong, colorError, form.description.length, form.logo, form.shortName, nameError, registrations.length]);
 
-  if (loading) return <div className="eb-form-loading"><div /><div /><div /></div>;
+  if (loading) return <SkeletonRegion label="Loading team"><Skeleton w={260} h={11} /><SkeletonForm panels={3} /></SkeletonRegion>;
 
   return (
     <div className="eb-team-form">

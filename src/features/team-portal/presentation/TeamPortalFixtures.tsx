@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, CalendarDays } from 'lucide-react';
+import { Skeleton, SkeletonRegion } from '@/shared/components/skeleton/Skeleton';
 
 type Fixture = {
   id: string;
@@ -88,8 +89,8 @@ export default function TeamPortalFixtures({
         </div>
       )}
       {loading ? (
-        <section className="portal-fixtures-card rounded-2xl border px-5 py-8 text-[13px] text-[#8a817a]">
-          Loading fixtures…
+        <section className="portal-fixtures-card rounded-2xl border p-5 text-[13px] text-[#8a817a]">
+          <SkeletonRegion label="Loading fixtures">{Array.from({ length: 4 }, (_, i) => <div key={i} className="eb-skel-row" style={{ justifyContent: 'space-between' }}><div className="eb-skel-stack" style={{ maxWidth: 90 }}><Skeleton w={60} h={9} /><Skeleton w={44} h={9} /></div><div className="eb-skel-row" style={{ flex: 1, justifyContent: 'center' }}><Skeleton w="28%" h={12} /><Skeleton w={52} h={22} style={{ borderRadius: 7 }} /><Skeleton w="28%" h={12} /></div><Skeleton w={64} h={20} round /></div>)}</SkeletonRegion>
         </section>
       ) : (
         <div className="grid gap-4">

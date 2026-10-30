@@ -5,17 +5,13 @@ import { useSeasonForm } from "./hooks/useSeasonForm";
 import SeasonDetailsCard from "./components/SeasonDetailsCard";
 import LeagueSeasonPanels from "./components/LeagueSeasonPanels";
 import SeasonPreviewRail from "./components/SeasonPreviewRail";
+import { Skeleton, SkeletonForm, SkeletonHeader, SkeletonRegion } from "@/shared/components/skeleton/Skeleton";
 
 function SeasonFormContent({ seasonId }: { seasonId?: string }) {
 	const v = useSeasonForm(seasonId);
 
 	if (v.loading) {
-		return (
-			<div className="flex items-center justify-center gap-2 py-24 text-[var(--txm)]">
-				<Loader2 className="h-5 w-5 animate-spin" />
-				Loading…
-			</div>
-		);
+		return <SkeletonRegion label="Loading season"><Skeleton w={120} h={11} /><SkeletonHeader /><SkeletonForm panels={2} /></SkeletonRegion>;
 	}
 
 	const enabledLeagueIds = v.values.leagueSeasons
