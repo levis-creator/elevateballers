@@ -16,6 +16,11 @@
 	opacity: 0;
 	animation: eb-skel-in 0.2s ease-out 0.15s forwards;
 }
+/* …except on a page that has just arrived, where nothing else is on screen yet.
+   The layouts set this attribute for a moment after each page load or swap. */
+html[data-eb-arrived] .eb-skel-region[role="status"] {
+	animation-delay: 0s;
+}
 
 /* A reload keeps the current content on screen, slightly faded, until new data arrives. */
 .eb-refreshing {

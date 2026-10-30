@@ -206,8 +206,17 @@ const themeStyle = [
 		<ClientRouter />
 		<script is:inline>
 			(function () {
+				// A page that has just arrived (first load or a swap) shows its loading
+				// skeleton at once; the usual short hold-back is for loads within a page.
+				window.ebMarkPageArrived = function () {
+					var root = document.documentElement;
+					root.setAttribute('data-eb-arrived', '');
+					window.clearTimeout(window.__ebArrivedTimer);
+					window.__ebArrivedTimer = window.setTimeout(function () { root.removeAttribute('data-eb-arrived'); }, 1000);
+				};
 				if (window.__ebPublicSplashCleanupBound) return;
 				window.__ebPublicSplashCleanupBound = true;
+				window.ebMarkPageArrived();
 				var removeSplash = function () {
 					var splash = document.getElementById('eb-splash');
 					if (splash) splash.remove();
@@ -224,6 +233,7 @@ const themeStyle = [
 				};
 				var swapped = function () {
 					removeSplash();
+					window.ebMarkPageArrived();
 					var bar = progress();
 					if (bar) bar.style.width = '88%';
 				};
