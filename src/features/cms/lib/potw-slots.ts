@@ -12,6 +12,8 @@ export interface PotwSlot {
   conferenceId: string | null;
   seasonId: string;
   seasonLabel: string;
+  /** The slot belongs to the active season — the one the admin opens on. */
+  seasonActive?: boolean;
   leagueId: string;
   leagueLabel: string;
   /** Short public label: the conference name, or the league's short code. */
@@ -34,6 +36,7 @@ export function buildPotwSlots(competitions: PublicCompetitionOption[]): PotwSlo
       leagueSeasonId: competition.id,
       seasonId: competition.seasonId,
       seasonLabel: competition.seasonLabel,
+      seasonActive: competition.seasonActive,
       leagueId: competition.leagueId,
       leagueLabel: competition.leagueLabel,
     };
@@ -54,10 +57,14 @@ export function buildPotwSlots(competitions: PublicCompetitionOption[]): PotwSlo
   });
 }
 
-/** Slots for the latest edition of each league — what the home page shows. */
+/**
+ * Slots for each league's current edition — what the home page shows: its
+ * edition in the active season, else its latest one.
+ */
 export function currentPotwSlots(competitions: PublicCompetitionOption[]): PotwSlot[] {
   const latest = new Map<string, PublicCompetitionOption>();
-  const newestFirst = [...competitions].sort((a, b) => b.startDate.localeCompare(a.startDate));
+  const newestFirst = [...competitions].sort((a, b) =>
+    Number(Boolean(b.seasonActive)) - Number(Boolean(a.seasonActive)) || b.startDate.localeCompare(a.startDate));
   for (const competition of newestFirst) {
     if (!latest.has(competition.leagueId)) latest.set(competition.leagueId, competition);
   }

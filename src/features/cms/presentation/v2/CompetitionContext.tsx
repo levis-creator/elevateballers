@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { SeasonWithCounts } from '../../types';
+import { findActiveSeason } from '../../../seasons/domain/entities/season';
 
 export default function CompetitionContext({
   seasons,
@@ -16,8 +17,10 @@ export default function CompetitionContext({
   }>;
   matches: Array<Record<string, any>>;
 }) {
-  const [seasonId, setSeasonId] = useState(seasons[0]?.id ?? '');
-  const season = seasons.find((item) => item.id === seasonId) ?? seasons[0];
+  // Open on the active season; without one, the first (newest) season.
+  const defaultSeason = findActiveSeason(seasons) ?? seasons[0];
+  const [seasonId, setSeasonId] = useState(defaultSeason?.id ?? '');
+  const season = seasons.find((item) => item.id === seasonId) ?? defaultSeason;
   const leagueSeasons = season?.leagueSeasons ?? [];
   const [leagueId, setLeagueId] = useState(leagueSeasons[0]?.leagueId ?? '');
   const selectedLeague =

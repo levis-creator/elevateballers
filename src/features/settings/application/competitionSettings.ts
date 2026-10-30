@@ -1,5 +1,5 @@
 import type { SiteSetting } from '../domain/siteSetting';
-import type { PublicCompetitionOption } from '@/features/seasons/domain/entities/public-competition';
+import { activeCompetition, type PublicCompetitionOption } from '@/features/seasons/domain/entities/public-competition';
 
 export type CompetitionNameSetting = { code: string; name: string };
 
@@ -69,6 +69,9 @@ export function applyCompetitionSettings(
 ): PublicCompetitionOption[] {
   const seasons = [...new Set(competitions.map((item) => item.seasonId))];
   const allowedSeasons = new Set(seasons.slice(0, settings.archive ? settings.archiveYears : 1));
+  // The active season is what public filters open on, so it is never archived away.
+  const active = activeCompetition(competitions);
+  if (active) allowedSeasons.add(active.seasonId);
   const leagueIds = [...new Set(competitions.map((item) => item.leagueId))];
   return competitions
     .filter((item) => allowedSeasons.has(item.seasonId))
@@ -90,5 +93,6 @@ export function configuredDefaultCompetitionId(
   fallback: string,
 ) {
   if (settings.defaultLeague === 'Remember last choice') return fallback;
-  return competitions.find((item) => item.leagueCode === settings.defaultLeague)?.id ?? fallback;
+  const league = competitions.filter((item) => item.leagueCode === settings.defaultLeague);
+  return (activeCompetition(league) ?? league[0])?.id ?? fallback;
 }

@@ -33,6 +33,7 @@ import { getTeam1Name, getTeam1Logo, getTeam2Name, getTeam2Logo, getWinnerName, 
 import TeamLogo from '../../../matches/components/TeamLogo';
 import { getLeagueName } from '../../../matches/lib/league-helpers';
 import { getSeasonName } from '../../../matches/lib/season-helpers';
+import { findActiveSeason } from '../../../seasons/domain/entities/season';
 
 export default function MatchList() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -42,7 +43,7 @@ export default function MatchList() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [seasonFilter, setSeasonFilter] = useState<string>('all');
-  const [seasons, setSeasons] = useState<{ id: string; name: string }[]>([]);
+  const [seasons, setSeasons] = useState<{ id: string; name: string; active?: boolean }[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [icons, setIcons] = useState<{
@@ -91,11 +92,17 @@ export default function MatchList() {
     fetchMatches();
   }, [statusFilter, seasonFilter]);
 
-  // Load the season list once to populate the season filter dropdown.
+  // Load the season list once to populate the season filter dropdown, and open
+  // on the active season unless a season was already picked.
   useEffect(() => {
     fetch('/api/seasons')
       .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setSeasons(Array.isArray(data) ? data : []))
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setSeasons(list);
+        const active = findActiveSeason(list);
+        if (active) setSeasonFilter((current) => (current === 'all' ? active.id : current));
+      })
       .catch(() => {});
   }, []);
 

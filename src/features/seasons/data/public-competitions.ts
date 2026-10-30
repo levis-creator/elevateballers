@@ -17,7 +17,7 @@ export async function getPublicCompetitions(): Promise<PublicCompetitionOption[]
 	const rows = await prisma.leagueSeason.findMany({
 		where: { status: { not: "DRAFT" }, league: { active: true } },
 		include: {
-			season: { select: { id: true, name: true } },
+			season: { select: { id: true, name: true, active: true } },
 			league: { select: { id: true, name: true } },
 			conferences: {
 				select: { id: true, name: true },
@@ -31,6 +31,7 @@ export async function getPublicCompetitions(): Promise<PublicCompetitionOption[]
 		id: row.id,
 		seasonId: row.season.id,
 		seasonLabel: row.season.name,
+		seasonActive: row.season.active,
 		leagueId: row.league.id,
 		leagueLabel: row.league.name,
 		structure: row.competitionStructure,

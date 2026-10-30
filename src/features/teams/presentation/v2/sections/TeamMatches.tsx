@@ -29,7 +29,7 @@ export default function TeamMatches({ recent, upcoming, seasons, settings }: Pro
 	const perPage = settings.matchRows;
 	const { season, recentPage, setSeason, setRecentPage } = useTeamViewStore();
 
-	// Default to the current (most recent) season; guard against a stale choice
+	// Default to the current season (the active one, else the most recent); guard against a stale choice
 	// carried over from another team. When no seasons are tagged, show everything.
 	const hasSeasons = seasons.length > 0;
 	const activeSeason = hasSeasons ? (season && seasons.includes(season) ? season : seasons[0]) : "";

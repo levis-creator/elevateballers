@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { playerDirectoryApi } from '../../../data/datasources/player-directory-api';
+import { findActiveSeason } from '../../../../seasons/domain/entities/season';
 import { getMissingProfileFields, getPlayerName, getPositionKey, matchesParticipation, sortPlayers, toPlayersCsv, type PlayerDirectoryFilters, type PlayerDirectoryRow, type PlayerDirectoryScope, type PlayerSortKey, type SortDirection } from '../../../domain/entities/player-directory';
 
 const pageSize = 10;
@@ -25,7 +26,8 @@ export function usePlayersDirectory() {
   const [notice, setNotice] = useState<{ tone: 'ok' | 'warn'; text: string } | null>(null);
 
   const load = useCallback(async () => { try { setLoading(true); setError(''); setPlayers(await playerDirectoryApi.list()); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Failed to load players'); } finally { setLoading(false); } }, []);
-  useEffect(() => { load(); playerDirectoryApi.seasons().then(setSeasons).catch(() => undefined); }, [load]);
+  // The season picker opens on the active season.
+  useEffect(() => { load(); playerDirectoryApi.seasons().then((rows) => { setSeasons(rows); const active = findActiveSeason(rows); if (active) setSeasonId((current) => current || active.id); }).catch(() => undefined); }, [load]);
   useEffect(() => { if (!seasonId || scope !== 'season') return; playerDirectoryApi.seasonTeams(seasonId, leagueSeasonId).then((rows) => setSeasonTeams(new Set(rows.map((row) => row.id)))).catch(() => setSeasonTeams(new Set())); }, [leagueSeasonId, scope, seasonId]);
 
   const currentSeason = seasons.find((season) => season.id === seasonId);

@@ -6,6 +6,7 @@
 import { getStandings } from "@/features/standings/lib/getStandings";
 import type { StandingsData, StandingRow, StandingTable } from "@/features/standings/domain/entities/standings-v2";
 import { getPublicCompetitions } from "@/features/seasons/data/public-competitions";
+import { activeCompetition } from "@/features/seasons/domain/entities/public-competition";
 import { getDisplayImageUrl } from "@/lib/asset-url";
 
 const PLAYOFF_SPOTS = 8;
@@ -55,7 +56,11 @@ export async function fetchStandingsData(): Promise<StandingsData | null> {
 		return {
 			competitions,
 			tables,
-			defaultLeagueSeasonId: tables[0]?.leagueSeasonId ?? competitions[0].id,
+			// Open on the active season's table when it has one.
+			defaultLeagueSeasonId:
+				activeCompetition(competitions.filter((item) => tables.some((table) => table.leagueSeasonId === item.id)))?.id
+				?? tables[0]?.leagueSeasonId
+				?? competitions[0].id,
 			playoffSpots: PLAYOFF_SPOTS,
 		};
 	} catch {

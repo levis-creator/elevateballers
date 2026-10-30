@@ -16,7 +16,7 @@ try {
   console.error('Failed to resolve default playoff season:', error);
 }
 
-// Send visitors straight to the most recent season that has a bracket.
+// Send visitors straight to the active season's bracket, else the most recent one.
 if (defaultSlug) {
   return Astro.redirect(`/playoffs/${defaultSlug}/`);
 }

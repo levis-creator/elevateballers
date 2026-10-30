@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check, CheckCircle2, ChevronDown, ChevronUp, Download, MoreHorizontal, Plus, Search,
   Shield, Trash2, Users, X,
 } from 'lucide-react';
 import type { TeamWithPlayerCount } from '../../types';
 import { useTeams } from '../hooks/useTeams';
+import { findActiveSeason } from '../../../seasons/domain/entities/season';
 
 type Team = TeamWithPlayerCount & { nickname?: string | null };
 type Season = ReturnType<typeof useTeams>['seasons'][number];
@@ -25,8 +26,13 @@ export default function TeamsPage() {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
 
+  // Open on the active season (else the newest) once the list arrives; after
+  // that "All seasons" stays a real choice instead of snapping back.
+  const seasonDefaulted = useRef(false);
   useEffect(() => {
-    if (!seasonId && seasons[0]) setSeasonId(seasons[0].id);
+    if (seasonDefaulted.current || !seasons.length) return;
+    seasonDefaulted.current = true;
+    if (!seasonId) setSeasonId((findActiveSeason(seasons) ?? seasons[0]).id);
   }, [seasonId, seasons]);
 
   const selectedSeason = seasons.find((season) => season.id === seasonId) as Season | undefined;

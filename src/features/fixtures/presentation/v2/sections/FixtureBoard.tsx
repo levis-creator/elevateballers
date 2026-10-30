@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useFixturesStore } from "@/features/fixtures/presentation/stores/v2/useFixturesStore";
 import type { FixtureMatch, PlayoffStage } from "@/features/fixtures/domain/entities/fixtures-v2";
-import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
+import { activeCompetition, type PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 import { configuredDefaultCompetitionId, type PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 import { fixturesToken, type PublicFixturesSettings } from "@/features/settings/application/fixturesSettings";
 import { buildBracket, seriesByGame, type Series, type SeriesSide } from "@/features/fixtures/domain/usecases/playoff-series";
@@ -184,7 +184,7 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 	const { leagueSeasonId, seasonId, conferenceId, view, setLeagueSeason, setSeason, setConference, setView } = useFixturesStore();
 	const storedLeague = settings.leagueFilter ? competitions.find((item) => item.id === leagueSeasonId) : undefined;
 	const configuredDefaultId = configuredDefaultCompetitionId(competitions, competitionSettings, defaultLeagueSeasonId);
-	const defaultCompetition = competitions.find((item) => item.id === configuredDefaultId) ?? competitions[0];
+	const defaultCompetition = competitions.find((item) => item.id === configuredDefaultId) ?? activeCompetition(competitions) ?? competitions[0];
 	// Fixtures opens on "All leagues"; a single league is only preselected when
 	// the All option is switched off in the competition settings.
 	const selectedLeague = storedLeague ?? (

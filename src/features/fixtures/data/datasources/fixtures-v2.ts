@@ -10,6 +10,7 @@ import { getDisplayImageUrl } from "@/lib/asset-url";
 import type { FixtureMatch, FixtureStatus, FixturesData, PlayoffStage } from "@/features/fixtures/domain/entities/fixtures-v2";
 import { prisma } from "@/lib/prisma";
 import { getPublicCompetitions } from "@/features/seasons/data/public-competitions";
+import { activeCompetition } from "@/features/seasons/domain/entities/public-competition";
 import { calculatePlayerMatchStats } from "@/features/player/domain/usecases/playerStats";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
@@ -193,7 +194,8 @@ export async function fetchFixturesData(): Promise<FixturesData | null> {
 			seasons,
 			defaultSeason,
 			defaultLeagueSeasonId:
-				matches.find((match) => match.leagueSeasonId)?.leagueSeasonId
+				activeCompetition(competitions)?.id
+				?? matches.find((match) => match.leagueSeasonId)?.leagueSeasonId
 				?? competitions[0]?.id
 				?? "",
 		};

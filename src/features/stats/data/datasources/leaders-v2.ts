@@ -6,6 +6,7 @@
  * the use-case can fall back to demo data.
  */
 import { prisma } from "@/lib/prisma";
+import { getActiveSeason } from "@/features/seasons/data/active-season";
 import { calculatePlayerStatistics } from "@/features/player/lib/playerStats";
 import type { LeadersData, LeaderRow, StatKey } from "@/features/stats/domain/entities/leaders-v2";
 import { ALL_LEAGUES } from "@/features/stats/domain/entities/leaders-v2";
@@ -124,7 +125,10 @@ export async function fetchLeadersData(): Promise<LeadersData | null> {
 
 		// Threshold to qualify. Kept low (1) because this is a young league where
 		// most players have only a game or two — a higher bar would empty the board.
-		return { rows, seasons, leagues, defaultSeason: seasons[0] ?? "", minGames: 1 };
+		// Open on the active season when it has stats, else the most recent one.
+		const activeName = (await getActiveSeason())?.name.trim();
+		const defaultSeason = activeName && seasons.includes(activeName) ? activeName : seasons[0] ?? "";
+		return { rows, seasons, leagues, defaultSeason, minGames: 1 };
 	} catch {
 		return null;
 	}

@@ -61,11 +61,15 @@ export default function POTWManagerV2() {
       if (!slotsRes.ok || !historyRes.ok) throw new Error('Failed to load Player of the Week data');
       const slotData: SlotsResponse = await slotsRes.json();
       setSlots(slotData.slots); setCurrentSlotKeys(slotData.currentSlotKeys); setActive(slotData.active); setHistory(await historyRes.json());
-      // Open on the first current slot that still needs a pick, else the first current slot.
+      // Open on the active season's current slots (else every current slot): the
+      // first that still needs a pick, else the first of them.
       if (!slotKey) {
         const current = slotData.slots.filter((slot) => slotData.currentSlotKeys.includes(slot.key));
+        const activeSeason = current.filter((slot) => slot.seasonActive);
+        const pool = activeSeason.length ? activeSeason : current;
         const filled = new Set(slotData.active.map(keyOf));
-        const first = current.find((slot) => !filled.has(slot.key)) ?? current[0] ?? slotData.slots[0];
+        const first = pool.find((slot) => !filled.has(slot.key)) ?? pool[0]
+          ?? slotData.slots.find((slot) => slot.seasonActive) ?? slotData.slots[0];
         if (first) { setSeasonId(first.seasonId); setSlotKey(first.key); }
       }
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Failed to load data'); }

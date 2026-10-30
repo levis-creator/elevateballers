@@ -50,6 +50,14 @@ export function assertSingleActiveSeason(activeSeasonCount: number, activating: 
 }
 
 /**
+ * The season every season filter opens on: the one marked active (the product
+ * allows at most one). Undefined when none is, so callers keep their own default.
+ */
+export function findActiveSeason<T extends { active?: boolean | null }>(seasons: readonly T[]): T | undefined {
+	return seasons.find((season) => season.active);
+}
+
+/**
  * The dates decide the lifecycle; `active` is the admin's override for ending a
  * season early ("Mark completed"). There is no status column, so:
  *

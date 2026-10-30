@@ -9,6 +9,7 @@
  *  - several same-named seasons, one league each (switch between those seasons).
  * Both are surfaced through the same league dropdown.
  */
+import { findActiveSeason } from '../../../seasons/domain/entities/season';
 import {
   getSeasons,
   getSeasonBySlug,
@@ -74,7 +75,9 @@ function buildSeasonOptions(
 export async function getDefaultPlayoffSeasonSlug(): Promise<string | null> {
   const [seasons, playoffIds] = await Promise.all([getSeasons(), getSeasonIdsWithPlayoffs()]);
   const withPlayoffs = new Set(playoffIds);
-  const first = seasons.find((s) => withPlayoffs.has(s.id));
+  // The active season's bracket when it has one, else the most recent bracket.
+  const bracketed = seasons.filter((s) => withPlayoffs.has(s.id));
+  const first = findActiveSeason(bracketed) ?? bracketed[0];
   return first?.slug ?? null;
 }
 

@@ -3,7 +3,7 @@ import { useStandingsStore } from "@/features/standings/presentation/stores/v2/u
 import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import TeamName from "@/features/teams/presentation/components/TeamName";
 import type { StandingTable } from "@/features/standings/domain/entities/standings-v2";
-import type { PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
+import { activeCompetition, type PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 import { configuredDefaultCompetitionId, type PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 import { standingsCutLabel, standingsEyebrow, type PublicStandingsSettings } from "@/features/settings/application/standingsSettings";
 
@@ -34,6 +34,7 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 	const configuredDefaultId = configuredDefaultCompetitionId(competitions, competitionSettings, defaultLeagueSeasonId);
 	const selected = competitions.find((item) => item.id === leagueSeasonId)
 		?? competitions.find((item) => item.id === configuredDefaultId)
+		?? activeCompetition(competitions)
 		?? competitions[0];
 	useEffect(() => {
 		if (competitionSettings.defaultLeague !== "Remember last choice") return;

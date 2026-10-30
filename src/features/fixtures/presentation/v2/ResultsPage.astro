@@ -2,6 +2,7 @@
 // v2 Results page composition. Reuses the shared Header/Footer and the Fixtures
 // data layer (completed matches only); the board (hero + featured latest result
 // + league filter + date-grouped final scores) is a React+Zustand island.
+import { activeCompetition } from "@/features/seasons/domain/entities/public-competition";
 import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import ResultsBoard from "./sections/ResultsBoard.tsx";
@@ -27,6 +28,6 @@ const matches = data.matches
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="results" />
-	<ResultsBoard matches={matches} seasons={[...new Set(competitions.map((item) => item.seasonLabel))]} defaultSeason={competitions[0]?.seasonLabel ?? data.defaultSeason} competitions={competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={settings} client:load />
+	<ResultsBoard matches={matches} seasons={[...new Set(competitions.map((item) => item.seasonLabel))]} defaultSeason={(activeCompetition(competitions) ?? competitions[0])?.seasonLabel ?? data.defaultSeason} competitions={competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={settings} client:load />
 	<Footer footer={footer} />
 </div>

@@ -10,6 +10,7 @@ import { MATCH_TIMEZONE } from './utils';
 import { getTeam1Name, getTeam2Name } from './team-helpers';
 import { getSeasonName } from './season-helpers';
 import { getLeagueName } from './league-helpers';
+import { findActiveSeason } from '../../../seasons/domain/entities/season';
 
 export type MatchStatusKey = 'UPCOMING' | 'LIVE' | 'COMPLETED';
 
@@ -200,5 +201,5 @@ export function initialSeasonFilter(
 ): string {
   if (requested === 'all') return 'all';
   if (requested && seasons.some((season) => season.id === requested)) return requested;
-  return seasons.find((season) => season.active)?.id ?? 'all';
+  return findActiveSeason(seasons)?.id ?? 'all';
 }

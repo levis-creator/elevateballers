@@ -2,6 +2,7 @@
 // v2 Fixtures page composition. Reuses the shared Header/Footer; the board
 // (hero season selector + Upcoming/Results toggle + league filter + date-grouped
 // match list) is a React+Zustand island.
+import { activeCompetition } from "@/features/seasons/domain/entities/public-competition";
 import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import FixtureBoard from "./sections/FixtureBoard.tsx";
@@ -30,6 +31,6 @@ const matches = data.matches.map((match) => ({
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="fixtures" />
-	<FixtureBoard matches={matches} seasons={[...new Set(competitions.map((item) => item.seasonLabel))]} defaultSeason={competitions[0]?.seasonLabel ?? data.defaultSeason} competitions={competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={settings} liveBadge={matchSettings.liveBadge} client:load />
+	<FixtureBoard matches={matches} seasons={[...new Set(competitions.map((item) => item.seasonLabel))]} defaultSeason={(activeCompetition(competitions) ?? competitions[0])?.seasonLabel ?? data.defaultSeason} competitions={competitions} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={settings} liveBadge={matchSettings.liveBadge} client:load />
 	<Footer footer={footer} />
 </div>

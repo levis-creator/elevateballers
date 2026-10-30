@@ -5,6 +5,7 @@
  * Returns null when the team doesn't exist (→ 404).
  */
 import { prisma } from "@/lib/prisma";
+import { getActiveSeason } from "@/features/seasons/data/active-season";
 import { getTeamBySlug, getStaffByTeam } from "@/features/cms/lib/queries";
 import { getTeamPlayerStats } from "@/features/player/lib/queries";
 import { getFilteredMatches } from "@/features/matches/lib/queries";
@@ -101,8 +102,14 @@ export async function fetchTeamDetail(slug: string): Promise<TeamDetail | null> 
 		awayLogo: getDisplayImageUrl(m.team2?.logo || m.team2Logo),
 	}));
 
-	// distinct seasons present in results (date-desc → [0] is the current season)
-	const seasons = [...new Set(recent.map((r) => r.season).filter((s) => s && s !== "—"))];
+	// distinct seasons present in results, date-desc; the active season (when the
+	// team has results in it) moves to the front, so [0] is the current season
+	// and the one the season filter opens on.
+	const byRecency = [...new Set(recent.map((r) => r.season).filter((s) => s && s !== "—"))];
+	const activeName = byRecency.length ? (await getActiveSeason().catch(() => null))?.name : undefined;
+	const seasons = activeName && byRecency.includes(activeName)
+		? [activeName, ...byRecency.filter((s) => s !== activeName)]
+		: byRecency;
 	const currentSeason = seasons[0] ?? "";
 
 	// Hero record + form are scoped to the current season; fall back to all-time

@@ -59,4 +59,12 @@ describe('currentPotwSlots', () => {
       potwSlotKey('ewbl-26', null),
     ]);
   });
+
+  it("prefers a league's edition in the active season over a newer one", () => {
+    const slots = currentPotwSlots([{ ...ebl2025, seasonActive: true }, ebl2026, ewbl2026]);
+    expect(slots.map((slot) => slot.key)).toEqual([
+      potwSlotKey('ebl-25', 'old'),
+      potwSlotKey('ewbl-26', null),
+    ]);
+  });
 });
