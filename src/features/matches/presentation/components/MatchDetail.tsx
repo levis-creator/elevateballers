@@ -107,10 +107,16 @@ export default function MatchDetail({ match: initialMatch, settings, canViewBoxS
 
   useEffect(() => {
     if (match.status === 'COMPLETED') return;
-    const interval = match.status === 'LIVE' ? Math.max(1, settings.delay) * 1000 : 30000;
+    // Scheduled matches only need to notice kick-off, so poll slowly; the API
+    // edge-caches them for 60s, making these polls nearly free.
+    const interval = match.status === 'LIVE' ? Math.max(1, settings.delay) * 1000 : 60000;
+    // Viewers who see more than the anonymous response skip the edge cache.
+    const viewerParam = canViewBoxScore && settings.boxScore !== 'Public' ? '&viewer=member' : '';
     const pollInterval = setInterval(async () => {
+      // Skip polls from background tabs.
+      if (document.visibilityState !== 'visible') return;
       try {
-        const response = await fetch(`/api/matches/${matchRef.current.id}?includeDetails=true`);
+        const response = await fetch(`/api/matches/${matchRef.current.id}?includeDetails=true${viewerParam}`);
         if (response.ok) {
           const updatedMatch = await response.json();
           setMatch(updatedMatch);
@@ -121,7 +127,7 @@ export default function MatchDetail({ match: initialMatch, settings, canViewBoxS
       }
     }, interval);
     return () => clearInterval(pollInterval);
-  }, [match.id, match.status, settings.delay]);
+  }, [match.id, match.status, settings.delay, settings.boxScore, canViewBoxScore]);
 
   useEffect(() => {
     if (match.status !== 'LIVE' || !match.clockRunning) return;
