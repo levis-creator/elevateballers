@@ -64,6 +64,10 @@ jobs:
         run: npm ci
 
       - name: Test
+        # Some modules build the Prisma client on import, which needs a URL;
+        # the tests mock every query, so it is never connected to.
+        env:
+          DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
         run: npm test
 
       - name: Build
