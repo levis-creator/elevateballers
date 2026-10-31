@@ -107,8 +107,12 @@ export default function MatchDetail({ match: initialMatch, settings, canViewBoxS
 
   useEffect(() => {
     if (match.status === 'COMPLETED') return;
-    const interval = match.status === 'LIVE' ? Math.max(1, settings.delay) * 1000 : 30000;
+    // Scheduled matches only need to notice kick-off, so poll slowly; the API
+    // edge-caches them for 60s, making these polls nearly free.
+    const interval = match.status === 'LIVE' ? Math.max(1, settings.delay) * 1000 : 60000;
     const pollInterval = setInterval(async () => {
+      // Skip polls from background tabs.
+      if (document.visibilityState !== 'visible') return;
       try {
         const response = await fetch(`/api/matches/${matchRef.current.id}?includeDetails=true`);
         if (response.ok) {

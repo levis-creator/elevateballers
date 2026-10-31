@@ -75,10 +75,19 @@ export const GET: APIRoute = async ({ params, url, request }) => {
       ? { ...match, matchPlayers: [] }
       : match;
 
-    // Completed matches are immutable — cache aggressively
-    const cacheControl = match.status === 'COMPLETED'
-      ? 'public, s-maxage=3600, stale-while-revalidate=300'
-      : 'no-store, max-age=0';
+    // Edge-cache only the anonymous variant. The response differs by viewer
+    // (box score visibility, unpublished results for staff), and the CDN cache
+    // key ignores cookies, so a signed-in response must never be stored.
+    // A short live cache collapses every fan's poll into ~1 function run per
+    // window instead of one per viewer, which is what drained Fluid Active CPU.
+    let cacheControl = 'private, no-store, max-age=0';
+    if (!currentUser) {
+      cacheControl = match.status === 'COMPLETED'
+        ? 'public, s-maxage=3600, stale-while-revalidate=300'
+        : match.status === 'LIVE'
+          ? 'public, s-maxage=5, stale-while-revalidate=10'
+          : 'public, s-maxage=60, stale-while-revalidate=300';
+    }
 
     return new Response(JSON.stringify(responseMatch), {
       headers: {
