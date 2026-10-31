@@ -1,0 +1,155 @@
+name: Deploy to cPanel
+
+# Builds on GitHub's Linux runner (so native packages such as sharp and resvg
+# get their Linux binaries) and ships the finished release over SSH. The host
+# has 1 GB of RAM, too little to run npm install or astro build itself.
+#
+# Server layout:
+#   ~/node24/                 Node 24 (the cPanel selector stops at Node 20)
+#   ~/releases/<sha>/         one folder per deploy, last 3 kept
+#   ~/current -> releases/<sha>
+#   ~/prod/                   Passenger app root: .htaccess, .env, tmp/, plus
+#                             symlinks into ~/current. .env never leaves the server.
+# The first run moves the manually deployed files in ~/prod into a
+# releases/bootstrap-* folder, which becomes the rollback target.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-cpanel
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+  APP_URL: https://prod.elevateballers.com
+  ORIGIN_IP: 102.218.215.35
+  DEPLOY_TARGET: cpanel
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CPANEL_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "${{ secrets.CPANEL_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host cpanel
+            HostName ${{ secrets.CPANEL_HOST }}
+            Port ${{ secrets.CPANEL_PORT }}
+            User ${{ secrets.CPANEL_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+          EOF
+
+      # PUBLIC_* values are inlined at build time, so read them from the
+      # server's .env instead of duplicating them in GitHub.
+      - name: Load public build variables from the server
+        run: ssh cpanel "grep -E '^PUBLIC_[A-Z_]+=' ~/prod/.env" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build:cpanel
+
+      - name: Package release
+        run: |
+          npm prune --omit=dev
+          tar -czf release.tar.gz dist node_modules prisma prisma.config.ts package.json server.js server.cjs
+
+      - name: Upload release
+        run: |
+          ssh cpanel "mkdir -p ~/releases/${{ github.sha }}"
+          scp release.tar.gz cpanel:releases/${{ github.sha }}/
+
+      - name: Activate release
+        run: |
+          ssh cpanel 'bash -s' <<'EOF'
+          set -euo pipefail
+          SHA="${{ github.sha }}"
+          REL="$HOME/releases/$SHA"
+
+          # Node 24 runtime, installed once.
+          if [ ! -x "$HOME/node24/bin/node" ]; then
+            V=$(curl -fsSL https://nodejs.org/dist/index.json | grep -o '"version":"v24[^"]*"' | head -1 | cut -d'"' -f4)
+            curl -fsSL "https://nodejs.org/dist/$V/node-$V-linux-x64.tar.gz" | tar -xz -C "$HOME"
+            mv "$HOME/node-$V-linux-x64" "$HOME/node24"
+          fi
+
+          cd "$REL"
+          tar -xzf release.tar.gz && rm release.tar.gz
+
+          FILES="dist node_modules prisma prisma.config.ts package.json server.js server.cjs"
+
+          # First run: ~/prod still holds real files from the manual deploy.
+          # Move them into a bootstrap release so they become the rollback target.
+          if [ ! -L "$HOME/current" ]; then
+            BOOT="$HOME/releases/bootstrap-$(date +%Y%m%d%H%M%S)"
+            mkdir -p "$BOOT"
+            for f in $FILES; do
+              [ -e "$HOME/prod/$f" ] && [ ! -L "$HOME/prod/$f" ] && mv "$HOME/prod/$f" "$BOOT/$f"
+            done
+            ln -sfn "$BOOT" "$HOME/current"
+          fi
+
+          # Remember the live release so a failed smoke test can roll back.
+          readlink "$HOME/current" > "$HOME/releases/.previous"
+          ln -sfn "$REL" "$HOME/current"
+
+          # ~/prod/.htaccess and ~/public_html/.htaccess both point Passenger at
+          # ~/prod and already use Node 24 + server.js; neither is touched here.
+          cd "$HOME/prod"
+          for f in $FILES; do
+            [ -L "$f" ] || [ ! -e "$f" ] || { echo "$f is not a symlink, refusing to replace it"; exit 1; }
+            ln -sfn "$HOME/current/$f" "$f"
+          done
+
+          mkdir -p tmp && touch tmp/restart.txt
+
+          # Keep the 3 newest releases.
+          ls -1dt "$HOME"/releases/*/ | tail -n +4 | xargs -r rm -rf
+          EOF
+
+      - name: Smoke test
+        id: smoke
+        run: |
+          for i in 1 2 3 4 5 6; do
+            # Hit the origin directly: Cloudflare may challenge scripted requests.
+            code=$(curl -sk --resolve "prod.elevateballers.com:443:$ORIGIN_IP" -o /dev/null -w '%{http_code}' "$APP_URL/robots.txt" || true)
+            echo "attempt $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          exit 1
+
+      - name: Roll back on failure
+        # Only after a live release failed its check; earlier failures never touched the server.
+        if: failure() && steps.smoke.outcome == 'failure'
+        run: |
+          ssh cpanel 'bash -s' <<'EOF'
+          PREV=$(cat "$HOME/releases/.previous" 2>/dev/null || true)
+          if [ -n "$PREV" ] && [ -d "$PREV" ]; then
+            ln -sfn "$PREV" "$HOME/current"
+            touch "$HOME/prod/tmp/restart.txt"
+            echo "Rolled back to $PREV"
+          else
+            echo "No previous release to roll back to"
+          fi
+          EOF
