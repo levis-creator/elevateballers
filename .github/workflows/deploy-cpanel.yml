@@ -24,7 +24,7 @@ concurrency:
 
 env:
   NODE_VERSION: '24'
-  APP_URL: https://prod.elevateballers.com
+  APP_HOST: www.elevateballers.com
   ORIGIN_IP: 102.218.215.35
   DEPLOY_TARGET: cpanel
 
@@ -136,7 +136,7 @@ jobs:
         run: |
           for i in 1 2 3 4 5 6; do
             # Hit the origin directly: Cloudflare may challenge scripted requests.
-            code=$(curl -sk --resolve "prod.elevateballers.com:443:$ORIGIN_IP" -o /dev/null -w '%{http_code}' "$APP_URL/robots.txt" || true)
+            code=$(curl -sk --resolve "$APP_HOST:443:$ORIGIN_IP" -o /dev/null -w '%{http_code}' "https://$APP_HOST/robots.txt" || true)
             echo "attempt $i: HTTP $code"
             [ "$code" = "200" ] && exit 0
             sleep 10
