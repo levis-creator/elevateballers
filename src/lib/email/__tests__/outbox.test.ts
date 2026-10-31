@@ -57,7 +57,7 @@ describe('enqueueFailedEmail', () => {
   it('reports false instead of throwing when the database is down', async () => {
     mocks.prisma.emailOutbox.create.mockRejectedValue(new Error('db down'));
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(await enqueueFailedEmail({}, new Error('x'), 'qstash')).toBe(false);
+    expect(await enqueueFailedEmail({}, new Error('x'), 'inline')).toBe(false);
     error.mockRestore();
   });
 });

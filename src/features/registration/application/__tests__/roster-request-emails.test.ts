@@ -2,14 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   prisma: { user: { findMany: vi.fn() } },
-  publishToJob: vi.fn(),
   sendAdminNotificationEmail: vi.fn(),
   sendTransactionalEmail: vi.fn(),
   enqueueFailedEmail: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: mocks.prisma }));
-vi.mock('@/lib/qstash', () => ({ publishToJob: mocks.publishToJob }));
 vi.mock('@/lib/email', () => ({ sendAdminNotificationEmail: mocks.sendAdminNotificationEmail }));
 vi.mock('@/lib/email/outbox', () => ({ enqueueFailedEmail: mocks.enqueueFailedEmail }));
 vi.mock('@/lib/email/config', () => ({ C: {}, SITE_URL: 'https://site.test' }));
@@ -40,7 +38,6 @@ const decision = (overrides: Partial<RosterDecision> = {}): RosterDecision => ({
 beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.SITE_URL;
-  mocks.publishToJob.mockResolvedValue(false);
   mocks.sendAdminNotificationEmail.mockResolvedValue(undefined);
   mocks.sendTransactionalEmail.mockResolvedValue(undefined);
   mocks.prisma.user.findMany.mockResolvedValue([
@@ -87,15 +84,6 @@ describe('notifyAdminsOfRosterRequest', () => {
     expect(data.message).toContain('Moved abroad');
   });
 
-  it('uses the job queue when it is configured', async () => {
-    mocks.publishToJob.mockResolvedValue(true);
-    await notifyAdminsOfRosterRequest({ eventId: 'h1', kind: 'REMOVAL', playerName: 'Ann', teamName: 'Queens', coachName: null });
-    expect(mocks.publishToJob).toHaveBeenCalledWith(
-      '/api/jobs/send-email',
-      expect.objectContaining({ jobType: 'admin_notification' })
-    );
-    expect(mocks.sendAdminNotificationEmail).not.toHaveBeenCalled();
-  });
 
   it('never throws when the email fails, and saves it for the hourly resend', async () => {
     const failure = new Error('smtp down');
@@ -112,14 +100,6 @@ describe('notifyAdminsOfRosterRequest', () => {
     error.mockRestore();
   });
 
-  it('still sends directly when queueing throws', async () => {
-    mocks.publishToJob.mockRejectedValue(new Error('qstash down'));
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    await notifyAdminsOfRosterRequest({ eventId: 'h1', kind: 'NEW', playerName: 'Ann', teamName: 'Queens', coachName: null });
-    expect(mocks.sendAdminNotificationEmail).toHaveBeenCalled();
-    expect(mocks.enqueueFailedEmail).not.toHaveBeenCalled();
-    error.mockRestore();
-  });
 });
 
 describe('notifyCoachesOfRosterDecisions', () => {

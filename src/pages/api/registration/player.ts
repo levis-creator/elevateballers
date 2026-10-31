@@ -4,7 +4,6 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { checkRegistrationOpen } from '../../../lib/registrationGate';
-import { publishToJob } from '../../../lib/qstash';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 import { findSubmission, submitPlayerRegistration } from '../../../features/registration/data/datasources/public-submission';
 import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, releasePublicRegistrationLimit, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
@@ -81,7 +80,7 @@ export const POST: APIRoute = async ({ request }) => {
     consumedLimit = null;
     await logAudit(request, 'PLAYER_REGISTRATION_SUBMITTED', { playerId: result.playerId, name: `${data.firstName} ${data.lastName}`.trim() });
     for (const jobId of result.jobIds) {
-      if (!await publishToJob('/api/jobs/send-email', { registrationJobId: jobId })) void processRegistrationEmailJob(jobId).catch((error) => console.error('[registration] player email job failed:', error));
+      void processRegistrationEmailJob(jobId).catch((error) => console.error('[registration] player email job failed:', error));
     }
     return responseFromStored(result.response, 201);
   } catch (error: any) {

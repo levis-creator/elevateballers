@@ -23,7 +23,6 @@ const mocks = vi.hoisted(() => ({
   findSubmission: vi.fn(),
   submitTeamRegistration: vi.fn(),
   submitPlayerRegistration: vi.fn(),
-  publishToJob: vi.fn(),
   siteSettingFindMany: vi.fn(),
 }));
 
@@ -52,9 +51,8 @@ vi.mock('../../../../lib/apiError', () => ({
     () => new Response(JSON.stringify({ error: 'unexpected' }), { status: 500 })
   ),
 }));
-vi.mock('../../../../lib/qstash', () => ({ publishToJob: mocks.publishToJob }));
 vi.mock('../../../../features/registration/application/process-registration-email-job', () => ({
-  processRegistrationEmailJob: vi.fn(),
+  processRegistrationEmailJob: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('../../../../features/registration/data/datasources/public-submission', () => ({
   findSubmission: mocks.findSubmission,
@@ -161,7 +159,6 @@ describe('public registration endpoints', () => {
       jobIds: ['job-player'],
       playerId: 'player-1',
     });
-    mocks.publishToJob.mockResolvedValue(true);
     mocks.siteSettingFindMany.mockResolvedValue([
       { key: 'registration_open', value: 'true' },
       { key: 'registration_opens', value: '2020-01-01' },

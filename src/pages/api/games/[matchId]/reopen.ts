@@ -4,7 +4,6 @@ import { logAudit } from '@/features/cms/lib/audit';
 import { prisma } from '@/lib/prisma';
 import { json, handleApiError } from '@/lib/apiError';
 import { cacheDel, cacheInvalidatePattern } from '@/lib/cache';
-import { publishToJob } from '@/lib/qstash';
 import { standingsCachePattern } from '@/features/standings/lib/standings-cache';
 
 export const prerender = false;
@@ -60,10 +59,6 @@ export const POST: APIRoute = async ({ params, request }) => {
       cacheInvalidatePattern('leaders:*'),
       ...(match.leagueSeasonId ? [cacheInvalidatePattern(standingsCachePattern(match.leagueSeasonId))] : []),
     ]);
-    if (wasPublished && match.leagueSeasonId) {
-      await publishToJob('/api/jobs/recalc-standings', { leagueSeasonId: match.leagueSeasonId });
-    }
-
     await logAudit(request, 'MATCH_REOPENED', { matchId, wasPublished });
     return json({ reopened: true, wasPublished }, 200);
   } catch (error) {

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   prisma: { teamOwnership: { findMany: vi.fn() } },
   sendTransactionalEmail: vi.fn(),
-  publishToJob: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: mocks.prisma }));
@@ -12,7 +11,6 @@ vi.mock('@/lib/email/core', () => ({
   emailWrapper: (html: string) => html,
   btn: (label: string, href: string) => `<a href="${href}">${label}</a>`,
 }));
-vi.mock('@/lib/qstash', () => ({ publishToJob: mocks.publishToJob }));
 vi.mock('@/lib/email/outbox', () => ({ enqueueFailedEmail: vi.fn() }));
 
 import { notifyCoachesOfTransfer } from './transfer-emails';
@@ -28,7 +26,6 @@ const notice = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.publishToJob.mockResolvedValue(false);
 });
 
 describe('notifyCoachesOfTransfer', () => {

@@ -11,8 +11,7 @@ export class InvalidEmailJobError extends Error {
 }
 
 /**
- * Runs one email job body — the same shape QStash delivers to
- * /api/jobs/send-email — so the endpoint and the outbox retry share it:
+ * Runs one email job body, as stored by the email outbox for retry:
  * `{ registrationJobId }`, `{ jobType, data }`, or a direct
  * `{ to, subject, html, ... }` send. Throws when the send fails.
  */

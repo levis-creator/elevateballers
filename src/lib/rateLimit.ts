@@ -1,12 +1,11 @@
 /**
- * Rate limiter with Upstash Redis (primary) and in-memory fallback.
+ * Rate limiter with Redis (primary) and in-memory fallback.
  *
- * Uses @upstash/ratelimit when Redis is available. If Redis is down or
- * credentials are missing, falls back to the original in-memory Map store
- * so the app keeps working on single-instance deployments.
+ * Uses a fixed-window counter in Redis when it is available, so every app
+ * process shares one count. If Redis is down or unconfigured, falls back to
+ * the original in-memory Map store so the app keeps working.
  */
 
-import { Ratelimit } from '@upstash/ratelimit';
 import { getRedisClient } from './redis';
 
 // ---------------------------------------------------------------------------
@@ -51,52 +50,7 @@ function memoryRetryAfter(key: string): number {
   return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
 }
 
-// ---------------------------------------------------------------------------
-// Upstash Ratelimit helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Cache of Ratelimit instances keyed by "max:windowMs" so we don't recreate
- * them on every call. Invalidated whenever the underlying Redis client
- * changes (e.g. an admin points the app at a different Upstash account),
- * since a stale limiter would keep talking to the old instance.
- */
-const limiters = new Map<string, Ratelimit>();
-let lastRedisClient: Awaited<ReturnType<typeof getRedisClient>> | undefined;
-
-async function getLimiter(max: number, windowMs: number): Promise<Ratelimit | null> {
-  const redis = await getRedisClient();
-  if (redis !== lastRedisClient) {
-    limiters.clear();
-    lastRedisClient = redis;
-  }
-  if (!redis) return null;
-
-  const cacheKey = `${max}:${windowMs}`;
-  let limiter = limiters.get(cacheKey);
-  if (limiter) return limiter;
-
-  // Convert milliseconds to the closest human-readable window string
-  const windowStr = msToWindow(windowMs);
-
-  limiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(max, windowStr),
-    prefix: 'rl',
-  });
-
-  limiters.set(cacheKey, limiter);
-  return limiter;
-}
-
-/** Convert milliseconds to an @upstash/ratelimit window string. */
-function msToWindow(ms: number): `${number} ${'ms' | 's' | 'm' | 'h' | 'd'}` {
-  if (ms >= 86_400_000 && ms % 86_400_000 === 0) return `${ms / 86_400_000} d`;
-  if (ms >= 3_600_000 && ms % 3_600_000 === 0) return `${ms / 3_600_000} h`;
-  if (ms >= 60_000 && ms % 60_000 === 0) return `${ms / 60_000} m`;
-  if (ms >= 1_000 && ms % 1_000 === 0) return `${ms / 1_000} s`;
-  return `${ms} ms`;
-}
+const redisKey = (key: string) => `rl:${key}`;
 
 // ---------------------------------------------------------------------------
 // Public API — same signatures as before, now async
@@ -110,13 +64,13 @@ export async function checkRateLimit(
   max: number,
   windowMs: number,
 ): Promise<boolean> {
-  const limiter = await getLimiter(max, windowMs);
-  if (!limiter) return memoryCheck(key, max, windowMs);
+  const redis = await getRedisClient();
+  if (!redis) return memoryCheck(key, max, windowMs);
 
   try {
-    const { success, reset } = await limiter.limit(key);
-    distributedResets.set(key, reset);
-    return success;
+    const { count, ttlMs } = await redis.incrWindow(redisKey(key), windowMs);
+    distributedResets.set(key, Date.now() + (ttlMs > 0 ? ttlMs : windowMs));
+    return count <= max;
   } catch (err) {
     console.warn('[rateLimit] Redis failed, using in-memory fallback:', err);
     distributedResets.delete(key);
@@ -131,8 +85,7 @@ export async function resetRateLimit(key: string): Promise<void> {
   const redis = await getRedisClient();
   if (redis) {
     try {
-      // Delete all Upstash ratelimit keys for this identifier
-      await redis.del(`rl:${key}`);
+      await redis.del(redisKey(key));
     } catch {
       // Best-effort — in-memory was already cleared
     }

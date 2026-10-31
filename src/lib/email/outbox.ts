@@ -16,7 +16,7 @@ const message = (error: unknown) => (error instanceof Error ? error.message : St
 export async function enqueueFailedEmail(
   payload: Record<string, unknown>,
   error: unknown,
-  source: 'inline' | 'qstash'
+  source: 'inline'
 ): Promise<boolean> {
   try {
     const row = await prisma.emailOutbox.create({

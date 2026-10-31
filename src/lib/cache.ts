@@ -1,5 +1,5 @@
 /**
- * Generic cache layer backed by Upstash Redis
+ * Generic cache layer backed by Redis (local or Upstash, see ./redis)
  *
  * Every operation is wrapped in try/catch — if Redis is unavailable or errors,
  * the caller transparently falls through to a database query (cache miss).
@@ -14,8 +14,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   const redis = await getRedisClient();
   if (!redis) return null;
   try {
-    const value = await redis.get<T>(key);
-    return value ?? null;
+    return await redis.get<T>(key);
   } catch (err) {
     console.warn(`[cache] GET "${key}" failed:`, err);
     return null;
@@ -33,7 +32,7 @@ export async function cacheSet(
   const redis = await getRedisClient();
   if (!redis) return;
   try {
-    await redis.set(key, value, { ex: ttlSeconds });
+    await redis.set(key, value, ttlSeconds);
   } catch (err) {
     console.warn(`[cache] SET "${key}" failed:`, err);
   }
@@ -60,18 +59,12 @@ export async function cacheInvalidatePattern(pattern: string): Promise<void> {
   const redis = await getRedisClient();
   if (!redis) return;
   try {
-    let cursor = 0;
+    let cursor = '0';
     do {
-      const result = await redis.scan(cursor, {
-        match: pattern,
-        count: 100,
-      });
-      cursor = Number(result[0]);
-      const keys = result[1] as string[];
-      if (keys.length > 0) {
-        await redis.del(...keys);
-      }
-    } while (cursor !== 0);
+      const [next, keys] = await redis.scan(cursor, pattern, 100);
+      cursor = next;
+      await redis.del(...keys);
+    } while (cursor !== '0');
   } catch (err) {
     console.warn(`[cache] INVALIDATE "${pattern}" failed:`, err);
   }

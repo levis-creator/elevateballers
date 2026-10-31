@@ -6,7 +6,6 @@ import { logAudit } from '../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../lib/apiError';
 import { cacheDel, cacheInvalidatePattern } from '../../../../lib/cache';
-import { publishToJob } from '../../../../lib/qstash';
 import { prisma } from '../../../../lib/prisma';
 import { standingsCachePattern } from '../../../../features/standings/lib/standings-cache';
 import { resolvePublicMatchPageSettings, siteSettingsService } from '../../../../features/settings';
@@ -52,7 +51,8 @@ export const POST: APIRoute = async ({ params, request }) => {
       select: { leagueSeasonId: true },
     });
 
-    // Invalidate only this competition's overall and conference tables.
+    // Invalidate only this competition's overall and conference tables; the
+    // next standings read recomputes and re-caches them.
     await Promise.all([
       cacheDel(`gamestate:${matchId}`),
       ...(match?.leagueSeasonId
@@ -60,13 +60,6 @@ export const POST: APIRoute = async ({ params, request }) => {
         : []),
       cacheInvalidatePattern('leaders:*'),
     ]);
-
-    // Queue background standings recalculation via QStash
-    if (match?.leagueSeasonId) {
-      await publishToJob('/api/jobs/recalc-standings', {
-        leagueSeasonId: match.leagueSeasonId,
-      });
-    }
 
     const state = await getGameState(matchId);
     await logAudit(request, 'GAME_ENDED', { matchId, finalPublished: matchSettings.autoPublish });

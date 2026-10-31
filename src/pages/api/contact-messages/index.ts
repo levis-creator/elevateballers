@@ -7,7 +7,6 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { checkRateLimit, getRateLimitRetryAfter } from '../../../lib/rateLimit';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { json, handleApiError } from '../../../lib/apiError';
-import { publishToJob } from '../../../lib/qstash';
 import {
   contactRecipients,
   resolvePublicContactPageSettings,
@@ -111,30 +110,15 @@ export const POST: APIRoute = async ({ request }) => {
     });
     await prisma.contactMessage.update({ where: { id: created.id }, data: { threadId: created.id } });
 
-    // Send emails via QStash (with inline fallback)
-    const sendNotification = () =>
-      sendContactNotification({ name, email, subject, message, recipients }).catch((err) =>
-        console.error('[contact] notification email failed:', err)
-      );
+    // Fire-and-forget so a slow mail provider never delays the response.
+    sendContactNotification({ name, email, subject, message, recipients }).catch((err) =>
+      console.error('[contact] notification email failed:', err)
+    );
     const autoReplyMessage = contactPageSettings.autoReply.replaceAll('{response}', contactSettings.responseTarget);
-    const sendAutoReply = () =>
+    if (autoReplyMessage) {
       sendContactAutoReply({ name, email, subject, responseTarget: contactSettings.responseTarget, message: autoReplyMessage }).catch((err) =>
         console.error('[contact] auto-reply email failed:', err)
       );
-
-    // Try QStash for reliable delivery with retries; fall back to fire-and-forget
-    const notificationQueued = await publishToJob('/api/jobs/send-email', {
-      jobType: 'contact_notification',
-      data: { name, email, subject, message, recipients },
-    });
-    if (!notificationQueued) sendNotification();
-
-    if (autoReplyMessage) {
-      const autoReplyQueued = await publishToJob('/api/jobs/send-email', {
-        jobType: 'contact_auto_reply',
-        data: { name, email, subject, responseTarget: contactSettings.responseTarget, message: autoReplyMessage },
-      });
-      if (!autoReplyQueued) sendAutoReply();
     }
 
     await prisma.registrationNotification.create({
@@ -146,25 +130,13 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     const adminUrl = `${process.env.SITE_URL ?? 'https://elevateballers.com'}/admin/messages?id=${created.id}`;
-    const adminQueued = await publishToJob('/api/jobs/send-email', {
-      jobType: 'admin_notification',
-      data: {
-        type: 'contact_message',
-        title: 'New Contact Message',
-        message: `${name} sent a new contact message${subject ? ` about "${subject}"` : ''}.`,
-        actionUrl: adminUrl,
-        actionText: 'View Message',
-      },
-    });
-    if (!adminQueued) {
-      sendAdminNotificationEmail({
-        type: 'contact_message',
-        title: 'New Contact Message',
-        message: `${name} sent a new contact message${subject ? ` about "${subject}"` : ''}.`,
-        actionUrl: adminUrl,
-        actionText: 'View Message',
-      }).catch((err) => console.error('[contact] admin notification email failed:', err));
-    }
+    sendAdminNotificationEmail({
+      type: 'contact_message',
+      title: 'New Contact Message',
+      message: `${name} sent a new contact message${subject ? ` about "${subject}"` : ''}.`,
+      actionUrl: adminUrl,
+      actionText: 'View Message',
+    }).catch((err) => console.error('[contact] admin notification email failed:', err));
 
     await logAudit(request, 'CONTACT_MESSAGE_SUBMITTED', {
       contactMessageId: created.id,

@@ -4,7 +4,6 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { checkRegistrationOpen } from '../../../lib/registrationGate';
-import { publishToJob } from '../../../lib/qstash';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 import {
   findSubmission,
@@ -229,10 +228,9 @@ export const POST: APIRoute = async ({ request }) => {
       coachName: data.coachName,
     });
     for (const jobId of result.jobIds) {
-      if (!(await publishToJob('/api/jobs/send-email', { registrationJobId: jobId })))
-        void processRegistrationEmailJob(jobId).catch((error) =>
-          console.error('[registration] team email job failed:', error)
-        );
+      void processRegistrationEmailJob(jobId).catch((error) =>
+        console.error('[registration] team email job failed:', error)
+      );
     }
     return responseFromStored(result.response, 201);
   } catch (error: any) {
