@@ -76,7 +76,9 @@ jobs:
       - name: Package release
         run: |
           npm prune --omit=dev
-          tar -czf release.tar.gz dist node_modules prisma prisma.config.ts package.json server.js server.cjs
+          # src/assets/fonts is read at runtime from process.cwd() by the match
+          # share image (og.png) and the stat-sheet PDF.
+          tar -czf release.tar.gz dist node_modules prisma prisma.config.ts package.json server.js server.cjs src/assets/fonts
 
       - name: Upload release
         run: |
@@ -100,7 +102,7 @@ jobs:
           cd "$REL"
           tar -xzf release.tar.gz && rm release.tar.gz
 
-          FILES="dist node_modules prisma prisma.config.ts package.json server.js server.cjs"
+          FILES="dist node_modules prisma prisma.config.ts package.json server.js server.cjs src"
 
           # First run: ~/prod still holds real files from the manual deploy.
           # Move them into a bootstrap release so they become the rollback target.
