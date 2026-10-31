@@ -42,6 +42,8 @@ export function optimizeImageUrl(
   opts: OptimizeOptions = {},
 ): string {
   if (!src) return '';
+  // `/_vercel/image` only exists on Vercel; other hosts serve the original.
+  if (import.meta.env.DEPLOY_TARGET !== 'vercel') return src;
   if (!isOptimizable(src)) return src;
 
   const params = new URLSearchParams();

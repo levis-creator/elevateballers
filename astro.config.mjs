@@ -84,6 +84,10 @@ export default defineConfig({
     remotePatterns: [{ protocol: 'https', hostname: 'cdn.sanity.io' }],
   },
   vite: {
+    // Lets shared code (e.g. src/lib/image-cdn.ts) branch on the host at build time.
+    define: {
+      'import.meta.env.DEPLOY_TARGET': JSON.stringify(deployTarget),
+    },
     resolve: {
       alias: {
         '@': resolve(fileURLToPath(new URL('.', import.meta.url)), './src'),
