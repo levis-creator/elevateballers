@@ -26,10 +26,21 @@ describe('POST /api/monitoring', () => {
   it('forwards envelopes for this project to Sentry', async () => {
     const response = await call(envelope(DSN));
     expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://o1.ingest.de.sentry.io/api/42/envelope/',
-      expect.objectContaining({ method: 'POST', body: envelope(DSN) })
-    );
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://o1.ingest.de.sentry.io/api/42/envelope/');
+    expect(init.method).toBe('POST');
+    expect(new TextDecoder().decode(init.body)).toBe(envelope(DSN));
+  });
+
+  it('forwards binary items (session replays) byte for byte', async () => {
+    const head = new TextEncoder().encode(`${JSON.stringify({ dsn: DSN })}\n{"type":"replay_recording","length":4}\n`);
+    const binary = new Uint8Array([0x78, 0x9c, 0xff, 0x80]); // not valid UTF-8
+    const body = new Uint8Array([...head, ...binary]);
+    const response = await POST({
+      request: new Request('https://site.test/api/monitoring', { method: 'POST', body }),
+    } as any);
+    expect(response.status).toBe(200);
+    expect(Array.from(fetchMock.mock.calls[0][1].body as Uint8Array)).toEqual(Array.from(body));
   });
 
   it('refuses envelopes addressed to another Sentry project or host', async () => {

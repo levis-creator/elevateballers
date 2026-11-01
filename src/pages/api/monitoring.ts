@@ -36,13 +36,16 @@ export const POST: APIRoute = async ({ request }) => {
   const declaredLength = Number(request.headers.get('content-length') ?? 0);
   if (declaredLength > MAX_ENVELOPE_BYTES) return empty(413);
 
-  const envelope = await request.text();
-  if (envelope.length > MAX_ENVELOPE_BYTES) return empty(413);
+  // Kept as bytes: replay items carry compressed binary that decoding as
+  // text would corrupt.
+  const envelope = new Uint8Array(await request.arrayBuffer());
+  if (envelope.byteLength > MAX_ENVELOPE_BYTES) return empty(413);
 
   // The first line of an envelope is a JSON header naming the DSN it is for.
   let dsn: URL;
   try {
-    const header = JSON.parse(envelope.slice(0, envelope.indexOf('\n')));
+    const headerEnd = envelope.indexOf(0x0a);
+    const header = JSON.parse(new TextDecoder().decode(envelope.subarray(0, headerEnd === -1 ? undefined : headerEnd)));
     dsn = new URL(header.dsn);
   } catch {
     return empty(400);
