@@ -222,7 +222,6 @@ node scripts/create-admin.js
 ### Documentation
 - `PERMISSION_SETUP.md` - Setup guide
 - `PERMISSIONS_USAGE_GUIDE.md` - Usage examples
-- `USERS_PAGE_FIX.md` - Users page fix details
 - `PERMISSIONS_COMPLETE.md` - This file
 
 ### Examples

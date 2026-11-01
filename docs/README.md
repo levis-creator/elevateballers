@@ -4,27 +4,23 @@ This folder contains all project documentation organized by topic.
 
 ## 📚 Documentation Index
 
-### 🚀 Deployment Guides
+### 🚀 Deployment & Operations
 
-- **[CPANEL_DEPLOYMENT.md](./CPANEL_DEPLOYMENT.md)** - Complete guide for deploying to cPanel
-- **[CPANEL_QUICK_START.md](./CPANEL_QUICK_START.md)** - Quick start guide for cPanel deployment
-- **[CPANEL_LOGIN_TROUBLESHOOTING.md](./CPANEL_LOGIN_TROUBLESHOOTING.md)** - Troubleshooting login issues on cPanel
-- **[RUN_CPANEL_LOCALLY.md](./RUN_CPANEL_LOCALLY.md)** - Guide for running cPanel setup locally
-- **[VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md)** - Guide for deploying to Vercel
-- **[NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md)** - Guide for deploying to Netlify
-- **[GITHUB_DEPLOYMENT_SETUP.md](./GITHUB_DEPLOYMENT_SETUP.md)** - GitHub deployment setup guide
-- **[SETUP_GITHUB_DEPLOYMENT.md](./SETUP_GITHUB_DEPLOYMENT.md)** - Step-by-step GitHub deployment setup
-- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide covering all platforms
-- **[DEPLOYMENT_QUICK_REFERENCE.md](./DEPLOYMENT_QUICK_REFERENCE.md)** - Quick reference for deployment commands
-- **[QUICK_DEPLOYMENT_GUIDE.md](./QUICK_DEPLOYMENT_GUIDE.md)** - Quick deployment guide
-- **[README_DEPLOYMENT.md](./README_DEPLOYMENT.md)** - Deployment overview and instructions
-- **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** - Checklist for deployment
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - How the site is hosted, deployed, monitored and backed up (cPanel + GitHub Actions + Cloudflare + Sentry)
 
 ### 🔧 Configuration & Setup
 
 - **[ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md)** - Environment variables documentation
 - **[NGROK_SETUP.md](./NGROK_SETUP.md)** - Guide for setting up ngrok tunnel
-- **[SET_FEATURE_FLAGS_IN_VERCEL.md](./SET_FEATURE_FLAGS_IN_VERCEL.md)** - How to set feature flags in Vercel
+
+### 🔐 Permissions (RBAC)
+
+- **[permissions/](./permissions/)** - Role-based access control: setup, seeding and usage guides
+
+### 🗺️ Planning & Design
+
+- **[planning/](./planning/)** - Redesign prompts and the scaling/registration to-do list
+- **[design-mockups/](./design-mockups/)** - Standalone HTML design mockups
 
 ### 🔄 Migration & Updates
 
@@ -37,9 +33,7 @@ This folder contains all project documentation organized by topic.
 - **[ADMIN_PORTAL_FIX.md](./ADMIN_PORTAL_FIX.md)** - Fixes for admin portal issues
 - **[BUILD_ISSUES_FIX.md](./BUILD_ISSUES_FIX.md)** - Solutions for build issues
 - **[FIX_BUILD_ISSUES.md](./FIX_BUILD_ISSUES.md)** - Additional build issue fixes
-- **[FUNCTION_INVOCATION_FAILED_FIX.md](./FUNCTION_INVOCATION_FAILED_FIX.md)** - Fix for function invocation failures
 - **[PRODUCTION_VS_DEV_FIX.md](./PRODUCTION_VS_DEV_FIX.md)** - Fixes for production vs development differences
-- **[VERCEL_PREVIEW_FIX.md](./VERCEL_PREVIEW_FIX.md)** - Fixes for Vercel preview issues
 - **[WHY_LOCAL_DIFFERENT.md](./WHY_LOCAL_DIFFERENT.md)** - Explanation of local vs production differences
 
 ### 🏠 Homepage
@@ -69,7 +63,7 @@ This folder contains all project documentation organized by topic.
 
 ## 🔍 Finding Documentation
 
-- **Deployment questions?** → Check the Deployment Guides section
+- **Deployment questions?** → Read [DEPLOYMENT.md](./DEPLOYMENT.md)
 - **Having build issues?** → Check Troubleshooting & Fixes section
 - **Setting up environment?** → Check Configuration & Setup section
 - **Need to migrate?** → Check Migration & Updates section
