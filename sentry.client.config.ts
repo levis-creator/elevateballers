@@ -23,8 +23,9 @@ Sentry.init({
     Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
     Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] }),
     Sentry.feedbackIntegration({
-      // Public pages only; the floating button would sit over admin controls.
-      autoInject: !window.location.pathname.startsWith('/admin'),
+      // Public pages only: the floating button would sit over admin controls
+      // and the team portal's fixed bottom navigation on phones.
+      autoInject: !/^\/(admin|team-portal)(\/|$)/.test(window.location.pathname),
       colorScheme: 'system',
       showBranding: false,
       triggerLabel: 'Report a bug',

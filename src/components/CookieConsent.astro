@@ -318,6 +318,11 @@ const {
 	.cc-reopen:hover { border-color: var(--brand); color: #fff; }
 	.cc-reopen-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
 
+	/* Sentry's "Report a bug" button: bottom-left, clear of the reopen pill,
+	   and hidden while the consent banner covers the bottom of the page. */
+	:global(#sentry-feedback) { --inset: auto auto 0 0; }
+	:global(body:has(.cc-banner-wrap:not([hidden])) #sentry-feedback) { display: none; }
+
 	@media (max-width: 720px) {
 		.cc-banner-wrap { padding: 12px; }
 		.cc-banner-grid { grid-template-columns: 1fr; gap: 18px; padding: 22px; }
