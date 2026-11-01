@@ -160,6 +160,9 @@
     "sanitize-html": {
       "htmlparser2": "^10.1.0"
     },
-    "path-to-regexp@6": "^6.3.0"
+    "path-to-regexp@6": "^6.3.0",
+    "satori": {
+      "fflate": "^0.7.5"
+    }
   }
 }
