@@ -75,8 +75,11 @@ jobs:
 
       - name: Build
         # Tags Sentry errors, traces and sessions with the commit they came from.
+        # With SENTRY_AUTH_TOKEN set, source maps are uploaded for that release
+        # and deleted from dist before packaging; without it the upload is skipped.
         env:
           PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run build:cpanel
 
       - name: Package release
