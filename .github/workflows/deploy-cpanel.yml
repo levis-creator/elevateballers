@@ -56,9 +56,12 @@ jobs:
           EOF
 
       # PUBLIC_* values are inlined at build time, so read them from the
-      # server's .env instead of duplicating them in GitHub.
+      # server's .env instead of duplicating them in GitHub. $GITHUB_ENV keeps
+      # quotes literally, so strip the ones dotenv would have removed.
       - name: Load public build variables from the server
-        run: ssh cpanel "grep -E '^PUBLIC_[A-Z_]+=' ~/prod/.env" >> "$GITHUB_ENV"
+        run: |
+          ssh cpanel "grep -E '^PUBLIC_[A-Z_]+=' ~/prod/.env" \
+            | sed -E "s/^([A-Z_]+)=([\"'])(.*)\2[[:space:]]*\$/\1=\3/" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm ci
