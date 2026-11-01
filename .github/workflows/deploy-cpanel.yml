@@ -74,6 +74,9 @@ jobs:
         run: npm test
 
       - name: Build
+        # Tags Sentry errors, traces and sessions with the commit they came from.
+        env:
+          PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: npm run build:cpanel
 
       - name: Package release

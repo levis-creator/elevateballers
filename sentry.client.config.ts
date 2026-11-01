@@ -1,5 +1,8 @@
-// Browser-side Sentry. Reports uncaught errors only: no performance tracing or
-// session replay, which keeps usage inside Sentry's free Developer plan.
+// Browser-side Sentry, tuned to stay inside the free Developer plan:
+// - errors, with a session replay only for page views that hit an error
+//   (the plan includes 50 replays a month; text and media are masked)
+// - a 10% sample of page-load and navigation traces
+// - console warnings and errors as Sentry logs
 // PUBLIC_SENTRY_DSN is inlined at build time; without it Sentry stays off.
 // Events go through this site's own /api/monitoring tunnel so ad blockers
 // that block *.sentry.io don't drop them.
@@ -12,8 +15,17 @@ Sentry.init({
   tunnel: '/api/monitoring',
   enabled: Boolean(dsn) && import.meta.env.PROD,
   environment: import.meta.env.MODE,
+  release: import.meta.env.PUBLIC_SENTRY_RELEASE || undefined,
   sendDefaultPii: false,
-  tracesSampleRate: 0,
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
+    Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] }),
+  ],
+  tracesSampleRate: 0.1,
+  // Keep traces on this site; don't add trace headers to Supabase, R2 etc.
+  tracePropagationTargets: [/^\//],
   replaysSessionSampleRate: 0,
-  replaysOnErrorSampleRate: 0,
+  replaysOnErrorSampleRate: 1.0,
+  enableLogs: true,
 });

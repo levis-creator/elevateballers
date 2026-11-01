@@ -11,8 +11,9 @@ export const prerender = false;
  * route can't be used to relay traffic anywhere else.
  */
 
-// A browser error envelope is a few KB; anything far larger is not ours.
-const MAX_ENVELOPE_BYTES = 256 * 1024;
+// Error envelopes are a few KB and compressed replay segments rarely pass a
+// few hundred; anything far larger is not ours.
+const MAX_ENVELOPE_BYTES = 1024 * 1024;
 
 const empty = (status: number) => new Response(null, { status });
 

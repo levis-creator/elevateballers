@@ -44,7 +44,7 @@ describe('POST /api/monitoring', () => {
   });
 
   it('rejects oversized envelopes', async () => {
-    expect((await call(envelope(DSN) + 'x'.repeat(300 * 1024))).status).toBe(413);
+    expect((await call(envelope(DSN) + 'x'.repeat(1100 * 1024))).status).toBe(413);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
