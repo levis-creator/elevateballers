@@ -101,12 +101,31 @@ jobs:
           SHA="${{ github.sha }}"
           REL="$HOME/releases/$SHA"
 
-          # Node 24 runtime, installed once.
-          if [ ! -x "$HOME/node24/bin/node" ]; then
-            V=$(curl -fsSL https://nodejs.org/dist/index.json | grep -o '"version":"v24[^"]*"' | head -1 | cut -d'"' -f4)
-            curl -fsSL "https://nodejs.org/dist/$V/node-$V-linux-x64.tar.gz" | tar -xz -C "$HOME"
-            mv "$HOME/node-$V-linux-x64" "$HOME/node24"
+          # Node 24 runtime. The host's Node selector stops at 20, so we run our
+          # own copy and move it to the newest 24.x release (security fixes)
+          # whenever one is out. The tarball is checked against nodejs.org's
+          # SHA-256 list, and the swap keeps ~/node24.prev for a manual revert.
+          # A failed update keeps the current Node; only a missing Node fails.
+          install_node() {
+            local v="$1" tmp
+            # Not /tmp: it is mounted noexec on this host.
+            tmp=$(mktemp -d "$HOME/.node-update.XXXXXX")
+            curl -fsSL "https://nodejs.org/dist/$v/node-$v-linux-x64.tar.gz" -o "$tmp/node.tgz" &&
+            curl -fsSL "https://nodejs.org/dist/$v/SHASUMS256.txt" -o "$tmp/sums" &&
+            (cd "$tmp" && grep " node-$v-linux-x64.tar.gz\$" sums | sed "s/node-$v-linux-x64.tar.gz/node.tgz/" | sha256sum -c --status) &&
+            tar -xzf "$tmp/node.tgz" -C "$tmp" &&
+            "$tmp/node-$v-linux-x64/bin/node" -v >/dev/null &&
+            { rm -rf "$HOME/node24.prev"; [ -d "$HOME/node24" ] && mv "$HOME/node24" "$HOME/node24.prev"; mv "$tmp/node-$v-linux-x64" "$HOME/node24"; }
+            local ok=$?
+            rm -rf "$tmp"
+            return $ok
+          }
+          LATEST=$(curl -fsSL https://nodejs.org/dist/index.json | grep -o '"version":"v24[^"]*"' | head -1 | cut -d'"' -f4 || true)
+          CURRENT=$("$HOME/node24/bin/node" -v 2>/dev/null || true)
+          if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ]; then
+            if install_node "$LATEST"; then echo "Node $CURRENT -> $LATEST"; else echo "Node update to $LATEST failed; keeping ${CURRENT:-none}"; fi
           fi
+          [ -x "$HOME/node24/bin/node" ] || { echo "Node 24 is not installed"; exit 1; }
 
           cd "$REL"
           tar -xzf release.tar.gz && rm release.tar.gz
