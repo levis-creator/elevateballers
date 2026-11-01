@@ -163,6 +163,9 @@
     "path-to-regexp@6": "^6.3.0",
     "satori": {
       "fflate": "^0.7.5"
+    },
+    "tsx": {
+      "esbuild": "^0.28.2"
     }
   }
 }
