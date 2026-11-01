@@ -2,6 +2,7 @@
 import { defineConfig, envField } from 'astro/config';
 import react from '@astrojs/react';
 import alpinejs from '@astrojs/alpinejs';
+import sentry from '@sentry/astro';
 import node from '@astrojs/node';
 import vercel from '@astrojs/vercel';
 import { fileURLToPath } from 'url';
@@ -27,7 +28,9 @@ export default defineConfig({
   site: 'https://elevateballers.com',
   // Sitemap generation is runtime-managed by src/pages/sitemap.xml.ts so the
   // Site Settings → SEO switch and excluded paths are always respected.
-  integrations: [react(), tailwindBaseStyles, alpinejs()],
+  // Sentry reads sentry.client.config.ts / sentry.server.config.ts. Source map
+  // upload is off until a SENTRY_AUTH_TOKEN is set up for the deploy.
+  integrations: [react(), tailwindBaseStyles, alpinejs(), sentry({ sourcemaps: { disable: true }, telemetry: false })],
   output: 'server',
   // Astro 7 defaults to JSX-style whitespace collapsing, which would join
   // adjacent inline elements; keep the previous HTML compression.
