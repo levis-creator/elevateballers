@@ -8,13 +8,13 @@ If `npx prisma migrate deploy` fails with EAGAIN error on cPanel, run the migrat
 SSH into your cPanel server and run:
 
 ```bash
-mysql -u elevateb_test -p elevateb_test < /path/to/migration.sql
+mysql -u elevateb_app -p elevateb_prod < /path/to/migration.sql
 ```
 
 Or connect interactively:
 
 ```bash
-mysql -u elevateb_test -p elevateb_test
+mysql -u elevateb_app -p elevateb_prod
 ```
 
 Then paste and run:
@@ -27,7 +27,7 @@ ALTER TABLE `teams` ADD COLUMN `nickname` VARCHAR(191) NULL;
 
 1. Log into cPanel
 2. Open **phpMyAdmin**
-3. Select database: `elevateb_test`
+3. Select database: `elevateb_prod`
 4. Click **SQL** tab
 5. Paste this SQL:
 

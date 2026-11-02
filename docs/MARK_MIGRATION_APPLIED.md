@@ -13,7 +13,7 @@ After running the SQL directly, you need to tell Prisma that the migration was a
 
 Via MySQL command line:
 ```bash
-mysql -u elevateb_test -p elevateb_test -e "ALTER TABLE teams ADD COLUMN nickname VARCHAR(191) NULL;"
+mysql -u elevateb_app -p elevateb_prod -e "ALTER TABLE teams ADD COLUMN nickname VARCHAR(191) NULL;"
 ```
 
 Or via phpMyAdmin - run:

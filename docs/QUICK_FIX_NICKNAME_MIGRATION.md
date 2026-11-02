@@ -11,7 +11,7 @@ Since this is a simple one-column migration, just run the SQL directly:
 ### Via MySQL Command Line (SSH)
 
 ```bash
-mysql -u elevateb_test -p elevateb_test -e "ALTER TABLE teams ADD COLUMN nickname VARCHAR(191) NULL;"
+mysql -u elevateb_app -p elevateb_prod -e "ALTER TABLE teams ADD COLUMN nickname VARCHAR(191) NULL;"
 ```
 
 Enter your MySQL password when prompted.
@@ -20,7 +20,7 @@ Enter your MySQL password when prompted.
 
 1. Log into **cPanel**
 2. Open **phpMyAdmin**
-3. Select database: `elevateb_test`
+3. Select database: `elevateb_prod`
 4. Click **SQL** tab
 5. Paste this SQL:
 
