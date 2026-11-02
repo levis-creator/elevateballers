@@ -32,11 +32,21 @@ const PUBLIC_KEYS = new Set([
   'system_skeletons',
 ]);
 
+// One page render asks for several categories (layout, header, page body).
+// Loading the whole table once and reusing it briefly turns those into a single
+// query. Writes in this process clear it; other processes catch up within the TTL.
+const SNAPSHOT_TTL_MS = 5_000;
+
 export class SiteSettingsService {
-  constructor(private readonly repository: SiteSettingsRepository) {}
+  private snapshot: { loadedAt: number; settings: Promise<SiteSetting[]> } | null = null;
+
+  constructor(
+    private readonly repository: SiteSettingsRepository,
+    private readonly now: () => number = Date.now,
+  ) {}
 
   async list(category?: string): Promise<SiteSetting[]> {
-    return (await this.repository.findAll(category)).map(revealSensitiveSetting);
+    return (await this.findAll(category)).map((setting) => revealSensitiveSetting({ ...setting }));
   }
 
   async listPublic(category?: string): Promise<SiteSetting[]> {
@@ -44,8 +54,26 @@ export class SiteSettingsService {
       throw new Error('Category not allowed');
     }
 
-    const settings = await this.repository.findAll(category);
-    return settings.filter((setting) => PUBLIC_KEYS.has(setting.key));
+    const settings = await this.findAll(category);
+    return settings.filter((setting) => PUBLIC_KEYS.has(setting.key)).map((setting) => ({ ...setting }));
+  }
+
+  private async findAll(category?: string): Promise<SiteSetting[]> {
+    const now = this.now();
+    if (!this.snapshot || now - this.snapshot.loadedAt >= SNAPSHOT_TTL_MS) {
+      const settings = this.repository.findAll();
+      const snapshot = { loadedAt: now, settings };
+      this.snapshot = snapshot;
+      settings.catch(() => {
+        if (this.snapshot === snapshot) this.snapshot = null;
+      });
+    }
+    const settings = await this.snapshot.settings;
+    return category ? settings.filter((setting) => setting.category === category) : settings;
+  }
+
+  private invalidate(): void {
+    this.snapshot = null;
   }
 
   async get(identifier: string): Promise<SiteSetting | null> {
@@ -78,6 +106,7 @@ export class SiteSettingsService {
       value: protectSensitiveSettingValue(key, input.value),
       label: input.label.trim(),
     });
+    this.invalidate();
     return revealSensitiveSetting(created);
   }
 
@@ -96,10 +125,13 @@ export class SiteSettingsService {
       ...input,
       ...(input.value === undefined ? {} : { value: protectSensitiveSettingValue(existing.key, input.value, existing.value) }),
     });
+    this.invalidate();
     return updated ? revealSensitiveSetting(updated) : null;
   }
 
-  remove(id: string): Promise<boolean> {
-    return this.repository.delete(id);
+  async remove(id: string): Promise<boolean> {
+    const removed = await this.repository.delete(id);
+    this.invalidate();
+    return removed;
   }
 }
