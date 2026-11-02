@@ -72,7 +72,7 @@ export class SiteSettingsService {
     return category ? settings.filter((setting) => setting.category === category) : settings;
   }
 
-  private invalidate(): void {
+  invalidate(): void {
     this.snapshot = null;
   }
 

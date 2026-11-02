@@ -130,6 +130,17 @@ jobs:
           cd "$REL"
           tar -xzf release.tar.gz && rm release.tar.gz
 
+          # Pages already open in a browser, or cached, still ask for the old
+          # release's hashed chunks; without them islands fail to hydrate
+          # ("Failed to fetch dynamically imported module"). Carry over chunks
+          # built in the last 7 days as hard links (hashed names never clash,
+          # and existing files are never overwritten).
+          LIVE_ASSETS="$(readlink -f "$HOME/current" 2>/dev/null || true)/dist/client/_astro"
+          if [ -d "$LIVE_ASSETS" ] && [ -d dist/client/_astro ]; then
+            (cd "$LIVE_ASSETS" && find . -type f -mtime -7 -print0) |
+              (cd "$LIVE_ASSETS" && xargs -0 -r cp -nl --parents -t "$REL/dist/client/_astro/") || true
+          fi
+
           FILES="dist node_modules prisma prisma.config.ts package.json server.js server.cjs src"
 
           # First run: ~/prod still holds real files from the manual deploy.

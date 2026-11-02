@@ -74,6 +74,7 @@ vi.mock('../../../../lib/prisma', () => ({
 import { POST as postTeam } from '../team';
 import { POST as postPlayer } from '../player';
 import { DEFAULT_PUBLIC_PRIVACY_POLICY_SETTINGS } from '../../../../features/settings/application/privacyPolicySettings';
+import { siteSettingsService } from '../../../../features/settings';
 
 const consentPayload = {
   privacyConsent: true,
@@ -114,6 +115,7 @@ const playerPayload = {
 describe('public registration endpoints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    siteSettingsService.invalidate();
     mocks.checkRateLimit.mockResolvedValue(true);
     mocks.resetRateLimit.mockResolvedValue(undefined);
     mocks.verifyTurnstile.mockResolvedValue(true);
@@ -160,10 +162,10 @@ describe('public registration endpoints', () => {
       playerId: 'player-1',
     });
     mocks.siteSettingFindMany.mockResolvedValue([
-      { key: 'registration_open', value: 'true' },
-      { key: 'registration_opens', value: '2020-01-01' },
-      { key: 'registration_closes', value: '2099-12-31' },
-      { key: 'registration_playerMode', value: 'true' },
+      { key: 'registration_open', value: 'true', category: 'registration' },
+      { key: 'registration_opens', value: '2020-01-01', category: 'registration' },
+      { key: 'registration_closes', value: '2099-12-31', category: 'registration' },
+      { key: 'registration_playerMode', value: 'true', category: 'registration' },
     ]);
   });
 
@@ -248,12 +250,12 @@ describe('public registration endpoints', () => {
 
   it('stores the policy version and wording that were accepted', async () => {
     mocks.siteSettingFindMany.mockResolvedValue([
-      { key: 'registration_open', value: 'true' },
-      { key: 'registration_opens', value: '2020-01-01' },
-      { key: 'registration_closes', value: '2099-12-31' },
-      { key: 'registration_playerMode', value: 'true' },
-      { key: 'privacy_version', value: 'v3 · 2026-11-01' },
-      { key: 'privacy_consentLabel', value: 'I accept the [privacy terms] and media use.' },
+      { key: 'registration_open', value: 'true', category: 'registration' },
+      { key: 'registration_opens', value: '2020-01-01', category: 'registration' },
+      { key: 'registration_closes', value: '2099-12-31', category: 'registration' },
+      { key: 'registration_playerMode', value: 'true', category: 'registration' },
+      { key: 'privacy_version', value: 'v3 · 2026-11-01', category: 'privacy' },
+      { key: 'privacy_consentLabel', value: 'I accept the [privacy terms] and media use.', category: 'privacy' },
     ]);
     const response = await postPlayer({
       request: request({ ...playerPayload, privacyPolicyVersion: 'v3 · 2026-11-01' }),
