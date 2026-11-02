@@ -1,4 +1,5 @@
 import type { SiteSetting } from '../domain/siteSetting';
+import { ELEVATE_LOGO_URL, resolveDefaultLogo } from '../../../lib/brandAssets';
 
 export type HeaderNavItem = {
   label: string;
@@ -33,7 +34,7 @@ export const DEFAULT_PUBLIC_HEADER_SETTINGS: PublicHeaderSettings = {
   utilityText: 'Nairobi, Kenya · Season 2026',
   statusText: 'Live standings updating',
   showLoginLink: true,
-  logo: '/logo/Elevate_Logo.png',
+  logo: ELEVATE_LOGO_URL,
   navItems: DEFAULT_HEADER_NAV_ITEMS,
   sticky: true,
   ctaLabel: 'Register Team',
@@ -49,8 +50,8 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
 function normalizeAssetPath(value: string | undefined, fallback: string): string {
   const path = value?.trim();
   if (!path) return fallback;
-  if (path === 'assets/elevate-logo.png') return '/logo/Elevate_Logo.png';
-  if (/^(https?:)?\/\//.test(path) || path.startsWith('/')) return path;
+  if (/^(https?:)?\/\//.test(path) || path.startsWith('/')) return resolveDefaultLogo(path);
+  if (path === 'assets/elevate-logo.png') return ELEVATE_LOGO_URL;
   return `/${path}`;
 }
 

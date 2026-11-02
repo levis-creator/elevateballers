@@ -7,35 +7,26 @@
 // PUBLIC_SENTRY_DSN is inlined at build time; without it Sentry stays off.
 // Events go through this site's own /api/monitoring tunnel so ad blockers
 // that block *.sentry.io don't drop them.
+//
+// Replay and the feedback button are loaded once the page is idle (see
+// src/lib/sentryDeferredIntegrations.ts): they are most of the SDK's size, and
+// loading them up front delayed every page. An error in the first moments of a
+// visit is still reported, just without a replay.
 import * as Sentry from '@sentry/astro';
 
 const dsn = import.meta.env.PUBLIC_SENTRY_DSN;
+const enabled = Boolean(dsn) && import.meta.env.PROD;
 
 Sentry.init({
   dsn,
   tunnel: '/api/monitoring',
-  enabled: Boolean(dsn) && import.meta.env.PROD,
+  enabled,
   environment: import.meta.env.MODE,
   release: import.meta.env.PUBLIC_SENTRY_RELEASE || undefined,
   sendDefaultPii: false,
   integrations: [
     Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
     Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] }),
-    Sentry.feedbackIntegration({
-      // Public pages only: the floating button would sit over admin controls
-      // and the team portal's fixed bottom navigation on phones.
-      autoInject: !/^\/(admin|team-portal)(\/|$)/.test(window.location.pathname),
-      colorScheme: 'system',
-      showBranding: false,
-      triggerLabel: 'Report a bug',
-      formTitle: 'Report a bug',
-      messagePlaceholder: 'What went wrong? What did you expect to happen?',
-      submitButtonLabel: 'Send report',
-      successMessageText: 'Thanks! Your report has been sent.',
-      isNameRequired: false,
-      isEmailRequired: false,
-    }),
   ],
   tracesSampleRate: 0.1,
   // Keep traces on this site; don't add trace headers to Supabase, R2 etc.
@@ -44,3 +35,19 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
   enableLogs: true,
 });
+
+if (enabled) {
+  const loadDeferred = () => {
+    import('./src/lib/sentryDeferredIntegrations')
+      .then(({ addDeferredIntegrations }) => addDeferredIntegrations())
+      .catch(() => {
+        // A failed chunk load only costs replay and the feedback button.
+      });
+  };
+  const whenIdle = () =>
+    'requestIdleCallback' in window
+      ? window.requestIdleCallback(loadDeferred, { timeout: 4000 })
+      : setTimeout(loadDeferred, 1500);
+  if (document.readyState === 'complete') whenIdle();
+  else window.addEventListener('load', whenIdle, { once: true });
+}

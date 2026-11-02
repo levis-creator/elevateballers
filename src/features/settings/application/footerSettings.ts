@@ -1,4 +1,5 @@
 import type { SiteSetting } from '../domain/siteSetting';
+import { ELEVATE_LOGO_URL, resolveDefaultLogo } from '../../../lib/brandAssets';
 
 export type FooterLink = {
   label: string;
@@ -34,7 +35,7 @@ export const DEFAULT_FOOTER_LINKS: FooterLink[] = [
 
 export const DEFAULT_PUBLIC_FOOTER_SETTINGS: PublicFooterSettings = {
   siteName: 'Elevate Ballers',
-  logo: '/logo/Elevate_Logo.png',
+  logo: ELEVATE_LOGO_URL,
   showContact: true,
   linksHeading: 'Explore',
   links: DEFAULT_FOOTER_LINKS,
@@ -99,8 +100,8 @@ function parseStoredLinks(value: string | undefined): FooterLink[] | null {
 function normalizeAssetPath(value: string | undefined, fallback: string): string {
   const path = value?.trim();
   if (!path) return fallback;
-  if (path === 'assets/elevate-logo.png') return '/logo/Elevate_Logo.png';
-  if (/^(https?:)?\/\//.test(path) || path.startsWith('/')) return path;
+  if (/^(https?:)?\/\//.test(path) || path.startsWith('/')) return resolveDefaultLogo(path);
+  if (path === 'assets/elevate-logo.png') return ELEVATE_LOGO_URL;
   return `/${path}`;
 }
 

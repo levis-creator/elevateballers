@@ -1,4 +1,5 @@
 ---
+import { ELEVATE_LOGO_URL } from '@/lib/brandAssets';
 // v2 full-screen boot SPLASH — shown on the first paint of a session (before
 // hydration/fonts settle), then faded out and removed on `load`. Pure CSS
 // animation; a tiny inline script handles the once-per-session guard + removal.
@@ -22,7 +23,7 @@ const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
 	<div class="relative flex flex-col items-center">
 		<!-- brand -->
 		<div class="mb-12">
-			<img src="/logo/Elevate_Logo.png" alt="Elevate Ballers League" class="h-[54px] w-auto max-[600px]:h-[44px]" />
+			<img src={ELEVATE_LOGO_URL} alt="Elevate Ballers League" class="h-[54px] w-auto max-[600px]:h-[44px]" />
 		</div>
 
 		<!-- bouncing, spinning basketball + squashing shadow -->

@@ -1,4 +1,5 @@
 ---
+import { ELEVATE_LOGO_URL } from '@/lib/brandAssets';
 import '@/styles/v2.css';
 import BasketballSeams from "@/components/BasketballSeams.astro";
 import '@fontsource/anton';
@@ -38,7 +39,7 @@ const pagePath = attemptedPath.startsWith('/') ? attemptedPath : `/${attemptedPa
   <body>
     <div class="access-page">
       <header class="access-header">
-        <a class="brand" href="/" aria-label="Elevate Ballers home"><span class="brand-chip"><img src="/logo/Elevate_Logo.png" alt="Elevate Ballers League" /></span></a>
+        <a class="brand" href="/" aria-label="Elevate Ballers home"><span class="brand-chip"><img src={ELEVATE_LOGO_URL} alt="Elevate Ballers League" /></span></a>
         <div class="header-actions">{user && <span class="account-chip"><span class="status-dot"></span>{displayName}</span>}<a class="home-button" href="/">Home <span aria-hidden="true">↗</span></a></div>
       </header>
 
