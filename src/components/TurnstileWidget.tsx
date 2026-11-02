@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import * as Sentry from '@sentry/astro';
 
 declare global {
   interface Window {
@@ -9,7 +10,7 @@ declare global {
           sitekey: string;
           callback?: (token: string) => void;
           'expired-callback'?: () => void;
-          'error-callback'?: () => void;
+          'error-callback'?: (errorCode: string) => boolean | void;
           theme?: 'light' | 'dark' | 'auto';
           size?: 'normal' | 'flexible' | 'compact';
           appearance?: 'always' | 'execute' | 'interaction-only';
@@ -36,12 +37,27 @@ interface Props {
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
 
+// Cloudflare raises these in the visitor's browser (300xxx/600xxx usually mean
+// an extension, VPN or automated browser failed the check). Report one per
+// widget so we can see how often real visitors get stuck.
+function reportTurnstileError(errorCode: string) {
+  Sentry.captureMessage(`Turnstile error ${errorCode}`, {
+    level: 'warning',
+    tags: { turnstile_code: errorCode },
+    fingerprint: ['turnstile-error', errorCode],
+  });
+}
+
 export default function TurnstileWidget({ siteKey, resetKey, onSuccess, onExpire, onError, theme, size, appearance }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const reportedRef = useRef(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    reportedRef.current = false;
+    setFailed(false);
 
     const render = () => {
       if (cancelled || !containerRef.current) return;
@@ -49,9 +65,21 @@ export default function TurnstileWidget({ siteKey, resetKey, onSuccess, onExpire
       containerRef.current.innerHTML = '';
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
-        callback: onSuccess,
+        callback: (token) => {
+          setFailed(false);
+          onSuccess(token);
+        },
         'expired-callback': onExpire ?? (() => {}),
-        'error-callback': onError ?? (() => {}),
+        'error-callback': (errorCode) => {
+          setFailed(true);
+          if (!reportedRef.current) {
+            reportedRef.current = true;
+            reportTurnstileError(errorCode);
+          }
+          onError?.();
+          // Handled: Turnstile skips its console error but keeps retrying.
+          return true;
+        },
         ...(theme ? { theme } : {}),
         ...(size ? { size } : {}),
         ...(appearance ? { appearance } : {}),
@@ -89,5 +117,25 @@ export default function TurnstileWidget({ siteKey, resetKey, onSuccess, onExpire
     };
   }, [siteKey, resetKey]);
 
-  return <div ref={containerRef} style={{ margin: '12px 0' }} />;
+  const retry = () => {
+    setFailed(false);
+    if (widgetIdRef.current != null && typeof window.turnstile !== 'undefined') {
+      window.turnstile.reset(widgetIdRef.current);
+    }
+  };
+
+  return (
+    <div style={{ margin: '12px 0' }}>
+      <div ref={containerRef} />
+      {failed && (
+        <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.4 }}>
+          Verification didn't complete. If you use a VPN or ad blocker, pause it, then{' '}
+          <button type="button" onClick={retry} style={{ padding: 0, border: 0, background: 'none', color: 'inherit', font: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}>
+            try again
+          </button>
+          .
+        </p>
+      )}
+    </div>
+  );
 }
