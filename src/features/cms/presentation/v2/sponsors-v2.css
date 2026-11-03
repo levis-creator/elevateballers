@@ -1,0 +1,731 @@
+/* Sponsors manager (v2). Uses the shell tokens from admin-v2.css. */
+.eb-sp {
+	--stripe: rgba(255, 255, 255, 0.035);
+	--sp-brand-rgb: var(--site-brand-rgb, 228 0 43);
+	max-width: 1180px;
+	margin: 0 auto;
+	color: var(--tx);
+	font-family: "Archivo", sans-serif;
+}
+.eb-root.light .eb-sp {
+	--stripe: rgb(20 16 9 / 0.04);
+}
+.eb-sp button {
+	font-family: "Archivo", sans-serif;
+	cursor: pointer;
+}
+.eb-sp button:disabled {
+	cursor: default;
+}
+
+/* Heading */
+.eb-sp-heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+.eb-sp-eyebrow {
+	margin-bottom: 4px;
+	color: var(--brandsoft);
+	font: 11px "Space Mono", monospace;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+.eb-sp h1 {
+	margin: 0;
+	color: var(--tx);
+	font: 400 30px/1 "Anton", sans-serif;
+	text-transform: uppercase;
+}
+.eb-sp-heading p {
+	margin: 6px 0 0;
+	color: var(--txm);
+	font-size: 13px;
+}
+.eb-sp-primary {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	border-radius: 8px;
+	background: var(--brand);
+	padding: 8px 14px;
+	color: var(--brandfg);
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+.eb-sp-primary:hover {
+	background: var(--brandlt);
+}
+
+/* Shared pieces */
+.eb-sp-card {
+	overflow: hidden;
+	border: 1px solid var(--bord);
+	border-radius: 16px;
+	background: var(--surf);
+}
+.eb-sp-label {
+	color: var(--txm);
+	font: 700 10px "Space Mono", monospace;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+.eb-sp-seg {
+	display: flex;
+	gap: 4px;
+	border: 1px solid var(--bord);
+	border-radius: 8px;
+	background: var(--surf2);
+	padding: 3px;
+}
+.eb-sp .eb-sp-seg button {
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	padding: 5px 10px;
+	color: var(--txm);
+	font: 700 10px "Space Mono", monospace;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.eb-sp .eb-sp-seg button.on {
+	background: var(--surf);
+	color: var(--tx);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.eb-sp-switch {
+	position: relative;
+	flex-shrink: 0;
+	width: 36px;
+	height: 20px;
+	border: 0;
+	border-radius: 999px;
+	background: var(--track);
+	padding: 0;
+	transition: background 0.15s;
+}
+.eb-sp-switch span {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	transition: left 0.15s;
+}
+.eb-sp-switch.on {
+	background: var(--brand);
+}
+.eb-sp-switch.on span {
+	left: 19px;
+}
+.eb-sp-switch.big {
+	width: 42px;
+	height: 24px;
+}
+.eb-sp-switch.big span {
+	width: 18px;
+	height: 18px;
+}
+.eb-sp-switch.big.on span {
+	left: 21px;
+}
+.eb-sp-alert {
+	border: 1px solid rgb(var(--sp-brand-rgb) / 0.35);
+	border-radius: 8px;
+	background: rgb(var(--sp-brand-rgb) / 0.1);
+	padding: 10px 12px;
+	color: var(--brandsoft);
+	font-size: 12px;
+}
+.eb-sp > .eb-sp-alert {
+	margin-bottom: 20px;
+}
+
+/* Live footer preview */
+.eb-sp-preview {
+	margin-bottom: 20px;
+}
+.eb-sp-preview-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	border-bottom: 1px solid var(--bord2);
+	padding: 12px 20px;
+}
+.eb-sp-count {
+	color: var(--faint);
+	font: 11px "Space Mono", monospace;
+}
+.eb-sp-preview-head .eb-sp-seg {
+	margin-left: auto;
+}
+.eb-sp-preview-strip {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	overflow-x: auto;
+	padding: 24px;
+	background: #0a0908;
+}
+.eb-sp-preview-strip.light {
+	background: #f5f3ef;
+}
+.eb-sp-partners,
+.eb-sp-preview-empty {
+	flex-shrink: 0;
+	color: #8a817a;
+}
+.eb-sp-preview-strip.light .eb-sp-partners,
+.eb-sp-preview-strip.light .eb-sp-preview-empty {
+	color: #6f665c;
+}
+.eb-sp-partners {
+	font: 10px "Space Mono", monospace;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+.eb-sp-preview-empty {
+	font-size: 13px;
+}
+.eb-sp-preview-tile {
+	display: flex;
+	width: 150px;
+	height: 56px;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.04);
+	padding: 0 12px;
+	color: #d8d0c6;
+}
+.eb-sp-preview-strip.light .eb-sp-preview-tile {
+	border-color: #e6e1d8;
+	background: #fff;
+	color: #3a332c;
+}
+.eb-sp-preview-tile img {
+	max-width: 100%;
+	max-height: 38px;
+	object-fit: contain;
+}
+.eb-sp-preview-tile span,
+.eb-sp-logo span {
+	overflow: hidden;
+	font: 400 19px "Anton", sans-serif;
+	letter-spacing: 0.04em;
+	text-overflow: ellipsis;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+/* List + editor layout */
+.eb-sp-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	align-items: start;
+	gap: 20px;
+}
+.eb-sp-grid.split {
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+}
+.eb-sp-list-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	border-bottom: 1px solid var(--bord2);
+	padding: 14px 20px;
+}
+.eb-sp-filters {
+	display: flex;
+	gap: 6px;
+}
+.eb-sp .eb-sp-filters button {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	border: 1px solid var(--bord);
+	border-radius: 8px;
+	background: transparent;
+	padding: 7px 12px;
+	color: var(--txm);
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+.eb-sp-filters button span {
+	display: inline-flex;
+	min-width: 16px;
+	justify-content: center;
+	border-radius: 999px;
+	background: var(--chip);
+	padding: 0 4px;
+	color: var(--txm);
+	font: 700 9.5px "Space Mono", monospace;
+}
+.eb-sp .eb-sp-filters button.on {
+	border-color: var(--brand);
+	background: rgb(var(--sp-brand-rgb) / 0.12);
+	color: var(--brandsoft);
+}
+.eb-sp-filters button.on span {
+	background: var(--brand);
+	color: var(--brandfg);
+}
+.eb-sp-drag-hint {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+	color: var(--txm);
+	font: 11px "Space Mono", monospace;
+}
+
+/* Rows */
+.eb-sp-row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	border-top: 2px solid transparent;
+	border-bottom: 1px solid var(--bord2);
+	padding: 12px 16px 12px 10px;
+}
+.eb-sp-row.editing {
+	background: rgb(var(--sp-brand-rgb) / 0.07);
+	box-shadow: inset 3px 0 0 var(--brand);
+}
+.eb-sp-row.hidden {
+	opacity: 0.62;
+}
+.eb-sp-row.dragging {
+	opacity: 0.4;
+}
+.eb-sp-row.over {
+	border-top-color: var(--brand);
+}
+.eb-sp-grip {
+	display: flex;
+	width: 20px;
+	height: 32px;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	color: var(--faint);
+	cursor: grab;
+}
+.eb-sp-pos {
+	width: 22px;
+	flex-shrink: 0;
+	color: var(--txm);
+	font: 700 12px "Space Mono", monospace;
+}
+.eb-sp-logo {
+	display: flex;
+	width: 120px;
+	height: 52px;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--bord2);
+	border-radius: 8px;
+	background: repeating-linear-gradient(135deg, var(--stripe) 0 6px, transparent 6px 12px);
+	padding: 0 8px;
+	color: var(--txd);
+}
+.eb-sp-logo img {
+	max-width: 100%;
+	max-height: 38px;
+	object-fit: contain;
+}
+.eb-sp-logo span {
+	font-size: 16px;
+}
+.eb-sp-meta {
+	min-width: 0;
+	flex: 1;
+}
+.eb-sp-name {
+	overflow: hidden;
+	color: var(--tx);
+	font-size: 14px;
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.eb-sp-url {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 6px;
+	color: var(--txm);
+	font: 11px "Space Mono", monospace;
+}
+.eb-sp-url span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.eb-sp-url.bad {
+	color: var(--brandsoft);
+}
+.eb-sp-arrows {
+	display: flex;
+	flex-shrink: 0;
+	flex-direction: column;
+}
+.eb-sp .eb-sp-arrows button {
+	display: flex;
+	width: 24px;
+	height: 18px;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	background: transparent;
+	padding: 0;
+	color: var(--txm);
+}
+.eb-sp .eb-sp-arrows button:disabled {
+	opacity: 0.25;
+}
+.eb-sp .eb-sp-edit {
+	flex-shrink: 0;
+	border: 1px solid var(--bord);
+	border-radius: 7px;
+	background: var(--surf2);
+	padding: 7px 12px;
+	color: var(--txd);
+	font-size: 12px;
+	font-weight: 700;
+}
+.eb-sp .eb-sp-edit.on {
+	border-color: var(--brand);
+	background: var(--brand);
+	color: var(--brandfg);
+}
+.eb-sp-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 56px 24px;
+	text-align: center;
+}
+.eb-sp-empty div {
+	color: var(--tx);
+	font: 400 20px "Anton", sans-serif;
+	text-transform: uppercase;
+}
+.eb-sp-empty p {
+	max-width: 300px;
+	margin: 0;
+	color: var(--txm);
+	font-size: 13px;
+}
+
+/* Editor */
+/* The content scroller starts under the fixed 57px top bar, so stick below it. */
+.eb-sp-editor {
+	position: sticky;
+	top: 57px;
+}
+.eb-sp-editor-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-bottom: 1px solid var(--bord2);
+	padding: 16px 20px;
+}
+.eb-sp-editor-head .eb-sp-label {
+	font-weight: 400;
+}
+.eb-sp-editor-title {
+	margin-top: 2px;
+	color: var(--tx);
+	font: 400 22px/1 "Anton", sans-serif;
+	text-transform: uppercase;
+}
+.eb-sp .eb-sp-close {
+	display: flex;
+	width: 32px;
+	height: 32px;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--bord);
+	border-radius: 8px;
+	background: var(--surf2);
+	color: var(--txm);
+}
+.eb-sp .eb-sp-close:hover {
+	border-color: var(--brand);
+	color: var(--brand);
+}
+.eb-sp-editor-body {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	padding: 20px;
+}
+.eb-sp-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.eb-sp-field-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.eb-sp-field-label {
+	color: var(--txm);
+	font: 700 10px "Space Mono", monospace;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+.eb-sp-field-label em {
+	color: var(--faint);
+	font-style: normal;
+	font-weight: 400;
+	letter-spacing: 0;
+	text-transform: none;
+}
+.eb-sp-field input {
+	border: 1px solid var(--bord);
+	border-radius: 8px;
+	background: var(--surf2);
+	padding: 10px 12px;
+	color: var(--tx);
+	outline: 0;
+	font: 14px "Archivo", sans-serif;
+}
+.eb-sp-field input.mono {
+	font: 12.5px "Space Mono", monospace;
+}
+.eb-sp-field input::placeholder {
+	color: var(--faint);
+}
+.eb-sp-field input:focus {
+	border-color: var(--brand);
+}
+.eb-sp-field input.invalid {
+	border-color: var(--brand);
+}
+.eb-sp-logo-previews {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+}
+.eb-sp-logo-previews div {
+	display: flex;
+	height: 88px;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--bord2);
+	border-radius: 8px;
+	background: #fff;
+	padding: 0 12px;
+}
+.eb-sp-logo-previews div.dark {
+	background: #0c0b0a;
+}
+.eb-sp-logo-previews img {
+	max-width: 100%;
+	max-height: 56px;
+	object-fit: contain;
+}
+.eb-sp-file {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	border: 1px solid var(--bord2);
+	border-radius: 8px;
+	background: var(--surf2);
+	padding: 8px 12px;
+}
+.eb-sp-file span {
+	min-width: 0;
+	flex: 1;
+	overflow: hidden;
+	color: var(--txd);
+	font: 11px "Space Mono", monospace;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.eb-sp .eb-sp-file button {
+	border: 0;
+	background: transparent;
+	padding: 0;
+	color: var(--txd);
+	font-size: 12px;
+	font-weight: 700;
+}
+.eb-sp .eb-sp-file button:hover {
+	color: var(--brand);
+}
+.eb-sp .eb-sp-file button.danger {
+	color: var(--brand);
+}
+.eb-sp .eb-sp-file button.danger:hover {
+	color: var(--brandlt);
+}
+.eb-sp-hint {
+	color: var(--txm);
+	font-size: 11.5px;
+}
+.eb-sp .eb-sp-drop {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	border: 1.5px dashed var(--bord);
+	border-radius: 8px;
+	background: var(--surf2);
+	padding: 24px 16px;
+	color: var(--txm);
+	text-align: center;
+}
+.eb-sp .eb-sp-drop:hover,
+.eb-sp .eb-sp-drop.active {
+	border-color: var(--brand);
+}
+.eb-sp-drop strong {
+	color: var(--tx);
+	font-size: 13px;
+	font-weight: 700;
+}
+.eb-sp-drop small {
+	color: var(--txm);
+	font: 10.5px "Space Mono", monospace;
+}
+.eb-sp-url-error {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	color: var(--brandsoft);
+	font-size: 12px;
+}
+.eb-sp .eb-sp-url-error button {
+	border: 1px solid rgb(var(--sp-brand-rgb) / 0.4);
+	border-radius: 4px;
+	background: rgb(var(--sp-brand-rgb) / 0.1);
+	padding: 2px 6px;
+	color: var(--brandsoft);
+	font: 700 11px "Space Mono", monospace;
+}
+.eb-sp .eb-sp-url-error button:hover {
+	background: rgb(var(--sp-brand-rgb) / 0.18);
+}
+.eb-sp-visibility {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	border: 1px solid var(--bord2);
+	border-radius: 8px;
+	background: var(--surf2);
+	padding: 12px 14px;
+}
+.eb-sp-visibility strong {
+	display: block;
+	color: var(--tx);
+	font-size: 13.5px;
+	font-weight: 700;
+}
+.eb-sp-visibility small {
+	display: block;
+	color: var(--txm);
+	font-size: 12px;
+}
+.eb-sp-editor-foot {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	border-top: 1px solid var(--bord2);
+	padding: 16px 20px;
+}
+.eb-sp .eb-sp-delete {
+	border: 1px solid rgb(var(--sp-brand-rgb) / 0.4);
+	border-radius: 8px;
+	background: transparent;
+	padding: 10px 12px;
+	color: var(--brand);
+	font-size: 12px;
+	font-weight: 700;
+}
+.eb-sp .eb-sp-delete:hover {
+	background: rgb(var(--sp-brand-rgb) / 0.1);
+}
+.eb-sp .eb-sp-cancel {
+	margin-left: auto;
+	border: 1px solid var(--bord);
+	border-radius: 8px;
+	background: var(--surf2);
+	padding: 10px 14px;
+	color: var(--txd);
+	font-size: 12px;
+	font-weight: 700;
+}
+.eb-sp .eb-sp-cancel:hover {
+	border-color: var(--brand);
+	color: var(--brand);
+}
+.eb-sp .eb-sp-save {
+	border: 0;
+	border-radius: 8px;
+	background: var(--brand);
+	padding: 10px 16px;
+	color: var(--brandfg);
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+.eb-sp .eb-sp-save:disabled {
+	background: var(--chip);
+	color: var(--faint);
+	cursor: not-allowed;
+}
+
+.eb-sp-toast {
+	position: fixed;
+	bottom: 24px;
+	left: 50%;
+	z-index: 50;
+	transform: translateX(-50%);
+	border: 1px solid var(--bord);
+	border-radius: 8px;
+	background: var(--surf);
+	padding: 10px 16px;
+	color: var(--tx);
+	font-size: 13px;
+	font-weight: 700;
+	box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 600px) {
+	.eb-sp-row {
+		gap: 10px;
+		padding: 12px 14px;
+	}
+	.eb-sp-logo {
+		width: 84px;
+	}
+	/* Drag-and-drop doesn't work on touch, so phones drop the grip and arrows. */
+	.eb-sp-grip,
+	.eb-sp-drag-hint,
+	.eb-sp-arrows {
+		display: none;
+	}
+}
