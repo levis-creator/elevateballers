@@ -22,7 +22,7 @@ export const DEFAULT_PUBLIC_HOME_SETTINGS: PublicHomeSettings = {
   pill: 'Season 2026 · Live now', heading: 'Elevate\nyour game', accentWord: 'game',
   body: 'Nairobi’s own basketball league — born on the city’s courts, built for its players. Live matches, standings, and rising stars from Kenya’s capital, all season long.',
   ctaLabel: 'Register Team', ctaHref: '/register', ctaLabel2: 'View Standings', ctaHref2: '/standings',
-  heroMedia: 'Drone video', heroVideo: '/media/general/nairobi-courts-loop.mp4', heroDim: 78, ghostWord: 'Nairobi',
+  heroMedia: 'Drone video', heroVideo: '', heroDim: 78, ghostWord: 'Nairobi',
   statRail: true, statRailItems: [
     { label: 'Teams', source: 'Registered teams' }, { label: 'Players', source: 'Registered players' }, { label: 'Matches Played', source: 'Matches marked final' },
   ], countUp: true,

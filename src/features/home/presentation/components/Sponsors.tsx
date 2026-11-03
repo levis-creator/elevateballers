@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { optimizeImageUrl } from '@/lib/image-cdn';
+import { normalizeExternalUrl } from '@/lib/externalUrl';
 
 interface Sponsor {
   id: string;
@@ -125,10 +126,12 @@ export default function Sponsors() {
 
           <div className="stm-image-carousel-init-unit">
             <div ref={carouselRef} className="stm-image-carousel-init">
-              {sponsors.map((sponsor) => (
+              {sponsors.map((sponsor) => {
+                const link = normalizeExternalUrl(sponsor.link);
+                return (
                 <div key={sponsor.id} className="stm-single-image-carousel">
-                  {sponsor.link ? (
-                    <a href={sponsor.link} target="_blank" rel="noopener noreferrer">
+                  {link ? (
+                    <a href={link} target="_blank" rel="noopener noreferrer">
                       <img
                         decoding="async"
                         src={optimizeImageUrl(sponsor.image, { width: 300 })}
@@ -145,7 +148,8 @@ export default function Sponsors() {
                     />
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

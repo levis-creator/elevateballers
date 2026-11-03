@@ -15,6 +15,7 @@ import {
   resolvePublicHeaderSettings,
 } from '@/features/settings';
 import { cacheGet, cacheSet } from '@/lib/cache';
+import { normalizeExternalUrl } from '@/lib/externalUrl';
 
 const FOOTER_CACHE_KEY = 'public:footer:v2';
 const FOOTER_CACHE_TTL_SECONDS = 300;
@@ -54,7 +55,7 @@ export async function getFooterData(): Promise<FooterData> {
         id: String(sponsor.id),
         name: String(sponsor.name || 'Sponsor'),
         image: String(sponsor.image || ''),
-        link: sponsor.link ? String(sponsor.link) : null,
+        link: normalizeExternalUrl(sponsor.link),
       })),
     };
     await cacheSet(FOOTER_CACHE_KEY, footer, FOOTER_CACHE_TTL_SECONDS);

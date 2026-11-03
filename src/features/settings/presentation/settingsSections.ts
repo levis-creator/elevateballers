@@ -1702,7 +1702,7 @@ export const SECTIONS: Section[] = [
             'home_heroVideo',
             'Video URL',
             'MP4 in the Media Library. Used as the image URL for Still image.',
-            { defaultValue: '/media/general/nairobi-courts-loop.mp4' }
+            { defaultValue: '' }
           ),
           f(
             'home_heroDim',

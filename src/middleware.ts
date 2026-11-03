@@ -1,5 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { htmlCacheControl } from './lib/htmlCacheControl';
+import { resolveLegacyPath } from './lib/legacyUrls';
+import { legacyUrlResponse } from './lib/legacyUrlResponse';
 
 function cacheControlFor(pathname: string, signedIn: boolean, pagePolicy: string | null): string | null {
   return htmlCacheControl({
@@ -11,6 +13,13 @@ function cacheControlFor(pathname: string, signedIn: boolean, pagePolicy: string
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // Old WordPress URLs: redirect to the new page or answer 410 Gone.
+  const legacy = resolveLegacyPath(context.url.pathname);
+  if (legacy) {
+    const legacyResponse = await legacyUrlResponse(legacy);
+    if (legacyResponse) return legacyResponse;
+  }
+
   const response = await next();
   // Mutate Astro's response in place. Re-wrapping a streaming response with
   // `new Response(response.body, ...)` can make Astro attempt to write to a
