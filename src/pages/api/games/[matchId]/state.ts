@@ -39,7 +39,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       },
     });
   } catch (error: any) {
-    console.error('Error fetching game state:', error);
     return handleApiError(error, "fetch game state", request);
   }
 };
@@ -83,7 +82,6 @@ export const PUT: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error updating game state:', error);
     return handleApiError(error, "update game state", request);
   }
 };

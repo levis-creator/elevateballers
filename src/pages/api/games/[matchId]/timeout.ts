@@ -80,7 +80,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error fetching timeouts:', error);
     return handleApiError(error, "fetch timeouts", request);
   }
 };
@@ -151,7 +150,6 @@ export const POST: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error creating timeout:', error);
     return handleApiError(error, "create timeout", request);
   }
 };

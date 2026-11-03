@@ -21,8 +21,6 @@ export const GET: APIRoute = async ({ request }) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching feature flags:', error);
-    
     return handleApiError(error, "fetch feature flags", request);
   }
 };

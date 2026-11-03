@@ -61,7 +61,6 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error approving team:', error);
     return handleApiError(error, 'approve team', request);
   }
 };

@@ -22,7 +22,6 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching settings:', error);
     return handleApiError(error, "fetch settings", request);
   }
 };

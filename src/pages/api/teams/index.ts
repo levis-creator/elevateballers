@@ -120,7 +120,6 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error creating team:', error);
     return handleApiError(error, 'create team', request);
   }
 };

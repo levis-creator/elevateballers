@@ -26,7 +26,6 @@ export const GET: APIRoute = async ({ url, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching seasons:', error);
     return handleApiError(error, "fetch seasons", request);
   }
 };

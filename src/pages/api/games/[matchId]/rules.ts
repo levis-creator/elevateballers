@@ -37,7 +37,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error fetching game rules:', error);
     return handleApiError(error, "fetch game rules", request);
   }
 };

@@ -114,7 +114,6 @@ export const POST: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error creating bulk substitutions:', error);
     return handleApiError(error, 'create bulk substitutions', request);
   }
 };

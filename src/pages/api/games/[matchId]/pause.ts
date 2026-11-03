@@ -50,7 +50,6 @@ export const POST: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error toggling game clock:', error);
     return handleApiError(error, "toggle game clock", request);
   }
 };

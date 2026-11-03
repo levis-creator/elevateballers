@@ -37,7 +37,6 @@ export const POST: APIRoute = async ({ request }) => {
     await putR2Object(uploadPartKey(uploadId, index), Buffer.from(await part.arrayBuffer()));
     return json({ ok: true }, 200);
   } catch (error) {
-    console.error('Error uploading rules PDF piece:', error);
     return handleApiError(error, 'upload rules PDF piece', request);
   }
 };

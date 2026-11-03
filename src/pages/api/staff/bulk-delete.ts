@@ -22,7 +22,6 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
-    console.error('Error bulk deleting staff:', error);
     return handleApiError(error, 'delete staff', request);
   }
 };

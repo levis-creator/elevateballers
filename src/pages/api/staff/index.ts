@@ -19,7 +19,6 @@ export const GET: APIRoute = async ({ request }) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching staff:', error);
     return handleApiError(error, "fetch staff", request);
   }
 };

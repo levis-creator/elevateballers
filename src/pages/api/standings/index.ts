@@ -35,7 +35,6 @@ export const GET: APIRoute = async ({ request }) => {
             },
         });
     } catch (error) {
-        console.error('Error fetching standings:', error);
         return handleApiError(error, "fetch standings", request);
     }
 };

@@ -79,7 +79,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     );
   } catch (error: any) {
-    console.error('Error generating bracket:', error);
     return handleApiError(error, 'generate bracket', request);
   }
 };

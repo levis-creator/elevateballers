@@ -54,7 +54,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     );
   } catch (error: any) {
-    console.error('Error previewing bracket:', error);
     return handleApiError(error, 'preview bracket', request);
   }
 };

@@ -63,7 +63,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     );
   } catch (error: any) {
-    console.error('Error generating report:', error);
     return handleApiError(error, "generate report", request);
   }
 };

@@ -62,7 +62,6 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error uploading rules PDF:', error);
     return handleApiError(error, 'upload rules PDF', request);
   }
 };

@@ -59,7 +59,6 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Notify subscribers error:', error);
     return handleApiError(error, 'notify subscribers', request);
   }
 };

@@ -33,7 +33,6 @@ export const GET: APIRoute = async ({ request }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (error: any) {
-        console.error('Error fetching users:', error);
         return handleApiError(error, 'fetch users', request);
     }
 };
@@ -140,7 +139,6 @@ export const POST: APIRoute = async ({ request }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (error: any) {
-        console.error('Error creating user:', error);
         return handleApiError(error, 'create user', request);
     }
 };

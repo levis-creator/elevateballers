@@ -29,7 +29,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error fetching match event:', error);
     return handleApiError(error, "fetch match event", request);
   }
 };
@@ -97,7 +96,6 @@ export const PUT: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error updating match event:', error);
     return handleApiError(error, "update match event", request);
   }
 };
@@ -161,7 +159,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error deleting match event:', error);
     return handleApiError(error, "delete match event", request);
   }
 };

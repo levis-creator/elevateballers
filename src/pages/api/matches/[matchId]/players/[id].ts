@@ -31,7 +31,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error fetching match player:', error);
     return handleApiError(error, "fetch match player", request);
   }
 };
@@ -88,7 +87,6 @@ export const PUT: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error updating match player:', error);
     return handleApiError(error, "update match player", request);
   }
 };

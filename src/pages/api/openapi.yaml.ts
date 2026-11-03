@@ -22,7 +22,6 @@ export const GET: APIRoute = async ({ request }) => {
       },
     });
   } catch (error) {
-    console.error('[openapi] Failed to read openapi.yaml:', error);
     return handleApiError(error, "OpenAPI spec not found", request);
   }
 };

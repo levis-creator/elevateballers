@@ -58,7 +58,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'text/plain' },
     });
   } catch (error: any) {
-    console.error('Error downloading report:', error);
     return handleApiError(error, "download report", request);
   }
 };

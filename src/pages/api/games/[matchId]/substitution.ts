@@ -75,7 +75,6 @@ export const POST: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error creating substitution:', error);
     return handleApiError(error, "create substitution", request);
   }
 };
@@ -101,7 +100,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error fetching substitutions:', error);
     return handleApiError(error, "fetch substitutions", request);
   }
 };

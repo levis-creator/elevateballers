@@ -43,7 +43,6 @@ export const GET: APIRoute = async ({ params, request }) => {
       },
     });
   } catch (error: any) {
-    console.error('Error fetching play-by-play:', error);
     return handleApiError(error, "fetch play-by-play", request);
   }
 };

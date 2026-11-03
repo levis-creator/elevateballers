@@ -37,7 +37,6 @@ export const GET: APIRoute = async ({ request, params }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (error: any) {
-        console.error('Error fetching user:', error);
         return handleApiError(error, 'fetch user', request);
     }
 };
@@ -149,7 +148,6 @@ export const PUT: APIRoute = async ({ request, params }) => {
         });
 
     } catch (error: any) {
-        console.error('Error updating user:', error);
         return handleApiError(error, 'update user', request);
     }
 };
@@ -210,7 +208,6 @@ export const DELETE: APIRoute = async ({ request, params }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (error: any) {
-        console.error('Error deleting user:', error);
         return handleApiError(error, 'delete user', request);
     }
 };

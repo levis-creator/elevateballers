@@ -84,7 +84,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Subscribe error:', error);
     return handleApiError(error, "subscribe", request);
   }
 };

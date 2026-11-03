@@ -18,7 +18,6 @@ export const GET: APIRoute = async ({ request }) => {
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (error: any) {
-        console.error('Error fetching sponsors:', error);
         return handleApiError(error, "fetch sponsors", request);
     }
 };

@@ -44,7 +44,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json(await storeRulesDocument(request, user.id, bytes, fileName), 200);
   } catch (error) {
-    console.error('Error completing rules PDF upload:', error);
     return handleApiError(error, 'complete rules PDF upload', request);
   } finally {
     // The pieces are only needed until they are joined.

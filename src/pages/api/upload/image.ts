@@ -263,7 +263,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     );
   } catch (error: any) {
-    console.error('Error uploading image:', error);
     return handleApiError(error, 'upload image', request);
   }
 };
