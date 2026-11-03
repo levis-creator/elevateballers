@@ -8,6 +8,9 @@ import { trackEvent } from '@/lib/analytics';
  * Posts to the existing, Turnstile-protected /api/subscribers endpoint (server
  * verifies the token). Turnstile runs in interaction-only mode so it stays
  * invisible for legitimate visitors and only shows a challenge when needed.
+ * It only starts once someone focuses the email field: the form sits in the
+ * footer of every page, and checking every visitor who scrolls past it ran
+ * needless challenges (and showed failures to people who never meant to sign up).
  */
 type Props = {
   placeholder?: string;
@@ -23,6 +26,7 @@ export default function SubscribeFormV2({
   const [message, setMessage] = useState('');
   const [token, setToken] = useState<string | null>(null);
   const [hp, setHp] = useState(''); // honeypot
+  const [verifying, setVerifying] = useState(false);
 
   const busy = status === 'loading' || status === 'success';
 
@@ -35,6 +39,7 @@ export default function SubscribeFormV2({
       return;
     }
     if (!token) {
+      setVerifying(true);
       setStatus('error');
       setMessage('Please complete the security check.');
       return;
@@ -76,6 +81,7 @@ export default function SubscribeFormV2({
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={() => setVerifying(true)}
           disabled={busy}
           className="flex-1 rounded-md border border-white/[0.12] bg-[#141210] px-3.5 py-3 font-body text-[14px] text-cream outline-none disabled:opacity-60"
         />
@@ -100,15 +106,17 @@ export default function SubscribeFormV2({
         className="hidden"
       />
 
-      <TurnstileWidget
-        siteKey={PUBLIC_TURNSTILE_SITE_KEY}
-        onSuccess={setToken}
-        onExpire={() => setToken(null)}
-        onError={() => setToken(null)}
-        theme="dark"
-        size="flexible"
-        appearance="interaction-only"
-      />
+      {verifying && (
+        <TurnstileWidget
+          siteKey={PUBLIC_TURNSTILE_SITE_KEY}
+          onSuccess={setToken}
+          onExpire={() => setToken(null)}
+          onError={() => setToken(null)}
+          theme="dark"
+          size="flexible"
+          appearance="interaction-only"
+        />
+      )}
 
       {message && (
         <p
