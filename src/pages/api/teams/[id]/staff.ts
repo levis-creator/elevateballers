@@ -5,13 +5,24 @@ import { requireSystemAdmin } from '@/features/rbac/auth-helpers';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
+import { requireTeamScopedPermission } from '@/features/rbac/middleware';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params, request }) => {
   try {
-    const teamStaff = await getStaffByTeam(params.id!, true);
+    // People who manage this team see unapproved staff and contact details;
+    // everyone else gets the approved list without them.
+    let canManage = false;
+    try {
+      await requireTeamScopedPermission(request, params.id!, 'staff:read');
+      canManage = true;
+    } catch {
+      canManage = false;
+    }
+    const teamStaff = await getStaffByTeam(params.id!, canManage);
 
-    return new Response(JSON.stringify(teamStaff), {
+    return new Response(JSON.stringify(canManage ? teamStaff : stripPrivateFields(teamStaff)), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {

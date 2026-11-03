@@ -5,6 +5,7 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 export const GET: APIRoute = async ({ params, url, request }) => {
   const matchId = params.matchId;
   if (!matchId) {
@@ -27,7 +28,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
       events = await getMatchEvents(matchId);
     }
 
-    return new Response(JSON.stringify(events), {
+    return new Response(JSON.stringify(stripPrivateFields(events)), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

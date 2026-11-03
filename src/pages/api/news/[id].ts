@@ -5,6 +5,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap } from '../../../features/cms/types';
 import { getUserIdFromRequest, writeAuditLog } from '../../../features/cms/lib/auth';
 import { handleApiError } from '../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -20,7 +21,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    return new Response(JSON.stringify(article), {
+    return new Response(JSON.stringify(stripPrivateFields(article)), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {

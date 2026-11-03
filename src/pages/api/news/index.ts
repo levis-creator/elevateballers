@@ -6,6 +6,7 @@ import { requirePermission } from '../../../features/rbac/middleware';
 import { categoryMap, type NewsArticleDTO } from '../../../features/cms/types';
 import { writeAuditLog } from '../../../features/cms/lib/auth';
 import { handleApiError } from '../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 
 export const prerender = false;
 import { prisma } from '../../../lib/prisma';
@@ -81,7 +82,7 @@ export const GET: APIRoute = async ({ request }) => {
       commentsCount: countsMap[article.id] || 0,
     } as NewsArticleDTO));
 
-    return new Response(JSON.stringify(articlesWithComments), {
+    return new Response(JSON.stringify(stripPrivateFields(articlesWithComments)), {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': admin ? 'no-cache' : 'public, s-maxage=120, stale-while-revalidate=60',

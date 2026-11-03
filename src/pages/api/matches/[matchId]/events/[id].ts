@@ -5,6 +5,7 @@ import { requireAuth } from '@/features/cms/lib/auth';
 import { logAudit } from '@/features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 export const GET: APIRoute = async ({ params, request }) => {
   const id = params.id;
   if (!id) {
@@ -23,7 +24,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    return new Response(JSON.stringify(matchEvent), {
+    return new Response(JSON.stringify(stripPrivateFields(matchEvent)), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

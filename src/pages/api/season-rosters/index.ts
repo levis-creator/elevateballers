@@ -3,6 +3,7 @@ import { requireSeasonTeamScopedPermission } from '../../../features/rbac/middle
 import { createPrismaSeasonRegistrationRepository } from '../../../features/registration/data/datasources/season-registration';
 import { createSeasonRegistrationUseCases } from '../../../features/registration/domain/usecases/season-registration';
 import { handleApiError } from '../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 export const prerender = false;
@@ -16,7 +17,8 @@ export const GET: APIRoute = async ({ url, request }) => {
     let includePending = false;
     try { await requireSeasonTeamScopedPermission(request, seasonTeamId, 'teams:update'); includePending = true; } catch { /* public approved roster */ }
     const useCases = createSeasonRegistrationUseCases(createPrismaSeasonRegistrationRepository());
-    return json(await useCases.listRoster(seasonTeamId, includePending));
+    const roster = await useCases.listRoster(seasonTeamId, includePending);
+    return json(includePending ? roster : stripPrivateFields(roster));
   } catch (error) { return handleApiError(error, 'list season roster', request); }
 };
 

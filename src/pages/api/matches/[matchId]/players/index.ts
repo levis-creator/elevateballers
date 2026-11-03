@@ -5,6 +5,7 @@ import { requireAuth } from '../../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 import { prisma } from '@/lib/prisma';
 import { assertSquadLimits } from '@/features/game-tracking/domain/squad-limits';
 import { assertPlayersAvailable } from '@/features/player/data/datasources/availability-repository';
@@ -27,7 +28,7 @@ export const GET: APIRoute = async ({ params, url, request }) => {
       players = await getMatchPlayers(matchId);
     }
 
-    return new Response(JSON.stringify(players), {
+    return new Response(JSON.stringify(stripPrivateFields(players)), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

@@ -5,6 +5,7 @@ import { requireAuth } from '../../../../features/cms/lib/auth';
 import { logAudit } from '../../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 export const prerender = false;
 
 /**
@@ -95,7 +96,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
     const substitutions = await getMatchSubstitutions(matchId);
 
-    return new Response(JSON.stringify(substitutions), {
+    return new Response(JSON.stringify(stripPrivateFields(substitutions)), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

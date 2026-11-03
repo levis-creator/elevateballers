@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getPlayByPlay, getPlayByPlayChanges } from '../../../../features/game-tracking/lib/queries';
 
 import { handleApiError } from '../../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 export const prerender = false;
 
 /**
@@ -26,7 +27,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     if (sinceDate && !Number.isNaN(sinceDate.getTime())) {
       const serverTime = new Date().toISOString();
       const changes = await getPlayByPlayChanges(matchId, sinceDate);
-      return new Response(JSON.stringify({ changes, serverTime }), {
+      return new Response(JSON.stringify(stripPrivateFields({ changes, serverTime })), {
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
       });
     }
@@ -34,7 +35,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     const serverTime = new Date().toISOString();
     const playByPlay = await getPlayByPlay(matchId);
 
-    return new Response(JSON.stringify({ ...playByPlay, serverTime }), {
+    return new Response(JSON.stringify(stripPrivateFields({ ...playByPlay, serverTime })), {
       headers: {
         'Content-Type': 'application/json',
         // Short edge cache — absorbs polling bursts, still feels instant

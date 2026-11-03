@@ -5,6 +5,7 @@ import { requireTeamScopedPermission } from '../../../features/rbac/middleware';
 import { logAudit } from '../../../features/cms/lib/audit';
 
 import { handleApiError } from '../../../lib/apiError';
+import { stripPrivateFields } from '@/lib/publicData';
 import type { UpdateTeamInput } from '../../../features/cms/types';
 import { approvePendingSeasonRegistrations } from '../../../features/registration/data/datasources/public-submission';
 import { notifyTeamRegistrationDecision } from '../../../features/registration/application/send-registration-decision';
@@ -50,7 +51,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    return new Response(JSON.stringify(team), {
+    return new Response(JSON.stringify(includeUnapproved ? team : stripPrivateFields(team)), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
