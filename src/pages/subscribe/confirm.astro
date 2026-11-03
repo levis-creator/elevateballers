@@ -1,0 +1,85 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { confirmSubscription } from '../../lib/subscriberConfirmation';
+
+// Opening the emailed link only shows a button; pressing it calls
+// /api/subscribers/confirm (see confirmSubscription for why).
+const token = Astro.url.searchParams.get('token') ?? '';
+const status = await confirmSubscription(Astro.request, token, false);
+
+const button = 'display: inline-block; padding: 12px 28px; background: #1a1a1a; color: #fff; text-decoration: none; border: 0; border-radius: 6px; font: inherit; font-weight: 500; cursor: pointer;';
+---
+
+<Layout title="Confirm subscription — ElevateBallers" robots="noindex">
+  <div style="min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
+    <div style="max-width: 480px; width: 100%; text-align: center;">
+
+      <div data-panel="ask" hidden={status !== 'ask'}>
+        <div style="font-size: 56px; margin-bottom: 16px;">📬</div>
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;">Confirm your subscription</h1>
+        <p style="color: #666; margin-bottom: 32px;">
+          Press the button to start getting ElevateBallers email alerts.
+        </p>
+        <button type="button" id="confirm-subscription" data-token={token} style={button}>Confirm subscription</button>
+        <p id="confirm-error" role="alert" hidden style="color: #b42318; margin-top: 16px;">Something went wrong. Please try again.</p>
+      </div>
+
+      <div data-panel="confirmed" hidden={status !== 'confirmed'}>
+        <div style="font-size: 56px; margin-bottom: 16px;">✅</div>
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;">You're subscribed</h1>
+        <p style="color: #666; margin-bottom: 32px;">
+          Thanks for confirming. You'll now get league news, results and match reports by email.
+        </p>
+        <a href="/" style={button}>Return to site</a>
+      </div>
+
+      <div data-panel="already" hidden={status !== 'already'}>
+        <div style="font-size: 56px; margin-bottom: 16px;">ℹ️</div>
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;">Already confirmed</h1>
+        <p style="color: #666; margin-bottom: 32px;">
+          This email address is already subscribed to ElevateBallers alerts.
+        </p>
+        <a href="/" style={button}>Return to site</a>
+      </div>
+
+      <div data-panel="invalid" hidden={status !== 'invalid'}>
+        <div style="font-size: 56px; margin-bottom: 16px;">❌</div>
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;">Invalid link</h1>
+        <p style="color: #666; margin-bottom: 32px;">
+          This confirmation link is invalid. Please subscribe again from the site to get a new one.
+        </p>
+        <a href="/" style={button}>Return to site</a>
+      </div>
+
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const button = document.getElementById('confirm-subscription') as HTMLButtonElement | null;
+  const error = document.getElementById('confirm-error');
+  const show = (name: string) => {
+    document.querySelectorAll<HTMLElement>('[data-panel]').forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== name;
+    });
+  };
+  button?.addEventListener('click', async () => {
+    button.disabled = true;
+    if (error) error.hidden = true;
+    try {
+      const res = await fetch('/api/subscribers/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: button.dataset.token }),
+      });
+      const { status } = await res.json();
+      if (status === 'confirmed' || status === 'already' || status === 'invalid') return show(status);
+      throw new Error('Unexpected response');
+    } catch {
+      button.disabled = false;
+      if (error) error.hidden = false;
+    }
+  });
+</script>

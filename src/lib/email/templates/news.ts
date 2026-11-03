@@ -80,6 +80,40 @@ export async function sendArticleNotification(data: {
   return { sent, failed };
 }
 
+// Double opt-in: a sign-up stays inactive until the address owner opens this
+// link and confirms. The link lands on a page with a button (not an instant
+// GET confirm) so mail scanners that open links can't confirm for them.
+export async function sendSubscriberConfirmation(data: {
+  email: string;
+  name?: string;
+  token: string;
+}): Promise<void> {
+  const confirmUrl = `${SITE_URL}/subscribe/confirm?token=${data.token}`;
+  const greeting = data.name ? `Hi ${data.name},` : 'Hi there,';
+
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:26px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;text-align:center;">Confirm your subscription</h2>
+
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">${greeting}</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      Someone, hopefully you, asked to get ElevateBallers email alerts at this address. Confirm it's you to start receiving them.
+    </p>
+
+    ${btn('Confirm subscription', confirmUrl)}
+
+    <p style="margin:24px 0 0;font-size:13px;color:${C.gray};line-height:1.6;">
+      Didn't ask for this? Ignore this email and you won't be subscribed.
+    </p>
+  `);
+
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: 'Confirm your ElevateBallers email alerts',
+    html,
+    audit: { template: 'subscriber_confirmation' },
+  });
+}
+
 export async function sendSubscriberWelcome(data: {
   email: string;
   name?: string;

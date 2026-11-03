@@ -1,15 +1,21 @@
 import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
-import { sendSubscriberWelcome } from '../../../lib/email';
+import { sendSubscriberConfirmation } from '../../../lib/email';
 
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
+import { enforceRateLimit } from '../../../lib/rateLimit';
+import { getClientIp } from '../../../lib/getClientIp';
+import { checkEmailDomain } from '../../../lib/emailDomain';
 import { logAudit } from '@/features/cms/lib/audit';
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
+    const ipLimited = await enforceRateLimit(`subscribe:ip:${getClientIp(request, clientAddress)}`, 10, 60 * 60 * 1000);
+    if (ipLimited) return ipLimited;
+
     const data = await request.json();
 
     // Honeypot
@@ -36,27 +42,44 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const existing = await prisma.subscriber.findUnique({ where: { email } });
-
-    if (existing) {
-      if (existing.active) {
-        return new Response(JSON.stringify({ ok: true, alreadySubscribed: true }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      // Re-activate
-      await prisma.subscriber.update({ where: { email }, data: { active: true, name: name || existing.name } });
-      logAudit(request, 'SUBSCRIBER_REACTIVATED', { subscriberId: existing.id });
-    } else {
-      const subscriber = await prisma.subscriber.create({ data: { email, name: name || undefined } });
-      logAudit(request, 'SUBSCRIBER_ADDED', { subscriberId: subscriber.id });
-      sendSubscriberWelcome({ email, name: subscriber.name || undefined, unsubscribeToken: subscriber.token }).catch((err) =>
-        console.error('Failed to send welcome email:', err)
-      );
+    const domainCheck = await checkEmailDomain(email);
+    if (domainCheck !== 'ok') {
+      return new Response(JSON.stringify({
+        error: domainCheck === 'disposable'
+          ? 'Please use your own email address, not a temporary one.'
+          : 'That email address can\'t receive mail. Please check it for typos.',
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    const existing = await prisma.subscriber.findUnique({ where: { email } });
+
+    if (existing?.active) {
+      return new Response(JSON.stringify({ ok: true, alreadySubscribed: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Each address gets at most 3 confirmation emails a day, so the form
+    // can't be used to flood someone else's inbox.
+    const limited = await enforceRateLimit(`subscribe:email:${email}`, 3, 24 * 60 * 60 * 1000,
+      'A confirmation email was already sent to this address. Please check your inbox.');
+    if (limited) return limited;
+
+    // New and returning sign-ups stay inactive until the address owner
+    // confirms from the email (double opt-in); only active subscribers get mail.
+    const subscriber = existing
+      ? await prisma.subscriber.update({ where: { email }, data: { name: name || existing.name } })
+      : await prisma.subscriber.create({ data: { email, name: name || undefined, active: false } });
+    logAudit(request, existing ? 'SUBSCRIBER_RECONFIRM_REQUESTED' : 'SUBSCRIBER_ADDED', { subscriberId: subscriber.id });
+    sendSubscriberConfirmation({ email, name: subscriber.name || undefined, token: subscriber.token }).catch((err) =>
+      console.error('Failed to send subscription confirmation email:', err)
+    );
+
+    return new Response(JSON.stringify({ ok: true, confirmationSent: true }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });

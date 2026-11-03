@@ -36,7 +36,7 @@ export default function SubscribeForm() {
       }
 
       setStatus('success');
-      setMessage(data.alreadySubscribed ? 'You are already subscribed!' : 'Thank you for subscribing!');
+      setMessage(data.alreadySubscribed ? 'You are already subscribed!' : 'Almost done! Check your inbox and confirm your email.');
       if (!data.alreadySubscribed) trackEvent('newsletter_signup');
       setEmail('');
       setTurnstileToken(null);

@@ -35,7 +35,7 @@ export default function SubscribeFormV2({
     // Honeypot: bots fill hidden fields — silently no-op.
     if (hp) {
       setStatus('success');
-      setMessage('Thanks — you are subscribed!');
+      setMessage('Almost done — check your inbox and confirm your email.');
       return;
     }
     if (!token) {
@@ -60,7 +60,9 @@ export default function SubscribeFormV2({
       }
       setStatus('success');
       setMessage(
-        data.alreadySubscribed ? 'You are already subscribed!' : 'Thanks — you are subscribed!'
+        data.alreadySubscribed
+          ? 'You are already subscribed!'
+          : 'Almost done — check your inbox and confirm your email.'
       );
       if (!data.alreadySubscribed) trackEvent('newsletter_signup');
       setEmail('');
