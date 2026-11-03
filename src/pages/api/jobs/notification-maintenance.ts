@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { sendDueMatchReminders } from '../../../features/settings/application/notificationMaintenance';
 import { processEmailOutbox } from '../../../lib/email/outbox-processor';
+import { retryRegistrationEmailJobs } from '../../../features/registration/application/process-registration-email-job';
 import { createOperationalNotification } from '../../../features/cms/lib/adminNotifications';
 
 export const prerender = false;
@@ -18,7 +19,11 @@ export const GET: APIRoute = async ({ request }) => {
       console.error('[notification-maintenance] email outbox failed:', error);
       return { error: error instanceof Error ? error.message : String(error) };
     });
-    return new Response(JSON.stringify({ success: true, ...result, outbox }), { headers: { 'Content-Type': 'application/json' } });
+    const registrationEmails = await retryRegistrationEmailJobs().catch((error) => {
+      console.error('[notification-maintenance] registration email retry failed:', error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    });
+    return new Response(JSON.stringify({ success: true, ...result, outbox, registrationEmails }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('[notification-maintenance] failed:', error);
     await createOperationalNotification({

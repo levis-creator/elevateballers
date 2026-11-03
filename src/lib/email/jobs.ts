@@ -16,7 +16,10 @@ export class InvalidEmailJobError extends Error {
  * `{ to, subject, html, ... }` send. Throws when the send fails.
  */
 export async function runEmailJob(body: any): Promise<void> {
-  if (body?.registrationJobId) return processRegistrationEmailJob(String(body.registrationJobId));
+  if (body?.registrationJobId) {
+    await processRegistrationEmailJob(String(body.registrationJobId));
+    return;
+  }
 
   if (body?.jobType) {
     switch (body.jobType) {
