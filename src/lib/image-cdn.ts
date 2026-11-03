@@ -54,6 +54,8 @@ export function optimizeImageUrl(
   opts: OptimizeOptions = {},
 ): string {
   if (!src) return '';
+  // Already optimised upstream (e.g. by a data loader): don't wrap it twice.
+  if (src.startsWith('/cdn-cgi/image/') || src.startsWith('/_vercel/image')) return src;
   const quality = opts.quality ?? 75;
 
   if (import.meta.env.DEPLOY_TARGET === 'vercel') {

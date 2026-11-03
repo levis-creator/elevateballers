@@ -10,6 +10,7 @@ import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data
 import { socialIcon } from "@/features/layout/lib/social-icons";
 import type { ArticleView } from "@/features/news/domain/entities/article-v2";
 import type { PublicArticlePageSettings } from "@/features/settings";
+import { optimizeImageUrl } from "@/lib/image-cdn";
 
 interface Props {
 	view: ArticleView;
@@ -83,7 +84,7 @@ const shares = settings.shareTargets.map((target) => {
 	<!-- HERO IMAGE -->
 	{settings.heroImage && view.heroImage && (
 		<section class="mx-auto max-w-[1000px] px-8 pt-8 max-[960px]:px-6">
-			<img src={view.heroImage} alt={view.title} class="block w-full rounded-2xl border border-black/10 object-cover" style="aspect-ratio:16/9;" loading="eager" />
+			<img src={optimizeImageUrl(view.heroImage, { width: 1600 })} alt={view.title} class="block w-full rounded-2xl border border-black/10 object-cover" style="aspect-ratio:16/9;" loading="eager" fetchpriority="high" />
 		</section>
 	)}
 
@@ -153,7 +154,7 @@ const shares = settings.shareTargets.map((target) => {
 							{view.sidebar.latest.map((n) => (
 								<a href={n.href} class="group flex gap-3 no-underline">
 									{n.image ? (
-										<img src={n.image} alt={n.title} loading="lazy" class="mt-0.5 h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
+										<img src={optimizeImageUrl(n.image, { width: 112 })} alt={n.title} loading="lazy" class="mt-0.5 h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
 									) : (
 										<span class="mt-0.5 h-14 w-14 flex-shrink-0 rounded-lg" style={`background:${NEWS_STRIPE};`}></span>
 									)}

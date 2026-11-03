@@ -38,6 +38,12 @@ describe('optimizeImageUrl', () => {
       );
     });
 
+    it('does not wrap an already optimised URL a second time', () => {
+      cloudflare();
+      const once = optimizeImageUrl(CDN, { width: 600 });
+      expect(optimizeImageUrl(once, { width: 800 })).toBe(once);
+    });
+
     it('leaves hosts that are not allowed origins alone', () => {
       cloudflare();
       expect(optimizeImageUrl(SANITY, { width: 200 })).toBe(SANITY);

@@ -7,6 +7,7 @@ import Header from "@/features/layout/presentation/v2/Header.astro";
 import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
 import type { PlayerView } from "@/features/player/domain/entities/player-detail-v2";
+import { optimizeImageUrl } from "@/lib/image-cdn";
 import { resolvePublicPlayerPageSettings, siteSettingsService } from "@/features/settings";
 import { getActiveAvailability } from "@/features/player/data/datasources/availability-repository";
 import { getDroppedOutPlayers } from "@/features/player/data/datasources/dropout-repository";
@@ -58,7 +59,7 @@ const RING_CIRC = 326.73;
 			<div class="relative">
 				<div class="aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 max-[960px]:max-w-[300px]" style={`background:${PHOTO_BG};`}>
 					{settings.headshot && view.hero.image ? (
-						<img src={view.hero.image} alt={`${view.hero.first} ${view.hero.last}`} class="h-full w-full object-cover" />
+						<img src={optimizeImageUrl(view.hero.image, { width: 600 })} alt={`${view.hero.first} ${view.hero.last}`} class="h-full w-full object-cover" fetchpriority="high" />
 					) : (
 						<div class="flex h-full items-center justify-center"><span class="font-display text-[64px] uppercase text-[#6b635a]">{initials}</span></div>
 					)}

@@ -1,7 +1,7 @@
 ---
 import { ELEVATE_LOGO_URL } from '@/lib/brandAssets';
 // v2 full-screen boot SPLASH — shown on the first paint of a session (before
-// hydration/fonts settle), then faded out and removed on `load`. Pure CSS
+// hydration/fonts settle), then faded out and removed once the HTML is parsed. Pure CSS
 // animation; a tiny inline script handles the once-per-session guard + removal.
 // Render this at the top of <body> in the v2 Layout. Requires loading.css
 // (imported by the Layout) for the eb-* keyframes.
@@ -91,8 +91,10 @@ const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
 				el.parentNode && el.parentNode.removeChild(el);
 			}, 450);
 		};
-		if (document.readyState === "complete") hide();
-		else window.addEventListener("load", hide);
+		// Hide once the HTML is parsed, not on `load`: waiting for every image and
+		// font kept the page covered for seconds on slow phones (late LCP).
+		if (document.readyState !== "loading") hide();
+		else document.addEventListener("DOMContentLoaded", hide, { once: true });
 		// `load` does not fire again during Astro client-side navigation.
 		document.addEventListener("astro:page-load", hide, { once: true });
 		document.addEventListener("astro:before-preparation", function () {
@@ -103,6 +105,6 @@ const { settings = DEFAULT_PUBLIC_SYSTEM_SETTINGS } = Astro.props;
 			}
 		}, { once: true });
 		// Safety net: never let the splash hang.
-		setTimeout(hide, 4000);
+		setTimeout(hide, 2500);
 	})();
 </script>

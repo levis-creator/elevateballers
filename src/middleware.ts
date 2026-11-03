@@ -1,4 +1,14 @@
 import { defineMiddleware } from 'astro:middleware';
+import { htmlCacheControl } from './lib/htmlCacheControl';
+
+function cacheControlFor(pathname: string, signedIn: boolean, pagePolicy: string | null): string | null {
+  return htmlCacheControl({
+    pathname,
+    signedIn,
+    pagePolicy,
+    publicCaching: import.meta.env.PUBLIC_UI_VERSION === 'v2',
+  });
+}
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const response = await next();
@@ -28,14 +38,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     headers.set('Content-Type', `${contentType}; charset=UTF-8`);
   }
 
-  // Public V2 pages are server-rendered for SEO, but they are also read-heavy.
-  // A short edge cache prevents every visitor from opening a cPanel DB
-  // connection. Admin pages, APIs, and authenticated routes remain private.
-  if (contentType?.toLowerCase().includes('text/html') && import.meta.env.PUBLIC_UI_VERSION === 'v2') {
-    const pathname = context.url.pathname;
-    const isPublicPage = !pathname.startsWith('/admin') && !pathname.startsWith('/api');
-    if (isPublicPage) {
-      const policy = 'public, s-maxage=60, stale-while-revalidate=300';
+  // Public V2 pages are server-rendered for SEO, but they are also read-heavy,
+  // so Cloudflare caches them briefly (its cache rule only stores HTML that
+  // says it may, and skips requests carrying the auth cookie). Anything that
+  // can differ per visitor must never be cached: a logged-in request (match
+  // pages show staff extra detail), and pages built around the current user.
+  if (contentType?.toLowerCase().includes('text/html')) {
+    const policy = cacheControlFor(context.url.pathname, context.cookies.has('auth-token'), headers.get('Cache-Control'));
+    if (policy) {
       headers.set('Cache-Control', policy);
       headers.set('CDN-Cache-Control', policy);
       headers.set('Vercel-CDN-Cache-Control', policy);

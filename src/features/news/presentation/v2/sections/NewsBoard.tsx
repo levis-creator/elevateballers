@@ -3,6 +3,7 @@ import { pillClass } from "@/features/home/presentation/v2/lib/tab-styles";
 import SubscribeFormV2 from "@/features/layout/presentation/v2/SubscribeFormV2";
 import type { NewsListData } from "@/features/news/domain/entities/news-list-v2";
 import type { PublicNewsListSettings } from "@/features/settings/application/newsListSettings";
+import { optimizeImageUrl } from "@/lib/image-cdn";
 
 interface Props {
 	data: NewsListData;
@@ -109,7 +110,7 @@ export default function NewsBoard({ data, settings }: Props) {
 										className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white no-underline shadow-[0_1px_2px_rgb(var(--site-ink-rgb)/0.04)] hover:border-brand/40"
 									>
 										<span className="relative block aspect-[16/10]" style={p.image ? undefined : { background: STRIPE }}>
-											{p.image && <img src={p.image} alt={p.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />}
+											{p.image && <img src={optimizeImageUrl(p.image, { width: 800 })} alt={p.title} loading={i < 2 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : undefined} className="absolute inset-0 h-full w-full object-cover" />}
 											<span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-brand">{p.cat}</span>
 										</span>
 										<span className="flex flex-1 flex-col p-6 max-[600px]:p-5">

@@ -3,6 +3,7 @@ import type { PlayerSort, PosFilter } from "@/features/player/presentation/store
 import type { PlayersDirectoryData, PlayerCard } from "@/features/player/domain/entities/players-directory-v2";
 import { useEffect } from 'react';
 import { playersListToken, type PublicPlayersListSettings } from '@/features/settings/application/playersListSettings';
+import { optimizeImageUrl } from '@/lib/image-cdn';
 
 interface Props {
 	data: PlayersDirectoryData;
@@ -120,8 +121,8 @@ export default function PlayersBoard({ data, settings }: Props) {
 				{pageItems.length > 0 ? (
 					<>
 						<div className="grid grid-cols-4 gap-5 max-[600px]:grid-cols-2 max-[960px]:grid-cols-3">
-							{pageItems.map((p) => (
-								<PlayerTile key={p.id} p={p} showHeadshot={settings.headshots} />
+							{pageItems.map((p, i) => (
+								<PlayerTile key={p.id} p={p} showHeadshot={settings.headshots} eager={i < 4} />
 							))}
 						</div>
 
@@ -153,7 +154,8 @@ export default function PlayersBoard({ data, settings }: Props) {
 	);
 }
 
-function PlayerTile({ p, showHeadshot }: { p: PlayerCard; showHeadshot: boolean }) {
+// The first row is usually on screen at load, so its photos load eagerly.
+function PlayerTile({ p, showHeadshot, eager }: { p: PlayerCard; showHeadshot: boolean; eager: boolean }) {
 	const Tag = p.href && p.href !== "#" ? "a" : "div";
 	return (
 		<Tag
@@ -162,7 +164,7 @@ function PlayerTile({ p, showHeadshot }: { p: PlayerCard; showHeadshot: boolean 
 		>
 			<span className="relative flex aspect-[4/5] items-center justify-center overflow-hidden" style={showHeadshot && p.image ? undefined : { background: STRIPE }}>
 				{showHeadshot && p.image ? (
-					<img src={p.image} alt={p.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+					<img src={optimizeImageUrl(p.image, { width: 480 })} alt={p.name} loading={eager ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover" />
 				) : (
 					<span className="font-display text-[40px] text-[#cfc7bb]">{p.initials}</span>
 				)}
