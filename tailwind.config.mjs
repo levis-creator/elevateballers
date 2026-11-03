@@ -75,12 +75,15 @@ export default {
           mid:    '#2a2847',
         },
         'table-alt': '#e8e8e8',
-        surf: '#faf9f5',
-        surf2: '#f1efe9',
-        txm: '#6b6860',
-        txd: '#403d37',
-        bord: '#dedbd3',
-        bord2: '#ebe8e0',
+        // Media library tokens. They read the admin theme variables (set per
+        // light/dark on .eb-root) and fall back to the light palette elsewhere.
+        // Utilities are `important`, so fixed hexes here would beat the theme.
+        surf: 'var(--surf, #faf9f5)',
+        surf2: 'var(--surf2, #f1efe9)',
+        txm: 'var(--txm, #6b6860)',
+        txd: 'var(--txd, #403d37)',
+        bord: 'var(--bord, #dedbd3)',
+        bord2: 'var(--bord2, #ebe8e0)',
       },
       borderRadius: {
         lg: "var(--radius)",
