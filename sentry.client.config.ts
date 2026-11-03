@@ -31,6 +31,14 @@ Sentry.init({
   tracesSampleRate: 0.1,
   // Keep traces on this site; don't add trace headers to Supabase, R2 etc.
   tracePropagationTargets: [/^\//],
+  // Astro's page transitions: a second click (or Back) while one is animating
+  // makes the browser cancel the old transition and reject it. The visitor
+  // just lands on the newer page, so these are not errors.
+  ignoreErrors: [
+    /view transition aborted/i,
+    /Skipped ViewTransition/i,
+    /Transition was (aborted|skipped)/i,
+  ],
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
   enableLogs: true,
