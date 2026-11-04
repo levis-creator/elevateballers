@@ -15,7 +15,13 @@
 import * as Sentry from '@sentry/astro';
 
 const dsn = import.meta.env.PUBLIC_SENTRY_DSN;
-const enabled = Boolean(dsn) && import.meta.env.PROD;
+// Search-engine renderers (Googlebot, Bingbot...) cut off script fetches, so
+// their page views report chunk-load failures no visitor sees, and they spend
+// the free plan's quota. Leave Sentry off for them.
+// Crawlers name themselves "Googlebot/2.1" etc.; a bare "bot" would also hit
+// phone models such as CUBOT.
+const isCrawler = /(bot|crawler|spider)\/|\bbot\b|slurp|HeadlessChrome|Lighthouse/i.test(navigator.userAgent);
+const enabled = Boolean(dsn) && import.meta.env.PROD && !isCrawler;
 
 Sentry.init({
   dsn,
