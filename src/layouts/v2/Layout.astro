@@ -111,9 +111,15 @@ const pattern = titlePattern === 'team'
 				? seoSettings.patternArticle
 				: '';
 const patternedTitle = pattern ? applyTitlePattern(pattern, titleTokens) : title;
-const baseTitle = patternedTitle
-	? patternedTitle.replaceAll("Elevate Ballers", brandSettings.siteName)
-	: seoSettings.metaTitle.replaceAll("Elevate Ballers", brandSettings.siteName);
+// Swap the old "Elevate Ballers" for the configured site name, leaving titles
+// that already use it alone (else "Elevate Ballers League" gains a second "League").
+const withSiteName = (value: string) => {
+	const siteName = brandSettings.siteName;
+	if (!siteName) return value;
+	const placeholder = "\u0000";
+	return value.replaceAll(siteName, placeholder).replaceAll("Elevate Ballers", siteName).replaceAll(placeholder, siteName);
+};
+const baseTitle = withSiteName(patternedTitle || seoSettings.metaTitle);
 const suffixBrand = seoSettings.titleSuffix.replace(/^[\s|—–-]+/, '').trim().toLowerCase();
 const resolvedTitle = patternedTitle && seoSettings.titleSuffix && !baseTitle.toLowerCase().includes(suffixBrand)
 	? `${baseTitle}${seoSettings.titleSuffix}`

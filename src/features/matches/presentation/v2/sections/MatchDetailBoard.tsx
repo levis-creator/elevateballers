@@ -137,6 +137,8 @@ export default function MatchDetailBoard({ view: initialView, settings, canViewB
 			<section className="relative overflow-hidden border-b border-black/[0.08] bg-night text-cream">
 				<div className="absolute inset-0" style={{ background: "radial-gradient(100% 130% at 50% -20%,rgb(var(--site-brand-rgb) / 0.2),transparent 60%)" }} />
 				<div className="relative mx-auto max-w-[1000px] px-8 py-9 max-[960px]:px-6">
+					{/* The scoreboard shows the teams as crests and links, so give the page its main heading here. */}
+					<h1 className="sr-only">{view.home.name} vs {view.away.name}</h1>
 					<div className="mb-7 flex items-center justify-between gap-3">
 						<a href={view.backHref} className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted2 no-underline hover:text-brandsoft">{view.backLabel}</a>
 						<span className="font-mono text-[11px] uppercase tracking-[0.1em] text-brandsoft">{view.league} · {view.scoreboardTag}</span>

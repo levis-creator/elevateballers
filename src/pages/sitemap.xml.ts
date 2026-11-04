@@ -42,21 +42,21 @@ export const GET: APIRoute = async ({ site }) => {
 
         const now = new Date().toISOString();
         const staticPages = [
-            { path: '',                  priority: '1.0', freq: 'daily'   },
-            { path: '/news',             priority: '0.9', freq: 'daily'   },
-            { path: '/standings',        priority: '0.8', freq: 'daily'   },
-            { path: '/upcoming-fixtures',priority: '0.8', freq: 'daily'   },
-            { path: '/matches',          priority: '0.8', freq: 'weekly'  },
-            { path: '/players',          priority: '0.7', freq: 'weekly'  },
-            { path: '/teams',            priority: '0.7', freq: 'weekly'  },
-            { path: '/stats/leaders',    priority: '0.7', freq: 'weekly'  },
-            { path: '/tournaments',      priority: '0.6', freq: 'weekly'  },
-            { path: '/about',            priority: '0.5', freq: 'monthly' },
-            { path: '/contacts',         priority: '0.5', freq: 'monthly' },
-            { path: '/rules',            priority: '0.5', freq: 'monthly' },
-            { path: '/league-registration', priority: '0.5', freq: 'monthly' },
-            { path: '/privacy-policy',   priority: '0.3', freq: 'yearly'  },
-            { path: '/staff',            priority: '0.4', freq: 'monthly' },
+            { path: '/',                   priority: '1.0', freq: 'daily'   },
+            { path: '/news/',              priority: '0.9', freq: 'daily'   },
+            { path: '/standings/',         priority: '0.8', freq: 'daily'   },
+            { path: '/upcoming-fixtures/', priority: '0.8', freq: 'daily'   },
+            { path: '/matches/',           priority: '0.8', freq: 'weekly'  },
+            { path: '/players/',           priority: '0.7', freq: 'weekly'  },
+            { path: '/teams/',             priority: '0.7', freq: 'weekly'  },
+            { path: '/stats/leaders/',     priority: '0.7', freq: 'weekly'  },
+            { path: '/tournaments/',       priority: '0.6', freq: 'weekly'  },
+            { path: '/about/',             priority: '0.5', freq: 'monthly' },
+            { path: '/contacts/',          priority: '0.5', freq: 'monthly' },
+            { path: '/rules/',             priority: '0.5', freq: 'monthly' },
+            { path: '/league-registration/',priority: '0.5', freq: 'monthly' },
+            { path: '/privacy-policy/',    priority: '0.3', freq: 'yearly'  },
+            { path: '/staff/',             priority: '0.4', freq: 'monthly' },
         ].filter(({ path }) => isIncluded(path || '/'));
 
         // This sitemap is dynamic because:

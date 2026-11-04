@@ -93,7 +93,9 @@ export function resolvePublicSeoSettings(settings: SiteSetting[]): PublicSeoSett
       defaults.metaDescription,
     ),
     canonicalBase: text(values.seo_canonical, defaults.canonicalBase).replace(/\/$/, ''),
-    titleSuffix: values.seo_suffix == null ? defaults.titleSuffix : values.seo_suffix.trim(),
+    // The suffix is appended straight after the title, so it always needs the
+    // leading space that trimming (or the admin form) can drop.
+    titleSuffix: values.seo_suffix == null ? defaults.titleSuffix : values.seo_suffix.trim() && ` ${values.seo_suffix.trim()}`,
     patternTeam: text(values.seo_patternTeam, defaults.patternTeam),
     patternPlayer: text(values.seo_patternPlayer, defaults.patternPlayer),
     patternMatch: text(values.seo_patternMatch, defaults.patternMatch),
