@@ -52,12 +52,22 @@ async function scanBuffer(buffer: Buffer, filename: string): Promise<{ status: '
 
 async function storeParsedAttachments(messageId: string, messageExternalId: string, attachments: ParsedAttachment[]) {
   let stored = 0;
+  if (!attachments?.length) return stored;
+  const externalIdFor = (index: number) => `${messageExternalId}:attachment:${index}`;
+  // One lookup per message instead of one per attachment: every sync re-reads
+  // the latest 100 emails per folder, so per-attachment lookups added up fast.
+  const existing = new Set(
+    (await prisma.messageAttachment.findMany({
+      where: { externalId: { in: attachments.map((_, index) => externalIdFor(index)) } },
+      select: { externalId: true },
+    })).map((row) => row.externalId),
+  );
   for (const [index, attachment] of attachments.entries()) {
+    const externalId = externalIdFor(index);
+    if (existing.has(externalId)) continue;
     const filename = safeFilename(attachment.filename);
     const mimeType = String(attachment.contentType || 'application/octet-stream').slice(0, 190);
     const size = Number(attachment.size || attachment.content.length || 0);
-    const externalId = `${messageExternalId}:attachment:${index}`;
-    if (await prisma.messageAttachment.findUnique({ where: { externalId }, select: { id: true } })) continue;
     const reason = blockedReason(filename, mimeType, size);
     if (reason) {
       await prisma.messageAttachment.create({ data: { messageId, externalId, filename, mimeType, size, contentId: attachment.cid || null, scanStatus: 'BLOCKED', scanReason: reason } });

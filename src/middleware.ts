@@ -17,7 +17,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // One canonical host for search engines: www.elevateballers.com → elevateballers.com.
   // Only page reads are redirected; API calls (webhooks, cron jobs, form posts)
   // keep working on either host, since a 301 would turn a POST into a GET.
-  const wwwRedirect = canonicalHostRedirect(context.url, context.request.method);
+  const wwwRedirect = canonicalHostRedirect(
+    context.url,
+    context.request.method,
+    context.request.headers.get('host'),
+    import.meta.env.SITE,
+  );
   if (wwwRedirect) return wwwRedirect;
 
   // Old WordPress URLs: redirect to the new page or answer 410 Gone.
