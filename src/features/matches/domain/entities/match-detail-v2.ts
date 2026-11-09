@@ -161,6 +161,8 @@ export interface MatchView {
 	backLabel: string;
 	dateText: string;
 	time: string;
+	/** Tip-off as an ISO 8601 timestamp (structured data), or null when unknown. */
+	startDate?: string | null;
 	venue: string | null;
 	/** Public highlight video attached through Media tags (`match:<id-or-slug>`). */
 	highlightUrl: string | null;

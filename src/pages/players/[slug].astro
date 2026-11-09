@@ -15,6 +15,8 @@ if (!usePublicV2) return Astro.rewrite(`/players-v1/${slug}`);
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import PlayerDetailPage from "@/features/player/presentation/v2/PlayerDetailPage.astro";
 import { getPlayerView } from "@/features/player/domain/usecases/get-player-view";
+import ManagedStructuredData from "@/features/settings/presentation/components/ManagedStructuredData.astro";
+import { buildPlayerJsonLd } from "@/lib/seo/entity-structured-data";
 
 const view = await getPlayerView(slug);
 if (!view) return Astro.rewrite("/404");
@@ -25,8 +27,11 @@ if (view.slug && slug !== view.slug) return Astro.redirect(`/players/${view.slug
 const name = `${view.hero.first} ${view.hero.last}`.trim();
 const seoTitle = `${name} - Players - Elevate Ballers`;
 const seoDescription = `${name} — ${view.hero.team}${view.hero.league ? ` (${view.hero.league})` : ""}. Season averages, per-game splits, game log, shooting and season highs.`;
+const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
+const jsonLd = buildPlayerJsonLd(siteBase, view);
 ---
 
 <LayoutV2 title={seoTitle} titlePattern="player" titleTokens={{ player: name, team: view.hero.team }} description={seoDescription} canonicalURL={`${Astro.url.origin}/players/${view.slug || slug}/`} type="website">
+	<ManagedStructuredData content={JSON.stringify(jsonLd)} />
 	<PlayerDetailPage view={view} />
 </LayoutV2>

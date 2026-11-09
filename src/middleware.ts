@@ -2,6 +2,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { htmlCacheControl } from './lib/htmlCacheControl';
 import { resolveLegacyPath } from './lib/legacyUrls';
 import { legacyUrlResponse } from './lib/legacyUrlResponse';
+import { canonicalHostRedirect } from './lib/canonicalHost';
 
 function cacheControlFor(pathname: string, signedIn: boolean, pagePolicy: string | null): string | null {
   return htmlCacheControl({
@@ -13,6 +14,12 @@ function cacheControlFor(pathname: string, signedIn: boolean, pagePolicy: string
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  // One canonical host for search engines: www.elevateballers.com → elevateballers.com.
+  // Only page reads are redirected; API calls (webhooks, cron jobs, form posts)
+  // keep working on either host, since a 301 would turn a POST into a GET.
+  const wwwRedirect = canonicalHostRedirect(context.url, context.request.method);
+  if (wwwRedirect) return wwwRedirect;
+
   // Old WordPress URLs: redirect to the new page or answer 410 Gone.
   const legacy = resolveLegacyPath(context.url.pathname);
   if (legacy) {

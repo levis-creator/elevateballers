@@ -17,6 +17,8 @@ import { getMatchView } from "@/features/matches/domain/usecases/get-match-view"
 import { canViewMatchBoxScore, resolvePublicMatchPageSettings, siteSettingsService } from "@/features/settings";
 import { LIVE_EDGE_CACHE_SECONDS } from "@/features/settings/application/matchPageSettings";
 import { getCurrentUser } from "@/features/cms/lib/auth";
+import ManagedStructuredData from "@/features/settings/presentation/components/ManagedStructuredData.astro";
+import { buildMatchJsonLd } from "@/lib/seo/entity-structured-data";
 
 const [view, matchSettingRecords, currentUser] = await Promise.all([
 	getMatchView(slugOrId),
@@ -56,6 +58,8 @@ const description =
 			? `Follow ${matchup} live — real-time score, box score and play-by-play in the ${view.league}.`
 			: `${matchup} — recent form, head-to-head and players to watch ahead of tip-off in the ${view.league}.`;
 const canonical = `${Astro.url.origin}/matches/${view.slug || view.id}/`;
+const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
+const jsonLd = buildMatchJsonLd(siteBase, view);
 ---
 
 <LayoutV2
@@ -71,5 +75,6 @@ const canonical = `${Astro.url.origin}/matches/${view.slug || view.id}/`;
 	canonicalURL={canonical}
 	type="website"
 >
+	<ManagedStructuredData content={JSON.stringify(jsonLd)} />
 	<MatchDetailPage view={view} settings={matchSettings} canViewBoxScore={canViewBoxScore} />
 </LayoutV2>

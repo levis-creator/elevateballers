@@ -32,6 +32,13 @@ import type {
 const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** ISO 8601 timestamp for structured data, or null when the date is missing or invalid. */
+function isoDate(value: Date | string | null | undefined): string | null {
+	if (!value) return null;
+	const d = new Date(value);
+	return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 const CREAM = "#f6f2ec";
 const DIM = "#8a817a";
 const WON = "#141009";
@@ -487,6 +494,7 @@ export async function fetchMatchView(slugOrId: string): Promise<MatchView | null
 			backLabel: state === "upcoming" ? "← All Fixtures" : "← All Results",
 			dateText: `${weekday}, ${MON[p.month - 1]} ${p.day}`,
 			time: formatMatchTime(match.date),
+			startDate: isoDate(match.date),
 			venue: null as string | null,
 			highlightUrl,
 			liveTag:

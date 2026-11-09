@@ -24,7 +24,7 @@ concurrency:
 
 env:
   NODE_VERSION: '24'
-  APP_HOST: www.elevateballers.com
+  APP_HOST: elevateballers.com
   ORIGIN_IP: 102.218.215.35
   DEPLOY_TARGET: cpanel
 

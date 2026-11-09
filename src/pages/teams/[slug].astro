@@ -15,9 +15,14 @@ if (!usePublicV2) return Astro.rewrite(`/teams-v1/${slug}`);
 import LayoutV2 from "@/layouts/v2/Layout.astro";
 import TeamDetailPage from "@/features/teams/presentation/v2/TeamDetailPage.astro";
 import { getTeamDetail } from "@/features/teams/domain/usecases/get-team-detail";
+import ManagedStructuredData from "@/features/settings/presentation/components/ManagedStructuredData.astro";
+import { buildTeamJsonLd } from "@/lib/seo/entity-structured-data";
 
 const detail = await getTeamDetail(slug);
 if (!detail) return Astro.rewrite("/404");
+
+const siteBase = Astro.site ? Astro.site.toString().replace(/\/$/, "") : Astro.url.origin;
+const jsonLd = buildTeamJsonLd(siteBase, detail);
 
 const seoTitle = `${detail.name} - Teams - Elevate Ballers`;
 const seoDescription = `${detail.name} — roster, results, upcoming fixtures and player stats in Elevate Ballers.`;
@@ -31,5 +36,6 @@ const seoDescription = `${detail.name} — roster, results, upcoming fixtures an
 	canonicalURL={`${Astro.url.origin}/teams/${detail.slug}/`}
 	type="website"
 >
+	<ManagedStructuredData content={JSON.stringify(jsonLd)} />
 	<TeamDetailPage detail={detail} />
 </LayoutV2>
