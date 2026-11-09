@@ -15,7 +15,13 @@ interface Props {
 	competitionSettings: PublicCompetitionSettings;
 	settings: PublicFixturesSettings;
 	liveBadge: string;
+	/** Server render time (ms). The first client render uses it so hydration
+	 *  matches the HTML, which Cloudflare may have cached for a few minutes. */
+	renderedAt: number;
 }
+
+/** Filter state the server renders with; the first client render uses it too. */
+const INITIAL_FILTERS = { leagueSeasonId: "", seasonId: "", conferenceId: "", view: "upcoming" } as const;
 
 const CREST_BG = "repeating-linear-gradient(45deg,rgb(var(--site-paper-border-rgb,231 226 218)),rgb(var(--site-paper-border-rgb,231 226 218)) 4px,var(--panel,#f0ece5) 4px,var(--panel,#f0ece5) 8px)";
 const DARK_CREST_BG = "repeating-linear-gradient(45deg,#1a1714,#1a1714 6px,#151210 6px,#151210 12px)";
@@ -180,8 +186,22 @@ function DarkCrest({ logo, abbr, alt, ring, color }: { logo: string | null; abbr
  *  Upcoming/Results toggle, conference filter, match-day list (knockout games
  *  get escalating playoff cards) and a "Roads to Finals" bracket. React
  *  island; filters live in a Zustand store and matches arrive pre-formatted. */
-export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId, competitionSettings, settings, liveBadge }: Props) {
-	const { leagueSeasonId, seasonId, conferenceId, view, setLeagueSeason, setSeason, setConference, setView } = useFixturesStore();
+export default function FixtureBoard({ matches, competitions, defaultLeagueSeasonId, competitionSettings, settings, liveBadge, renderedAt }: Props) {
+	const store = useFixturesStore();
+	const { setLeagueSeason, setSeason, setConference, setView } = store;
+	// Hydrate with exactly what the server rendered: its timestamp and default
+	// filters. The store outlives client-side navigation, so a filter picked
+	// earlier would otherwise change the first render and break hydration.
+	// After mount, switch to the live clock and the stored filters.
+	const [hydrated, setHydrated] = useState(false);
+	const [now, setNow] = useState(renderedAt);
+	useEffect(() => {
+		setHydrated(true);
+		setNow(Date.now());
+		const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+		return () => window.clearInterval(timer);
+	}, []);
+	const { leagueSeasonId, seasonId, conferenceId, view } = hydrated ? store : INITIAL_FILTERS;
 	const storedLeague = settings.leagueFilter ? competitions.find((item) => item.id === leagueSeasonId) : undefined;
 	const configuredDefaultId = configuredDefaultCompetitionId(competitions, competitionSettings, defaultLeagueSeasonId);
 	const defaultCompetition = competitions.find((item) => item.id === configuredDefaultId) ?? activeCompetition(competitions) ?? competitions[0];
@@ -228,7 +248,6 @@ export default function FixtureBoard({ matches, competitions, defaultLeagueSeaso
 	}, [selected?.id, isOverall]);
 
 	const isResults = settings.viewTabs && view === "results";
-	const now = Date.now();
 	const horizonEnd = now + settings.horizon * 24 * 60 * 60 * 1000;
 	const inScope = matches
 		.filter((m) => scopeIds.has(m.leagueSeasonId ?? ""))
