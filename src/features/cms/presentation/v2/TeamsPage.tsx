@@ -105,10 +105,11 @@ export default function TeamsPage() {
     void runAction(`/api/teams/${id}`, { method: 'DELETE' });
   };
 
+  const exportQuery = new URLSearchParams({ ...(seasonId && { seasonId }), ...(leagueId && { leagueId }) }).toString();
   const heading = (
     <div className="eb-teams-heading">
       <div><div className="eb-kicker">Competition</div><h1>Teams</h1><p>Teams registered into a competition edition. Pick a season and league below — conference controls appear only when that edition uses them.</p></div>
-      <div className="eb-teams-heading-actions"><button className="eb-quiet-button" onClick={() => undefined}><Download size={iconSize} /> Export</button><a className="eb-primary-button" href="/admin/teams/new"><Plus size={iconSize} /> Create Team</a></div>
+      <div className="eb-teams-heading-actions"><a className="eb-quiet-button" href={`/api/teams/export?${exportQuery}`} title="Download the teams in this season and league as CSV"><Download size={iconSize} /> Export teams</a><a className="eb-quiet-button" href={`/api/season-rosters/export?${exportQuery}`} title="Download the current approved rosters for this season and league as CSV"><Download size={iconSize} /> Export rosters</a><a className="eb-primary-button" href="/admin/teams/new"><Plus size={iconSize} /> Create Team</a></div>
     </div>
   );
   if (loading) return <section className="eb-teams-page">{heading}<SkeletonRegion label="Loading teams"><Skeleton h={48} style={{ borderRadius: 12 }} /><SkeletonStats count={4} /><SkeletonTable rows={8} columns={3} /></SkeletonRegion></section>;

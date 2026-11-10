@@ -3,6 +3,7 @@ import { prisma } from '../../../../lib/prisma';
 import { createPlayer } from '../../../cms/lib/mutations';
 import { createStaff, createTeam, assignStaffToTeam } from '../../../cms/lib/mutations';
 import type { RegistrationConsentInput } from '../../application/privacy-consent';
+import { COACH_ROLE_NAME } from '../../../users/domain/entities/user-directory';
 
 const EXPIRY_DAYS = 30;
 // Prisma's interactive-transaction default is 5s. Public registration performs
@@ -74,16 +75,19 @@ export async function submitTeamRegistration(
       throw new Error('The selected league does not match the League Season.');
     if (edition && input.seasonId && edition.seasonId !== input.seasonId)
       throw new Error('The selected season does not match the League Season.');
-    const [existingStaff, existingTeam, existingUser] = await Promise.all([
-      db.staff.findFirst({ where: { email: input.contactEmail }, select: { id: true } }),
-      db.team.findFirst({ where: { contactEmail: input.contactEmail }, select: { id: true } }),
-      db.user.findFirst({ where: { email: input.contactEmail }, select: { id: true } }),
-    ]);
-    if (existingStaff || existingTeam || existingUser) {
-      const error = new Error('This email address is already registered in the system.');
-      error.name = 'RegistrationConflictError';
-      throw error;
-    }
+    // One coach can run several teams. A coach email seen before reuses that
+    // staff record, so every team they register links to the same coach.
+    const existingCoach =
+      (await db.staff.findFirst({
+        where: { email: input.contactEmail, role: 'COACH' },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, phone: true },
+      })) ??
+      (await db.staff.findFirst({
+        where: { email: input.contactEmail },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, phone: true },
+      }));
     const description = [
       input.leagueName && `League: ${input.leagueName}`,
       `Coach: ${input.coachName}`,
@@ -100,19 +104,27 @@ export async function submitTeamRegistration(
       },
       db
     );
-    const parts = input.coachName.trim().split(/\s+/);
-    const coachStaff = await createStaff(
-      {
-        firstName: parts[0],
-        lastName: parts.slice(1).join(' ') || parts[0],
-        email: input.contactEmail,
-        phone: input.contactPhone,
-        role: 'COACH',
-        bio: input.additionalInfo || undefined,
-        approved: !input.requireApproval,
-      },
-      db
-    );
+    let coachStaff: { id: string };
+    if (existingCoach) {
+      coachStaff = existingCoach;
+      // Keep the coach's existing details; only fill a phone number they lack.
+      if (!existingCoach.phone && input.contactPhone)
+        await db.staff.update({ where: { id: existingCoach.id }, data: { phone: input.contactPhone } });
+    } else {
+      const parts = input.coachName.trim().split(/\s+/);
+      coachStaff = await createStaff(
+        {
+          firstName: parts[0],
+          lastName: parts.slice(1).join(' ') || parts[0],
+          email: input.contactEmail,
+          phone: input.contactPhone,
+          role: 'COACH',
+          bio: input.additionalInfo || undefined,
+          approved: !input.requireApproval,
+        },
+        db
+      );
+    }
     await assignStaffToTeam({ teamId: team.id, staffId: coachStaff.id, role: 'COACH' }, db);
 
     const playersToLink = await db.player.findMany({
@@ -186,6 +198,7 @@ export async function submitTeamRegistration(
           applicationId,
           seasonTeamId,
           linkedPlayersCount: playersToLink.length,
+          existingCoach: Boolean(existingCoach),
           entryFee: input.entryFee,
           approvalRequired: input.requireApproval,
         },
@@ -292,8 +305,41 @@ export async function approvePendingSeasonRegistrations(teamIds: string[]): Prom
       });
       approved += 1;
     }
+    await grantCoachPortalAccess(db, teamIds);
     return approved;
   }, PUBLIC_REGISTRATION_TRANSACTION_OPTIONS);
+}
+
+/**
+ * A coach who already has a team portal login gets access to each newly
+ * approved team they coach, so one coach account covers all of their teams.
+ */
+async function grantCoachPortalAccess(db: any, teamIds: string[]): Promise<void> {
+  const now = new Date();
+  const assignments = await db.teamStaff.findMany({
+    where: {
+      teamId: { in: teamIds },
+      role: 'COACH',
+      staff: { userId: { not: null } },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }],
+    },
+    select: { teamId: true, staff: { select: { userId: true, email: true } } },
+  });
+  for (const { teamId, staff } of assignments) {
+    const existing = await db.teamOwnership.findFirst({
+      where: {
+        teamId,
+        userId: staff.userId,
+        revokedAt: null,
+        OR: [{ effectiveTo: null }, { effectiveTo: { gt: now } }],
+      },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await db.teamOwnership.create({
+      data: { teamId, userId: staff.userId, email: staff.email ?? '', role: COACH_ROLE_NAME, verifiedAt: now },
+    });
+  }
 }
 
 export async function submitPlayerRegistration(

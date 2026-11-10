@@ -9,6 +9,7 @@ import {
   Download,
   FileWarning,
   Loader2,
+  MessageSquareWarning,
   Search,
   Shield,
   UserRound,
@@ -36,11 +37,20 @@ type Queue = {
 };
 
 const emptyQueue: Queue = { players: [], teams: [], rosterProposals: [], duplicates: [], page: 1, total: 0, totalPages: 1 };
-const statusLabel: Record<string, string> = { PENDING: 'Pending', APPROVED: 'Approved', REJECTED: 'Rejected' };
+const statusLabel: Record<string, string> = { PENDING: 'Pending', NEEDS_CHANGES: 'Needs changes', APPROVED: 'Approved', REJECTED: 'Rejected' };
+type Option = { id: string; name: string };
+const filterInput = 'h-10 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 text-[12px] font-semibold text-[var(--txd)] outline-none focus:border-[var(--brand)]';
+
+/** Status shown for a player or team row; "needs changes" holds until a final decision. */
+function registrationStatus(row: any) {
+  if (row.approved) return 'APPROVED';
+  return row.reviewStatus || 'PENDING';
+}
 
 function statusClass(status: string) {
   if (status === 'APPROVED') return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
   if (status === 'REJECTED') return 'border-rose-500/25 bg-rose-500/10 text-rose-300';
+  if (status === 'NEEDS_CHANGES') return 'border-sky-500/25 bg-sky-500/10 text-sky-300';
   return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
 }
 
@@ -60,6 +70,16 @@ export default function RegistrationReviewQueue() {
   const [kind, setKind] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('kind') || '');
   const [status, setStatus] = useState('PENDING');
   const [search, setSearch] = useState('');
+  const [leagueId, setLeagueId] = useState('');
+  const [seasonId, setSeasonId] = useState('');
+  const [teamId, setTeamId] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [options, setOptions] = useState<{ leagues: Option[]; seasons: Option[]; teams: Option[] }>({ leagues: [], seasons: [], teams: [] });
+  const [changesFor, setChangesFor] = useState<string[] | null>(null);
+  const filterParams: Record<string, string> = Object.fromEntries(
+    Object.entries({ kind, status, search, leagueId, seasonId, teamId, from, to }).filter(([, value]) => value)
+  );
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +94,7 @@ export default function RegistrationReviewQueue() {
   const load = async (page = 1) => {
     setLoading(true);
     setError(null);
-    const params = new URLSearchParams({ page: String(page), limit: '25', ...(kind && { kind }), ...(status && { status }), ...(search && { search }) });
+    const params = new URLSearchParams({ page: String(page), limit: '25', ...filterParams });
     try {
       const response = await fetch(`/api/registration/review-queue?${params}`);
       if (!response.ok) throw new Error('Could not load registrations.');
@@ -86,7 +106,20 @@ export default function RegistrationReviewQueue() {
     }
   };
 
-  useEffect(() => { void load(); }, [kind, status]);
+  useEffect(() => { void load(); }, [kind, status, leagueId, seasonId, teamId, from, to]);
+
+  // Dropdown choices for the filters; a failed lookup just leaves that list empty.
+  useEffect(() => {
+    const list = (url: string) => fetch(url).then((response) => (response.ok ? response.json() : [])).catch(() => []);
+    const pick = (rows: any): Option[] => (Array.isArray(rows) ? rows : [])
+      .map((row: any) => ({ id: String(row.id), name: String(row.name ?? '') }))
+      .sort((a: Option, b: Option) => a.name.localeCompare(b.name));
+    void Promise.all([list('/api/leagues?compact=true'), list('/api/seasons?compact=true'), list('/api/teams')])
+      .then(([leagues, seasons, teams]) => setOptions({ leagues: pick(leagues), seasons: pick(seasons), teams: pick(teams) }));
+  }, []);
+
+  const clearFilters = () => { setSearch(''); setLeagueId(''); setSeasonId(''); setTeamId(''); setFrom(''); setTo(''); };
+  const hasExtraFilters = Boolean(search || leagueId || seasonId || teamId || from || to);
 
   const openDuplicateReview = async (duplicate: { key: string; ids: string[]; resolution?: string }) => {
     setDuplicateReview(duplicate);
@@ -163,7 +196,7 @@ export default function RegistrationReviewQueue() {
   const toggle = (rowKind: Kind, id: string) => setSelected((value) => value.includes(key(rowKind, id)) ? value.filter((item) => item !== key(rowKind, id)) : [...value, key(rowKind, id)]);
   const toggleAll = () => setSelected((value) => allVisibleSelected ? value.filter((item) => !visibleKeys.includes(item)) : [...new Set([...value, ...visibleKeys])]);
 
-  const review = async (keys: string[], action: 'APPROVE' | 'REJECT') => {
+  const review = async (keys: string[], action: 'APPROVE' | 'REJECT' | 'REQUEST_CHANGES', note?: string) => {
     if (!keys.length || actionPending.size > 0) return;
     setMessage(null);
     setError(null);
@@ -192,7 +225,7 @@ export default function RegistrationReviewQueue() {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ kind: rowKind, ids, action }),
+          body: JSON.stringify({ kind: rowKind, ids, action, ...(note && { note }) }),
         });
         return { response, body: await response.json().catch(() => ({})), expected: ids.length };
       }));
@@ -201,7 +234,10 @@ export default function RegistrationReviewQueue() {
         setQueue(previousQueue);
         setError(failed.body.error ?? (Number(failed.body.count) === 0 ? 'No matching registration was updated. Refresh the queue and try again.' : 'Some items could not be updated.'));
       } else {
-        setMessage(`${keys.length} item${keys.length === 1 ? '' : 's'} ${action === 'APPROVE' ? 'approved' : 'rejected'}.`);
+        const emailFailures = results.reduce((total, { body }) => total + (Number(body.emailFailures) || 0), 0);
+        const verb = action === 'APPROVE' ? 'approved' : action === 'REJECT' ? 'rejected' : 'sent back for changes';
+        const emailNote = emailFailures ? ` ${emailFailures} email${emailFailures === 1 ? '' : 's'} could not be sent; contact the applicant directly.` : '';
+        setMessage(`${keys.length} item${keys.length === 1 ? '' : 's'} ${verb}.${emailNote}`);
         setSelected((value) => value.filter((item) => !keys.includes(item)));
         void load(previousQueue.page);
       }
@@ -213,7 +249,8 @@ export default function RegistrationReviewQueue() {
     }
   };
 
-  const exportUrl = `/api/registration/review-queue-export?kind=${kind}&status=${status}&search=${encodeURIComponent(search)}`;
+  const exportUrl = `/api/registration/review-queue-export?${new URLSearchParams(filterParams)}`;
+  const selectionCanRequestChanges = selected.length > 0 && selected.every((item) => !item.startsWith('ROSTER:'));
 
   return (
     <section className="min-h-full bg-[var(--bg)] px-4 py-5 font-['Archivo'] text-[var(--tx)] sm:px-6 sm:py-7 lg:px-8">
@@ -229,22 +266,32 @@ export default function RegistrationReviewQueue() {
 
         <div className="mb-4 rounded-xl border border-[var(--bord)] bg-[var(--surf)] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.08)] sm:p-4"><div className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <label className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--txm)]" /><input className="h-10 w-full rounded-lg border border-[var(--bord)] bg-[var(--surf2)] pl-9 pr-3 text-[13px] text-[var(--tx)] outline-none placeholder:text-[var(--faint)] focus:border-[var(--brand)]" placeholder="Search name, email, or team" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && void load(1)} /></label>
-          <div className="grid grid-cols-2 gap-2 sm:flex"><select aria-label="Registration type" className="h-10 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 text-[12px] font-semibold text-[var(--txd)] outline-none focus:border-[var(--brand)]" value={kind} onChange={(event) => setKind(event.target.value)}><option value="">All types</option><option value="PLAYER">Players</option><option value="TEAM">Teams</option><option value="ROSTER">Coach roster proposals</option></select><select aria-label="Registration status" className="h-10 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 text-[12px] font-semibold text-[var(--txd)] outline-none focus:border-[var(--brand)]" value={status} onChange={(event) => setStatus(event.target.value)}><option value="PENDING">Pending</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select><button type="button" className="col-span-2 h-10 rounded-lg bg-[var(--brand)] px-4 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)] transition-colors hover:bg-[var(--brandlt)] sm:col-span-1" onClick={() => void load(1)}>Apply filters</button></div>
-        </div></div>
+          <div className="grid grid-cols-2 gap-2 sm:flex"><select aria-label="Registration type" className="h-10 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 text-[12px] font-semibold text-[var(--txd)] outline-none focus:border-[var(--brand)]" value={kind} onChange={(event) => setKind(event.target.value)}><option value="">All types</option><option value="PLAYER">Players</option><option value="TEAM">Teams</option><option value="ROSTER">Coach roster proposals</option></select><select aria-label="Registration status" className="h-10 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 text-[12px] font-semibold text-[var(--txd)] outline-none focus:border-[var(--brand)]" value={status} onChange={(event) => setStatus(event.target.value)}><option value="PENDING">Pending</option><option value="NEEDS_CHANGES">Needs changes</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select><button type="button" className="col-span-2 h-10 rounded-lg bg-[var(--brand)] px-4 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--brandfg)] transition-colors hover:bg-[var(--brandlt)] sm:col-span-1" onClick={() => void load(1)}>Apply filters</button></div>
+        </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[var(--bord2)] pt-3 sm:grid-cols-3 xl:flex xl:items-center">
+            <select aria-label="League" className={filterInput} value={leagueId} onChange={(event) => setLeagueId(event.target.value)}><option value="">All leagues</option>{options.leagues.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select>
+            <select aria-label="Season" className={filterInput} value={seasonId} onChange={(event) => setSeasonId(event.target.value)}><option value="">All seasons</option>{options.seasons.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select>
+            <select aria-label="Team" className={`${filterInput} col-span-2 sm:col-span-1 xl:max-w-[220px]`} value={teamId} onChange={(event) => setTeamId(event.target.value)}><option value="">All teams</option>{options.teams.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select>
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-[var(--txm)]">From<input type="date" aria-label="Submitted from" className={`${filterInput} min-w-0 flex-1`} value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} /></label>
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-[var(--txm)]">To<input type="date" aria-label="Submitted to" className={`${filterInput} min-w-0 flex-1`} value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} /></label>
+            {hasExtraFilters && <button type="button" onClick={clearFilters} className="h-10 rounded-lg px-3 text-[12px] font-bold text-[var(--txm)] hover:text-[var(--brand)]">Clear filters</button>}
+          </div>
+        </div>
 
         {(message || error) && <div role="status" className={`mb-4 flex items-center gap-2 rounded-lg border px-3.5 py-3 text-[13px] ${error ? 'border-rose-500/25 bg-rose-500/10 text-rose-200' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'}`}>{error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}{error || message}</div>}
         {queue.duplicates.length > 0 && <div role="alert" className="mb-4 rounded-xl border-2 border-[var(--warn-border)] bg-[var(--warn-bg)] p-4 shadow-[0_8px_24px_rgba(245,158,11,0.12)]"><div className="mb-2 flex flex-wrap items-center gap-2 text-[var(--warn-text)]"><FileWarning className="h-5 w-5" /><span className="font-['Anton'] text-[18px] uppercase leading-none tracking-[0.02em]">Possible duplicates need attention</span><span className="rounded-full bg-[var(--warn-border)] px-2 py-0.5 font-['Space_Mono'] text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--warn-text)]">{queue.duplicates.length} matches</span></div><p className="mb-3 text-[12px] leading-5 text-[var(--warn-muted)]">Review these matching emails or names before approving new registrations.</p><div className="flex flex-wrap gap-2">{queue.duplicates.map((duplicate) => <button type="button" key={duplicate.key} onClick={() => void openDuplicateReview(duplicate)} className="rounded-md border border-[var(--warn-chip-border)] bg-[var(--warn-chip-bg)] px-2.5 py-1.5 text-left text-[11px] font-semibold text-[var(--warn-chip-text)] transition-colors hover:border-[var(--warn-text)] hover:bg-[var(--warn-border)]"><span className="block">{duplicate.key} · {duplicate.ids.length} records</span>{duplicate.resolution === 'FLAG_FOR_MERGE' && <span className="mt-1 block font-['Space_Mono'] text-[9px] uppercase tracking-[0.06em]">Flagged for merge</span>}</button>)}</div></div>}
-        {selected.length > 0 && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--brand)]/25 bg-[var(--brand)]/[0.08] px-4 py-3"><span className="mr-auto font-['Space_Mono'] text-[11px] uppercase tracking-[0.08em] text-[var(--brandsoft)]">{selected.length} selected</span><button type="button" disabled={actionPending.size > 0} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[11px] font-bold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void review(selected, 'APPROVE')}>{actionPending.size > 0 ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Approve</button><button type="button" disabled={actionPending.size > 0} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-500/30 px-3 text-[11px] font-bold text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void review(selected, 'REJECT')}>{actionPending.size > 0 ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />} Reject</button></div>}
+        {selected.length > 0 && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--brand)]/25 bg-[var(--brand)]/[0.08] px-4 py-3"><span className="mr-auto font-['Space_Mono'] text-[11px] uppercase tracking-[0.08em] text-[var(--brandsoft)]">{selected.length} selected</span><button type="button" disabled={actionPending.size > 0} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[11px] font-bold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void review(selected, 'APPROVE')}>{actionPending.size > 0 ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Approve</button><button type="button" disabled={actionPending.size > 0} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-500/30 px-3 text-[11px] font-bold text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void review(selected, 'REJECT')}>{actionPending.size > 0 ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />} Reject</button>{selectionCanRequestChanges && <button type="button" disabled={actionPending.size > 0} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-sky-500/30 px-3 text-[11px] font-bold text-sky-300 hover:bg-sky-500/10 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => setChangesFor(selected)}><MessageSquareWarning className="h-3.5 w-3.5" /> Request changes</button>}</div>}
 
         <div className="overflow-hidden rounded-xl border border-[var(--bord)] bg-[var(--surf)] shadow-[0_8px_24px_rgba(0,0,0,0.08)]"><div className="flex items-center justify-between border-b border-[var(--bord2)] px-4 py-3 sm:px-5"><div><h2 className="font-['Anton'] text-[19px] uppercase leading-none text-[var(--tx)]">Review queue</h2><p className="mt-1 text-[11px] text-[var(--txm)]">{queue.total} result{queue.total === 1 ? '' : 's'} · page {queue.page} of {queue.totalPages}</p></div>{loading && <Loader2 className="h-4 w-4 animate-spin text-[var(--brand)]" />}</div>
           <div className="overflow-x-auto"><table className="w-full min-w-[900px] border-collapse"><thead><tr className="border-b border-[var(--bord2)] bg-[var(--surf2)] text-left"><th className="w-12 px-4 py-3"><button type="button" aria-label={allVisibleSelected ? 'Clear selection' : 'Select all'} onClick={toggleAll} className={`flex h-[18px] w-[18px] items-center justify-center rounded border ${allVisibleSelected ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--brandfg)]' : 'border-[var(--bord)] text-transparent hover:border-[var(--brand)]'}`}><Check className="h-3 w-3" strokeWidth={3} /></button></th>{['Type', 'Applicant', 'Contact', 'Status', 'Team / proposer', 'Request', 'Actions'].map((heading) => <th key={heading} className="px-3 py-3 font-['Space_Mono'] text-[9px] uppercase tracking-[0.1em] text-[var(--txm)]">{heading}</th>)}</tr></thead><tbody>
-            {players.map((row) => <tr key={`p-${row.id}`} className="border-b border-[var(--bord2)] transition-colors hover:bg-[var(--hov)]"><td className="px-4 py-3"><input aria-label={`Select ${displayName(row, 'PLAYER')}`} type="checkbox" disabled={actionPending.size > 0} checked={selected.includes(key('PLAYER', row.id))} onChange={() => toggle('PLAYER', row.id)} className="h-4 w-4 accent-[var(--brand)]" /></td><td className="px-3 py-3"><span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--txd)]"><TypeIcon kind="PLAYER" /> Player</span></td><td className="px-3 py-3 text-[13px] font-bold text-[var(--tx)]">{displayName(row, 'PLAYER')}</td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.email || '—'}</td><td className="px-3 py-3"><StatusBadge status={row.approved ? 'APPROVED' : status} /></td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.team?.name || '—'}</td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">New player</td><td className="px-3 py-3">{!row.approved && <RowActions busy={actionPending.size > 0} pending={actionPending.has(key('PLAYER', row.id))} onApprove={() => void review([key('PLAYER', row.id)], 'APPROVE')} onReject={() => void review([key('PLAYER', row.id)], 'REJECT')} />}</td></tr>)}
-            {teams.map((row) => <tr key={`t-${row.id}`} className="border-b border-[var(--bord2)] transition-colors hover:bg-[var(--hov)]"><td className="px-4 py-3"><input aria-label={`Select ${displayName(row, 'TEAM')}`} type="checkbox" disabled={actionPending.size > 0} checked={selected.includes(key('TEAM', row.id))} onChange={() => toggle('TEAM', row.id)} className="h-4 w-4 accent-[var(--brand)]" /></td><td className="px-3 py-3"><span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--txd)]"><TypeIcon kind="TEAM" /> Team</span></td><td className="px-3 py-3 text-[13px] font-bold text-[var(--tx)]">{displayName(row, 'TEAM')}</td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.contactEmail || '—'}</td><td className="px-3 py-3"><StatusBadge status={row.approved ? 'APPROVED' : status} /></td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.name || '—'}</td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">New team</td><td className="px-3 py-3">{!row.approved && <RowActions busy={actionPending.size > 0} pending={actionPending.has(key('TEAM', row.id))} onApprove={() => void review([key('TEAM', row.id)], 'APPROVE')} onReject={() => void review([key('TEAM', row.id)], 'REJECT')} />}</td></tr>)}
+            {players.map((row) => <tr key={`p-${row.id}`} className="border-b border-[var(--bord2)] transition-colors hover:bg-[var(--hov)]"><td className="px-4 py-3"><input aria-label={`Select ${displayName(row, 'PLAYER')}`} type="checkbox" disabled={actionPending.size > 0} checked={selected.includes(key('PLAYER', row.id))} onChange={() => toggle('PLAYER', row.id)} className="h-4 w-4 accent-[var(--brand)]" /></td><td className="px-3 py-3"><span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--txd)]"><TypeIcon kind="PLAYER" /> Player</span></td><td className="px-3 py-3 text-[13px] font-bold text-[var(--tx)]">{displayName(row, 'PLAYER')}</td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.email || '—'}</td><td className="px-3 py-3"><StatusBadge status={registrationStatus(row)} /></td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.team?.name || '—'}</td><td className="max-w-[240px] px-3 py-3 text-[12px] text-[var(--txm)]">New player<ReviewNote row={row} /></td><td className="px-3 py-3">{!row.approved && <RowActions busy={actionPending.size > 0} pending={actionPending.has(key('PLAYER', row.id))} onApprove={() => void review([key('PLAYER', row.id)], 'APPROVE')} onReject={() => void review([key('PLAYER', row.id)], 'REJECT')} onRequestChanges={() => setChangesFor([key('PLAYER', row.id)])} />}</td></tr>)}
+            {teams.map((row) => <tr key={`t-${row.id}`} className="border-b border-[var(--bord2)] transition-colors hover:bg-[var(--hov)]"><td className="px-4 py-3"><input aria-label={`Select ${displayName(row, 'TEAM')}`} type="checkbox" disabled={actionPending.size > 0} checked={selected.includes(key('TEAM', row.id))} onChange={() => toggle('TEAM', row.id)} className="h-4 w-4 accent-[var(--brand)]" /></td><td className="px-3 py-3"><span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--txd)]"><TypeIcon kind="TEAM" /> Team</span></td><td className="px-3 py-3 text-[13px] font-bold text-[var(--tx)]">{displayName(row, 'TEAM')}</td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.contactEmail || '—'}</td><td className="px-3 py-3"><StatusBadge status={registrationStatus(row)} /></td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.name || '—'}{row.sameCoachTeams?.length > 0 && <div className="mt-0.5 text-[11px] text-[var(--txd)]" title="Registered with the same coach email; these teams share one coach record">Same coach: {row.sameCoachTeams.map((team: Option) => team.name).join(', ')}</div>}</td><td className="max-w-[240px] px-3 py-3 text-[12px] text-[var(--txm)]">New team<ReviewNote row={row} /></td><td className="px-3 py-3">{!row.approved && <RowActions busy={actionPending.size > 0} pending={actionPending.has(key('TEAM', row.id))} onApprove={() => void review([key('TEAM', row.id)], 'APPROVE')} onReject={() => void review([key('TEAM', row.id)], 'REJECT')} onRequestChanges={() => setChangesFor([key('TEAM', row.id)])} />}</td></tr>)}
             {rosterProposals.map((row) => <tr key={`r-${row.id}`} className="border-b border-[var(--bord2)] transition-colors hover:bg-[var(--hov)]"><td className="px-4 py-3"><input aria-label={`Select roster request for ${displayName(row.player, 'PLAYER')}`} type="checkbox" disabled={actionPending.size > 0} checked={selected.includes(key('ROSTER', row.id))} onChange={() => toggle('ROSTER', row.id)} className="h-4 w-4 accent-[var(--brand)]" /></td><td className="px-3 py-3"><span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--txd)]"><TypeIcon kind="ROSTER" /> Roster</span></td><td className="px-3 py-3 text-[13px] font-bold text-[var(--tx)]">{displayName(row.player, 'PLAYER')}</td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.player?.email || '—'}</td><td className="px-3 py-3"><StatusBadge status={row.status} /></td><td className="px-3 py-3 text-[12px] text-[var(--txm)]">{row.team?.name || '—'} · {row.proposedBy?.name || row.proposedBy?.email || 'Unknown coach'}</td><td className="max-w-[220px] px-3 py-3 text-[12px] text-[var(--txm)]"><strong className="text-[var(--txd)]">{REQUEST_LABEL[row.requestType] ?? 'Roster change'}</strong>{row.note && <div className="mt-0.5 truncate">{row.note}</div>}</td><td className="px-3 py-3"><RowActions busy={actionPending.size > 0} pending={actionPending.has(key('ROSTER', row.id))} onApprove={() => void review([key('ROSTER', row.id)], 'APPROVE')} onReject={() => void review([key('ROSTER', row.id)], 'REJECT')} /></td></tr>)}
-          </tbody></table>{!loading && !players.length && !teams.length && !rosterProposals.length && <div className="flex flex-col items-center gap-2 px-6 py-16 text-center"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surf2)] text-[var(--txm)]"><ClipboardCheck className="h-5 w-5" /></span><div className="font-['Anton'] text-[20px] uppercase text-[var(--tx)]">No registrations found</div><p className="max-w-[320px] text-[13px] text-[var(--txm)]">Try a different status, type, or search term.</p></div>}{error && <div className="flex items-center justify-center gap-2 px-6 py-16 text-[13px] text-rose-300"><AlertCircle className="h-4 w-4" /> {error}</div>}</div>
+          </tbody></table>{!loading && !players.length && !teams.length && !rosterProposals.length && <div className="flex flex-col items-center gap-2 px-6 py-16 text-center"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surf2)] text-[var(--txm)]"><ClipboardCheck className="h-5 w-5" /></span><div className="font-['Anton'] text-[20px] uppercase text-[var(--tx)]">No registrations found</div><p className="max-w-[320px] text-[13px] text-[var(--txm)]">Try a different status, type, filter, or search term.</p></div>}{error && <div className="flex items-center justify-center gap-2 px-6 py-16 text-[13px] text-rose-300"><AlertCircle className="h-4 w-4" /> {error}</div>}</div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--bord2)] px-4 py-3 sm:px-5"><span className="font-['Space_Mono'] text-[10px] uppercase tracking-[0.08em] text-[var(--txm)]">Page {queue.page} of {queue.totalPages}</span><div className="flex gap-2"><button type="button" disabled={queue.page <= 1 || loading} onClick={() => void load(queue.page - 1)} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--bord)] px-3 text-[11px] font-bold text-[var(--txd)] disabled:cursor-not-allowed disabled:opacity-40 hover:border-[var(--brand)]"><ChevronLeft className="h-3.5 w-3.5" /> Previous</button><button type="button" disabled={queue.page >= queue.totalPages || loading} onClick={() => void load(queue.page + 1)} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--bord)] px-3 text-[11px] font-bold text-[var(--txd)] disabled:cursor-not-allowed disabled:opacity-40 hover:border-[var(--brand)]">Next <ChevronRight className="h-3.5 w-3.5" /></button></div></div>
         </div>
 
+        {changesFor && <RequestChangesDialog count={changesFor.length} busy={actionPending.size > 0} onClose={() => setChangesFor(null)} onSubmit={(note) => { const keys = changesFor; setChangesFor(null); void review(keys, 'REQUEST_CHANGES', note); }} />}
         {duplicateReview && <DuplicateReviewDialog duplicate={duplicateReview} players={duplicatePlayers} loading={duplicateLoading} merging={duplicateMerging} actionError={duplicateActionError} onClose={() => setDuplicateReview(null)} onResolve={resolveDuplicate} onMerge={mergeDuplicate} />}
       </div>
     </section>
@@ -252,7 +299,30 @@ export default function RegistrationReviewQueue() {
 }
 
 function StatusBadge({ status }: { status: string }) { return <span className={`inline-flex rounded-full border px-2 py-1 font-['Space_Mono'] text-[9px] uppercase tracking-[0.06em] ${statusClass(status)}`}>{statusLabel[status] || status}</span>; }
-function RowActions({ onApprove, onReject, busy, pending }: { onApprove: () => void; onReject: () => void; busy: boolean; pending: boolean }) { return <div className="flex items-center gap-1.5"><button type="button" disabled={busy} aria-label="Approve registration" onClick={onApprove} className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-600/90 px-2 text-[10px] font-bold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">{pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} {pending ? 'Saving…' : 'Approve'}</button><button type="button" disabled={busy} aria-label="Reject registration" onClick={onReject} className="inline-flex h-7 items-center gap-1 rounded-md border border-rose-500/25 px-2 text-[10px] font-bold text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50"><X className="h-3 w-3" /> Reject</button></div>; }
+function RowActions({ onApprove, onReject, onRequestChanges, busy, pending }: { onApprove: () => void; onReject: () => void; onRequestChanges?: () => void; busy: boolean; pending: boolean }) { return <div className="flex items-center gap-1.5"><button type="button" disabled={busy} aria-label="Approve registration" onClick={onApprove} className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-600/90 px-2 text-[10px] font-bold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">{pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} {pending ? 'Saving…' : 'Approve'}</button>{onRequestChanges && <button type="button" disabled={busy} aria-label="Request changes from the applicant" title="Send back to the applicant with a note" onClick={onRequestChanges} className="inline-flex h-7 items-center gap-1 rounded-md border border-sky-500/25 px-2 text-[10px] font-bold text-sky-300 hover:bg-sky-500/10 disabled:cursor-not-allowed disabled:opacity-50"><MessageSquareWarning className="h-3 w-3" /> Changes</button>}<button type="button" disabled={busy} aria-label="Reject registration" onClick={onReject} className="inline-flex h-7 items-center gap-1 rounded-md border border-rose-500/25 px-2 text-[10px] font-bold text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50"><X className="h-3 w-3" /> Reject</button></div>; }
+
+function ReviewNote({ row }: { row: any }) {
+  if (row.approved || row.reviewStatus !== 'NEEDS_CHANGES' || !row.reviewNotes) return null;
+  return <div className="mt-1 line-clamp-2 text-[11px] text-sky-300" title={row.reviewNotes}>Asked for: {row.reviewNotes}</div>;
+}
+
+function RequestChangesDialog({ count, busy, onClose, onSubmit }: { count: number; busy: boolean; onClose: () => void; onSubmit: (note: string) => void }) {
+  const [note, setNote] = useState('');
+  const trimmed = note.trim();
+  const many = count !== 1;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <form className="w-full max-w-[520px] rounded-2xl border border-[var(--bord)] bg-[var(--surf)] text-[var(--tx)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]" role="dialog" aria-modal="true" aria-labelledby="request-changes-title" onSubmit={(event) => { event.preventDefault(); if (trimmed) onSubmit(trimmed); }}>
+      <header className="flex items-start justify-between gap-4 border-b border-[var(--bord2)] px-5 py-4"><div><h2 id="request-changes-title" className="font-['Anton'] text-[22px] uppercase leading-none">Request changes</h2><p className="mt-1 text-[12px] leading-5 text-[var(--txm)]">{many ? `${count} applicants get` : 'The applicant gets'} this note by email. {many ? 'These registrations stay' : 'The registration stays'} under “Needs changes” until you approve or reject {many ? 'them' : 'it'}.</p></div><button type="button" aria-label="Close" onClick={onClose} className="rounded-md p-1.5 text-[var(--txm)] hover:bg-[var(--hov)] hover:text-[var(--tx)]"><X className="h-5 w-5" /></button></header>
+      <div className="p-5">
+        <label htmlFor="request-changes-note" className="mb-1.5 block text-[12px] font-bold text-[var(--txd)]">What needs to change?</label>
+        <textarea id="request-changes-note" autoFocus required maxLength={2000} rows={5} value={note} onChange={(event) => setNote(event.target.value)} placeholder="For example: please send the coach’s phone number and confirm the team’s home venue." className="w-full rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3 py-2 text-[13px] leading-5 text-[var(--tx)] outline-none placeholder:text-[var(--faint)] focus:border-[var(--brand)]" />
+        <div className="mt-1 text-right font-['Space_Mono'] text-[10px] text-[var(--txm)]">{note.length}/2000</div>
+        <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={onClose} className="h-9 rounded-lg border border-[var(--bord)] bg-[var(--surf2)] px-3.5 text-[12px] font-bold text-[var(--txd)] hover:border-[var(--brand)]">Cancel</button><button type="submit" disabled={!trimmed || busy} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand)] px-3.5 text-[12px] font-extrabold text-[var(--brandfg)] hover:bg-[var(--brandlt)] disabled:cursor-not-allowed disabled:opacity-40">Send to applicant</button></div>
+      </div>
+    </form>
+  </div>;
+}
+
 
 function DuplicateReviewDialog({
   duplicate,

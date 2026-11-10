@@ -2,6 +2,7 @@ import { prisma } from '../../../lib/prisma';
 import {
   sendPlayerApprovedEmail,
   sendRegistrationApprovedEmail,
+  sendRegistrationChangesRequestedEmail,
   sendRegistrationRejectedEmail,
   sendTeamApprovedEmail,
 } from '../../../lib/email';
@@ -97,4 +98,50 @@ export async function notifyPlayerRegistrationDecision(
     status: 'rejected',
     playerId,
   });
+}
+
+/** Emails the applicant(s) what to fix on a registration marked NEEDS_CHANGES. */
+export async function notifyRegistrationChangesRequested(
+  kind: 'PLAYER' | 'TEAM',
+  id: string,
+  note: string
+): Promise<void> {
+  const db = prisma as any;
+  if (kind === 'PLAYER') {
+    const player = await db.player.findUnique({
+      where: { id },
+      select: { firstName: true, lastName: true, email: true },
+    });
+    if (!player?.email) return;
+    const name = `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim() || 'there';
+    await sendRegistrationChangesRequestedEmail({
+      name,
+      email: player.email,
+      subjectName: 'your player registration',
+      note,
+      playerId: id,
+    });
+    return;
+  }
+  const [team, application] = await Promise.all([
+    db.team.findUnique({ where: { id }, select: { name: true, contactEmail: true } }),
+    db.seasonRegistrationApplication.findFirst({
+      where: { teamId: id },
+      orderBy: { createdAt: 'desc' },
+      select: { applicantName: true, applicantEmail: true },
+    }),
+  ]);
+  if (!team) return;
+  const recipients = new Map<string, string>();
+  if (team.contactEmail)
+    recipients.set(team.contactEmail.trim().toLowerCase(), application?.applicantName || team.name);
+  if (application?.applicantEmail)
+    recipients.set(application.applicantEmail.trim().toLowerCase(), application.applicantName || team.name);
+  const results = await Promise.allSettled(
+    [...recipients].map(([email, name]) =>
+      sendRegistrationChangesRequestedEmail({ name, email, subjectName: team.name, note, teamId: id })
+    )
+  );
+  const failure = results.find((result) => result.status === 'rejected');
+  if (failure?.status === 'rejected') throw failure.reason;
 }

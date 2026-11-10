@@ -510,6 +510,8 @@ model Team {
   description                    String?
   approved                       Boolean                         @default(false)
   reviewStatus                  String?                         @map("review_status")
+  /// What the applicant must fix when reviewStatus is NEEDS_CHANGES.
+  reviewNotes                    String?                         @map("review_notes") @db.Text
   createdAt                      DateTime                        @default(now()) @map("created_at")
   updatedAt                      DateTime                        @updatedAt @map("updated_at")
   slug                           String                          @unique
@@ -550,6 +552,7 @@ model Team {
   @@index([slug])
   @@index([approved])
   @@index([reviewStatus])
+  @@index([contactEmail])
   @@index([approved, name], map: "teams_public_directory_idx")
   @@map("teams")
 }
@@ -816,6 +819,8 @@ model Player {
   stats                           Json?
   approved                        Boolean                          @default(false)
   reviewStatus                    String?                          @map("review_status")
+  /// What the applicant must fix when reviewStatus is NEEDS_CHANGES.
+  reviewNotes                     String?                          @map("review_notes") @db.Text
   archived                        Boolean                          @default(false)
   mergedIntoId                    String?                          @map("merged_into_id")
   mergedAt                        DateTime?                        @map("merged_at")

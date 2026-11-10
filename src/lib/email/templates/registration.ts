@@ -455,3 +455,43 @@ export async function sendMatchReminderEmail(data: {
     audit: { template: 'match_reminder', context: { matchId: data.matchId } },
   });
 }
+
+const escapeEmailText = (value: string) =>
+  value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char);
+
+/** Tells an applicant what to fix before their registration can be approved. */
+export async function sendRegistrationChangesRequestedEmail(data: {
+  name: string;
+  email: string;
+  subjectName: string;
+  note: string;
+  teamId?: string;
+  playerId?: string;
+}): Promise<void> {
+  const name = escapeEmailText(data.name);
+  const subjectName = escapeEmailText(data.subjectName);
+  const note = escapeEmailText(data.note);
+  const html = emailWrapper(`
+    <h2 style="margin:0 0 16px;font-size:22px;color:${C.primary};font-family:'Anton','Arial Black',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">A few changes needed</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">Hi ${name},</p>
+    <p style="margin:0 0 16px;font-size:15px;color:${C.text};line-height:1.7;">
+      Thanks for registering <strong>${subjectName}</strong>. Before we can approve it, we need a few changes:
+    </p>
+    <div style="margin:0 0 16px;padding:14px 16px;border-left:4px solid ${C.primary};background:#f7f4ef;font-size:15px;color:${C.text};line-height:1.7;white-space:pre-line;">${note}</div>
+    <p style="margin:0;font-size:15px;color:${C.text};line-height:1.7;">
+      Reply to this email with the updated details and we will finish reviewing your registration.
+    </p>
+    <p style="margin:16px 0 0;font-size:15px;color:${C.text};line-height:1.7;">
+      Best regards,<br /><strong>ElevateBallers Team</strong>
+    </p>
+  `);
+  await sendTransactionalEmail({
+    to: data.email,
+    subject: `Changes needed for ${data.subjectName}`,
+    html,
+    audit: {
+      template: 'registration_changes_requested',
+      context: data.teamId ? { teamId: data.teamId } : data.playerId ? { playerId: data.playerId } : undefined,
+    },
+  });
+}

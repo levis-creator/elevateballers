@@ -2,7 +2,7 @@
 
 This plan keeps the current Astro full-stack app and hardens it for more users before considering a separate backend. Work through the phases in order.
 
-Last checked against the code on 2026-11-03. Production now runs as a single Node process on cPanel (see `docs/DEPLOYMENT.md`), not serverless, so items about serverless pooling and QStash no longer apply as written.
+Last checked against the code on 2026-11-11. Production now runs as a single Node process on cPanel (see `docs/DEPLOYMENT.md`), not serverless, so items about serverless pooling and QStash no longer apply as written.
 
 ## Phase 1: Stabilize Public Registration
 
@@ -60,16 +60,16 @@ QStash was replaced by a database outbox: registration writes `PublicRegistratio
 ## Phase 6: Admin Scaling
 
 - [x] Add a registration review queue (`/api/registration/review-queue`).
-- [ ] Filter registrations by league, season, team, and submitted date. Only kind, status and text search exist today.
-- [ ] Add pagination to all large admin lists (the review queue has it; other lists not audited).
+- [x] Filter registrations by league, season, team, and submitted date (`leagueId`, `seasonId`, `teamId`, `from`, `to` on the review queue and its export).
+- [ ] Add pagination to all large admin lists. Audited 2026-11-11: `players`, `staff`, `users`, `comments` and `teams` list endpoints return whole tables, and their admin pages search, filter and export in the browser, so paging them means moving that filtering server-side. Leagues, seasons, roles, permissions, pages and game rules stay small.
 - [x] Add bulk approve/reject actions for teams and players (`bulk-approve` with `approved: false` rejects).
-- [ ] Add `Needs changes` status with admin notes. `adminNotes` exists; the status does not.
-- [ ] Add duplicate detection for:
+- [x] Add `Needs changes` status with admin notes (`reviewStatus = NEEDS_CHANGES` plus `reviewNotes` on players and teams; the applicant is emailed the note).
+- [x] Add duplicate detection for:
   - [x] team name (unique constraint plus an admin notification on a repeat submission)
-  - [ ] coach email
+  - [x] coach email (not a duplicate: one coach may run several teams. A repeat coach email reuses the same coach record, and the queue shows "Same coach: …")
   - [x] player email
   - [x] player name plus date/team context (player duplicate review and merge)
-- [ ] Add CSV export for registrations, teams, players, and rosters. Registrations export exists but stops at 100 rows; players, staff and subscribers export in the browser; teams and rosters have none.
+- [x] Add CSV export for registrations, teams, players, and rosters. Registrations export has no row cap; teams (`/api/teams/export`) and rosters (`/api/season-rosters/export`) export from the Teams page; players, staff and subscribers export in the browser.
 - [x] Add clear audit events for approval, rejection, roster edits, and ownership changes.
 
 ## Phase 7: Database and Query Hardening
@@ -127,7 +127,5 @@ Do not split the frontend and backend yet. Revisit that decision only if one or 
 
 1. Point the uptime monitor at `/api/health` so a database outage alerts.
 2. Add an index on `Player.email`.
-3. Add league/season/date filters and the `Needs changes` status to the review queue.
-4. Remove the 100-row cap on the registrations CSV export; add team and roster exports.
-5. Audit admin `findMany` calls for pagination.
-6. Load test registration on the cPanel server.
+3. Server-side pagination for the players, staff, users, comments and teams admin lists.
+4. Load test registration on the cPanel server.
