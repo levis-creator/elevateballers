@@ -1,4 +1,5 @@
 import { prisma } from '../../../lib/prisma';
+import { playerNameKey } from '../domain/player-duplicates';
 
 export class DuplicateMergeConflict extends Error {
   name = 'DuplicateMergeConflict';
@@ -7,8 +8,6 @@ export class DuplicateMergeConflict extends Error {
   }
 }
 
-const duplicateKeyFor = (player: { email: string | null; firstName: string | null; lastName: string | null }) =>
-  player.email?.trim().toLowerCase() || `${player.firstName?.trim().toLowerCase()}::${player.lastName?.trim().toLowerCase()}`;
 
 const pairKey = (...values: (string | null)[]) => values.map((value) => value ?? '').join('|');
 
@@ -28,7 +27,8 @@ export async function mergeDuplicatePlayers(input: {
     if (primary.archived || secondary.archived || primary.mergedIntoId || secondary.mergedIntoId) {
       throw new DuplicateMergeConflict(['One of these records is already archived or merged. Refresh the review and try again.']);
     }
-    if (duplicateKeyFor(primary) !== input.matchKey || duplicateKeyFor(secondary) !== input.matchKey) {
+    // Duplicate warnings group records by full name; both must still carry it.
+    if (playerNameKey(primary) !== input.matchKey || playerNameKey(secondary) !== input.matchKey) {
       throw new DuplicateMergeConflict(['The records no longer match the duplicate warning. Refresh the review and try again.']);
     }
 

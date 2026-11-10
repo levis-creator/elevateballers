@@ -1,6 +1,7 @@
 import { prisma } from '../../../../lib/prisma';
 import type { RosterDecision } from '../../application/roster-request-emails';
 import { approvePendingSeasonRegistrations } from './public-submission';
+import { findDuplicateGroups, findSharedContacts } from '../../domain/player-duplicates';
 import { markRosterDroppedOut } from '../../../player/data/datasources/dropout-repository';
 
 const PROPOSAL_ACTIONS = ['ROSTER_PROPOSED', 'ROSTER_EDIT_PROPOSED', 'ROSTER_REMOVAL_PROPOSED'];
@@ -303,27 +304,16 @@ export async function getRegistrationReviewQueue(
       (other) => other.id !== team.id
     ),
   }));
-  const duplicates = await db.player.findMany({
-    where: {
-      archived: false,
-      mergedIntoId: null,
-      OR: [{ email: { not: null } }, { firstName: { not: null }, lastName: { not: null } }],
-    },
-    select: { id: true, firstName: true, lastName: true, email: true },
+  // Every active player, to group same-name records and spot shared contacts.
+  const activePlayers = await db.player.findMany({
+    where: { archived: false, mergedIntoId: null },
+    select: { id: true, firstName: true, lastName: true, email: true, phone: true, dateOfBirth: true, teamId: true },
   });
-  const duplicateKeys = new Map<string, string[]>();
-  for (const player of duplicates) {
-    const key =
-      player.email?.toLowerCase() ||
-      `${player.firstName?.toLowerCase()}::${player.lastName?.toLowerCase()}`;
-    if (key) duplicateKeys.set(key, [...(duplicateKeys.get(key) || []), player.id]);
-  }
-  const duplicateGroups = [...duplicateKeys.entries()]
-    .filter(([, ids]) => ids.length > 1)
-    .map(([matchKey, ids]) => ({ matchKey, ids }));
+  const duplicateGroups = findDuplicateGroups(activePlayers);
+  const sharedContacts = findSharedContacts(players, activePlayers);
   const duplicateReviews = duplicateGroups.length
     ? await db.playerDuplicateReview.findMany({
-        where: { matchKey: { in: duplicateGroups.map(({ matchKey }) => matchKey) } },
+        where: { matchKey: { in: duplicateGroups.map(({ key }) => key) } },
         select: { matchKey: true, resolution: true },
       })
     : [];
@@ -335,12 +325,12 @@ export async function getRegistrationReviewQueue(
     Math.ceil(Math.max(playerTotal, teamTotal, rosterTotal) / input.limit)
   );
   return {
-    players,
+    players: players.map((player: any) => ({ ...player, sharedContactWith: sharedContacts.get(player.id) ?? [] })),
     teams: mappedTeams,
     rosterProposals: mappedRosterProposals,
     duplicates: duplicateGroups
-      .filter(({ matchKey }) => reviewByKey.get(matchKey) !== 'NOT_DUPLICATE')
-      .map(({ matchKey, ids }) => ({ key: matchKey, ids, resolution: reviewByKey.get(matchKey) ?? 'OPEN' })),
+      .filter(({ key }) => reviewByKey.get(key) !== 'NOT_DUPLICATE')
+      .map((group) => ({ ...group, resolution: reviewByKey.get(group.key) ?? 'OPEN' })),
     page: input.page,
     limit: input.limit,
     total: playerTotal + teamTotal + rosterTotal,

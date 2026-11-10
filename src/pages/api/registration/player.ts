@@ -4,6 +4,7 @@ import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { checkRegistrationOpen } from '../../../lib/registrationGate';
+import { sharedSignals } from '../../../features/registration/domain/player-duplicates';
 import { processRegistrationEmailJob } from '../../../features/registration/application/process-registration-email-job';
 import { findSubmission, submitPlayerRegistration } from '../../../features/registration/data/datasources/public-submission';
 import { allowPublicRegistration, genericRegistrationResponse, getIdempotencyKey, isHoneypotTriggered, normalizeEmail, normalizeId, normalizeOptionalText, normalizePhone, normalizeText, releasePublicRegistrationLimit, validatePlayerRegistration } from '../../../lib/publicRegistrationSecurity';
@@ -64,16 +65,23 @@ export const POST: APIRoute = async ({ request }) => {
     if (!gate.open) return new Response(JSON.stringify({ error: gate.message ?? 'Registration is currently closed.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     let teamId: string | undefined;
     if (data.teamName) teamId = (await prisma.team.findUnique({ where: { name: data.teamName }, select: { id: true } }))?.id;
-    const duplicateEmail = await prisma.player.findFirst({ where: { email: data.email }, select: { id: true } });
-    const duplicateName = await prisma.player.findFirst({ where: { firstName: data.firstName, lastName: data.lastName, ...(teamId ? { teamId } : {}) }, select: { id: true } });
-    if (duplicateEmail || duplicateName) {
+    // Never reject on a repeat email or name: minors often use their coach's
+    // email or phone, and names repeat. A same-name player who also shares a
+    // phone, email or team is flagged for review; the registration still goes in.
+    const sameName = await prisma.player.findMany({
+      where: { firstName: data.firstName, lastName: data.lastName, archived: false, mergedIntoId: null },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, dateOfBirth: true, teamId: true },
+      take: 20,
+    });
+    const incoming = { id: 'incoming', firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, teamId: teamId ?? null };
+    const likelyMatch = sameName.map((player) => ({ player, reasons: sharedSignals(incoming, player) })).find(({ reasons }) => reasons.length);
+    if (likelyMatch) {
       await createOperationalNotification({
         type: 'REGISTRATION_DUPLICATE',
         message: `Possible duplicate player registration for ${data.firstName} ${data.lastName}`.trim(),
         severity: 'warning',
-        metadata: { email: data.email, action: 'REVIEW_DUPLICATE' },
+        metadata: { existingPlayerId: likelyMatch.player.id, reasons: likelyMatch.reasons, action: 'REVIEW_DUPLICATE' },
       }).catch((notificationError) => console.warn('[registration] duplicate notification failed:', notificationError));
-      return genericRegistrationResponse();
     }
 
     const result = await submitPlayerRegistration({ idempotencyKey, firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone, position: data.position, jerseyNumber: data.jerseyNumber, height: data.height, weight: data.weight, teamName: data.teamName, teamId, additionalInfo: data.additionalInfo, requireApproval: registrationSettings.approval, entryFee: registrationSettings.fee, consent: privacyConsent.consent });

@@ -105,11 +105,23 @@ function registrationRateLimitKeys(kind: PublicRegistrationKind, ip: string, ema
   };
 }
 
+/**
+ * Sign-up limits per connection (per hour) and per email (per day). A coach
+ * often registers a whole squad of minors from one device with their own
+ * email, so player limits allow a full roster; Turnstile and the honeypot
+ * still stop bots.
+ */
+export const PUBLIC_REGISTRATION_RATE_LIMITS: Record<PublicRegistrationKind, { perIpPerHour: number; perEmailPerDay: number }> = {
+  team: { perIpPerHour: 5, perEmailPerDay: 3 },
+  player: { perIpPerHour: 40, perEmailPerDay: 40 },
+};
+
 export async function allowPublicRegistration(kind: PublicRegistrationKind, ip: string, email: string): Promise<boolean> {
   const keys = registrationRateLimitKeys(kind, ip, email);
-  const ipAllowed = await checkRateLimit(keys.ip, 5, 60 * 60 * 1000);
+  const limits = PUBLIC_REGISTRATION_RATE_LIMITS[kind];
+  const ipAllowed = await checkRateLimit(keys.ip, limits.perIpPerHour, 60 * 60 * 1000);
   if (!ipAllowed) return false;
-  return checkRateLimit(keys.email, 3, 24 * 60 * 60 * 1000);
+  return checkRateLimit(keys.email, limits.perEmailPerDay, 24 * 60 * 60 * 1000);
 }
 
 /** Release quota after a server-side persistence failure. Validation and

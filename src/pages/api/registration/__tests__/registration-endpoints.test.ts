@@ -278,13 +278,32 @@ describe('public registration endpoints', () => {
     expect(mocks.resetRateLimit).toHaveBeenCalledTimes(2);
   });
 
-  it('returns a generic response for duplicate players', async () => {
-    mocks.playerFindFirst.mockResolvedValueOnce({ id: 'existing-player' });
+  it('accepts a player who shares an email with another player (a minor using the coach email)', async () => {
+    mocks.playerFindMany.mockResolvedValueOnce([]);
     const response = await postPlayer({ request: request(playerPayload) } as any);
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual(
-      expect.objectContaining({ error: expect.stringContaining('could not process') })
+    expect(response.status).toBe(201);
+    expect(mocks.submitPlayerRegistration).toHaveBeenCalled();
+    expect(mocks.notificationCreate).not.toHaveBeenCalled();
+  });
+
+  it('accepts a same-name player and flags it when a phone also matches', async () => {
+    mocks.playerFindMany.mockResolvedValueOnce([
+      { id: 'existing-player', firstName: playerPayload.firstName, lastName: playerPayload.lastName, email: 'other@example.com', phone: playerPayload.phone, dateOfBirth: null, teamId: null },
+    ]);
+    const response = await postPlayer({ request: request(playerPayload) } as any);
+    expect(response.status).toBe(201);
+    expect(mocks.submitPlayerRegistration).toHaveBeenCalled();
+    expect(mocks.notificationCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ type: 'REGISTRATION_DUPLICATE' }) })
     );
-    expect(mocks.createPlayer).not.toHaveBeenCalled();
+  });
+
+  it('does not flag a same-name player who shares nothing else', async () => {
+    mocks.playerFindMany.mockResolvedValueOnce([
+      { id: 'existing-player', firstName: playerPayload.firstName, lastName: playerPayload.lastName, email: 'other@example.com', phone: '+254799999999', dateOfBirth: null, teamId: 'another-team' },
+    ]);
+    const response = await postPlayer({ request: request(playerPayload) } as any);
+    expect(response.status).toBe(201);
+    expect(mocks.notificationCreate).not.toHaveBeenCalled();
   });
 });
