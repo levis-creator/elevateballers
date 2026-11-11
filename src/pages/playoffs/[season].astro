@@ -1,0 +1,38 @@
+---
+export const prerender = false;
+
+// Edge-cache the bracket briefly — results change only when games are decided.
+Astro.response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+
+import { usePublicV2 } from "@/lib/ui-version";
+
+const { season: slug = "" } = Astro.params;
+// v2-only route (imports only the v2 tree). The legacy page serves the same
+// URL when the v2 flag is off.
+if (!usePublicV2) return Astro.rewrite(`/playoffs-v1/${encodeURIComponent(slug)}/${Astro.url.search}`);
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import PlayoffsPage from "@/features/tournaments/presentation/v2/PlayoffsPage.astro";
+import { getPlayoffsPageData } from "@/features/tournaments/data/datasources/playoffs-v2";
+import { resolvePublicCompetitionSettings, siteSettingsService } from "@/features/settings";
+
+const leagueParam = Astro.url.searchParams.get("league") ?? undefined;
+let data = null;
+try {
+	const competitionSettings = resolvePublicCompetitionSettings(await siteSettingsService.list("leagues"));
+	data = await getPlayoffsPageData(slug, leagueParam, competitionSettings);
+} catch (error) {
+	console.error("Failed to load playoff data:", error);
+}
+
+// Unknown season (or one without a bracket) → the index picks a valid one.
+if (!data) return Astro.redirect("/playoffs/");
+
+const league = data.leagues.find((item) => item.slug === data.initialLeague);
+const title = `${data.season.name} Playoffs${data.leagues.length > 1 && league ? ` · ${league.code}` : ""} - Elevate Ballers`;
+const description = `The ${data.season.name} Elevate Ballers playoff bracket — every series, game-by-game scores and the road to the championship.`;
+---
+
+<LayoutV2 title={title} description={description} canonicalURL={`${Astro.url.origin}/playoffs/${data.season.slug}/`} type="website">
+	<PlayoffsPage data={data} />
+</LayoutV2>

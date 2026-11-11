@@ -1,0 +1,30 @@
+---
+export const prerender = false;
+
+import { usePublicV2 } from "@/lib/ui-version";
+
+if (!usePublicV2) return Astro.rewrite(`/playoffs-v1/${Astro.url.search}`);
+
+import LayoutV2 from "@/layouts/v2/Layout.astro";
+import PlayoffsPage from "@/features/tournaments/presentation/v2/PlayoffsPage.astro";
+import { getDefaultPlayoffSeasonSlug } from "@/features/tournaments/data/datasources/getPlayoffPageData";
+
+let defaultSlug: string | null = null;
+try {
+	defaultSlug = await getDefaultPlayoffSeasonSlug();
+} catch (error) {
+	console.error("Failed to resolve default playoff season:", error);
+}
+
+// Send visitors straight to the active season's bracket, else the most recent one.
+if (defaultSlug) return Astro.redirect(`/playoffs/${defaultSlug}/${Astro.url.search}`);
+---
+
+<LayoutV2
+	title="Playoffs - Elevate Ballers"
+	description="Elevate Ballers playoff brackets — every series, game-by-game scores and the road to the championship."
+	canonicalURL={`${Astro.url.origin}/playoffs/`}
+	type="website"
+>
+	<PlayoffsPage data={null} />
+</LayoutV2>

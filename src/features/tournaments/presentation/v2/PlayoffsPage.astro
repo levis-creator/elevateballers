@@ -1,0 +1,43 @@
+---
+// v2 Playoffs page: site header/footer around the bracket island, or an empty
+// state when no season has a bracket yet.
+import Header from "@/features/layout/presentation/v2/Header.astro";
+import Footer from "@/features/layout/presentation/v2/Footer.astro";
+import PlayoffsBoard from "./PlayoffsBoard.tsx";
+import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import type { PlayoffsPageData } from "../../data/datasources/playoffs-v2";
+
+interface Props {
+	data: PlayoffsPageData | null;
+}
+
+const { data } = Astro.props;
+const footer = await getFooterData();
+// Server time decides "awaiting result" so the server and browser agree.
+const now = new Date().toISOString();
+---
+
+<div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
+	<Header active="playoffs" />
+	{data ? (
+		<PlayoffsBoard data={data} now={now} client:load />
+	) : (
+		<>
+			<section class="relative overflow-hidden bg-night text-cream">
+				<div class="absolute inset-0" style="background:radial-gradient(110% 120% at 88% -20%,rgba(228,0,43,0.32),transparent 60%);"></div>
+				<div class="relative mx-auto max-w-[1280px] px-8 pb-10 pt-12 max-[960px]:px-6">
+					<div class="mb-3 flex items-center gap-[10px] font-mono text-[11px] uppercase tracking-[0.16em] text-brandsoft"><span class="h-px w-[26px] bg-brand"></span>Postseason</div>
+					<h1 class="font-display text-[clamp(56px,8vw,108px)] uppercase leading-[0.84] tracking-[0.01em]">Playoffs</h1>
+				</div>
+			</section>
+			<section class="mx-auto max-w-[1280px] px-8 py-[72px] max-[960px]:px-6">
+				<div class="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-black/[0.16] bg-paper2 px-8 py-20 text-center">
+					<div class="font-display text-[24px] uppercase text-ink">No bracket yet</div>
+					<p class="max-w-[400px] text-[15px] leading-[1.6] text-muted">Playoff brackets appear here once the postseason gets underway. Until then, follow the race on the regular-season table.</p>
+					<a href="/standings/" class="mt-2 rounded-md bg-brand px-5 py-3 text-[12px] font-extrabold uppercase tracking-[0.06em] text-white no-underline hover:bg-brandlt hover:text-white">See standings</a>
+				</div>
+			</section>
+		</>
+	)}
+	<Footer footer={footer} />
+</div>
