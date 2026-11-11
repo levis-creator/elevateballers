@@ -28,8 +28,12 @@ import {
   AlertCircle,
   Clock,
   Check,
-  ChevronDown,
 } from 'lucide-react';
+import { DEFAULT_PHONE_COUNTRY, PHONE_COUNTRIES, toInternationalPhone } from '@/lib/phone';
+import CountryDialPicker from './CountryDialPicker';
+import FormSelect from './FormSelect';
+
+const POSITIONS = ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'];
 
 interface League {
   id: string;
@@ -100,12 +104,47 @@ function Label({
   );
 }
 
-function SelectChevron() {
+/** Country dial code plus the number; the parent combines them on submit. */
+function PhoneField({
+  label,
+  name,
+  dial,
+  value,
+  onDialChange,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  dial: string;
+  value: string;
+  onDialChange: (dial: string) => void;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const country = PHONE_COUNTRIES.find((entry) => entry.dial === dial) ?? DEFAULT_PHONE_COUNTRY;
   return (
-    <ChevronDown
-      className="pointer-events-none absolute right-3.5 top-[38px] h-4 w-4 text-muted"
-      aria-hidden
-    />
+    <div className="block">
+      <label htmlFor={`${name}-number`}>
+        <Label icon={Phone} required>
+          {label}
+        </Label>
+      </label>
+      {/* One field: a compact country-code prefix and the number share a border. */}
+      <div className="flex w-full items-stretch rounded-lg border border-black/15 bg-paper2 transition-shadow focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/[0.12] [&>div>button]:rounded-l-lg">
+        <CountryDialPicker dial={dial} onChange={onDialChange} label={label} />
+        <input
+          id={`${name}-number`}
+          type="tel"
+          name={name}
+          inputMode="tel"
+          autoComplete="tel-national"
+          value={value}
+          onChange={onChange}
+          placeholder={country.dial === DEFAULT_PHONE_COUNTRY.dial ? '712 345 678' : 'Phone number'}
+          required
+          className="min-w-0 flex-1 bg-transparent px-4 py-3 font-body text-[14px] text-ink2 outline-none placeholder:text-muted2/70"
+        />
+      </div>
+    </div>
   );
 }
 
@@ -133,6 +172,8 @@ export default function RegistrationFormV2({
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonsLoading, setSeasonsLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [teamPhoneDial, setTeamPhoneDial] = useState(DEFAULT_PHONE_COUNTRY.dial);
+  const [playerPhoneDial, setPlayerPhoneDial] = useState(DEFAULT_PHONE_COUNTRY.dial);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   useEffect(() => {
     if (!settings.playerMode && activeTab === 'player') setActiveTab('team');
@@ -269,6 +310,11 @@ export default function RegistrationFormV2({
       setError('Please complete the security check before submitting.');
       return;
     }
+    const teamPhone = toInternationalPhone(teamPhoneDial, teamFormData.contactPhone);
+    if (!teamPhone) {
+      setError('Enter a valid contact phone number, including the right country code.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -281,7 +327,7 @@ export default function RegistrationFormV2({
           name: teamFormData.name.trim(),
           coachName: teamFormData.coachName.trim(),
           contactEmail: teamFormData.contactEmail.trim(),
-          contactPhone: teamFormData.contactPhone.trim(),
+          contactPhone: teamPhone,
           leagueId: teamFormData.leagueId || undefined,
           seasonId: teamFormData.seasonId || undefined,
           leagueSeasonId: selectedCompetition?.id,
@@ -337,6 +383,11 @@ export default function RegistrationFormV2({
       setError('Please complete the security check before submitting.');
       return;
     }
+    const playerPhone = toInternationalPhone(playerPhoneDial, playerFormData.phone);
+    if (!playerPhone) {
+      setError('Enter a valid phone number, including the right country code.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -349,7 +400,7 @@ export default function RegistrationFormV2({
           firstName: playerFormData.firstName.trim(),
           lastName: playerFormData.lastName.trim(),
           email: playerFormData.email.trim(),
-          phone: playerFormData.phone.trim(),
+          phone: playerPhone,
           position: playerFormData.position.trim(),
           jerseyNumber: playerFormData.jerseyNumber
             ? parseInt(playerFormData.jerseyNumber)
@@ -540,24 +591,21 @@ export default function RegistrationFormV2({
                   className={inputCls}
                 />
               </label>
-              <label className="relative block">
-                <Label icon={Trophy}>League</Label>
-                <select
+              <div className="block">
+                <label htmlFor="team-league">
+                  <Label icon={Trophy}>League</Label>
+                </label>
+                <FormSelect
+                  id="team-league"
                   name="leagueId"
+                  label="League"
                   value={teamFormData.leagueId}
-                  onChange={handleTeamChange}
-                  disabled={leaguesLoading}
-                  className={`${inputCls} appearance-none pr-10`}
-                >
-                  <option value="">Select League</option>
-                  {leagues.map((league) => (
-                    <option key={league.id} value={league.id}>
-                      {league.name}
-                    </option>
-                  ))}
-                </select>
-                <SelectChevron />
-              </label>
+                  placeholder="Select League"
+                  loading={leaguesLoading}
+                  options={leagues.map((league) => ({ value: league.id, label: league.name }))}
+                  onChange={(leagueId) => setTeamFormData((previous) => ({ ...previous, leagueId, seasonId: '' }))}
+                />
+              </div>
               <label className="block">
                 <Label icon={Mail} required>
                   Contact Email
@@ -572,39 +620,33 @@ export default function RegistrationFormV2({
                   className={inputCls}
                 />
               </label>
-              <label className="block">
-                <Label icon={Phone} required>
-                  Contact Phone
-                </Label>
-                <input
-                  type="tel"
-                  name="contactPhone"
-                  value={teamFormData.contactPhone}
-                  onChange={handleTeamChange}
-                  placeholder="07xx xxx xxx"
-                  required
-                  className={inputCls}
-                />
-              </label>
+              <PhoneField
+                label="Contact Phone"
+                name="contactPhone"
+                dial={teamPhoneDial}
+                value={teamFormData.contactPhone}
+                onDialChange={setTeamPhoneDial}
+                onChange={handleTeamChange}
+              />
               {teamFormData.leagueId && seasons.length > 0 && (
-                <label className="relative col-span-full block">
-                  <Label icon={CalendarRange}>Season</Label>
-                  <select
+                <div className="col-span-full block">
+                  <label htmlFor="team-season">
+                    <Label icon={CalendarRange}>Season</Label>
+                  </label>
+                  <FormSelect
+                    id="team-season"
                     name="seasonId"
+                    label="Season"
                     value={teamFormData.seasonId}
-                    onChange={handleTeamChange}
-                    disabled={seasonsLoading}
-                    className={`${inputCls} appearance-none pr-10`}
-                  >
-                    <option value="">All / Not season-specific</option>
-                    {seasons.map((season) => (
-                      <option key={season.id} value={season.id}>
-                        {season.name}
-                      </option>
-                    ))}
-                  </select>
-                  <SelectChevron />
-                </label>
+                    placeholder="All / Not season-specific"
+                    loading={seasonsLoading}
+                    options={[
+                      { value: '', label: 'All / Not season-specific' },
+                      ...seasons.map((season) => ({ value: season.id, label: season.name })),
+                    ]}
+                    onChange={(seasonId) => setTeamFormData((previous) => ({ ...previous, seasonId }))}
+                  />
+                </div>
               )}
               <label className="col-span-full block">
                 <Label icon={MessageSquare}>Additional Information</Label>
@@ -733,40 +775,31 @@ export default function RegistrationFormV2({
                   className={inputCls}
                 />
               </label>
-              <label className="block">
-                <Label icon={Phone} required>
-                  Phone
-                </Label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={playerFormData.phone}
-                  onChange={handlePlayerChange}
-                  placeholder="07xx xxx xxx"
-                  required
-                  className={inputCls}
-                />
-              </label>
-              <label className="relative block">
-                <Label icon={Crosshair} required>
-                  Position
-                </Label>
-                <select
+              <PhoneField
+                label="Phone"
+                name="phone"
+                dial={playerPhoneDial}
+                value={playerFormData.phone}
+                onDialChange={setPlayerPhoneDial}
+                onChange={handlePlayerChange}
+              />
+              <div className="block">
+                <label htmlFor="player-position">
+                  <Label icon={Crosshair} required>
+                    Position
+                  </Label>
+                </label>
+                <FormSelect
+                  id="player-position"
                   name="position"
+                  label="Position"
                   value={playerFormData.position}
-                  onChange={handlePlayerChange}
+                  placeholder="Select Position"
                   required
-                  className={`${inputCls} appearance-none pr-10`}
-                >
-                  <option value="">Select Position</option>
-                  <option value="Point Guard">Point Guard</option>
-                  <option value="Shooting Guard">Shooting Guard</option>
-                  <option value="Small Forward">Small Forward</option>
-                  <option value="Power Forward">Power Forward</option>
-                  <option value="Center">Center</option>
-                </select>
-                <SelectChevron />
-              </label>
+                  options={POSITIONS.map((position) => ({ value: position, label: position }))}
+                  onChange={(position) => setPlayerFormData((previous) => ({ ...previous, position }))}
+                />
+              </div>
               <label className="block">
                 <Label icon={Hash}>Jersey Number</Label>
                 <input
@@ -780,27 +813,25 @@ export default function RegistrationFormV2({
                   className={inputCls}
                 />
               </label>
-              <label className="relative col-span-full block">
-                <Label icon={Shield} required>
-                  Team
-                </Label>
-                <select
+              <div className="col-span-full block">
+                <label htmlFor="player-team">
+                  <Label icon={Shield} required>
+                    Team
+                  </Label>
+                </label>
+                <FormSelect
+                  id="player-team"
                   name="teamName"
+                  label="Team"
                   value={playerFormData.teamName}
-                  onChange={handlePlayerChange}
-                  disabled={teamsLoading}
+                  placeholder="Select Team"
                   required
-                  className={`${inputCls} appearance-none pr-10`}
-                >
-                  <option value="">Select Team</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.name}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-                <SelectChevron />
-              </label>
+                  loading={teamsLoading}
+                  searchPlaceholder="Search teams"
+                  options={teams.map((team) => ({ value: team.name, label: team.name }))}
+                  onChange={(teamName) => setPlayerFormData((previous) => ({ ...previous, teamName }))}
+                />
+              </div>
               <label className="block">
                 <Label icon={Ruler}>Height</Label>
                 <input

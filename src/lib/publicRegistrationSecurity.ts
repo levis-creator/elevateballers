@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { normalizePhoneNumber } from './phone';
 import { checkRateLimit, resetRateLimit } from './rateLimit';
 
 export const PUBLIC_REGISTRATION_LIMITS = {
@@ -23,8 +24,13 @@ export function normalizeEmail(value: unknown): string {
   return normalizeText(value).toLowerCase();
 }
 
+/**
+ * Saves phones in international form (+254712345678). A number typed without
+ * a country code is read as Kenyan; anything unusable is returned cleaned so
+ * validation rejects it.
+ */
 export function normalizePhone(value: unknown): string {
-  return normalizeText(value).replace(/[\s()-]/g, '');
+  return normalizePhoneNumber(normalizeText(value)) ?? normalizeText(value).replace(/[\s()-]/g, '');
 }
 
 export function normalizeOptionalText(value: unknown): string | undefined {

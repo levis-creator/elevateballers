@@ -72,8 +72,12 @@ describe('findSharedContacts', () => {
 
 describe('keys', () => {
   it('matches Kenyan numbers written with or without the country code', () => {
-    expect(phoneKey('+254 712-345-678')).toBe(phoneKey('0712345678'));
+    expect(phoneKey('+254 712-345-678')).toBe('+254712345678');
+    expect(phoneKey('0712345678')).toBe('+254712345678');
     expect(phoneKey('123')).toBeNull();
+  });
+  it('keeps the same digits under different country codes apart', () => {
+    expect(phoneKey('+255712345678')).not.toBe(phoneKey('0712345678'));
   });
   it('normalises spacing and case in names', () => {
     expect(playerNameKey({ firstName: '  Mary  Anne ', lastName: 'WAMBUI' })).toBe('mary anne::wambui');

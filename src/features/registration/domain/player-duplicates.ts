@@ -9,6 +9,8 @@
  * coach's squad); it is shown as context only.
  */
 
+import { normalizePhoneNumber } from '../../../lib/phone';
+
 export type DuplicateCandidate = {
   id: string;
   firstName: string | null;
@@ -41,10 +43,13 @@ export function playerNameKey(player: Pick<DuplicateCandidate, 'firstName' | 'la
   return first && last ? `${first}::${last}` : null;
 }
 
-/** Last 9 digits, so +254 712 345 678 and 0712345678 match. */
+/**
+ * The full international number, so 0712345678 and +254 712 345 678 match,
+ * but the same digits under another country code do not. Older numbers saved
+ * without a country code are read as Kenyan.
+ */
 export function phoneKey(phone: string | null | undefined): string | null {
-  const digits = (phone ?? '').replace(/\D/g, '');
-  return digits.length >= 7 ? digits.slice(-9) : null;
+  return normalizePhoneNumber(phone);
 }
 
 export function emailKey(email: string | null | undefined): string | null {
