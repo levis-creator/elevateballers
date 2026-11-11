@@ -21,7 +21,13 @@
             }, 600);
         });
         //Default plugins
-        $("select:not(.disable-select2)").select2({
+        // Never enhance a select that React renders (anything inside an Astro
+        // island): Select2 rewrites its attributes before React hydrates, which
+        // breaks hydration ("server rendered HTML didn't match the client") and
+        // hides React's own change handling behind Select2's widget.
+        $("select:not(.disable-select2)").filter(function () {
+            return !$(this).closest('astro-island').length;
+        }).select2({
             width: '100%',
             minimumResultsForSearch: '1'
         });
