@@ -6,6 +6,7 @@ import type { StandingTable } from "@/features/standings/domain/entities/standin
 import { activeCompetition, type PublicCompetitionOption } from "@/features/seasons/domain/entities/public-competition";
 import { configuredDefaultCompetitionId, type PublicCompetitionSettings } from "@/features/settings/application/competitionSettings";
 import { standingsCutLabel, standingsEyebrow, type PublicStandingsSettings } from "@/features/settings/application/standingsSettings";
+import { editionKey, type BracketLinks } from "@/features/tournaments/domain/usecases/bracket-links";
 
 interface Props {
 	competitions: PublicCompetitionOption[];
@@ -13,6 +14,8 @@ interface Props {
 	defaultLeagueSeasonId: string;
 	competitionSettings: PublicCompetitionSettings;
 	settings: PublicStandingsSettings;
+	/** Playoff bracket pages for competitions that have one. */
+	bracketLinks?: BracketLinks;
 }
 
 const diffLabel = (d: number) => `${d > 0 ? "+" : ""}${d}`;
@@ -27,7 +30,7 @@ const conferenceAccent = (name: string, index: number) => {
 /** Standings — hero + league filter tabs + top-3 + full table + search.
  *  React island; league filter and search live in a Zustand store. Rankings are
  *  computed within the active league filter. */
-export default function StandingsBoard({ competitions, tables, defaultLeagueSeasonId, competitionSettings, settings }: Props) {
+export default function StandingsBoard({ competitions, tables, defaultLeagueSeasonId, competitionSettings, settings, bracketLinks }: Props) {
 	const { leagueSeasonId, conferenceId, query, setLeagueSeason, setConference, setQuery } = useStandingsStore();
 	const allCompetitions = "__all__";
 	const isOverall = Boolean(competitionSettings.allLabel) && leagueSeasonId === allCompetitions;
@@ -96,6 +99,10 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 			default: return "—";
 		}
 	};
+	// The bracket for what is on screen: the whole season's under the "all" tab.
+	const bracketHref = isOverall
+		? bracketLinks?.bySeason[seasonId]
+		: selected ? bracketLinks?.byEdition[editionKey(selected.seasonId, selected.leagueId)] : undefined;
 	const selectSeason = (nextSeasonId: string) => {
 		const next = competitions.find((item) => item.seasonId === nextSeasonId);
 		if (next) setLeagueSeason(next.id);
@@ -164,6 +171,11 @@ export default function StandingsBoard({ competitions, tables, defaultLeagueSeas
 											</button>
 										))}
 									</div>
+								)}
+								{bracketHref && (
+									<a href={bracketHref} className="ml-auto inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-brand no-underline transition-colors hover:border-brand hover:bg-brand hover:text-white max-[600px]:ml-0">
+										Playoff bracket <span aria-hidden>→</span>
+									</a>
 								)}
 							</div>
 						</section>

@@ -6,10 +6,13 @@ import Footer from "@/features/layout/presentation/v2/Footer.astro";
 import StandingsBoard from "./sections/StandingsBoard.tsx";
 import { getStandingsData } from "@/features/standings/domain/usecases/get-standings-data";
 import { getFooterData } from "@/features/layout/domain/usecases/get-footer-data";
+import { getPlayoffBracketLinks } from "@/features/tournaments/data/datasources/playoffQueries";
 import { applyCompetitionSettings, resolvePublicCompetitionSettings, resolvePublicStandingsSettings, siteSettingsService } from "@/features/settings";
 
-const [data, footer, leagueRecords, standingsRecords] = await Promise.all([
+const [data, footer, leagueRecords, standingsRecords, bracketLinks] = await Promise.all([
 	getStandingsData(), getFooterData(), siteSettingsService.list("leagues"), siteSettingsService.list("standings"),
+	// A bracket link is a bonus: never let it break the standings page.
+	getPlayoffBracketLinks().catch(() => ({ byEdition: {}, bySeason: {} })),
 ]);
 const competitionSettings = resolvePublicCompetitionSettings(leagueRecords);
 const standingsSettings = resolvePublicStandingsSettings(standingsRecords);
@@ -18,6 +21,6 @@ const competitions = applyCompetitionSettings(data.competitions, competitionSett
 
 <div class="min-h-screen overflow-x-hidden bg-paper font-body text-ink2">
 	<Header active="standings" />
-	<StandingsBoard competitions={competitions} tables={data.tables} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={standingsSettings} client:load />
+	<StandingsBoard competitions={competitions} tables={data.tables} defaultLeagueSeasonId={data.defaultLeagueSeasonId} competitionSettings={competitionSettings} settings={standingsSettings} bracketLinks={bracketLinks} client:load />
 	<Footer footer={footer} />
 </div>
