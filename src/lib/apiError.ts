@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { getClientIp as getTrustedClientIp } from './getClientIp';
 import { auditPermissionDenied } from './permissionDeniedAudit';
 
 /**
@@ -31,7 +32,7 @@ export function json(body: unknown, status: number): Response {
  */
 export function handleApiError(error: unknown, context: string, request?: Request): Response {
   const msg = error instanceof Error ? error.message : String(error);
-  const clientIp = getClientIp(request);
+  const clientIp = clientIpForLog(request);
 
   // Auth errors thrown by requirePermission / requireAnyPermission etc.
   if (msg.startsWith('Unauthorized')) {
@@ -116,15 +117,9 @@ function buildLogMeta(message: string, ip: string | null): Record<string, string
   return ip ? { message, ip } : { message };
 }
 
-function getClientIp(request?: Request): string | null {
+/** The client IP for log lines, using the same trusted source as rate limiting. */
+function clientIpForLog(request?: Request): string | null {
   if (!request) return null;
-  const header =
-    request.headers.get('cf-connecting-ip') ||
-    request.headers.get('x-real-ip') ||
-    request.headers.get('x-forwarded-for') ||
-    request.headers.get('true-client-ip') ||
-    request.headers.get('x-client-ip');
-  if (!header) return null;
-  const first = header.split(',')[0]?.trim();
-  return first || null;
+  const ip = getTrustedClientIp(request);
+  return ip === 'unknown' ? null : ip;
 }

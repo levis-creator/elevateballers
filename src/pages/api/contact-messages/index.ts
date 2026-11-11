@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getClientIp } from '../../../lib/getClientIp';
 import { markContactNotificationsRead } from '@/features/cms/lib/notificationCleanup';
 import { prisma } from '../../../lib/prisma';
 import { requirePermission } from '../../../features/rbac/middleware';
@@ -17,10 +18,6 @@ import { updateImapMessageState } from '../../../features/messages/application/i
 
 export const prerender = false;
 
-const getClientIp = (request: Request): string =>
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-  request.headers.get('x-real-ip') ??
-  'unknown';
 
 const parseBody = async (request: Request): Promise<Record<string, string>> => {
   const contentType = request.headers.get('content-type') ?? '';

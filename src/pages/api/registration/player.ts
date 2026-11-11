@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getClientIp } from '../../../lib/getClientIp';
 import { prisma } from '../../../lib/prisma';
 import { logAudit } from '../../../features/cms/lib/audit';
 import { handleApiError } from '../../../lib/apiError';
@@ -14,7 +15,6 @@ import { createOperationalNotification } from '../../../features/cms/lib/adminNo
 
 export const prerender = false;
 
-const getClientIp = (request: Request): string => request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? 'unknown';
 
 function responseFromStored(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
