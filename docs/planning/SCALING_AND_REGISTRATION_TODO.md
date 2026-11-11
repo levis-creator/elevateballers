@@ -2,7 +2,7 @@
 
 This plan keeps the current Astro full-stack app and hardens it for more users before considering a separate backend. Work through the phases in order.
 
-Last checked against the code on 2026-11-11. Production now runs as a single Node process on cPanel (see `docs/DEPLOYMENT.md`), not serverless, so items about serverless pooling and QStash no longer apply as written.
+Last checked against the code on 2026-11-11 (updated after the duplicate, phone and health-check changes). Production now runs as a single Node process on cPanel (see `docs/DEPLOYMENT.md`), not serverless, so items about serverless pooling and QStash no longer apply as written.
 
 ## Phase 1: Stabilize Public Registration
 
@@ -61,14 +61,14 @@ QStash was replaced by a database outbox: registration writes `PublicRegistratio
 
 - [x] Add a registration review queue (`/api/registration/review-queue`).
 - [x] Filter registrations by league, season, team, and submitted date (`leagueId`, `seasonId`, `teamId`, `from`, `to` on the review queue and its export).
-- [ ] Add pagination to all large admin lists. Audited 2026-11-11: `players`, `staff`, `users`, `comments` and `teams` list endpoints return whole tables, and their admin pages search, filter and export in the browser, so paging them means moving that filtering server-side. Leagues, seasons, roles, permissions, pages and game rules stay small.
+- [ ] Add pagination to all large admin lists. **Deferred on 2026-11-11; not needed yet.** Production sizes: players 455, staff 36, teams 26, users 10; comments load per article (max 4). Only players is large, and its full list is ~45 KB gzipped (239 KB raw) and returns in ~0.6 s. Server paging would mean moving the page's filters, season scope, sorting and CSV export server-side. Revisit at about 2,000 players or if `/api/players` takes over 2 s.
 - [x] Add bulk approve/reject actions for teams and players (`bulk-approve` with `approved: false` rejects).
 - [x] Add `Needs changes` status with admin notes (`reviewStatus = NEEDS_CHANGES` plus `reviewNotes` on players and teams; the applicant is emailed the note).
 - [x] Add duplicate detection for:
   - [x] team name (unique constraint plus an admin notification on a repeat submission)
   - [x] coach email (not a duplicate: one coach may run several teams. A repeat coach email reuses the same coach record, and the queue shows "Same coach: …")
-  - [x] player email
-  - [x] player name plus date/team context (player duplicate review and merge)
+  - [x] players. Email and name alone are **not** duplicates: minors often register with their coach's email or phone, and names repeat across teams (on 2026-11-11 production had 13 players sharing 5 emails and 5 same-name pairs). Registrations are never rejected on either. The review queue groups records by full name and marks a group a *likely* duplicate only when they also share a phone, email, date of birth or team; name-only groups are listed separately. Player rows show who else uses the same contact, as context. Logic: `src/features/registration/domain/player-duplicates.ts`.
+- [x] Store phones in international form (`+254712345678`). The registration form has a country code picker (Kenya default); numbers sent without a code are read as Kenyan (`src/lib/phone.ts`). Older stored numbers are still as typed; matching normalises them.
 - [x] Add CSV export for registrations, teams, players, and rosters. Registrations export has no row cap; teams (`/api/teams/export`) and rosters (`/api/season-rosters/export`) export from the Teams page; players, staff and subscribers export in the browser.
 - [x] Add clear audit events for approval, rejection, roster edits, and ownership changes.
 
@@ -91,8 +91,9 @@ QStash was replaced by a database outbox: registration writes `PublicRegistratio
 ## Phase 8: Security and Abuse Protection
 
 - [x] Keep Turnstile on all public forms.
-- [x] Add rate limits to login, forgot password, registration, contact, and upload endpoints.
+- [x] Add rate limits to login, forgot password, registration, contact, and upload endpoints. Player sign-up allows 40 per connection per hour and 40 per email per day so a coach can register a squad; teams stay at 5 and 3.
 - [x] Add file upload size/type limits where missing.
+- [x] Make per-IP rate limits unspoofable (2026-11-11). Five endpoints read the client IP from the first `X-Forwarded-For` entry, `X-Real-IP` or `CF-Connecting-IP`, all of which anyone can send by calling the origin server (102.218.215.35) directly, so a script could get a fresh limit per request. Apache already resolves the real visitor IP from Cloudflare (its access log shows no Cloudflare addresses), so `src/lib/getClientIp.ts` now uses only the last `X-Forwarded-For` entry, which our own stack appends.
 - [x] Ensure registration endpoints do not expose private player/coach data in responses.
 - [ ] Ensure public endpoints do not reveal whether a private email belongs to an existing user (not verified).
 - [ ] Add structured logs for suspicious registration behavior. Duplicate team submissions raise an admin notification; nothing else is logged in a structured way.
@@ -105,7 +106,7 @@ QStash was replaced by a database outbox: registration writes `PublicRegistratio
 - [ ] Test with 50, 100, and 300 near-concurrent submissions.
 - [ ] Record response times, error rates, and database connection usage.
 - [ ] Monitor delivery times for registration email jobs.
-- [ ] Add uptime monitoring against `/api/health`. The endpoint exists, but the Sentry uptime monitor checks `/robots.txt`, which doesn't touch the database.
+- [ ] Add uptime monitoring against `/api/health`. The endpoint is ready (503 when the database fails or takes over 5 s, never cached); the Sentry uptime monitor still checks `/robots.txt` and must be repointed in Sentry.
 - [ ] Add alerts for:
   - [ ] database unreachable
   - [ ] registration error spikes
@@ -125,7 +126,8 @@ Do not split the frontend and backend yet. Revisit that decision only if one or 
 
 ## Suggested Next Steps
 
-1. Point the uptime monitor at `/api/health` so a database outage alerts.
-2. Add an index on `Player.email`.
-3. Server-side pagination for the players, staff, users, comments and teams admin lists.
-4. Load test registration on the cPanel server.
+1. Repoint the Sentry uptime monitor from `/robots.txt` to `/api/health`.
+2. Load test registration against a test copy (`scripts/load-test-registration.ts`), never production.
+3. Add an index on `Player.email`.
+4. Optionally convert stored phone numbers to international form, and require date of birth for players.
+5. Server-side pagination for the players admin list once it nears 2,000 players.

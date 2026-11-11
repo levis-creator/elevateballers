@@ -84,7 +84,7 @@ interface PlayerFormData {
 type TabType = 'team' | 'player';
 
 const inputCls =
-  'w-full rounded-lg border border-black/15 bg-paper2 px-4 py-3 font-body text-[14px] text-ink2 outline-none transition-shadow placeholder:text-muted2/70 focus:border-brand focus:ring-[3px] focus:ring-brand/[0.12] disabled:opacity-60';
+  'w-full rounded-lg border border-black/15 bg-paper2 px-4 py-3 font-body text-[14px] text-ink2 outline-none transition-shadow placeholder:text-muted2/70 focus:!border-brand focus:!ring-[3px] focus:!ring-brand/[0.12] disabled:opacity-60';
 
 function Label({
   icon: Icon,
@@ -129,7 +129,7 @@ function PhoneField({
         </Label>
       </label>
       {/* One field: a compact country-code prefix and the number share a border. */}
-      <div className="flex w-full items-stretch rounded-lg border border-black/15 bg-paper2 transition-shadow focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/[0.12] [&>div>button]:rounded-l-lg">
+      <div className="flex w-full items-stretch rounded-lg border border-black/15 bg-paper2 transition-shadow focus-within:!border-brand focus-within:!ring-[3px] focus-within:!ring-brand/[0.12] [&>div>button]:rounded-l-lg">
         <CountryDialPicker dial={dial} onChange={onDialChange} label={label} />
         <input
           id={`${name}-number`}
@@ -489,7 +489,7 @@ export default function RegistrationFormV2({
             </button>
             <a
               href="/upcoming-fixtures"
-              className="rounded-lg border border-black/15 px-6 py-3.5 font-body text-[13px] font-bold uppercase tracking-[0.05em] text-ink2 no-underline hover:border-brand hover:text-brand"
+              className="rounded-lg border border-black/15 px-6 py-3.5 font-body text-[13px] font-bold uppercase tracking-[0.05em] text-ink2 no-underline hover:!border-brand hover:text-brand"
             >
               View fixtures
             </a>

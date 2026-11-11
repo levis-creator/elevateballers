@@ -44,7 +44,7 @@ export default function FormSelect({
         disabled={disabled || loading}
         ariaLabel={`${label}${selected ? `: ${selected.label}` : ''}`}
         searchPlaceholder={searchPlaceholder ?? `Search ${label.toLowerCase()}`}
-        triggerClassName="flex w-full items-center gap-3 rounded-lg border border-black/15 bg-paper2 px-4 py-3 text-left outline-none transition-shadow hover:border-black/25 focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/[0.12] disabled:cursor-not-allowed disabled:opacity-60 aria-expanded:border-brand aria-expanded:ring-[3px] aria-expanded:ring-brand/[0.12]"
+        triggerClassName="flex w-full items-center gap-3 rounded-lg border border-black/15 bg-paper2 px-4 py-3 text-left outline-none transition-shadow hover:!border-black/25 focus-visible:!border-brand focus-visible:!ring-[3px] focus-visible:!ring-brand/[0.12] disabled:cursor-not-allowed disabled:opacity-60 aria-expanded:!border-brand aria-expanded:!ring-[3px] aria-expanded:!ring-brand/[0.12]"
         trigger={(_, open) => (
           <>
             <span className={`min-w-0 flex-1 truncate font-body text-[14px] ${selected ? 'text-ink2' : 'text-muted2/70'}`}>
